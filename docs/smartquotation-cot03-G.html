@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>SmartQuotation · COT-03 · Três Variantes em G — Refined Bauhaus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ===========================================================
+     DESIGN SYSTEM · G — REFINED BAUHAUS
+     =========================================================== */
+  :root {
+    --g-paper: #f4f1ea;
+    --g-paper-2: #fafaf2;
+    --g-black: #16151a;
+    --g-white: #fff;
+    --g-orange: #d94e1f;
+    --g-yellow: #f5c542;
+    --g-green: #2d6a3e;
+    --g-red: #a23a2f;
+    --g-blue: #2950b0;
+    --g-amber: #b8851a;
+    --g-gray-1: #888278;
+    --g-gray-2: #e3dfd2;
+    --g-gray-3: #c8c2b2;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #0c0c0d;
+    color: #e8e8e8;
+    font-family: 'Archivo', sans-serif;
+  }
+
+  /* ====== Page chrome (página comparativa) ====== */
+  .page-header {
+    padding: 40px 48px 28px;
+    border-bottom: 1px solid #1f1f22;
+    display: flex; align-items: end; justify-content: space-between; gap: 32px;
+  }
+  .page-header h1 {
+    font-weight: 800; font-size: 38px; letter-spacing: -0.025em; line-height: 1.0;
+    text-transform: uppercase;
+  }
+  .page-header h1 em { font-style: normal; color: var(--g-yellow); }
+  .page-header .meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #66666c; text-transform: uppercase; letter-spacing: 0.12em;
+    line-height: 1.6; text-align: right;
+  }
+  .page-header .meta strong { color: #c0c0c5; }
+
+  .intro {
+    padding: 22px 48px 0; max-width: 1100px;
+    font-size: 14px; line-height: 1.7; color: #a0a0a8;
+  }
+  .intro strong { color: #e8e8e8; }
+  .intro code {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--g-yellow);
+    background: #f5c54215; padding: 1px 6px;
+    border: 1px solid #f5c54230;
+  }
+
+  /* Cards de cada variante */
+  .variant-section {
+    padding: 28px 32px 8px;
+  }
+  .variant-card {
+    border: 1px solid #1f1f22;
+    background: #131316;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .variant-head {
+    padding: 18px 24px;
+    border-bottom: 1px solid #1f1f22;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  }
+  .variant-head .left {
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  .variant-head .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #66666c; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .variant-head h2 {
+    font-weight: 700; font-size: 22px; letter-spacing: -0.02em;
+    color: #e8e8e8;
+  }
+  .variant-head .pitch {
+    font-size: 13px; color: #b8b8c0; max-width: 580px; line-height: 1.55;
+    text-align: right;
+  }
+  .variant-head .pitch strong { color: #e8e8e8; }
+
+  .mock-wrap { background: var(--g-paper); }
+
+  /* ===========================================================
+     COMPONENTES G COMPARTILHADOS (todas variantes)
+     =========================================================== */
+
+  .g-app {
+    font-family: 'Archivo', sans-serif;
+    color: var(--g-black);
+    background: var(--g-paper);
+    height: 820px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 60px 200px 1fr;
+  }
+
+  /* RAIL */
+  .g-rail {
+    background: var(--g-black); color: var(--g-paper);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px 0; gap: 4px;
+  }
+  .g-rail .mark {
+    width: 36px; height: 36px; background: var(--g-orange);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; letter-spacing: -0.04em;
+    margin-bottom: 12px; position: relative;
+  }
+  .g-rail .mark::after {
+    content: ''; position: absolute; bottom: -3px; right: -3px;
+    width: 7px; height: 7px; background: var(--g-yellow);
+  }
+  .g-rail a {
+    width: 36px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: #888278; text-decoration: none;
+    font-weight: 700; font-size: 10.5px; letter-spacing: 0.04em;
+  }
+  .g-rail a.active {
+    background: #d94e1f15; color: var(--g-yellow);
+    border-left: 2px solid var(--g-yellow);
+  }
+  .g-rail .grow { flex: 1; }
+  .g-rail .av {
+    width: 32px; height: 32px; background: var(--g-orange); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px;
+  }
+
+  /* SIDEBAR DE NAVEGAÇÃO PRINCIPAL */
+  .g-sb {
+    background: var(--g-white);
+    border-right: 1px solid var(--g-gray-2);
+    padding: 18px 0;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .g-sb .head {
+    padding: 0 18px 12px; border-bottom: 1px solid var(--g-gray-2);
+  }
+  .g-sb .head .eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    color: var(--g-gray-1); letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .g-sb .head h2 {
+    font-weight: 700; font-size: 16px; letter-spacing: -0.01em;
+    text-transform: uppercase; color: var(--g-black); margin-top: 4px;
+  }
+  .g-sb .head h2::after {
+    content: ''; display: block; width: 24px; height: 3px;
+    background: var(--g-orange); margin-top: 6px;
+  }
+  .g-sb .grp {
+    padding: 12px 18px 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    color: var(--g-gray-1); letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .g-sb a {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 18px;
+    color: var(--g-black); text-decoration: none;
+    font-weight: 600; font-size: 12.5px;
+  }
+  .g-sb a:hover { background: var(--g-paper); }
+  .g-sb a.on { background: var(--g-black); color: var(--g-yellow); }
+  .g-sb a .n {
+    margin-left: auto; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--g-gray-1); font-weight: 500;
+  }
+  .g-sb a.on .n { color: var(--g-orange); }
+
+  /* MAIN */
+  .g-main { overflow: hidden; display: flex; flex-direction: column; }
+
+  /* TOPBAR */
+  .g-topbar {
+    background: var(--g-white);
+    border-bottom: 1px solid var(--g-gray-2);
+    padding: 10px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .g-topbar .crumb {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--g-gray-1); letter-spacing: 0.06em;
+  }
+  .g-topbar .crumb b { color: var(--g-black); }
+  .g-topbar .crumb .sep { color: var(--g-gray-3); margin: 0 6px; }
+  .g-topbar .tenant {
+    font-weight: 700; font-size: 11px;
+    color: var(--g-gray-1); letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .g-topbar .tenant b { color: var(--g-black); }
+
+  /* HEADER DA COTAÇÃO (compartilhado entre variantes) */
+  .q-header {
+    background: var(--g-white);
+    border-bottom: 1.5px solid var(--g-black);
+    padding: 20px 26px 18px;
+  }
+  .q-header .row1 {
+    display: flex; align-items: start; justify-content: space-between; gap: 24px;
+    margin-bottom: 14px;
+  }
+  .q-header .id-block .breadcrumb-q {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--g-gray-1); letter-spacing: 0.16em; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .q-header .id-block .number {
+    font-weight: 800; font-size: 28px; letter-spacing: -0.025em; line-height: 1.0;
+    text-transform: uppercase;
+  }
+  .q-header .id-block .number .rev {
+    color: var(--g-orange); font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; font-weight: 600; letter-spacing: 0; margin-left: 10px;
+    text-transform: none; vertical-align: middle;
+  }
+  .q-header .id-block .subtitle {
+    margin-top: 6px; font-size: 13.5px; color: var(--g-black);
+    font-weight: 500;
+  }
+  .q-header .id-block .subtitle b { font-weight: 700; }
+  .q-header .id-block .subtitle .equip {
+    color: var(--g-gray-1); margin-left: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  }
+
+  .q-header .status-block {
+    text-align: right;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  }
+  .q-header .status-block .meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--g-gray-1); letter-spacing: 0.06em; line-height: 1.5;
+  }
+  .q-header .status-block .meta b { color: var(--g-black); }
+
+  /* STATUS PILL — G */
+  .q-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    border: 1.5px solid currentColor;
+  }
+  .q-status::before {
+    content: ''; width: 6px; height: 6px; background: currentColor;
+  }
+  .q-status--review { color: var(--g-amber); background: #fff8e6; }
+  .q-status--approved { color: var(--g-green); background: #eaf3ea; }
+  .q-status--draft { color: var(--g-gray-1); }
+  .q-status--won { color: var(--g-paper); background: var(--g-green); border-color: var(--g-green); }
+  .q-status--won::before { background: var(--g-yellow); }
+
+  /* AÇÕES DE STATUS */
+  .q-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    border-top: 1px solid var(--g-gray-2); padding-top: 14px;
+  }
+  .q-btn {
+    background: var(--g-white); border: 1.5px solid var(--g-black);
+    padding: 7px 14px; font-family: 'Archivo', sans-serif;
+    font-weight: 700; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--g-black); cursor: pointer;
+  }
+  .q-btn:hover { background: var(--g-paper); }
+  .q-btn.primary { background: var(--g-black); color: var(--g-yellow); }
+  .q-btn.primary:hover { background: #000; }
+  .q-btn.primary::before { content: '▸ '; color: var(--g-orange); }
+  .q-btn.ghost { border-color: var(--g-gray-2); color: var(--g-gray-1); font-weight: 600; }
+  .q-btn.danger { border-color: var(--g-red); color: var(--g-red); }
+  .q-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  /* APPROVAL BANNER */
+  .approval-banner {
+    background: var(--g-green);
+    color: var(--g-paper);
+    padding: 10px 26px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    border-bottom: 1.5px solid var(--g-black);
+  }
+  .approval-banner .lt {
+    display: flex; align-items: center; gap: 12px;
+    font-weight: 600; font-size: 12.5px;
+  }
+  .approval-banner .lt .check {
+    width: 22px; height: 22px; background: var(--g-yellow); color: var(--g-black);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px;
+  }
+  .approval-banner .lt .meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: #c8e0c8; letter-spacing: 0.04em; font-weight: 500;
+  }
+  .approval-banner .lt .meta b { color: var(--g-paper); }
+  .approval-banner .rt {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: #c8e0c8; letter-spacing: 0.04em;
+  }
+  .approval-banner .rt b { color: var(--g-paper); }
+
+  /* ===========================================================
+     VARIANTE G.1 — TABS HORIZONTAIS (estrutura clássica do UX_SPEC)
+     =========================================================== */
+  .g1-tabs {
+    background: var(--g-white);
+    border-bottom: 1.5px solid var(--g-black);
+    padding: 0 26px;
+    display: flex; gap: 0;
+    overflow-x: auto;
+  }
+  .g1-tab {
+    padding: 12px 16px 11px;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--g-gray-1); cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1.5px;
+    background: transparent; border-top: none; border-left: none; border-right: none;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .g1-tab .n {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    background: var(--g-paper); color: var(--g-gray-1);
+    padding: 1px 6px; font-weight: 500; letter-spacing: 0;
+  }
+  .g1-tab.on { color: var(--g-black); border-bottom-color: var(--g-orange); }
+  .g1-tab.on .n { background: var(--g-orange); color: var(--g-white); }
+  .g1-tab.lock { color: var(--g-gray-3); }
+  .g1-tab.lock::before { content: '⊘ '; }
+
+  .g1-body { padding: 22px 26px; overflow-y: auto; flex: 1; background: var(--g-paper); }
+
+  /* Seções dentro do body */
+  .g-section {
+    background: var(--g-white);
+    border: 1px solid var(--g-gray-2);
+    margin-bottom: 16px;
+  }
+  .g-section-head {
+    border-bottom: 1.5px solid var(--g-black);
+    padding: 12px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .g-section-head h3 {
+    font-weight: 700; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .g-section-head h3::before {
+    content: ''; display: inline-block; width: 16px; height: 3px;
+    background: var(--g-orange); vertical-align: middle; margin-right: 8px;
+  }
+  .g-section-head .actions { display: flex; gap: 6px; }
+  .g-section-head .actions .btn-mini {
+    background: var(--g-white); border: 1.5px solid var(--g-black);
+    padding: 4px 10px; font-weight: 700; font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+  }
+  .g-section-head .actions .btn-mini.primary {
+    background: var(--g-black); color: var(--g-yellow);
+  }
+  .g-section-body { padding: 14px 18px; }
+
+  /* Tabela G */
+  .g-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px;
+  }
+  .g-table thead th {
+    text-align: left; padding: 8px 10px;
+    background: var(--g-black); color: var(--g-paper);
+    font-weight: 700; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .g-table thead th.num { text-align: right; }
+  .g-table tbody td {
+    padding: 9px 10px; border-bottom: 1px solid var(--g-gray-2); vertical-align: middle;
+  }
+  .g-table tbody tr:hover td { background: var(--g-paper-2); }
+  .g-table tbody tr:last-child td { border-bottom: none; }
+  .g-table tbody td.num {
+    text-align: right; font-family: 'JetBrains Mono', monospace; font-feature-settings: 'tnum';
+  }
+  .g-table tbody td.id {
+    font-family: 'JetBrains Mono', monospace; font-weight: 600;
+    color: var(--g-orange); font-size: 11px;
+  }
+  .g-table tbody td.title { font-weight: 600; font-size: 12.5px; }
+  .g-table tbody td.title small {
+    display: block; font-weight: 400; font-size: 10.5px;
+    color: var(--g-gray-1); margin-top: 1px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Cards de equipamento (KPI strip do hero) */
+  .stat-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--g-white); border: 1.5px solid var(--g-black); margin-bottom: 16px;
+  }
+  .stat {
+    padding: 14px 16px; border-right: 1px solid var(--g-gray-2);
+    position: relative;
+  }
+  .stat:last-child { border-right: none; }
+  .stat::before {
+    content: ''; position: absolute; left: 0; top: 0; width: 24px; height: 3px;
+    background: var(--g-orange);
+  }
+  .stat:nth-child(2)::before { background: var(--g-yellow); }
+  .stat:nth-child(3)::before { background: var(--g-green); }
+  .stat:nth-child(4)::before { background: var(--g-black); }
+  .stat .lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    color: var(--g-gray-1); letter-spacing: 0.1em; text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .stat .val {
+    font-weight: 800; font-size: 24px; color: var(--g-black);
+    letter-spacing: -0.025em; margin-top: 2px; line-height: 1.1;
+    font-feature-settings: 'tnum';
+  }
+  .stat .val .u {
+    font-size: 12px; color: var(--g-gray-1); font-weight: 600; margin-left: 3px;
+  }
+  .stat .delta {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; margin-top: 2px;
+  }
+  .stat .delta.up { color: var(--g-green); }
+
+  /* Status de componente */
+  .comp-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px;
+    font-weight: 700; font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    border: 1.5px solid currentColor;
+  }
+  .comp-status::before {
+    content: ''; width: 5px; height: 5px; background: currentColor;
+  }
+  .comp-status--calc { color: var(--g-green); background: #eaf3ea; }
+  .comp-status--pending { color: var(--g-amber); background: #fff8e6; }
+  .comp-status--imported { color: var(--g-blue); background: #e8edf8; }
+  .comp-status--signed { color: var(--g-paper); background: var(--g-green); border-color: var(--g-green); }
+  .comp-status--signed::before { background: var(--g-yellow); }
+
+  /* ===========================================================
+     VARIANTE G.2 — MASTER-DETAIL (sidebar de equipamentos à esq.)
+     =========================================================== */
+  .g2-layout {
+    display: grid; grid-template-columns: 280px 1fr;
+    flex: 1; overflow: hidden;
+    background: var(--g-paper);
+  }
+  .g2-list {
+    background: var(--g-white);
+    border-right: 1.5px solid var(--g-black);
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .g2-list-head {
+    padding: 14px 18px;
+    border-bottom: 1.5px solid var(--g-black);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .g2-list-head h3 {
+    font-weight: 700; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .g2-list-head h3 .count {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--g-orange); margin-left: 4px;
+  }
+  .g2-list-head .add {
+    background: var(--g-black); color: var(--g-yellow);
+    border: none; padding: 4px 8px; font-weight: 700; font-size: 11px;
+    cursor: pointer;
+  }
+  .g2-item {
+    padding: 12px 18px 12px 22px;
+    border-bottom: 1px solid var(--g-gray-2);
+    cursor: pointer; position: relative;
+  }
+  .g2-item:hover { background: var(--g-paper-2); }
+  .g2-item.on {
+    background: var(--g-paper-2);
+    border-left: 4px solid var(--g-orange);
+    padding-left: 18px;
+  }
+  .g2-item .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .g2-item .tag {
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 13px;
+    color: var(--g-black);
+  }
+  .g2-item .type {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--g-gray-1); letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .g2-item .desc {
+    font-weight: 500; font-size: 12px; color: var(--g-black); margin-top: 3px;
+  }
+  .g2-item .meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--g-gray-1); margin-top: 4px;
+  }
+  .g2-item .footer {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-top: 8px;
+  }
+  .g2-item .wgt {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--g-black); font-weight: 600;
+  }
+  .g2-item .wgt small { color: var(--g-gray-1); font-weight: 400; margin-left: 3px; font-size: 9.5px; }
+
+  .g2-detail {
+    overflow-y: auto;
+    padding: 18px 24px;
+  }
+  .g2-detail .equip-head {
+    background: var(--g-white);
+    border: 1.5px solid var(--g-black);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .g2-detail .equip-head .ttl {
+    font-weight: 800; font-size: 22px; letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .g2-detail .equip-head .ttl small {
+    display: block;
+    font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 10.5px;
+    color: var(--g-gray-1); letter-spacing: 0.12em; margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .g2-detail .equip-head .actions { display: flex; gap: 6px; }
+
+  /* Param-grid (data sheet) */
+  .param-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--g-white); border: 1px solid var(--g-gray-2);
+    margin-bottom: 14px;
+  }
+  .param {
+    padding: 10px 14px;
+    border-right: 1px solid var(--g-gray-2);
+    border-bottom: 1px solid var(--g-gray-2);
+  }
+  .param:nth-child(4n) { border-right: none; }
+  .param:nth-last-child(-n+4) { border-bottom: none; }
+  .param .lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    color: var(--g-gray-1); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .param .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 13.5px; color: var(--g-black); margin-top: 3px;
+    font-feature-settings: 'tnum';
+  }
+  .param .val .u { color: var(--g-gray-1); font-weight: 500; font-size: 11px; margin-left: 2px; }
+
+  /* Component cards grid */
+  .comp-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .comp-card {
+    background: var(--g-white); border: 1.5px solid var(--g-black);
+    padding: 12px 14px;
+    position: relative;
+  }
+  .comp-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--g-green);
+  }
+  .comp-card.pending::before { background: var(--g-amber); }
+  .comp-card.imported::before { background: var(--g-blue); }
+  .comp-card .row1 {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .comp-card .name {
+    font-weight: 700; font-size: 13px;
+    text-transform: uppercase; letter-spacing: -0.01em;
+  }
+  .comp-card .name small {
+    display: block;
+    font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 10px;
+    color: var(--g-gray-1); margin-top: 1px; letter-spacing: 0.06em;
+  }
+  .comp-card .results {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--g-gray-2);
+  }
+  .comp-card .res { padding-right: 6px; border-right: 1px solid var(--g-gray-2); }
+  .comp-card .res:last-child { border-right: none; padding-right: 0; padding-left: 6px; }
+  .comp-card .res .l {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    color: var(--g-gray-1); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .comp-card .res .v {
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12.5px;
+    color: var(--g-black); margin-top: 2px; font-feature-settings: 'tnum';
+  }
+  .comp-card .res .v .u { color: var(--g-gray-1); font-weight: 400; font-size: 10px; margin-left: 2px; }
+
+  /* ===========================================================
+     VARIANTE G.3 — COMMAND CENTER (coluna única + minimap)
+     =========================================================== */
+  .g3-body {
+    flex: 1; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 220px;
+    background: var(--g-paper);
+  }
+  .g3-scroll { overflow-y: auto; padding: 18px 24px; }
+  .g3-minimap {
+    background: var(--g-white);
+    border-left: 1px solid var(--g-gray-2);
+    padding: 18px 16px;
+    overflow-y: auto;
+  }
+  .g3-minimap h4 {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    color: var(--g-gray-1); letter-spacing: 0.14em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .g3-minimap a {
+    display: block; padding: 6px 0 6px 14px;
+    text-decoration: none; color: var(--g-black);
+    font-weight: 600; font-size: 11.5px;
+    border-left: 2px solid var(--g-gray-2);
+    position: relative;
+  }
+  .g3-minimap a:hover { border-left-color: var(--g-gray-1); }
+  .g3-minimap a.on { border-left-color: var(--g-orange); color: var(--g-orange); }
+  .g3-minimap a .n {
+    float: right;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--g-gray-1); font-weight: 500;
+  }
+  .g3-minimap a.on .n { color: var(--g-orange); }
+  .g3-minimap .div {
+    height: 1px; background: var(--g-gray-2); margin: 14px 0 8px;
+  }
+  .g3-minimap .progress {
+    background: var(--g-paper);
+    border: 1px solid var(--g-gray-2);
+    padding: 10px 12px; margin-top: 14px;
+  }
+  .g3-minimap .progress .lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    color: var(--g-gray-1); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .g3-minimap .progress .val {
+    font-weight: 800; font-size: 22px; color: var(--g-black); margin-top: 4px;
+    letter-spacing: -0.02em;
+    font-feature-settings: 'tnum';
+  }
+  .g3-minimap .progress .bar {
+    height: 6px; background: var(--g-gray-2); margin-top: 8px;
+    position: relative;
+  }
+  .g3-minimap .progress .bar::after {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 67%;
+    background: var(--g-orange);
+  }
+  .g3-minimap .progress .steps {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    color: var(--g-gray-1); margin-top: 6px; letter-spacing: 0.06em;
+  }
+
+  /* ===========================================================
+     RESPONSIVO BÁSICO
+     =========================================================== */
+  @media (max-width: 1200px) {
+    .variant-section { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div>
+    <h1>COT-03 · DETALHE DA COTAÇÃO<br><em>Três variantes em G · Refined Bauhaus</em></h1>
+  </div>
+  <div class="meta">
+    <strong>R&D / UX · Rodada 4</strong><br>
+    Conceito travado · G<br>
+    Tela mais populosa<br>
+    6 abas / hub central
+  </div>
+</header>
+
+<p class="intro">
+  Aplicando <strong>G · Refined Bauhaus</strong> à tela mais densa do MVP — <code>COT-03</code>. Esta tela concentra tudo: dados gerais, equipamentos com cálculo normativo, BOM, formação de preço, aprovação técnica e proposta. As três variantes resolvem essa densidade de maneiras diferentes — todas mantendo o mesmo DNA visual (preto + laranja + amarelo + Archivo + JetBrains Mono).
+  Todas mostram o estado <strong>Em Revisão</strong> com cálculos prontos para a tela ser representativa do "pior caso de densidade" — após aprovação técnica e antes de virar proposta.
+</p>
+
+<!-- ============================================================
+     VARIANTE G.1 — TABS HORIZONTAIS
+     ============================================================ -->
+<section class="variant-section">
+  <article class="variant-card">
+    <header class="variant-head">
+      <div class="left">
+        <span class="tag">VARIANTE G.1</span>
+        <h2>Tabs Horizontais</h2>
+      </div>
+      <p class="pitch">
+        Estrutura <strong>clássica e familiar</strong> — segue o UX_SPEC à risca. Header da cotação fixo no topo, abas horizontais como navegação principal, conteúdo abaixo. <strong>Vantagem:</strong> aprendizado zero, qualquer usuário entende em 5 segundos. <strong>Custo:</strong> alternância entre abas pode esconder contexto cruzado (ex: aprovação técnica está em outra aba que equipamentos).
+      </p>
+    </header>
+    <div class="mock-wrap">
+      <div class="g-app">
+        <!-- RAIL -->
+        <aside class="g-rail">
+          <div class="mark">SQ</div>
+          <a href="#">DA</a>
+          <a href="#" class="active">CO</a>
+          <a href="#">CL</a>
+          <a href="#">MA</a>
+          <a href="#">AP</a>
+          <a href="#">AU</a>
+          <a href="#">CF</a>
+          <div class="grow"></div>
+          <div class="av">R</div>
+        </aside>
+        <!-- SIDEBAR -->
+        <aside class="g-sb">
+          <div class="head">
+            <div class="eyebrow">Módulo</div>
+            <h2>Cotações</h2>
+          </div>
+          <div class="grp">Visualizações</div>
+          <a href="#">Todas<span class="n">38</span></a>
+          <a href="#" class="on">Esta cotação<span class="n">038</span></a>
+          <a href="#">Minhas<span class="n">12</span></a>
+          <a href="#">Pendentes<span class="n">3</span></a>
+          <div class="grp">Status</div>
+          <a href="#">Rascunho<span class="n">5</span></a>
+          <a href="#">Em Revisão<span class="n">7</span></a>
+          <a href="#">Aprovadas<span class="n">11</span></a>
+          <a href="#">Ganhas<span class="n">9</span></a>
+        </aside>
+        <!-- MAIN -->
+        <main class="g-main">
+          <div class="g-topbar">
+            <div class="crumb">cotações<span class="sep">/</span><b>COT-2025-038</b></div>
+            <div class="tenant">Tenant · <b>Caldeiraria ABC</b> · Osasco/SP</div>
+          </div>
+          <!-- HEADER DA COTAÇÃO -->
+          <div class="q-header">
+            <div class="row1">
+              <div class="id-block">
+                <div class="breadcrumb-q">COT-03 · Detalhe</div>
+                <div class="number">COT-2025-038 <span class="rev">Rev. A</span></div>
+                <div class="subtitle">
+                  <b>Petrobras Refinaria REDUC</b>
+                  <span class="equip">V-101 · Vaso Separador · 10 bar · 150°C</span>
+                </div>
+              </div>
+              <div class="status-block">
+                <span class="q-status q-status--review">Em Revisão</span>
+                <div class="meta">
+                  Criado em <b>05/01/2025</b> por <b>Romulo Souza</b><br>
+                  Válido até <b>05/02/2025</b> · 18 dias restantes
+                </div>
+              </div>
+            </div>
+            <div class="q-actions">
+              <button class="q-btn">Editar Dados</button>
+              <button class="q-btn primary">Enviar para Revisão</button>
+              <button class="q-btn">Criar Revisão</button>
+              <button class="q-btn ghost" disabled>Gerar Proposta</button>
+              <button class="q-btn ghost" disabled>Marcar como Ganha</button>
+            </div>
+          </div>
+          <!-- TABS -->
+          <nav class="g1-tabs">
+            <button class="g1-tab">Dados Gerais</button>
+            <button class="g1-tab on">Equipamentos <span class="n">2</span></button>
+            <button class="g1-tab">BOM & Roteiro <span class="n">42</span></button>
+            <button class="g1-tab">Formação de Preço</button>
+            <button class="g1-tab">Aprovação Técnica <span class="n">1</span></button>
+            <button class="g1-tab lock">Proposta</button>
+          </nav>
+          <!-- APPROVAL BANNER -->
+          <div class="approval-banner">
+            <div class="lt">
+              <div class="check">✓</div>
+              <div>
+                Cálculo técnico aprovado
+                <div class="meta">por <b>Eng. Rodrigo Oliveira · CREA-SP 5063412</b> · ART 28051·2025 · há 2h</div>
+              </div>
+            </div>
+            <div class="rt">Snapshot hash · <b>a4f9·2c8b·71de</b></div>
+          </div>
+          <!-- BODY DA ABA EQUIPAMENTOS -->
+          <div class="g1-body">
+            <!-- STAT ROW -->
+            <div class="stat-row">
+              <div class="stat">
+                <div class="lbl">Equipamentos</div>
+                <div class="val">02</div>
+                <div class="delta">1 vaso + 1 trocador</div>
+              </div>
+              <div class="stat">
+                <div class="lbl">Peso Total Estimado</div>
+                <div class="val">4.847<span class="u">kg</span></div>
+                <div class="delta up">Δ +1,2% vs PVElite</div>
+              </div>
+              <div class="stat">
+                <div class="lbl">Custo Material</div>
+                <div class="val">R$ 86<span class="u">.420</span></div>
+                <div class="delta">Aço SA-516-70</div>
+              </div>
+              <div class="stat">
+                <div class="lbl">Cálculos Calculados</div>
+                <div class="val">12<span class="u">/12</span></div>
+                <div class="delta up">100% · 0 importados</div>
+              </div>
+            </div>
+            <!-- LISTA DE EQUIPAMENTOS -->
+            <div class="g-section">
+              <div class="g-section-head">
+                <h3>Equipamentos da Cotação</h3>
+                <div class="actions">
+                  <button class="btn-mini">+ Vaso de Pressão</button>
+                  <button class="btn-mini">+ Trocador de Calor</button>
+                  <button class="btn-mini primary">Recalcular Todos</button>
+                </div>
+              </div>
+              <div class="g-section-body" style="padding: 0;">
+                <table class="g-table">
+                  <thead><tr>
+                    <th>Tag</th>
+                    <th>Tipo / Norma</th>
+                    <th>Material Principal</th>
+                    <th class="num">Pressão · Temp.</th>
+                    <th class="num">Peso (kg)</th>
+                    <th class="num">Componentes</th>
+                    <th>Status Cálculo</th>
+                    <th>Aprovação</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr>
+                      <td class="id">V-101</td>
+                      <td class="title">Vaso Separador<small>ASME VIII Div.1 · Vertical</small></td>
+                      <td class="title">SA-516-70<small>Sobremetal 3,0 mm · E=1,0</small></td>
+                      <td class="num">10 bar · 150°C</td>
+                      <td class="num">2.847</td>
+                      <td class="num">7 / 7</td>
+                      <td><span class="comp-status comp-status--calc">Calculado</span></td>
+                      <td><span class="comp-status comp-status--signed">Assinado</span></td>
+                    </tr>
+                    <tr>
+                      <td class="id">E-204</td>
+                      <td class="title">Trocador BEM<small>TEMA · Casco-Tubo · Horizontal</small></td>
+                      <td class="title">SA-516-70 · SA-179<small>Feixe 187 tubos · Ø3/4"</small></td>
+                      <td class="num">8 bar · 180°C</td>
+                      <td class="num">2.000</td>
+                      <td class="num">5 / 5</td>
+                      <td><span class="comp-status comp-status--calc">Calculado</span></td>
+                      <td><span class="comp-status comp-status--signed">Assinado</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <!-- COMPONENTES DO V-101 -->
+            <div class="g-section">
+              <div class="g-section-head">
+                <h3>Componentes · V-101 Vaso Separador</h3>
+                <div class="actions">
+                  <button class="btn-mini">Importar Cálculo</button>
+                  <button class="btn-mini">Ver Snapshots</button>
+                  <button class="btn-mini primary">Recalcular</button>
+                </div>
+              </div>
+              <div class="g-section-body">
+                <div class="comp-grid">
+                  <div class="comp-card">
+                    <div class="row1">
+                      <div class="name">Casco Cilíndrico<small>UG-27 · ASME VIII Div.1 (2021)</small></div>
+                      <span class="comp-status comp-status--calc">Calc.</span>
+                    </div>
+                    <div class="results">
+                      <div class="res"><div class="l">Espessura</div><div class="v">12,3<span class="u">mm</span></div></div>
+                      <div class="res"><div class="l">MAWP</div><div class="v">11,5<span class="u">bar</span></div></div>
+                      <div class="res"><div class="l">Peso</div><div class="v">1.247<span class="u">kg</span></div></div>
+                    </div>
+                  </div>
+                  <div class="comp-card">
+                    <div class="row1">
+                      <div class="name">Tampo Sup. Elíptico 2:1<small>UG-32 · ASME VIII Div.1 (2021)</small></div>
+                      <span class="comp-status comp-status--calc">Calc.</span>
+                    </div>
+                    <div class="results">
+                      <div class="res"><div class="l">Espessura</div><div class="v">11,8<span class="u">mm</span></div></div>
+                      <div class="res"><div class="l">MAWP</div><div class="v">12,1<span class="u">bar</span></div></div>
+                      <div class="res"><div class="l">Peso</div><div class="v">385<span class="u">kg</span></div></div>
+                    </div>
+                  </div>
+                  <div class="comp-card">
+                    <div class="row1">
+                      <div class="name">Tampo Inf. Elíptico 2:1<small>UG-32 · ASME VIII Div.1 (2021)</small></div>
+                      <span class="comp-status comp-status--calc">Calc.</span>
+                    </div>
+                    <div class="results">
+                      <div class="res"><div class="l">Espessura</div><div class="v">11,8<span class="u">mm</span></div></div>
+                      <div class="res"><div class="l">MAWP</div><div class="v">12,1<span class="u">bar</span></div></div>
+                      <div class="res"><div class="l">Peso</div><div class="v">385<span class="u">kg</span></div></div>
+                    </div>
+                  </div>
+                  <div class="comp-card imported">
+                    <div class="row1">
+                      <div class="name">Bocal N1 · Entrada Topo<small>UG-37 · Importado · PVElite ext.</small></div>
+                      <span class="comp-status comp-status--imported">Import.</span>
+                    </div>
+                    <div class="results">
+                      <div class="res"><div class="l">Espessura</div><div class="v">8,2<span class="u">mm</span></div></div>
+                      <div class="res"><div class="l">DN</div><div class="v">DN150<span class="u">·Sch80</span></div></div>
+                      <div class="res"><div class="l">Peso</div><div class="v">68<span class="u">kg</span></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================================
+     VARIANTE G.2 — MASTER-DETAIL
+     ============================================================ -->
+<section class="variant-section">
+  <article class="variant-card">
+    <header class="variant-head">
+      <div class="left">
+        <span class="tag">VARIANTE G.2</span>
+        <h2>Master-Detail · Sidebar de Equipamentos</h2>
+      </div>
+      <p class="pitch">
+        Lista de equipamentos vira <strong>navegação lateral persistente</strong>. Você sempre vê todos os equipamentos da cotação à esquerda, e foca em um por vez à direita com data sheet + componentes. <strong>Vantagem:</strong> ideal para cotações com muitos equipamentos (cliente típico tem 1–5; alguns chegam a 10+). <strong>Custo:</strong> esconde as outras "abas" — BOM, Preço e Proposta ficam no header ou em modal.
+      </p>
+    </header>
+    <div class="mock-wrap">
+      <div class="g-app">
+        <aside class="g-rail">
+          <div class="mark">SQ</div>
+          <a href="#">DA</a>
+          <a href="#" class="active">CO</a>
+          <a href="#">CL</a>
+          <a href="#">MA</a>
+          <a href="#">AP</a>
+          <a href="#">AU</a>
+          <a href="#">CF</a>
+          <div class="grow"></div>
+          <div class="av">R</div>
+        </aside>
+        <aside class="g-sb">
+          <div class="head">
+            <div class="eyebrow">Cotação aberta</div>
+            <h2 style="font-size: 14px;">COT-2025-038</h2>
+          </div>
+          <div class="grp">Navegação</div>
+          <a href="#" class="on">Equipamentos<span class="n">2</span></a>
+          <a href="#">Dados Gerais</a>
+          <a href="#">BOM & Roteiro<span class="n">42</span></a>
+          <a href="#">Formação de Preço</a>
+          <a href="#">Aprovação Técnica<span class="n">1</span></a>
+          <a href="#">Proposta</a>
+          <div class="grp">Esta cotação</div>
+          <a href="#">Histórico de revisões</a>
+          <a href="#">Audit log<span class="n">87</span></a>
+          <a href="#">Anexos<span class="n">4</span></a>
+        </aside>
+        <main class="g-main">
+          <div class="g-topbar">
+            <div class="crumb">cotações<span class="sep">/</span><b>COT-2025-038</b><span class="sep">/</span>equipamentos<span class="sep">/</span><b>V-101</b></div>
+            <div class="tenant">Tenant · <b>Caldeiraria ABC</b></div>
+          </div>
+          <div class="q-header">
+            <div class="row1">
+              <div class="id-block">
+                <div class="breadcrumb-q">COT-03 · Detalhe</div>
+                <div class="number">COT-2025-038 <span class="rev">Rev. A</span></div>
+                <div class="subtitle">
+                  <b>Petrobras Refinaria REDUC</b>
+                  <span class="equip">V-101 · Vaso Separador · 10 bar · 150°C</span>
+                </div>
+              </div>
+              <div class="status-block">
+                <span class="q-status q-status--review">Em Revisão</span>
+                <div class="meta">
+                  Criado em <b>05/01/2025</b> por <b>Romulo Souza</b><br>
+                  Total previsto · <b>R$ 287.450</b> · Margem <b>22,0%</b>
+                </div>
+              </div>
+            </div>
+            <div class="q-actions">
+              <button class="q-btn">Editar Dados</button>
+              <button class="q-btn primary">Enviar para Revisão</button>
+              <button class="q-btn">Criar Revisão</button>
+              <button class="q-btn ghost" disabled>Gerar Proposta</button>
+            </div>
+          </div>
+          <!-- LAYOUT MASTER-DETAIL -->
+          <div class="g2-layout">
+            <!-- LISTA DE EQUIPAMENTOS -->
+            <aside class="g2-list">
+              <div class="g2-list-head">
+                <h3>Equipamentos <span class="count">02</span></h3>
+                <button class="add">+ Novo</button>
+              </div>
+              <div class="g2-item on">
+                <div class="row">
+                  <span class="tag">V-101</span>
+                  <span class="type">Vaso · ASME VIII</span>
+                </div>
+                <div class="desc">Vaso Separador Vertical</div>
+                <div class="meta">SA-516-70 · 10 bar · 150°C · 3,0mm s/m</div>
+                <div class="footer">
+                  <span class="wgt">2.847<small>kg</small></span>
+                  <span class="comp-status comp-status--signed">Assinado</span>
+                </div>
+              </div>
+              <div class="g2-item">
+                <div class="row">
+                  <span class="tag">E-204</span>
+                  <span class="type">Trocador · TEMA-BEM</span>
+                </div>
+                <div class="desc">Trocador Casco-Tubo Horizontal</div>
+                <div class="meta">SA-516-70 · 8 bar · 180°C · 187 tubos Ø3/4"</div>
+                <div class="footer">
+                  <span class="wgt">2.000<small>kg</small></span>
+                  <span class="comp-status comp-status--signed">Assinado</span>
+                </div>
+              </div>
+              <div class="g2-item" style="opacity: 0.5; cursor: not-allowed;">
+                <div class="row">
+                  <span class="tag" style="color: var(--g-gray-1);">+ Vaso</span>
+                  <span class="type">ASME VIII</span>
+                </div>
+                <div class="desc" style="color: var(--g-gray-1);">Adicionar vaso de pressão</div>
+              </div>
+              <div class="g2-item" style="opacity: 0.5; cursor: not-allowed;">
+                <div class="row">
+                  <span class="tag" style="color: var(--g-gray-1);">+ Trocador</span>
+                  <span class="type">TEMA</span>
+                </div>
+                <div class="desc" style="color: var(--g-gray-1);">Adicionar trocador de calor</div>
+              </div>
+            </aside>
+            <!-- DETALHE -->
+            <section class="g2-detail">
+              <!-- APPROVAL BANNER -->
+              <div class="approval-banner" style="margin-bottom: 14px;">
+                <div class="lt">
+                  <div class="check">✓</div>
+                  <div>
+                    Cálculo aprovado · V-101
+                    <div class="meta">Eng. Rodrigo Oliveira · CREA-SP 5063412 · ART 28051·2025</div>
+                  </div>
+                </div>
+                <div class="rt">Hash · <b>a4f9·2c8b·71de</b></div>
+              </div>
+              <!-- HEAD DO EQUIPAMENTO -->
+              <div class="equip-head">
+                <div class="ttl">
+                  <small>Vaso de Pressão · ASME VIII Div.1</small>
+                  V-101 · Vaso Separador
+                </div>
+                <div class="actions">
+                  <button class="q-btn ghost">Editar</button>
+                  <button class="q-btn">Snapshots</button>
+                  <button class="q-btn primary">Recalcular</button>
+                </div>
+              </div>
+              <!-- DATA SHEET COMPACTO -->
+              <div class="param-grid">
+                <div class="param"><div class="lbl">Orientação</div><div class="val">Vertical</div></div>
+                <div class="param"><div class="lbl">Pressão Projeto</div><div class="val">10,0<span class="u">bar</span></div></div>
+                <div class="param"><div class="lbl">Temperatura</div><div class="val">150<span class="u">°C</span></div></div>
+                <div class="param"><div class="lbl">Sobremetal</div><div class="val">3,0<span class="u">mm</span></div></div>
+                <div class="param"><div class="lbl">Material Casco</div><div class="val">SA-516-70</div></div>
+                <div class="param"><div class="lbl">Diâmetro Ext.</div><div class="val">1000<span class="u">mm</span></div></div>
+                <div class="param"><div class="lbl">Comprimento T-T</div><div class="val">3000<span class="u">mm</span></div></div>
+                <div class="param"><div class="lbl">Eficiência Junta</div><div class="val">1,00</div></div>
+              </div>
+              <!-- COMPONENTES -->
+              <div class="comp-grid">
+                <div class="comp-card">
+                  <div class="row1">
+                    <div class="name">Casco Cilíndrico<small>UG-27 · ASME VIII (2021)</small></div>
+                    <span class="comp-status comp-status--calc">Calc.</span>
+                  </div>
+                  <div class="results">
+                    <div class="res"><div class="l">Esp. Req.</div><div class="v">12,3<span class="u">mm</span></div></div>
+                    <div class="res"><div class="l">MAWP</div><div class="v">11,5<span class="u">bar</span></div></div>
+                    <div class="res"><div class="l">Peso</div><div class="v">1.247<span class="u">kg</span></div></div>
+                  </div>
+                </div>
+                <div class="comp-card">
+                  <div class="row1">
+                    <div class="name">Tampo Sup. Elíptico 2:1<small>UG-32 · ASME VIII (2021)</small></div>
+                    <span class="comp-status comp-status--calc">Calc.</span>
+                  </div>
+                  <div class="results">
+                    <div class="res"><div class="l">Esp. Req.</div><div class="v">11,8<span class="u">mm</span></div></div>
+                    <div class="res"><div class="l">MAWP</div><div class="v">12,1<span class="u">bar</span></div></div>
+                    <div class="res"><div class="l">Peso</div><div class="v">385<span class="u">kg</span></div></div>
+                  </div>
+                </div>
+                <div class="comp-card">
+                  <div class="row1">
+                    <div class="name">Tampo Inf. Elíptico 2:1<small>UG-32 · ASME VIII (2021)</small></div>
+                    <span class="comp-status comp-status--calc">Calc.</span>
+                  </div>
+                  <div class="results">
+                    <div class="res"><div class="l">Esp. Req.</div><div class="v">11,8<span class="u">mm</span></div></div>
+                    <div class="res"><div class="l">MAWP</div><div class="v">12,1<span class="u">bar</span></div></div>
+                    <div class="res"><div class="l">Peso</div><div class="v">385<span class="u">kg</span></div></div>
+                  </div>
+                </div>
+                <div class="comp-card imported">
+                  <div class="row1">
+                    <div class="name">Bocal N1 · Topo<small>UG-37 · Importado · PVElite</small></div>
+                    <span class="comp-status comp-status--imported">Import.</span>
+                  </div>
+                  <div class="results">
+                    <div class="res"><div class="l">Esp.</div><div class="v">8,2<span class="u">mm</span></div></div>
+                    <div class="res"><div class="l">DN</div><div class="v">DN150<span class="u">·S80</span></div></div>
+                    <div class="res"><div class="l">Peso</div><div class="v">68<span class="u">kg</span></div></div>
+                  </div>
+                </div>
+                <div class="comp-card">
+                  <div class="row1">
+                    <div class="name">Bocal N2 · Saída<small>UG-37 · ASME VIII (2021)</small></div>
+                    <span class="comp-status comp-status--calc">Calc.</span>
+                  </div>
+                  <div class="results">
+                    <div class="res"><div class="l">Esp.</div><div class="v">7,5<span class="u">mm</span></div></div>
+                    <div class="res"><div class="l">DN</div><div class="v">DN100<span class="u">·S40</span></div></div>
+                    <div class="res"><div class="l">Peso</div><div class="v">42<span class="u">kg</span></div></div>
+                  </div>
+                </div>
+                <div class="comp-card">
+                  <div class="row1">
+                    <div class="name">Suportes · 2× Selas<small>ASME VIII · Zick Method</small></div>
+                    <span class="comp-status comp-status--calc">Calc.</span>
+                  </div>
+                  <div class="results">
+                    <div class="res"><div class="l">Esp.</div><div class="v">9,5<span class="u">mm</span></div></div>
+                    <div class="res"><div class="l">Tensão</div><div class="v">94<span class="u">MPa</span></div></div>
+                    <div class="res"><div class="l">Peso</div><div class="v">285<span class="u">kg</span></div></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================================
+     VARIANTE G.3 — COMMAND CENTER (coluna única + minimap)
+     ============================================================ -->
+<section class="variant-section">
+  <article class="variant-card">
+    <header class="variant-head">
+      <div class="left">
+        <span class="tag">VARIANTE G.3</span>
+        <h2>Command Center · Coluna Única + Minimap</h2>
+      </div>
+      <p class="pitch">
+        <strong>Tudo em uma coluna scrollável</strong>, com minimap à direita para navegação rápida e indicador de progresso da cotação. <strong>Vantagem:</strong> visão holística — você vê o estado completo da cotação numa olhada, ideal para a persona Gestor Comercial que precisa entender rentabilidade junto com aprovação técnica. <strong>Custo:</strong> mais scroll; tela longa pode intimidar no primeiro contato.
+      </p>
+    </header>
+    <div class="mock-wrap">
+      <div class="g-app">
+        <aside class="g-rail">
+          <div class="mark">SQ</div>
+          <a href="#">DA</a>
+          <a href="#" class="active">CO</a>
+          <a href="#">CL</a>
+          <a href="#">MA</a>
+          <a href="#">AP</a>
+          <a href="#">AU</a>
+          <a href="#">CF</a>
+          <div class="grow"></div>
+          <div class="av">R</div>
+        </aside>
+        <aside class="g-sb">
+          <div class="head">
+            <div class="eyebrow">Módulo</div>
+            <h2>Cotações</h2>
+          </div>
+          <div class="grp">Visualizações</div>
+          <a href="#">Todas<span class="n">38</span></a>
+          <a href="#" class="on">COT-2025-038<span class="n">↵</span></a>
+          <a href="#">Minhas<span class="n">12</span></a>
+          <div class="grp">Atalhos</div>
+          <a href="#">+ Nova cotação</a>
+          <a href="#">Importar Excel</a>
+        </aside>
+        <main class="g-main">
+          <div class="g-topbar">
+            <div class="crumb">cotações<span class="sep">/</span><b>COT-2025-038 · detalhe completo</b></div>
+            <div class="tenant">Tenant · <b>Caldeiraria ABC</b></div>
+          </div>
+          <div class="q-header">
+            <div class="row1">
+              <div class="id-block">
+                <div class="breadcrumb-q">COT-03 · Detalhe Completo</div>
+                <div class="number">COT-2025-038 <span class="rev">Rev. A</span></div>
+                <div class="subtitle">
+                  <b>Petrobras Refinaria REDUC</b>
+                  <span class="equip">2 equipamentos · R$ 287.450 · margem 22,0% · 67% concluída</span>
+                </div>
+              </div>
+              <div class="status-block">
+                <span class="q-status q-status--review">Em Revisão</span>
+                <div class="meta">
+                  Criado em <b>05/01/2025</b> por <b>Romulo Souza</b><br>
+                  Última edição há <b>2h</b> · Aprovação técnica <b>concluída</b>
+                </div>
+              </div>
+            </div>
+            <div class="q-actions">
+              <button class="q-btn">Editar Dados</button>
+              <button class="q-btn primary">Enviar para Revisão</button>
+              <button class="q-btn">Criar Revisão</button>
+              <button class="q-btn ghost" disabled>Gerar Proposta</button>
+            </div>
+          </div>
+          <!-- BODY · COLUNA ÚNICA + MINIMAP -->
+          <div class="g3-body">
+            <div class="g3-scroll">
+              <!-- SEÇÃO: DADOS GERAIS -->
+              <div class="g-section">
+                <div class="g-section-head">
+                  <h3>§1 · Dados Gerais</h3>
+                  <div class="actions"><button class="btn-mini">Editar</button></div>
+                </div>
+                <div class="g-section-body">
+                  <div class="param-grid">
+                    <div class="param"><div class="lbl">Cliente</div><div class="val" style="font-size: 11.5px; font-family: 'Archivo';">Petrobras REDUC</div></div>
+                    <div class="param"><div class="lbl">CNPJ</div><div class="val">33.000.167/1097-90</div></div>
+                    <div class="param"><div class="lbl">Cidade</div><div class="val" style="font-size: 11.5px; font-family: 'Archivo';">Duque de Caxias · RJ</div></div>
+                    <div class="param"><div class="lbl">Prazo Entrega</div><div class="val">12<span class="u">sem</span></div></div>
+                    <div class="param"><div class="lbl">Cond. Pagamento</div><div class="val" style="font-size: 11.5px; font-family: 'Archivo';">30/60/90 dias</div></div>
+                    <div class="param"><div class="lbl">Validade Proposta</div><div class="val">05/02/2025</div></div>
+                    <div class="param"><div class="lbl">Moeda</div><div class="val">BRL</div></div>
+                    <div class="param"><div class="lbl">Incoterm</div><div class="val">CIF</div></div>
+                  </div>
+                </div>
+              </div>
+              <!-- SEÇÃO: EQUIPAMENTOS -->
+              <div class="approval-banner" style="margin-bottom: 16px; margin-top: 4px;">
+                <div class="lt">
+                  <div class="check">✓</div>
+                  <div>
+                    2 equipamentos · 12 componentes · todos aprovados tecnicamente
+                    <div class="meta">Eng. Rodrigo Oliveira · CREA-SP 5063412 · ART 28051·2025</div>
+                  </div>
+                </div>
+                <div class="rt">há 2h</div>
+              </div>
+              <div class="g-section">
+                <div class="g-section-head">
+                  <h3>§2 · Equipamentos · 02</h3>
+                  <div class="actions">
+                    <button class="btn-mini">+ Vaso</button>
+                    <button class="btn-mini">+ Trocador</button>
+                  </div>
+                </div>
+                <div class="g-section-body" style="padding: 0;">
+                  <table class="g-table">
+                    <thead><tr>
+                      <th>Tag</th>
+                      <th>Equipamento</th>
+                      <th class="num">Pressão · Temp.</th>
+                      <th class="num">Peso (kg)</th>
+                      <th class="num">Custo (R$)</th>
+                      <th>Status</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr>
+                        <td class="id">V-101</td>
+                        <td class="title">Vaso Separador Vertical<small>ASME VIII · SA-516-70 · 7 componentes</small></td>
+                        <td class="num">10 bar · 150°C</td>
+                        <td class="num">2.847</td>
+                        <td class="num">48.230</td>
+                        <td><span class="comp-status comp-status--signed">Assinado</span></td>
+                      </tr>
+                      <tr>
+                        <td class="id">E-204</td>
+                        <td class="title">Trocador BEM Horizontal<small>TEMA · SA-516-70 · 187 tubos · 5 componentes</small></td>
+                        <td class="num">8 bar · 180°C</td>
+                        <td class="num">2.000</td>
+                        <td class="num">38.190</td>
+                        <td><span class="comp-status comp-status--signed">Assinado</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- SEÇÃO: BOM & ROTEIRO (resumo) -->
+              <div class="g-section">
+                <div class="g-section-head">
+                  <h3>§3 · BOM & Roteiro · Resumo</h3>
+                  <div class="actions"><button class="btn-mini">Ver Completo</button></div>
+                </div>
+                <div class="g-section-body" style="padding: 0;">
+                  <table class="g-table">
+                    <thead><tr>
+                      <th>Categoria</th>
+                      <th class="num">Itens</th>
+                      <th class="num">Peso (kg)</th>
+                      <th class="num">Custo Material</th>
+                      <th class="num">Horas Total</th>
+                      <th class="num">Custo MO</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr><td class="title">Chapas</td><td class="num">14</td><td class="num">3.247</td><td class="num">R$ 27.600</td><td class="num">—</td><td class="num">—</td></tr>
+                      <tr><td class="title">Tubos / Bocais</td><td class="num">8</td><td class="num">340</td><td class="num">R$ 4.182</td><td class="num">—</td><td class="num">—</td></tr>
+                      <tr><td class="title">Tubos Feixe (E-204)</td><td class="num">187</td><td class="num">560</td><td class="num">R$ 8.890</td><td class="num">—</td><td class="num">—</td></tr>
+                      <tr><td class="title">Flanges + Acessórios</td><td class="num">12</td><td class="num">420</td><td class="num">R$ 6.480</td><td class="num">—</td><td class="num">—</td></tr>
+                      <tr><td class="title">Roteiro — Corte/Calandra/Solda/PWHT/RX/Pintura</td><td class="num">42</td><td class="num">—</td><td class="num">—</td><td class="num">412</td><td class="num">R$ 18.540</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- SEÇÃO: FORMAÇÃO DE PREÇO -->
+              <div class="g-section">
+                <div class="g-section-head">
+                  <h3>§4 · Formação de Preço</h3>
+                  <div class="actions"><button class="btn-mini">Editar Margem</button><button class="btn-mini primary">Recalcular</button></div>
+                </div>
+                <div class="g-section-body" style="padding: 0;">
+                  <table class="g-table">
+                    <thead><tr>
+                      <th>Composição</th>
+                      <th class="num">% sobre custo</th>
+                      <th class="num">Valor (R$)</th>
+                      <th>Observação</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr><td class="title">Custo Material</td><td class="num">100%</td><td class="num">47.152</td><td><small style="color: var(--g-gray-1);">Aço SA-516-70 · tubos SA-179 · acessórios</small></td></tr>
+                      <tr><td class="title">Mão de Obra Direta</td><td class="num">39,3%</td><td class="num">18.540</td><td><small style="color: var(--g-gray-1);">412h · centro de custo CCF-01</small></td></tr>
+                      <tr><td class="title">Overhead Industrial</td><td class="num">15,0%</td><td class="num">9.854</td><td><small style="color: var(--g-gray-1);">Aplicado sobre (material + MO)</small></td></tr>
+                      <tr><td class="title">Serviços Externos</td><td class="num">7,4%</td><td class="num">3.500</td><td><small style="color: var(--g-gray-1);">END · ART · Pintura especial</small></td></tr>
+                      <tr style="background: var(--g-paper);">
+                        <td class="title" style="font-weight: 800; text-transform: uppercase;">Subtotal · Custo</td>
+                        <td class="num" style="font-weight: 700;">100,0%</td>
+                        <td class="num" style="font-weight: 700;">79.046</td>
+                        <td></td>
+                      </tr>
+                      <tr><td class="title">Margem de Lucro</td><td class="num">22,0%</td><td class="num">17.390</td><td><small style="color: var(--g-gray-1);">Política da empresa · 18–25%</small></td></tr>
+                      <tr><td class="title">Impostos · ICMS+PIS+COFINS</td><td class="num">21,25%</td><td class="num">23.014</td><td><small style="color: var(--g-gray-1);">12% + 9,25% sobre preço bruto</small></td></tr>
+                      <tr style="background: var(--g-black); color: var(--g-paper);">
+                        <td class="title" style="font-weight: 800; text-transform: uppercase; color: var(--g-paper);">Preço de Venda</td>
+                        <td class="num" style="color: var(--g-yellow); font-weight: 700;">—</td>
+                        <td class="num" style="color: var(--g-yellow); font-weight: 800; font-size: 14px;">R$ 287.450</td>
+                        <td style="color: var(--g-yellow);"><small style="color: var(--g-yellow);">Margem líquida: 22,0%</small></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <!-- MINIMAP -->
+            <aside class="g3-minimap">
+              <h4>Navegação</h4>
+              <a href="#">§1 · Dados Gerais <span class="n">✓</span></a>
+              <a href="#" class="on">§2 · Equipamentos <span class="n">2</span></a>
+              <a href="#">§3 · BOM & Roteiro <span class="n">42</span></a>
+              <a href="#">§4 · Formação Preço <span class="n">R$</span></a>
+              <a href="#">§5 · Aprov. Técnica <span class="n">✓</span></a>
+              <a href="#" style="color: var(--g-gray-3);">§6 · Proposta <span class="n">⊘</span></a>
+              <div class="div"></div>
+              <div class="progress">
+                <div class="lbl">Progresso Cotação</div>
+                <div class="val">67<span style="font-size: 14px; color: var(--g-gray-1);">%</span></div>
+                <div class="bar"></div>
+                <div class="steps">4 / 6 etapas</div>
+              </div>
+              <div class="progress" style="margin-top: 12px;">
+                <div class="lbl">Validade</div>
+                <div class="val">18<span style="font-size: 14px; color: var(--g-gray-1);">d</span></div>
+                <div class="steps">restantes · expira 05/02</div>
+              </div>
+            </aside>
+          </div>
+        </main>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section style="padding: 16px 48px 64px;">
+  <div style="border: 1px solid #1f1f22; background: #131316; padding: 24px 32px;">
+    <h3 style="font-weight: 800; font-size: 18px; letter-spacing: -0.02em; text-transform: uppercase; margin-bottom: 14px;">
+      Matriz de decisão · <em style="font-style: normal; color: #f5c542;">G.1 · G.2 · G.3</em>
+    </h3>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+      <thead>
+        <tr>
+          <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #1f1f22; color: #66666c; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;">Critério</th>
+          <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #1f1f22; color: #f5c542; font-family: 'JetBrains Mono', monospace; font-size: 11px;">G.1 · Tabs</th>
+          <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #1f1f22; color: #f5c542; font-family: 'JetBrains Mono', monospace; font-size: 11px;">G.2 · Master-Detail</th>
+          <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #1f1f22; color: #f5c542; font-family: 'JetBrains Mono', monospace; font-size: 11px;">G.3 · Command Center</th>
+        </tr>
+      </thead>
+      <tbody style="color: #c0c0c5; line-height: 1.55;">
+        <tr>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Persona favorita</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Orçamentista (Romulo) — workflow linear</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Engenheiro (Eng. Rodrigo) — foca 1 equipamento por vez</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Gestor Comercial (Fernanda) — vê tudo de uma vez</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Aderência ao UX_SPEC</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Total — é exatamente o que está documentado</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Adaptação — UX_SPEC pede tabs; isso reorganiza para master-detail</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Adaptação — combina o que estaria em 6 abas numa rolagem</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Escala com volume</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Boa até ~5 equipamentos por cotação</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Excelente — escala para 10+ equipamentos sem comprometer UX</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Boa — minimap ajuda, mas scroll fica grande com muitos equipamentos</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Custo implementação</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Baixo — HTMX swap por aba</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Médio — 2 painéis sincronizados (URL state)</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #1f1f22;">Médio — scroll spy + minimap reativo</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px;">Recomendação</td>
+          <td style="padding: 10px 12px;"><strong style="color: #e8e8e8;">Default para o MVP</strong> — menor risco, segue o spec</td>
+          <td style="padding: 10px 12px;">Migração futura quando volume crescer (H2)</td>
+          <td style="padding: 10px 12px;">Modo "executivo" futuro — toggle do gestor para visão consolidada</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</body>
+</html>
