@@ -106,6 +106,8 @@ def reference_inputs(designacao: str):
         "n_chicanas": chic.get("QUANTIDADE") or 1,
         "diametro_casco_mm": d_casco,
         "esp_casco_mm": vir.get("ESP."),
+        # nº de passes dos tubos (referência): BEU feixe-U ≥ 2 passes; demais ~2 (típico).
+        "n_passes_tubos": 2,
         "fator_correcao_mo": 1.0,
     }
 
@@ -126,12 +128,14 @@ def _physical_params(designacao, cleaned):
 
     tubos = r("n_tubos")
     chicanas = r("n_chicanas")
+    rasgos = r("n_passes_tubos")              # rasgos de partição ∝ nº de passes dos tubos
     comprimento = r("comprimento_tubo_mm")   # comprimento axial do casco ∝ comprimento do tubo
     diametro = r("diametro_casco_mm")
     esp_casco_ratio = r("esp_casco_mm")       # espessura proj/ref (linear)
     esp2 = esp_casco_ratio ** 2               # #2: volume de chanfro/solda ∝ espessura²
     return {
         "tubos": tubos, "chicanas": chicanas, "comprimento": comprimento, "diametro": diametro,
+        "rasgos": rasgos,
         # furação do pacote de chicanas ∝ nº tubos × nº chicanas (cada chicana furada com o
         # padrão completo de tubos) — #6 agy
         "furacao_chicana": tubos * chicanas,

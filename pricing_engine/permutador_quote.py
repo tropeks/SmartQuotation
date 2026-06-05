@@ -57,11 +57,12 @@ _DRIVER_PARAM = {
     "Nº CHICANAS": "chicanas",
     "ESP PACOTE": "furacao_chicana",   # #6: furação do pacote ∝ nº tubos × nº chicanas
     "Nº Soldas": "solda_circ", "Nº Cilindros": "comprimento", "COMPR. (m)": "solda_long",
+    "Nº RASGOS": "rasgos",             # rasgos de partição ∝ nº de passes dos tubos (agy §5)
 }
 # parcela de SETUP fixo por parâmetro (#1): horas = horas_ref × (setup + (1-setup)×razão).
 # Defaults de engenharia (editáveis): furação/calandragem têm setup alto; ensaios baixo.
 _SETUP_FRAC = {
-    "tubos": 0.20, "chicanas": 0.20, "furacao_chicana": 0.20,
+    "tubos": 0.20, "chicanas": 0.20, "furacao_chicana": 0.20, "rasgos": 0.25,
     "comprimento": 0.15, "diametro": 0.15,
     "solda": 0.10, "solda_long": 0.10, "solda_circ": 0.10,
     "massa": 0.10, "area": 0.10, "volume": 0.10,
@@ -107,7 +108,7 @@ def _escala_op(o, params):
 
 # parâmetro físico → LADO do equipamento, p/ metalurgia por componente (#agy: bimetálico).
 _PARAM_LADO = {
-    "tubos": "feixe", "chicanas": "feixe", "furacao_chicana": "feixe",
+    "tubos": "feixe", "chicanas": "feixe", "furacao_chicana": "feixe", "rasgos": "feixe",
     "comprimento": "casco", "diametro": "casco", "solda_long": "casco",
     "solda_circ": "casco", "solda": "casco", "massa": "casco", "area": "casco", "volume": "casco",
 }

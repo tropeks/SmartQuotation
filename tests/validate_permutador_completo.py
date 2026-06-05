@@ -39,7 +39,8 @@ def check_geometria(designacao):
             continue
         # placas de suporte (segmentos) e espelhos (disco FURADO) não batem a fórmula de
         # disco cheio — o peso_liq desconta furos/recortes. Fora do gate geométrico estrito.
-        if "SUPORTE" in (m["label"] or "").upper() or m.get("familia") == "espelho":
+        if ("SUPORTE" in (m["label"] or "").upper()
+                or m.get("familia") in ("espelho", "perfurado")):
             continue
         checados += 1
         desvio = abs(liq * qtd - ref) / ref

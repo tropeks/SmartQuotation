@@ -118,8 +118,8 @@ class ComposeViewTests(TestCase):
         data = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
                 "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
                 "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
-                "esp_casco_mm": 9.5, "classe_feixe": "CS", "classe_casco": "CS",
-                "fator_correcao_mo": 1.0}
+                "esp_casco_mm": 9.5, "n_passes_tubos": 2, "classe_feixe": "CS",
+                "classe_casco": "CS", "fator_correcao_mo": 1.0}
         data.update(over)
         return self.client.post("/tema/permutador/", data)
 
@@ -184,6 +184,20 @@ class ComposeViewTests(TestCase):
         base = estimate_complete("BEU")
         maior = estimate_complete("BEU", dims_override={"ESPELHO FIXO": {"OD": 700}})
         self.assertGreater(maior["custo_material"], base["custo_material"])
+
+    def test_chicana_geometrizavel(self):
+        """Refino: a chicana (perfurado) agora recomputa o peso pela geometria (dims_override)."""
+        from apps.tema_templates.services import estimate_complete
+        base = estimate_complete("BEU")
+        maior = estimate_complete("BEU", dims_override={"TRANSVERSAL": {"LARG.": 600}})
+        self.assertGreater(maior["custo_material"], base["custo_material"])
+
+    def test_rasgos_escalam_com_passes(self):
+        """Refino: mais passes de tubos → mais rasgos de partição (op usinada)."""
+        from apps.tema_templates.services import estimate_complete
+        base = estimate_complete("BEU")
+        quatro = estimate_complete("BEU", params={"rasgos": 2.0})  # 4 passes vs ref 2
+        self.assertGreater(quatro["custo_mao_obra"], base["custo_mao_obra"])
 
     def test_usinagem_espelho_segue_liga_do_feixe(self):
         """Polimento agy §4: usinar/furar espelho em inox segue a liga do FEIXE, não do casco."""
