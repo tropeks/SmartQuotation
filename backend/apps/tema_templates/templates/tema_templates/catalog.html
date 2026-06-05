@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Catálogo TEMA{% endblock %}
+{% block content %}
+<div class="eyebrow">TEMA · Catálogo de Partes</div>
+<div class="q-number">CATÁLOGO TEMA</div>
+<p><a class="q-btn primary" href="{% url 'tema_templates:compose' %}">→ Compor Trocador</a></p>
+{% for parte, templates in grupos %}
+<section class="g-section" style="margin-top:12px">
+  <div class="g-section-head">{{ parte }}</div>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th style="width:64px">Letra</th><th>Nome</th><th>Ref. TEMA</th></tr></thead>
+      <tbody>
+        {% for t in templates %}
+        <tr>
+          <td class="mono" style="color:var(--g-orange);font-weight:700">{{ t.tema_letter|default:"—" }}</td>
+          <td>{{ t.name }}</td>
+          <td class="mono" style="color:var(--g-gray-1)">{{ t.standard_ref|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

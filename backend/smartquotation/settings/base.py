@@ -45,8 +45,9 @@ TENANT_APPS = [
     "apps.quotations",
     "apps.proposals",
     "apps.cost_discovery",
+    "apps.tema_templates",
     # domínio (criados nas tasks seguintes):
-    # "apps.templates_lib", "apps.costing",
+    # "apps.costing",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [a for a in TENANT_APPS if a not in SHARED_APPS]

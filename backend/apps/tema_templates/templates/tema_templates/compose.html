@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Compor Trocador{% endblock %}
+{% block content %}
+<div class="eyebrow">TEMA · Composição</div>
+<div class="q-number">COMPOR TROCADOR</div>
+<p style="color:var(--g-gray-1)">Selecione as três letras TEMA (frontal · casco · traseiro). A designação
+e os avisos de compatibilidade aparecem ao vivo.</p>
+
+<section class="g-section" style="margin-top:8px">
+  <div class="g-section-body">
+    <form hx-post="{% url 'tema_templates:compose_check' %}" hx-target="#compose-result"
+          hx-trigger="change" hx-swap="innerHTML">
+      {% csrf_token %}
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label style="flex:1;min-width:200px">
+          <span class="eyebrow">Cabeçote Frontal</span>
+          <select name="front" class="g-input">
+            <option value="">—</option>
+            {% for f in fronts %}<option value="{{ f.tema_letter }}">{{ f.tema_letter }} · {{ f.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label style="flex:1;min-width:200px">
+          <span class="eyebrow">Casco</span>
+          <select name="shell" class="g-input">
+            <option value="">—</option>
+            {% for s in shells %}<option value="{{ s.tema_letter }}">{{ s.tema_letter }} · {{ s.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label style="flex:1;min-width:200px">
+          <span class="eyebrow">Cabeçote Traseiro</span>
+          <select name="rear" class="g-input">
+            <option value="">—</option>
+            {% for r in rears %}<option value="{{ r.tema_letter }}">{{ r.tema_letter }} · {{ r.name }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div id="compose-result"></div>
+{% endblock %}
