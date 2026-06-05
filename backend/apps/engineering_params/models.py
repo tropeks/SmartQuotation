@@ -101,6 +101,10 @@ class TenantParamConfig(models.Model):
 
     fator_correcao_mo = models.DecimalField(max_digits=6, decimal_places=4, default=1.0)
     drill_method_threshold_holes = models.IntegerField(default=600)  # limiar radial→CNC na furação
+    # compatibilidade entre letras TEMA: block (impede) | warn (avisa) | free (livre)
+    tema_compat_mode = models.CharField(
+        max_length=10, default="warn",
+        choices=[("block", "Bloquear"), ("warn", "Avisar"), ("free", "Livre")])
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
