@@ -7,4 +7,5 @@ urlpatterns = [
     path("tema/catalogo/", views.catalog, name="catalog"),
     path("tema/compor/", views.compose, name="compose"),
     path("tema/compor/check/", views.compose_check, name="compose_check"),
+    path("tema/permutador/", views.data_sheet, name="data_sheet"),
 ]

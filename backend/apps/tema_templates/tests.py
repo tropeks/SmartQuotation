@@ -109,6 +109,19 @@ class ComposeViewTests(TestCase):
         self.assertContains(r, "BEM")
         self.assertContains(r, "Custeio paramétrico")
 
+    def test_data_sheet_get_prefilled(self):
+        r = self.client.get("/tema/permutador/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "DATA SHEET")
+
+    def test_data_sheet_post_recomputa(self):
+        r = self.client.post("/tema/permutador/", {
+            "designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
+            "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "comprimento_casco_mm": 1631,
+            "fator_correcao_mo": 1.0})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Custo total")
+
     def test_designacao_nao_custeavel_sem_breakdown(self):
         r = self._check("A", "E", "L")          # AEL não tem custeio completo validado
         self.assertNotContains(r, "Custeio paramétrico · permutador completo")
@@ -138,6 +151,22 @@ class PermutadorEngineTests(TestCase):
         from pricing_engine.permutador_quote import quote_completo
         self.assertNotAlmostEqual(quote_completo("BEU")["custo_total"],
                                   quote_completo("BEM")["custo_total"], delta=1000)
+
+    def test_dims_override_muda_custo_material(self):
+        """Parametria de verdade (#1/#9): dobrar o comprimento do tubo aumenta o material."""
+        from apps.tema_templates.services import estimate_complete
+        base = estimate_complete("BEU")
+        ref = estimate_complete("BEU", dims_override={
+            "TUBOS DE TROCA TÉRMICA": {"COMPR.": 26000}})  # ~2× o comprimento de referência
+        self.assertGreater(ref["custo_material"], base["custo_material"] + 1000)
+
+    def test_densidade_inox_pesa_mais(self):
+        """#5: mesmo componente em inox (AISI-304) pesa ~2% mais que em aço-carbono."""
+        from pricing_engine.beu_geometry import peso_chapa_retangular
+        from pricing_engine.materials import density
+        carb = peso_chapa_retangular(9.5, 2400, 1631, rho=density("SA-516 GR 70"))
+        inox = peso_chapa_retangular(9.5, 2400, 1631, rho=density("AISI-304"))
+        self.assertGreater(inox, carb)
 
     def test_fator_mo_escala_mao_de_obra(self):
         from pricing_engine.beu_quote import quote_beu

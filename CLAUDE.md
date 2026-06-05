@@ -15,7 +15,10 @@ pricing_engine/        # MOTOR de custeio — Python PURO (zero Django). Não ed
   quote_completo(designacao, cost_chain) compõe matéria-prima (peso geométrico×preço; itens
   comerciais=catálogo) + mão-de-obra (FC escala) + serviços. Validado a 0,0% vs gabarito:
   BEU R$ 128.160, BEM R$ 119.295. Seeds {d}_{materiais,operacoes,ground_truth}.json gerados
-  por scripts/extract_permutador.py. beu_quote.quote_beu = wrapper compat. beu_geometry.py=pesos.
+  por scripts/extract_permutador.py. beu_quote.quote_beu = wrapper compat. beu_geometry.py=pesos
+  (ρ por material via materials.density; tampo 2:1 = CALIB 4/π, calibração não fórmula física).
+  Parametria real: dims_override recomputa peso pela geometria (data sheet do trocador completo
+  em apps/tema_templates). LIMITAÇÃO conhecida: operações/serviços ainda não escalam com dims.
 
 backend/               # Django 5.2 + django-tenants (schema-per-tenant) + session auth (sem JWT)
   apps/tenants/        # Tenant/Domain/Plan (public). provision_tenant cria schema isolado.

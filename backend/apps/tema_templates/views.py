@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from apps.tema_templates.models import ComponentTemplate, check_compatibility
-from apps.tema_templates.services import estimate_complete, COSTABLE
+from apps.tema_templates.services import estimate_complete, reference_inputs, COSTABLE
+from apps.tema_templates.forms import PermutadorDataSheetForm
 from apps.engineering_params.models import TenantParamConfig
 
 
@@ -30,6 +31,25 @@ def compose(request):
     rears = ComponentTemplate.objects.filter(tema_part="rear_head")
     return render(request, "tema_templates/compose.html",
                   {"fronts": fronts, "shells": shells, "rears": rears})
+
+
+@login_required
+def data_sheet(request):
+    """Data sheet do permutador completo: dimensões reais → recálculo geométrico do custo.
+    Prova a parametria (#1/#9): mudar comprimento/nº de tubos move o custo de material."""
+    custo = ref = None
+    if request.method == "POST":
+        form = PermutadorDataSheetForm(request.POST)
+        if form.is_valid():
+            override, fc = form.to_dims_override()
+            custo = estimate_complete(form.cleaned_data["designacao"],
+                                      dims_override=override, fator_correcao_mo=fc)
+    else:
+        desig = request.GET.get("designacao") or (sorted(COSTABLE)[0] if COSTABLE else "")
+        ref = reference_inputs(desig)
+        form = PermutadorDataSheetForm(initial=ref)
+    return render(request, "tema_templates/data_sheet.html",
+                  {"form": form, "custo": custo, "costable": sorted(COSTABLE)})
 
 
 @login_required

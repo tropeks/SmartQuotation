@@ -39,11 +39,49 @@ def tenant_cost_chain():
     return chain
 
 
-def estimate_complete(designacao: str):
+def reference_inputs(designacao: str):
+    """Valores de referência (do seed) p/ pré-preencher o data sheet do trocador completo."""
+    d = (designacao or "").upper()
+    if d not in COSTABLE:
+        return {}
+    import json
+    import os
+    from pricing_engine import permutador_quote as pq
+    path = os.path.join(os.path.dirname(pq.__file__), "seeds", f"{d.lower()}_materiais.json")
+    try:
+        mats = json.load(open(path, encoding="utf-8"))["materiais"]
+    except Exception:
+        return {}
+    by_label = {m["label"]: m.get("dims", {}) for m in mats if m.get("label")}
+    tub = by_label.get("TUBOS DE TROCA TÉRMICA", {})
+    vir = by_label.get("VIROLA", {})
+    return {
+        "designacao": d,
+        "n_tubos": tub.get("QUANTIDADE"),
+        "comprimento_tubo_mm": tub.get("COMPR."),
+        "od_tubo_mm": tub.get("OD"),
+        "esp_tubo_mm": tub.get("ESP."),
+        "comprimento_casco_mm": vir.get("COMPR."),
+        "fator_correcao_mo": 1.0,
+    }
+
+
+def estimate_complete(designacao: str, dims_override: dict | None = None,
+                      fator_correcao_mo: float | None = None):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
-    Retorna dict do motor (custo por seção + preço) ou None se a designação não é custeável."""
+
+    dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
+    recomputam o peso geométrico (parametria de verdade, não replay do seed). Ex.:
+    {"TUBOS DE TROCA TÉRMICA": {"COMPR.": 8000, "QUANTIDADE": 200}}.
+    fator_correcao_mo: sobrescreve o fator de MO (default = o do TenantParamConfig).
+
+    Retorna dict do motor (custo por seção + preço) ou None se não é custeável.
+    """
     d = (designacao or "").upper()
     if d not in COSTABLE:
         return None
     from pricing_engine.permutador_quote import quote_completo
-    return quote_completo(d, cost_chain=tenant_cost_chain())
+    chain = tenant_cost_chain()
+    if fator_correcao_mo is not None:
+        chain.fator_correcao_mo = float(fator_correcao_mo)
+    return quote_completo(d, cost_chain=chain, dims_override=dims_override or None)

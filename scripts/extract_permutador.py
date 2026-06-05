@@ -80,10 +80,34 @@ def familia(label, dims):
     return "catalogo"
 
 
+def _aba_orcamento(wb, designacao):
+    """Acha a aba de ORÇAMENTO de forma robusta (não depende do literal 'BEM').
+    Preferência: nome contendo a designação + ORÇAMENTO; senão a única com ORÇAMENTO;
+    senão o nome legado. NOTA: os offsets i-3/i-2 do parser dependem do layout Rev.0."""
+    nomes = wb.sheetnames
+    up = designacao.upper()
+    for n in nomes:
+        u = n.upper()
+        if "ORÇAMENTO" in u and up in u:
+            return wb[n]
+    orc = [n for n in nomes if "ORÇAMENTO" in n.upper()]
+    if len(orc) == 1:
+        return wb[orc[0]]
+    if 'PERMUTADOR "BEM" - ORÇAMENTO' in nomes:
+        return wb['PERMUTADOR "BEM" - ORÇAMENTO']
+    if orc:
+        return wb[orc[0]]
+    raise KeyError(f"Aba de ORÇAMENTO não encontrada em {nomes}")
+
+
 def extrair(designacao):
-    p = glob.glob(f"/home/rcosta00/dev/uploads/*{designacao}*.xlsx")[0]
+    achados = glob.glob(f"/home/rcosta00/dev/uploads/*{designacao}*.xlsx")
+    if not achados:
+        raise FileNotFoundError(
+            f"Planilha do permutador {designacao!r} não encontrada em ~/dev/uploads/")
+    p = achados[0]
     wb = openpyxl.load_workbook(p, data_only=True, read_only=True)
-    ws = wb['PERMUTADOR "BEM" - ORÇAMENTO']
+    ws = _aba_orcamento(wb, designacao)
     rows = list(ws.iter_rows(min_row=1, max_row=ws.max_row, max_col=90, values_only=True))
 
     def cell(r, c):
