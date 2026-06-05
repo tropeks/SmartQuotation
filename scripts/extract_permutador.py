@@ -25,6 +25,39 @@ GABARITOS = {  # totais lidos da planilha (custo c/ imp, venda c/ imp, venda s/ 
 }
 
 
+# rótulos do header que NÃO são driver físico (saídas/flags/taxas)
+_NAO_DRIVER = {
+    "APLICÁVEL", "HORAS", "R$ / HORA", "AJUSTE", "PREÇO R$", "x", "R$ / SV",
+    "R$ / FERR.", "HH / FLANG.", "HH / LUVA", "HORAS / CIL.", "HORAS / M",
+    "HH / Tampo", "HH / ANEL", "R$ / kgf", "R$ / KGF", "R$ / TRANSP.", "TRANSPORTE",
+    "R$ / TUBO", "R$ / ANEL", "HH / Divisora", "Esp. Furo", "OD Furos", "ID",
+    "R$ / FL.", "OD PCT.", "HH / Bocal", "Nº Furos",
+}
+# driver físico → grupo de escala (feixe|chicanas|casco|fixo). 'fixo' = config do
+# equipamento (nº de bocais/flanges/etc.), não escala com tubos/comprimento.
+_DRIVER_GRUPO = {
+    "Nº TUBOS": "feixe", "Nº FUROS": "feixe", "FUROS": "feixe", "Nº BARRAS": "feixe",
+    "Nº TIRANTES": "feixe", "ESP PACOTE": "feixe",
+    "Nº CHICANAS": "chicanas",
+    "Nº Soldas": "casco", "COMPR. (m)": "casco", "Nº Cilindros": "casco",
+}
+
+
+def _driver(hdr, cell, i):
+    """Driver físico (rótulo de quantidade) de uma operação + grupo de escala + valor ref."""
+    for name in hdr:
+        n = name.strip()
+        if n in _NAO_DRIVER:
+            continue
+        up = n.upper()
+        if (n.startswith("Nº") or n.startswith("N°") or "COMPR" in up
+                or n in ("PESO kgf", "PESO", "QUANT.", "QUANTIDADE", "FUROS", "ESP PACOTE")):
+            val = cell(i, hdr[name])
+            ref = float(val) if isinstance(val, (int, float)) else None
+            return n, _DRIVER_GRUPO.get(n, "fixo"), ref
+    return None, "fixo", None
+
+
 def secao_de(texto):
     if not isinstance(texto, str):
         return None
@@ -178,10 +211,12 @@ def extrair(designacao):
             is_labor = isinstance(horas, (int, float)) and isinstance(rate, (int, float))
             base = "".join(ch for ch in (label or "OP").upper() if ch.isalnum())[:18]
             code_seen[base] = code_seen.get(base, 0) + 1
+            drv, grupo, drv_ref = _driver(hdr, cell, i)
             o = {"code": f"{(secao or 'OP')[:3].upper()}-{base}-{code_seen[base]}",
                  "row": i, "secao": secao, "label": label,
                  "tipo": "mao_obra" if is_labor else "servico",
-                 "preco_gabarito": preco, "ajuste": round(float(ajuste), 2)}
+                 "preco_gabarito": preco, "ajuste": round(float(ajuste), 2),
+                 "driver": drv, "grupo": grupo, "driver_ref": drv_ref}
             if is_labor:
                 o["horas"] = round(float(horas), 3)
                 o["rate"] = round(float(rate), 2)

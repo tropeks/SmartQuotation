@@ -55,6 +55,9 @@ def reference_inputs(designacao: str):
     by_label = {m["label"]: m.get("dims", {}) for m in mats if m.get("label")}
     tub = by_label.get("TUBOS DE TROCA TÉRMICA", {})
     vir = by_label.get("VIROLA", {})
+    # nº de chicanas: material 'CHICANAS TRANSVERSAIS' (família perfurado)
+    chic = next((m.get("dims", {}) for m in mats
+                 if "CHICANA" in (m.get("label") or "").upper()), {})
     return {
         "designacao": d,
         "n_tubos": tub.get("QUANTIDADE"),
@@ -62,12 +65,32 @@ def reference_inputs(designacao: str):
         "od_tubo_mm": tub.get("OD"),
         "esp_tubo_mm": tub.get("ESP."),
         "comprimento_casco_mm": vir.get("COMPR."),
+        "n_chicanas": chic.get("QUANTIDADE") or 1,
         "fator_correcao_mo": 1.0,
     }
 
 
+def _scale_factors(designacao, cleaned):
+    """Fatores de escala de horas (feixe/chicanas/casco) = valor do projeto / referência."""
+    ref = reference_inputs(designacao)
+    if not ref:
+        return {}
+
+    def ratio(campo, default_ref=1.0):
+        r = ref.get(campo) or default_ref
+        v = cleaned.get(campo)
+        return (float(v) / float(r)) if (v and r) else 1.0
+
+    return {
+        "feixe": ratio("n_tubos"),
+        "chicanas": ratio("n_chicanas"),
+        "casco": ratio("comprimento_casco_mm"),
+    }
+
+
 def estimate_complete(designacao: str, dims_override: dict | None = None,
-                      fator_correcao_mo: float | None = None):
+                      fator_correcao_mo: float | None = None,
+                      scale_factors: dict | None = None):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
 
     dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
@@ -84,4 +107,5 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
     chain = tenant_cost_chain()
     if fator_correcao_mo is not None:
         chain.fator_correcao_mo = float(fator_correcao_mo)
-    return quote_completo(d, cost_chain=chain, dims_override=dims_override or None)
+    return quote_completo(d, cost_chain=chain, dims_override=dims_override or None,
+                          scale_factors=scale_factors or None)

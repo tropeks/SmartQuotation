@@ -69,7 +69,13 @@ def designacoes_disponiveis():
 
 def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: float = 1.0,
                    fator_preco: float = 1.25, impostos_pct: float = 9.0,
-                   dims_override: dict | None = None) -> dict:
+                   dims_override: dict | None = None,
+                   scale_factors: dict | None = None) -> dict:
+    """scale_factors: {grupo: fator} p/ escalar as HORAS de fabricação pelo driver físico
+    (feixe=nº tubos, chicanas=nº chicanas, casco=comprimento). Calibrado do job de
+    referência (fator 1,0 = caso de referência → reconcilia 0,0%). Grupo 'fixo' (config:
+    nº de bocais/flanges) e serviços de terceiros NÃO escalam — limitação conhecida."""
+    sf = scale_factors or {}
     d = designacao.lower()
     mats = _load(f"{d}_materiais.json")["materiais"]
     ops = _load(f"{d}_operacoes.json")["operacoes"]
@@ -108,14 +114,18 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         secoes[m["secao"]] = secoes.get(m["secao"], 0.0) + custo
 
     custo_mo = custo_servico = 0.0
+    mo_por_grupo = {}
     for o in ops:
         if o["tipo"] == "mao_obra":
             ajuste = o.get("ajuste", 0.0)
-            base = o["preco_gabarito"] - ajuste      # parcela de MO (R$ a FC=1)
-            c = base * fc + ajuste
+            grupo = o.get("grupo", "fixo")
+            fator = float(sf.get(grupo, 1.0))         # escala de horas pelo driver físico
+            base = o["preco_gabarito"] - ajuste       # parcela de MO (R$ a FC=1, ref)
+            c = base * fator * fc + ajuste
             custo_mo += c
+            mo_por_grupo[grupo] = round(mo_por_grupo.get(grupo, 0.0) + c, 2)
         else:
-            c = o["preco_gabarito"]
+            c = o["preco_gabarito"]                    # serviço/terceiro: fixo (não escala)
             custo_servico += c
         secoes[o["secao"]] = secoes.get(o["secao"], 0.0) + c
 
@@ -129,6 +139,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         "designacao_tema": designacao.upper(),
         "custo_material": round(custo_material, 2),
         "custo_mao_obra": round(custo_mo, 2),
+        "custo_mo_por_grupo": mo_por_grupo,
         "custo_servicos": round(custo_servico, 2),
         "custo_total": round(custo_total, 2),
         "por_secao": {k: round(v, 2) for k, v in secoes.items()},

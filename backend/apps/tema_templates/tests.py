@@ -114,13 +114,27 @@ class ComposeViewTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "DATA SHEET")
 
+    def _post(self, **over):
+        data = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
+                "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
+                "comprimento_casco_mm": 1631, "fator_correcao_mo": 1.0}
+        data.update(over)
+        return self.client.post("/tema/permutador/", data)
+
     def test_data_sheet_post_recomputa(self):
-        r = self.client.post("/tema/permutador/", {
-            "designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
-            "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "comprimento_casco_mm": 1631,
-            "fator_correcao_mo": 1.0})
+        r = self._post()
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Custo total")
+
+    def test_data_sheet_mais_tubos_sobe_mao_de_obra(self):
+        """Parametria plena: mais tubos → mais horas de fabricação (não só material)."""
+        from apps.tema_templates.services import estimate_complete, _scale_factors
+        ref = estimate_complete("BEU")
+        sf = _scale_factors("BEU", {"n_tubos": 136, "n_chicanas": 18, "comprimento_casco_mm": 1631})
+        maior = estimate_complete("BEU", scale_factors=sf)
+        self.assertGreater(maior["custo_mao_obra"], ref["custo_mao_obra"] + 1000)
+        self.assertGreater(maior["custo_mo_por_grupo"]["feixe"],
+                           ref["custo_mo_por_grupo"]["feixe"])
 
     def test_designacao_nao_custeavel_sem_breakdown(self):
         r = self._check("A", "E", "L")          # AEL não tem custeio completo validado
