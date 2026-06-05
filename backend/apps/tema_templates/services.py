@@ -14,8 +14,11 @@ COSTABLE = set(designacoes_disponiveis())
 
 # fator multiplicador de horas de caldeiraria/solda por classe metalúrgica (#3 agy).
 # Aço-carbono = 1,0 (referência). Defaults de engenharia EDITÁVEIS — não medidos.
+# LIMITAÇÃO: é um fator GLOBAL — não modela construção bimetálica (ex.: feixe inox +
+# casco CS); nesse caso o custo de MO fica entre os dois. Desacoplar por componente é
+# milestone futura (precisa material por componente no data sheet).
 LIGA_FATOR = {
-    "CS": 1.0, "INOX": 1.3, "DUPLEX": 1.6, "NIQUEL": 2.0,
+    "CS": 1.0, "INOX": 1.4, "DUPLEX": 1.7, "NIQUEL": 2.3,
 }
 LIGA_CHOICES = [("CS", "Aço Carbono"), ("INOX", "Aço Inox (300/400)"),
                 ("DUPLEX", "Duplex / Superduplex"), ("NIQUEL", "Liga de Níquel (Inconel…)")]
@@ -103,7 +106,8 @@ def _physical_params(designacao, cleaned):
     chicanas = r("n_chicanas")
     comprimento = r("comprimento_tubo_mm")   # comprimento axial do casco ∝ comprimento do tubo
     diametro = r("diametro_casco_mm")
-    esp2 = r("esp_casco_mm") ** 2             # #2: volume de chanfro/solda ∝ espessura²
+    esp_casco_ratio = r("esp_casco_mm")       # espessura proj/ref (linear)
+    esp2 = esp_casco_ratio ** 2               # #2: volume de chanfro/solda ∝ espessura²
     return {
         "tubos": tubos, "chicanas": chicanas, "comprimento": comprimento, "diametro": diametro,
         # furação do pacote de chicanas ∝ nº tubos × nº chicanas (cada chicana furada com o
@@ -111,10 +115,12 @@ def _physical_params(designacao, cleaned):
         "furacao_chicana": tubos * chicanas,
         # massa cresce mais que linear com D (seção ∝ D² e a espessura cresce com D) — #2.2 agy
         "massa": diametro * diametro * comprimento,
-        # soldas escalam com comprimento/diâmetro E com espessura² (mais passes) — #2,#5 agy
+        # soldas DE DEPOSIÇÃO escalam com comprimento/diâmetro E espessura² (volume de chanfro)
         "solda_long": comprimento * esp2,
         "solda_circ": diametro * esp2,
-        "solda": (0.5 * comprimento + 0.5 * diametro) * esp2,   # NDT (RT/UT) ∝ solda × espessura
+        # NDT (raio-X/ultrassom) é cobrado por metro de junta → linear, NÃO t² (correção #2 agy:
+        # t² superestimaria o RT em chapas grossas em até 16×). Espessura entra só linear.
+        "solda": (0.5 * comprimento + 0.5 * diametro) * (esp_casco_ratio),
         "area": diametro * comprimento,            # superfície de pintura πDL
         "volume": diametro * diametro * comprimento,
     }

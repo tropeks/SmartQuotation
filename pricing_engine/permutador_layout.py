@@ -17,8 +17,9 @@ PITCH_RATIO_PADRAO = 1.25
 FOLGA_CASCO_MM = 12.0          # folga típica feixe↔casco (espelho fixo/U): bypass + clearance
 _AREA_TUBO = {"triangular": 0.866, "quadrado": 1.0}
 
-# folga radial feixe↔casco por tipo de cabeçote traseiro TEMA (#5 agy). Cabeçote flutuante
-# (P/S/T/W) exige folga muito maior p/ anel bipartido + flange de fechamento. Valores típicos.
+# folga DIAMETRAL feixe↔casco (Shell ID − OTL) por tipo de cabeçote traseiro TEMA (#5 agy).
+# A fórmula necessario = d_feixe + folga é diametral. Cabeçote flutuante (P/S/T/W) exige folga
+# muito maior p/ anel bipartido + flange de fechamento. Valores típicos de folga diametral.
 FOLGA_POR_CABECOTE = {
     "L": 12.0, "M": 12.0, "N": 12.0, "U": 15.0,        # espelho fixo / feixe em U
     "P": 50.0, "S": 60.0, "T": 75.0, "W": 45.0,        # flutuante (anel bipartido / pull-through)
