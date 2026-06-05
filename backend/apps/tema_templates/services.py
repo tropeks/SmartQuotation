@@ -52,12 +52,17 @@ def reference_inputs(designacao: str):
         mats = json.load(open(path, encoding="utf-8"))["materiais"]
     except Exception:
         return {}
+    import math
     by_label = {m["label"]: m.get("dims", {}) for m in mats if m.get("label")}
     tub = by_label.get("TUBOS DE TROCA TÉRMICA", {})
     vir = by_label.get("VIROLA", {})
     # nº de chicanas: material 'CHICANAS TRANSVERSAIS' (família perfurado)
     chic = next((m.get("dims", {}) for m in mats
                  if "CHICANA" in (m.get("label") or "").upper()), {})
+    # diâmetro do casco: a maior virola tem LARGURA = circunferência → D ≈ LARGURA/π
+    larguras = [m.get("dims", {}).get("LARGURA") for m in mats if "VIROLA" in (m.get("label") or "")]
+    larg = max([x for x in larguras if x], default=None)
+    d_casco = round(larg / math.pi, 1) if larg else None
     return {
         "designacao": d,
         "n_tubos": tub.get("QUANTIDADE"),
@@ -66,31 +71,42 @@ def reference_inputs(designacao: str):
         "esp_tubo_mm": tub.get("ESP."),
         "comprimento_casco_mm": vir.get("COMPR."),
         "n_chicanas": chic.get("QUANTIDADE") or 1,
+        "diametro_casco_mm": d_casco,
+        "esp_casco_mm": vir.get("ESP."),
         "fator_correcao_mo": 1.0,
     }
 
 
-def _scale_factors(designacao, cleaned):
-    """Fatores de escala de horas (feixe/chicanas/casco) = valor do projeto / referência."""
+def _physical_params(designacao, cleaned):
+    """Razões físicas proj/ref que escalam horas de fabricação e serviços. 1,0 no referência.
+
+    massa/solda/area/volume são PROXIES geométricos (limitação conhecida): massa∝D·L,
+    solda≈½L+½D (longitudinal+circunferencial), area∝D·L (πDL), volume∝D²·L.
+    """
     ref = reference_inputs(designacao)
     if not ref:
         return {}
 
-    def ratio(campo, default_ref=1.0):
-        r = ref.get(campo) or default_ref
-        v = cleaned.get(campo)
-        return (float(v) / float(r)) if (v and r) else 1.0
+    def r(campo):
+        rv, v = ref.get(campo), cleaned.get(campo)
+        return (float(v) / float(rv)) if (v and rv) else 1.0
 
+    tubos = r("n_tubos")
+    chicanas = r("n_chicanas")
+    comprimento = r("comprimento_tubo_mm")   # comprimento axial do casco ∝ comprimento do tubo
+    diametro = r("diametro_casco_mm")
     return {
-        "feixe": ratio("n_tubos"),
-        "chicanas": ratio("n_chicanas"),
-        "casco": ratio("comprimento_casco_mm"),
+        "tubos": tubos, "chicanas": chicanas, "comprimento": comprimento, "diametro": diametro,
+        "massa": diametro * comprimento,
+        "solda": 0.5 * comprimento + 0.5 * diametro,
+        "area": diametro * comprimento,
+        "volume": diametro * diametro * comprimento,
     }
 
 
 def estimate_complete(designacao: str, dims_override: dict | None = None,
                       fator_correcao_mo: float | None = None,
-                      scale_factors: dict | None = None):
+                      params: dict | None = None):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
 
     dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
@@ -108,4 +124,15 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
     if fator_correcao_mo is not None:
         chain.fator_correcao_mo = float(fator_correcao_mo)
     return quote_completo(d, cost_chain=chain, dims_override=dims_override or None,
-                          scale_factors=scale_factors or None)
+                          params=params or None)
+
+
+def layout_avisos(designacao, cleaned):
+    """Avisos de arranjo (feixe vs casco) — achado #4. Vazio = ok."""
+    from pricing_engine.permutador_layout import check_layout
+    try:
+        return check_layout(int(cleaned.get("n_tubos") or 0),
+                            float(cleaned.get("od_tubo_mm") or 0),
+                            float(cleaned.get("diametro_casco_mm") or 0))
+    except Exception:
+        return []

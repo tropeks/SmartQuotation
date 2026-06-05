@@ -4,7 +4,7 @@ from django.shortcuts import render
 
 from apps.tema_templates.models import ComponentTemplate, check_compatibility
 from apps.tema_templates.services import (
-    estimate_complete, reference_inputs, _scale_factors, COSTABLE)
+    estimate_complete, reference_inputs, _physical_params, layout_avisos, COSTABLE)
 from apps.tema_templates.forms import PermutadorDataSheetForm
 from apps.engineering_params.models import TenantParamConfig
 
@@ -39,20 +39,22 @@ def data_sheet(request):
     """Data sheet do permutador completo: dimensões reais → recálculo geométrico do custo.
     Prova a parametria (#1/#9): mudar comprimento/nº de tubos move o custo de material."""
     custo = ref = None
+    avisos = []
     if request.method == "POST":
         form = PermutadorDataSheetForm(request.POST)
         if form.is_valid():
             desig = form.cleaned_data["designacao"]
             override, fc = form.to_dims_override()
-            sf = _scale_factors(desig, form.cleaned_data)
+            params = _physical_params(desig, form.cleaned_data)
+            avisos = layout_avisos(desig, form.cleaned_data)
             custo = estimate_complete(desig, dims_override=override,
-                                      fator_correcao_mo=fc, scale_factors=sf)
+                                      fator_correcao_mo=fc, params=params)
     else:
         desig = request.GET.get("designacao") or (sorted(COSTABLE)[0] if COSTABLE else "")
         ref = reference_inputs(desig)
         form = PermutadorDataSheetForm(initial=ref)
     return render(request, "tema_templates/data_sheet.html",
-                  {"form": form, "custo": custo, "costable": sorted(COSTABLE)})
+                  {"form": form, "custo": custo, "avisos": avisos, "costable": sorted(COSTABLE)})
 
 
 @login_required

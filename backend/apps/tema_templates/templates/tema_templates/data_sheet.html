@@ -24,6 +24,16 @@
   </div>
 </section>
 
+{% if avisos %}
+<section class="g-section" style="margin-top:12px;border-color:var(--g-orange)">
+  <div class="g-section-body">
+    {% for a in avisos %}
+    <div class="g-note" style="padding:10px 12px;border-left:3px solid var(--g-orange)">⚠️ {{ a }}</div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if custo %}
 <section class="g-section" style="margin-top:12px">
   <div class="g-section-head" style="display:flex;align-items:center;gap:12px">
@@ -34,27 +44,29 @@
     <table class="g-table">
       <tbody>
         <tr><td>Matéria-prima (recomputada da geometria)</td><td class="num mono">R$ {{ custo.custo_material|floatformat:2 }}</td></tr>
-        <tr><td>Mão de obra (× F.C. {{ custo.fator_correcao_mo }})
-          <span style="font-size:.78rem;color:var(--g-gray-1)">
-          — feixe R$ {{ custo.custo_mo_por_grupo.feixe|default:0|floatformat:0 }} ·
-          casco R$ {{ custo.custo_mo_por_grupo.casco|default:0|floatformat:0 }} ·
-          chicanas R$ {{ custo.custo_mo_por_grupo.chicanas|default:0|floatformat:0 }} ·
-          fixo R$ {{ custo.custo_mo_por_grupo.fixo|default:0|floatformat:0 }}</span></td>
+        <tr><td>Mão de obra (× F.C. {{ custo.fator_correcao_mo }})</td>
           <td class="num mono">R$ {{ custo.custo_mao_obra|floatformat:2 }}</td></tr>
         <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|floatformat:2 }}</td></tr>
         <tr style="border-top:2px solid var(--g-ink,#111)"><td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|floatformat:2 }}</b></td></tr>
         <tr><td>Preço de venda c/ impostos</td><td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|floatformat:2 }}</td></tr>
       </tbody>
     </table>
+    <div class="eyebrow" style="margin-top:14px">Custo por driver físico</div>
+    <table class="g-table" style="margin-top:4px"><tbody>
+      {% for p, v in custo.custo_por_param.items %}
+      <tr><td>{{ p }}</td><td class="num mono">R$ {{ v|floatformat:2 }}</td></tr>
+      {% endfor %}
+    </tbody></table>
+
     <div class="g-note" style="margin-top:10px;padding:10px 12px;border-left:3px solid var(--g-green,#27ae60)">
-      <b>✓ Material + mão de obra escalam com as dimensões.</b> A matéria-prima é recomputada
-      pela geometria; as horas de fabricação escalam pelo driver físico — grupo <b>feixe</b>
-      (furação, mandrilagem, montagem de tubos) com o nº de tubos, <b>chicanas</b> com o nº de
-      chicanas, <b>casco</b> (soldas, calandragem) com o comprimento.
-      <b>Limitações conhecidas:</b> (1) a MO de <b>config fixa</b> (montagem de bocais/flanges)
-      e os <b>serviços de terceiros</b> (raio-X, tratamento térmico, consumíveis) ainda usam
-      custo fixo do job de referência; (2) a escala é linear calibrada a 1 job real (sem 2º
-      gabarito p/ validar a linearidade).</div>
+      <b>✓ Material + mão de obra + serviços escalam por driver físico.</b> Cada operação
+      escala por um parâmetro (nº de tubos, nº de chicanas, comprimento, <b>diâmetro</b>,
+      metros de solda, massa, área, volume) com parcela de <b>setup fixo</b>. Ensaios (raio-X,
+      ultrassom), tratamento térmico e consumíveis agora respondem; soldas separam
+      longitudinal (∝comprimento) de circunferencial (∝diâmetro).
+      <b>Limitações conhecidas:</b> (1) MO administrativa/config (data book, bocais/flanges)
+      é fixa; (2) <b>massa/solda/área/volume</b> são proxies geométricos (≈D·L, ≈½L+½D…) e as
+      <b>frações de setup</b> são defaults de engenharia; (3) escala calibrada a 1 job real.</div>
   </div>
 </section>
 {% endif %}
