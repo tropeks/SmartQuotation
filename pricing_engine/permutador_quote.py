@@ -17,9 +17,30 @@ from __future__ import annotations
 import json
 import os
 
-from .beu_geometry import peso_liquido_geom
+from .beu_geometry import peso_liquido_geom, RHO
 
 _SEEDS = os.path.join(os.path.dirname(__file__), "seeds")
+
+
+def _rho(material):
+    """Densidade kgf/mm³ do material (de norma, via materials.density), default aço-carbono."""
+    try:
+        from .materials import density
+        return density(material or "")
+    except Exception:
+        return RHO
+
+
+def gross_up_icms(impostos_pct: float) -> float:
+    """Gross-up de imposto sobre o preço de venda.
+
+    LIMITAÇÃO/ACHADO #4: o ICMS brasileiro é 'por dentro' (fórmula legal 1/(1−alíquota)).
+    O fator 0,97 aqui é uma CALIBRAÇÃO empírica que aproxima a razão venda_com/venda_sem do
+    gabarito ENGEMATEX (que embute outros efeitos — PIS/COFINS, base reduzida). NÃO é uma
+    fórmula fiscal pura; deve ser substituído por um motor fiscal real (regime + alíquotas
+    por tributo) quando formos modelar imposto a sério.
+    """
+    return 1.0 / (1.0 - impostos_pct / 100.0 * 0.97)
 
 # família geométrica → forma de matéria-prima (chave da TenantCostChain.material_price)
 _FAMILIA_FORMA = {
@@ -77,7 +98,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
             peso_bruto = m["peso_bruto"]
             if dims_override and m["label"] in dims_override:
                 dims = {**m.get("dims", {}), **dims_override[m["label"]]}
-                liq = peso_liquido_geom(m["familia"], dims)
+                liq = peso_liquido_geom(m["familia"], dims, rho=_rho(m.get("material")))
                 if liq is not None:
                     qtd = float(m.get("dims", {}).get("QUANTIDADE", 1) or 1)
                     perda = (m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq") else 1.10
@@ -99,9 +120,10 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         secoes[o["secao"]] = secoes.get(o["secao"], 0.0) + c
 
     custo_total = custo_material + custo_mo + custo_servico
+    # formação de preço ENGEMATEX: custo × F.C. = venda COM impostos; venda SEM impostos
+    # por dedução do gross-up de imposto (ver gross_up_icms — calibração, não fórmula fiscal).
     preco_com_impostos = custo_total * fator_preco
-    gross_up = 1.0 / (1.0 - impostos_pct / 100.0 * 0.97)   # ICMS embutido (calibrado ao gabarito)
-    preco_sem_impostos = preco_com_impostos / gross_up
+    preco_sem_impostos = preco_com_impostos / gross_up_icms(impostos_pct)
 
     return {
         "designacao_tema": designacao.upper(),

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Data Sheet · Permutador Completo{% endblock %}
+{% block content %}
+<div class="eyebrow">TEMA · Permutador Completo</div>
+<div class="q-number">DATA SHEET</div>
+<p style="color:var(--g-gray-1)">Informe as dimensões reais do projeto — o custo de material é
+<b>recomputado pela geometria</b> (não é replay do caso de referência). Custeável: {{ costable|join:", " }}.</p>
+
+<section class="g-section" style="margin-top:8px">
+  <div class="g-section-body">
+    <form method="post" action="{% url 'tema_templates:data_sheet' %}">
+      {% csrf_token %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+        {% for field in form %}
+        <label>
+          <span class="eyebrow">{{ field.label }}</span>
+          {{ field }}
+          {% if field.errors %}<span style="color:var(--g-red,#c0392b);font-size:.8rem">{{ field.errors|join:" " }}</span>{% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      <p style="margin-top:14px"><button class="q-btn primary" type="submit">Recalcular custo</button></p>
+    </form>
+  </div>
+</section>
+
+{% if custo %}
+<section class="g-section" style="margin-top:12px">
+  <div class="g-section-head" style="display:flex;align-items:center;gap:12px">
+    <span>Custo · {{ custo.designacao_tema }}</span>
+    <span class="mono" style="font-size:1.3rem;font-weight:800;color:var(--g-orange)">R$ {{ custo.custo_total|floatformat:2 }}</span>
+  </div>
+  <div class="g-section-body">
+    <table class="g-table">
+      <tbody>
+        <tr><td>Matéria-prima (recomputada da geometria)</td><td class="num mono">R$ {{ custo.custo_material|floatformat:2 }}</td></tr>
+        <tr><td>Mão de obra (× F.C. {{ custo.fator_correcao_mo }})</td><td class="num mono">R$ {{ custo.custo_mao_obra|floatformat:2 }}</td></tr>
+        <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|floatformat:2 }}</td></tr>
+        <tr style="border-top:2px solid var(--g-ink,#111)"><td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|floatformat:2 }}</b></td></tr>
+        <tr><td>Preço de venda c/ impostos</td><td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|floatformat:2 }}</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:8px;font-size:.82rem;color:var(--g-gray-1)">
+      Matéria-prima respondendo às dimensões via geometria. <b>Limitação conhecida (#6):</b>
+      operações de serviço (ensaios, teste hidrostático, PWHT, pintura) ainda usam o custo
+      fixo do job de referência — não escalam com o tamanho do equipamento.</p>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
