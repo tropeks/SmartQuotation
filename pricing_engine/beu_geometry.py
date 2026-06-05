@@ -89,6 +89,8 @@ GEOMETRIZAVEIS = {
     # espelho = disco maciço furado: peso BRUTO da chapa-disco original (os furos saem como
     # refugo, capturados na perda). Fora do gate geométrico estrito (peso_liq desconta furos).
     "espelho": (peso_disco, ("OD", "ESP.")),
+    # chicana = recorte de chapa (blank = bounding box LARG×COMPR×ESP); recorte+furos = refugo.
+    "perfurado": (peso_chapa_retangular, ("ESP.", "LARG.", "COMPR.")),
     "tampo_2_1": (peso_tampo_2_1, ("OD DISCO", "ESP.")),
 }
 
