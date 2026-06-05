@@ -1,0 +1,572 @@
+[
+ {
+  "op": "ESPELHOS - USINAR",
+  "X": "SIM",
+  "AF": 8,
+  "AN": 150,
+  "AV": 0,
+  "CF": 1200
+ },
+ {
+  "op": "ESPELHOS - TRAÇAR FUROS",
+  "X": "SIM",
+  "AF": 272,
+  "AN": 2,
+  "AV": 80,
+  "BD": 0,
+  "CF": 160
+ },
+ {
+  "op": "ESPELHOS - FURAR",
+  "X": "SIM",
+  "AF": 272,
+  "AN": 6,
+  "AV": 110,
+  "BD": 0,
+  "CF": 660
+ },
+ {
+  "op": "ESPELHOS - ESCAREAR",
+  "X": "SIM",
+  "AF": 272,
+  "AN": 2,
+  "AV": 110,
+  "BD": 0,
+  "CF": 220
+ },
+ {
+  "op": "ESPELHOS - ALARGAR",
+  "X": "SIM",
+  "AF": 272,
+  "AN": 3,
+  "AV": 110,
+  "BD": 0,
+  "CF": 330
+ },
+ {
+  "op": "ESPELHOS - GROOVES",
+  "X": "SIM",
+  "AF": 272,
+  "AN": 2,
+  "AV": 110,
+  "BD": 0,
+  "CF": 220
+ },
+ {
+  "op": "ESPELHOS - USINAR FUROS P/ TIRANTES",
+  "X": "SIM",
+  "AF": 12,
+  "AN": 2,
+  "AV": 110,
+  "BD": 0,
+  "CF": 220
+ },
+ {
+  "op": "ESPELHOS - TRAÇAR RASGOS",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 1,
+  "AV": 80,
+  "BD": 0,
+  "CF": 80
+ },
+ {
+  "op": "ESPELHOS - USINAR RASGOS",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 4,
+  "AV": 150,
+  "BD": 0,
+  "CF": 600
+ },
+ {
+  "op": "ESPELHOS - ACABAMENTO",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 2,
+  "AV": 40,
+  "BD": 0,
+  "CF": 80
+ },
+ {
+  "op": "ESPELHOS - INSPECIONAR",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": 110
+ },
+ {
+  "op": "CHICANAS - TRAÇAR E RECORTAR",
+  "X": "SIM",
+  "AF": 19,
+  "AN": 7,
+  "AV": 90,
+  "BD": 0,
+  "CF": 630
+ },
+ {
+  "op": "CHICANAS - TRAÇAR FUROS",
+  "X": "SIM",
+  "AF": 136,
+  "AN": 2,
+  "AV": 80,
+  "BD": 0,
+  "CF": 160
+ },
+ {
+  "op": "CHICANAS - FORMAR PACOTE",
+  "X": "SIM",
+  "AF": 19,
+  "AN": 416.8,
+  "AV": 2,
+  "BD": 120,
+  "BL": 0,
+  "CF": 240
+ },
+ {
+  "op": "CHICANAS - FURAR",
+  "X": "SIM",
+  "AF": 237.5,
+  "AN": 15,
+  "AV": 110,
+  "BD": 0,
+  "CF": 1650
+ },
+ {
+  "op": "CHICANAS - PREPARAÇÃO PARA USINAR",
+  "X": "SIM",
+  "AF": 19,
+  "AN": 416.8,
+  "AV": 2,
+  "BD": 120,
+  "BL": 0,
+  "CF": 240
+ },
+ {
+  "op": "CHICANAS - USINAR",
+  "X": "SIM",
+  "AF": 19,
+  "AN": 416.8,
+  "AV": 3,
+  "BD": 150,
+  "BL": 0,
+  "CF": 450
+ },
+ {
+  "op": "CHICANAS - TRAÇAR RECORTES",
+  "X": "SIM",
+  "AF": 19,
+  "AN": 7,
+  "AV": 90,
+  "BD": 0,
+  "CF": 630
+ },
+ {
+  "op": "CHICANAS - ESCAREAR",
+  "X": "SIM",
+  "AF": 2448,
+  "AN": 5,
+  "AV": 110,
+  "BD": 0,
+  "CF": 550
+ },
+ {
+  "op": "CHICANAS - RECORTAR E DAR ACABAMENTO",
+  "X": "SIM",
+  "AF": 19,
+  "AN": 6,
+  "AV": 130,
+  "BD": 0,
+  "CF": 780
+ },
+ {
+  "op": "CHICANAS - INSPECIONAR",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": 110
+ },
+ {
+  "op": "PREPARAR TIRANTES",
+  "X": "SIM",
+  "AF": 12,
+  "AN": 3,
+  "AV": 120,
+  "BD": 0,
+  "CF": 360
+ },
+ {
+  "op": "PREPARAR ESPAÇADORES",
+  "X": "SIM",
+  "AF": 3,
+  "AN": 150,
+  "AV": 0,
+  "CF": 450
+ },
+ {
+  "op": "MONTAR ESTRUTURA DO FEIXE",
+  "X": "SIM",
+  "AF": 4,
+  "AN": 160,
+  "AV": 0,
+  "CF": 640
+ },
+ {
+  "op": "QUEBRA JATO",
+  "X": "SIM",
+  "AF": 3,
+  "AN": 90,
+  "AV": 0,
+  "CF": 270
+ },
+ {
+  "op": "CURVAR TUBOS TERCEIROS",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 160,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "TRANSPORTE PARA CURVAMENTO EM TERCEIROS",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 800,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "CURVAMENTO DE TUBOS ENGEMATEX",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 0,
+  "AV": 160,
+  "BD": 0,
+  "CF": 0
+ },
+ {
+  "op": "PREPARAR TUBOS U PARA TRATAMENTO TÉRMICO",
+  "X": "NÃO",
+  "AF": 6,
+  "AN": 160,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "TRANSPORTE PARA TRATAMENTO TÉRMICO TUBOS",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 800,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "TRATAMENTO TÉRMICO ALÍVIO DE TENSÕES - TUBOS U",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 2000,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "EXAME DE L. P. NAS CURVAS DOS TUBOS U",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 200,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "INTRODUZIR OS TUBOS",
+  "X": "SIM",
+  "AF": 136,
+  "AN": 4,
+  "AV": 40,
+  "BD": 0,
+  "CF": 160
+ },
+ {
+  "op": "MONTAR O ESPELHO FLUTUANTE",
+  "X": "SIM",
+  "AF": 3,
+  "AN": 160,
+  "AV": 0,
+  "CF": 480
+ },
+ {
+  "op": "MONTAR OS TUBOS",
+  "X": "SIM",
+  "AF": 136,
+  "AN": 3,
+  "AV": 40,
+  "BD": 0,
+  "CF": 120
+ },
+ {
+  "op": "GABARITAR - TUBOS",
+  "X": "SIM",
+  "AF": 136,
+  "AN": 2,
+  "AV": 40,
+  "BD": 0,
+  "CF": 80
+ },
+ {
+  "op": "MANDRILAR",
+  "X": "SIM",
+  "AF": 272,
+  "AN": 2,
+  "AV": 120,
+  "BD": 6,
+  "BL": 80,
+  "CF": 720
+ },
+ {
+  "op": "REBAIXAR E DAR ACABAMENTO",
+  "X": "SIM",
+  "AF": 136,
+  "AN": 4,
+  "AV": 60,
+  "BD": 0,
+  "CF": 240
+ },
+ {
+  "op": "SOLDAR PASSE DE RAIZ",
+  "X": "NÃO",
+  "AF": 272,
+  "AN": 7,
+  "AV": 90,
+  "BD": 0,
+  "CF": 0
+ },
+ {
+  "op": "EXAME L. P.  PASSE RAIZ",
+  "X": "NÃO",
+  "AF": 1,
+  "AN": 200,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "SOLDAR PASSE DE ACABAMENTO",
+  "X": "NÃO",
+  "AF": 272,
+  "AN": 7,
+  "AV": 90,
+  "BD": 0,
+  "CF": 0
+ },
+ {
+  "op": "EXAME L. P.  PASSE DE ACABAMENTO",
+  "X": "NÃO",
+  "AF": 1,
+  "AN": 200,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "INSPECIONAR TUBOS MONTADOS",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": 110
+ },
+ {
+  "op": "MONTAR BARRAS",
+  "X": "SIM",
+  "AF": 6,
+  "AN": 3,
+  "AV": 170,
+  "BD": 0,
+  "CF": 510
+ },
+ {
+  "op": "SOLDAR BARRAS",
+  "X": "SIM",
+  "AF": 6,
+  "AN": 5,
+  "AV": 90,
+  "BD": 0,
+  "CF": 450
+ },
+ {
+  "op": "DAR ACABAMENTO BARRAS",
+  "X": "SIM",
+  "AF": 6,
+  "AN": 5,
+  "AV": 40,
+  "BD": 0,
+  "CF": 200
+ },
+ {
+  "op": "INSPECIONAR BARRAS MONTADAS",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": 110
+ },
+ {
+  "op": "MONTAR ALÇA / BATENTE",
+  "X": "SIM",
+  "AF": 3,
+  "AN": 90,
+  "AV": 0,
+  "CF": 270
+ },
+ {
+  "op": "SOLDAR ALÇA / BATENTE",
+  "X": "SIM",
+  "AF": 3,
+  "AN": 90,
+  "AV": 0,
+  "CF": 270
+ },
+ {
+  "op": "DAR ACABAMENTO ALÇA / BATENTE",
+  "X": "SIM",
+  "AF": 2,
+  "AN": 40,
+  "AV": 0,
+  "CF": 80
+ },
+ {
+  "op": "EXAME L. P. NA SOLDA ALÇA / BATENTE",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 80,
+  "AV": 0,
+  "CF": 80
+ },
+ {
+  "op": "INSPECIONAR ALÇA / BATENTE",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": 110
+ },
+ {
+  "op": "TRATAMENTO TÉRMICO EQUIPAMENTO",
+  "X": "NÃO",
+  "AF": 1,
+  "AN": 5000,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "EXAME DE LÍQUIDO PENETRANTE",
+  "X": "NÃO",
+  "AF": 1,
+  "AN": 200,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "MEDIR DUREZA",
+  "X": "NÃO",
+  "AF": 1,
+  "AN": 150,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "INSPEÇÃO DIMENSIONAL",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 600,
+  "AV": 0,
+  "CF": 600
+ },
+ {
+  "op": "P.M.I.",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 1500,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "TESTE HIDROSTÁTICO",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 0,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "TRANSPORTE - PREPARAÇÃO E EMBALAGEM",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 150,
+  "AV": 0,
+  "CF": 150
+ },
+ {
+  "op": "TRANSPORTE: ENGEMATEX P/",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 1600,
+  "AV": 0,
+  "CF": 1600
+ },
+ {
+  "op": "PROJETO - DETALHAMENTO DESENHOS P/ CLIENTE",
+  "X": "NÃO",
+  "AF": 0,
+  "AN": 1600,
+  "AV": 0,
+  "CF": 0
+ },
+ {
+  "op": "PLANO DE INSPEÇÃO E TESTES (PIT)",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 150,
+  "AV": 0,
+  "CF": 150
+ },
+ {
+  "op": "PLANO DE SOLDA (PS)",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 250,
+  "AV": 0,
+  "CF": 250
+ },
+ {
+  "op": "DATA BOOK",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 250,
+  "AV": 0,
+  "CF": 250
+ },
+ {
+  "op": "INSPEÇÃO TIPO \"Q\"",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 1500,
+  "AV": 0,
+  "CF": 1500
+ },
+ {
+  "op": "FERRAMENTAS",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 150,
+  "AV": 0,
+  "CF": 150
+ },
+ {
+  "op": "EXPANDIDORES",
+  "X": "SIM",
+  "AF": 272,
+  "AN": 354,
+  "AV": 0,
+  "CF": 354
+ }
+]

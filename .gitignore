@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Virtualenv
+.venv/
+backend/.venv/
+venv/
+
+# Env / secrets
+.env
+*.env
+!*.env.example
+backend/.env
+
+# Django
+staticfiles/
+media/
+*.sqlite3
+
+# graphify (grafo gerado — reconstruível com `graphify update .`)
+graphify-out/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
