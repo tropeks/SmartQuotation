@@ -97,9 +97,10 @@ def _physical_params(designacao, cleaned):
     diametro = r("diametro_casco_mm")
     return {
         "tubos": tubos, "chicanas": chicanas, "comprimento": comprimento, "diametro": diametro,
-        "massa": diametro * comprimento,
+        # massa cresce mais que linear com D (seção ∝ D² e a espessura cresce com D) — #2.2 agy
+        "massa": diametro * diametro * comprimento,
         "solda": 0.5 * comprimento + 0.5 * diametro,
-        "area": diametro * comprimento,
+        "area": diametro * comprimento,            # superfície de pintura πDL
         "volume": diametro * diametro * comprimento,
     }
 
