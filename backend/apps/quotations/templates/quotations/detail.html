@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ q.number }} — {{ q.title }}{% endblock %}
+{% block content %}
+<div class="eyebrow">COT · Detalhe</div>
+<div class="q-number">{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></div>
+<p class="mono" style="color:var(--g-gray-1)">{{ q.customer.company_name }} · {{ q.get_scope_display }} · {{ q.get_status_display }}</p>
+
+<div class="stat-row" style="margin-top:12px">
+  <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ q.custo_total|floatformat:0 }}</div><div class="delta">mat {{ q.custo_material|floatformat:0 }} + MO {{ q.custo_mo|floatformat:0 }}</div></div>
+  <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ q.peso_bruto_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">base de custo</div></div>
+  <div class="stat"><div class="lbl">Refugo</div><div class="val mono">{{ q.perda_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">bruto − líquido</div></div>
+  <div class="stat"><div class="lbl">Computado</div><div class="val mono" style="font-size:14px">{{ q.computed_at|date:"d/m/Y H:i" }}</div></div>
+</div>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Estrutura Analítica (EAP)</h3></header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th>Código</th><th>Item</th><th class="num">Material</th><th class="num">Mão de Obra</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        {% for it in itens %}
+        <tr>
+          <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
+          <td>{{ it.descricao }}</td>
+          <td class="num">R$ {{ it.custo_material|floatformat:0 }}</td>
+          <td class="num">R$ {{ it.custo_mo|floatformat:0 }}</td>
+          <td class="num">R$ {{ it.custo_total|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="price-line">
+  <span class="lbl">Preço de Venda</span>
+  <span class="val mono">R$ {{ q.preco_com_impostos|floatformat:2 }}</span>
+</div>
+<div class="price-sub">
+  <span>Sem impostos: R$ {{ q.preco_sem_impostos|floatformat:2 }}</span>
+  <span>Markup: {{ q.fator_preco }}</span>
+  <span>Impostos: {{ q.impostos_pct }}%</span>
+</div>
+{% endblock %}

@@ -1,8 +1,9 @@
 """URLs do schema de TENANT (app por subdomínio)."""
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # apps de domínio adicionam suas rotas conforme construídos
+    path("", include("apps.accounts.urls")),         # login/logout/dashboard
+    path("", include("apps.quotations.urls")),       # cotações + data sheet do feixe
 ]

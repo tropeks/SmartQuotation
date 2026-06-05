@@ -21,12 +21,17 @@ class MateriaPrima:
     descricao: str
     material: str
     forma: str            # chapa|tubo|barra|forjado|fundido
-    peso_kg: float = 0.0
+    peso_kg: float = 0.0   # BRUTO (base de custo, Opção A — cobra perdas)
     preco_kgf: float = 0.0
+    peso_liquido: float = 0.0   # instalado (informativo); refugo = peso_kg - peso_liquido
 
     @property
     def custo(self) -> float:
         return self.peso_kg * self.preco_kgf
+
+    @property
+    def perda_kg(self) -> float:
+        return self.peso_kg - self.peso_liquido
 
 
 @dataclass

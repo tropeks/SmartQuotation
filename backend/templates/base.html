@@ -1,0 +1,26 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SmartQuotation{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/design-system-g.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+</head>
+<body>
+  <div class="g-rail">
+    <span class="brand">SMART<b>QUOTATION</b></span>
+    <span class="spacer"></span>
+    {% if user.is_authenticated %}
+      <span class="tenant">{{ request.tenant.name|default:"—" }}</span>
+      <a class="q-btn" href="{% url 'quotations:list' %}">Cotações</a>
+      <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}
+        <button class="q-btn">Sair</button></form>
+    {% endif %}
+  </div>
+  <main class="g-main">{% block content %}{% endblock %}</main>
+</body>
+</html>

@@ -28,3 +28,4 @@ graphify-out/
 .DS_Store
 .idea/
 .vscode/
+.gstack/

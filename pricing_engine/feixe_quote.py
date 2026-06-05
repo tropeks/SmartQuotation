@@ -9,7 +9,7 @@ Formação de preço (parametrizável por tenant — vem da cadeia de custos / w
 from __future__ import annotations
 from .feixe_inputs import FeixeInputs
 from .operations_registry import REGISTRY
-from .components import feixe_136_componentes, peso_componente
+from .components import componentes_from_inputs, peso_componente, peso_liquido_componente
 from .wbs import Cotacao, Item, MateriaPrima, OperacaoExecutada
 
 # códigos de item → descrição (EAP N1)
@@ -37,12 +37,13 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
     """Monta a EAP completa do feixe e forma o preço."""
     itens: dict[str, Item] = {code: Item(code, desc) for code, desc in ITENS.items()}
 
-    # --- matérias-primas (peso computado da geometria) ---
-    for c in feixe_136_componentes():
-        peso, status = peso_componente(c)
+    # --- matérias-primas (peso computado da geometria, paramétrico) ---
+    for c in componentes_from_inputs(inp):
+        peso, status = peso_componente(c)        # BRUTO (base de custo, Opção A)
         item_code = _COMP_ITEM.get(c.codigo, "MON-01")
-        itens[item_code].materias_primas.append(
-            MateriaPrima(c.codigo, c.descricao, c.material, c.forma, peso, c.rkg))
+        mp = MateriaPrima(c.codigo, c.descricao, c.material, c.forma, peso, c.rkg)
+        mp.peso_liquido = peso_liquido_componente(c)   # informativo (refugo = bruto - líquido)
+        itens[item_code].materias_primas.append(mp)
 
     # --- operações (custo computado das fórmulas) ---
     for op in REGISTRY:
