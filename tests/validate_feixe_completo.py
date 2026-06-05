@@ -63,3 +63,15 @@ if erros:
 print("\n" + "=" * 72)
 print(f"OPERAÇÕES: {len([o for o in REGISTRY])} no registry | erros: {len(erros)}")
 print("=" * 72)
+
+# Gate de CI: falha se o motor regredir além de 10% ou houver erro de cálculo.
+import sys
+GATE = 10.0
+if erros:
+    print(f"\nFALHA CI: {len(erros)} erro(s) de cálculo no motor.")
+    sys.exit(1)
+if abs(delta_tot) > GATE:
+    print(f"\nFALHA CI: delta total {delta_tot:+.1f}% excede o gate de ±{GATE:.0f}%.")
+    sys.exit(1)
+print(f"\nGATE OK: delta {delta_tot:+.1f}% dentro de ±{GATE:.0f}%, 0 erros.")
+sys.exit(0)
