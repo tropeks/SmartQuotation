@@ -178,6 +178,14 @@ class ComposeViewTests(TestCase):
         from pricing_engine.beu_geometry import perda_familia
         self.assertGreater(perda_familia("disco"), perda_familia("tubo"))
 
+    def test_preco_liga_sobe_material(self):
+        """#agy 1.C: liga nobre multiplica o preço/kg da matéria-prima do lado (efeito dominante)."""
+        from apps.tema_templates.services import estimate_complete
+        cs = estimate_complete("BEU")
+        feixe_inox = estimate_complete("BEU", preco_por_lado={"feixe": 4.5, "casco": 1.0})
+        # o feixe (tubos+espelho) é boa parte do material → preço sobe forte
+        self.assertGreater(feixe_inox["custo_material"], cs["custo_material"] + 10000)
+
     def test_folga_cabecote_flutuante(self):
         """#5: cabeçote flutuante (S) exige folga radial maior que fixo (M)."""
         from pricing_engine.permutador_layout import folga_cabecote

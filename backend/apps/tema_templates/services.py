@@ -22,19 +22,26 @@ LIGA_FATOR = {
 CLASSE_DENSIDADE = {
     "CS": 7.85e-6, "INOX": 7.93e-6, "DUPLEX": 7.80e-6, "NIQUEL": 8.80e-6,
 }
+# fator de PREÇO/kg da matéria-prima por classe vs aço-carbono (#agy 1.C — material é ~70%
+# do custo de liga nobre). Multiplicadores típicos de mercado, EDITÁVEIS — não cotados.
+PRECO_FATOR = {
+    "CS": 1.0, "INOX": 4.5, "DUPLEX": 6.0, "NIQUEL": 12.0,
+}
 LIGA_CHOICES = [("CS", "Aço Carbono"), ("INOX", "Aço Inox (300/400)"),
                 ("DUPLEX", "Duplex / Superduplex"), ("NIQUEL", "Liga de Níquel (Inconel…)")]
 
 
 def _metalurgia(cleaned):
-    """(liga_por_lado, dens_por_lado) a partir das classes do feixe e do casco. CS → 1,0."""
+    """(liga_por_lado, dens_por_lado, preco_por_lado) das classes feixe/casco. CS → 1,0.
+    liga escala MO; dens escala peso; preço escala R$/kg da matéria-prima (#agy 1.C)."""
     cf = cleaned.get("classe_feixe", "CS")
     cc = cleaned.get("classe_casco", "CS")
-    liga = {"feixe": LIGA_FATOR.get(cf, 1.0), "casco": LIGA_FATOR.get(cc, 1.0)}
     base = CLASSE_DENSIDADE["CS"]
+    liga = {"feixe": LIGA_FATOR.get(cf, 1.0), "casco": LIGA_FATOR.get(cc, 1.0)}
     dens = {"feixe": CLASSE_DENSIDADE.get(cf, base) / base,
             "casco": CLASSE_DENSIDADE.get(cc, base) / base}
-    return liga, dens
+    preco = {"feixe": PRECO_FATOR.get(cf, 1.0), "casco": PRECO_FATOR.get(cc, 1.0)}
+    return liga, dens, preco
 
 
 def tenant_cost_chain():
@@ -141,7 +148,8 @@ def _physical_params(designacao, cleaned):
 
 def estimate_complete(designacao: str, dims_override: dict | None = None,
                       fator_correcao_mo: float | None = None, params: dict | None = None,
-                      liga_por_lado: dict | None = None, dens_por_lado: dict | None = None):
+                      liga_por_lado: dict | None = None, dens_por_lado: dict | None = None,
+                      preco_por_lado: dict | None = None):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
 
     dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
@@ -160,7 +168,7 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
         chain.fator_correcao_mo = float(fator_correcao_mo)
     return quote_completo(d, cost_chain=chain, dims_override=dims_override or None,
                           params=params or None, liga_por_lado=liga_por_lado or None,
-                          dens_por_lado=dens_por_lado or None)
+                          dens_por_lado=dens_por_lado or None, preco_por_lado=preco_por_lado or None)
 
 
 def layout_avisos(designacao, cleaned):

@@ -113,8 +113,16 @@ _PARAM_LADO = {
 }
 
 
+# peças do FEIXE cujo param de escala é 'diametro' (escalam com Ø do casco) mas a
+# metalurgia é do lado do FEIXE: tirantes, barras de selagem, curvas dos tubos-U (#agy 1.A).
+_FEIXE_LABEL_KW = ("TIRANTE", "BARRA", "CURVA", "TUBOS U", "MANDRIL")
+
+
 def _lado_da_op(o):
     """Lado (feixe|casco) de uma operação — define qual liga aplicar. None = sem liga."""
+    lbl = (o.get("label") or "").upper()
+    if any(k in lbl for k in _FEIXE_LABEL_KW):
+        return "feixe"
     return _PARAM_LADO.get(_param_da_op(o))
 
 
@@ -144,7 +152,8 @@ def designacoes_disponiveis():
 def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: float = 1.0,
                    fator_preco: float = 1.25, impostos_pct: float = 9.0,
                    dims_override: dict | None = None, params: dict | None = None,
-                   liga_por_lado: dict | None = None, dens_por_lado: dict | None = None) -> dict:
+                   liga_por_lado: dict | None = None, dens_por_lado: dict | None = None,
+                   preco_por_lado: dict | None = None) -> dict:
     """params: {parâmetro: razão proj/ref} p/ escalar as HORAS de fabricação E serviços por
     DRIVER físico (tubos, chicanas, comprimento, diametro, solda, massa, area, volume), com
     parcela de setup fixo. Razão 1,0 = caso de referência → reconcilia 0,0%. Operações
@@ -157,6 +166,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
     do material do lado (níquel mais pesado). Tudo 1,0 (aço-carbono) → reconcilia 0,0%."""
     liga_lado = liga_por_lado or {}
     dens_lado = dens_por_lado or {}
+    preco_lado = preco_por_lado or {}
     d = designacao.lower()
     mats = _load(f"{d}_materiais.json")["materiais"]
     ops = _load(f"{d}_operacoes.json")["operacoes"]
@@ -179,8 +189,10 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
     secoes = {}
     custo_material = 0.0
     for m in mats:
+        lado_mat = _lado_do_material(m["secao"])
+        pf = float(preco_lado.get(lado_mat, 1.0))    # fator de preço/kg por liga do lado (#agy 1.C)
         if m.get("familia") == "catalogo" or not m.get("peso_bruto"):
-            custo = m["preco"]                       # item de catálogo (preço fixo)
+            custo = m["preco"] * pf                  # item de catálogo (preço fixo) × liga
         else:
             peso_bruto = m["peso_bruto"]
             if dims_override and m["label"] in dims_override:
@@ -193,8 +205,9 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                              else perda_familia(m["familia"]))
                     peso_bruto = liq * qtd * perda
             # densidade por liga do LADO do material (níquel mais pesado que aço-carbono)
-            peso_bruto *= float(dens_lado.get(_lado_do_material(m["secao"]), 1.0))
-            custo = peso_bruto * preco_kgf(m.get("material"), m["familia"], m["price_kgf"])
+            peso_bruto *= float(dens_lado.get(lado_mat, 1.0))
+            # preço/kg da liga do lado (inox/níquel custam várias vezes o aço-carbono) — #agy 1.C
+            custo = peso_bruto * preco_kgf(m.get("material"), m["familia"], m["price_kgf"]) * pf
         custo_material += custo
         secoes[m["secao"]] = secoes.get(m["secao"], 0.0) + custo
 

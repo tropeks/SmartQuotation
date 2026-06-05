@@ -47,9 +47,10 @@ def data_sheet(request):
             override, fc = form.to_dims_override()
             params = _physical_params(desig, form.cleaned_data)
             avisos = layout_avisos(desig, form.cleaned_data)
-            liga, dens = _metalurgia(form.cleaned_data)
+            liga, dens, preco = _metalurgia(form.cleaned_data)
             custo = estimate_complete(desig, dims_override=override, fator_correcao_mo=fc,
-                                      params=params, liga_por_lado=liga, dens_por_lado=dens)
+                                      params=params, liga_por_lado=liga, dens_por_lado=dens,
+                                      preco_por_lado=preco)
     else:
         desig = request.GET.get("designacao") or (sorted(COSTABLE)[0] if COSTABLE else "")
         ref = reference_inputs(desig)
