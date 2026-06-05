@@ -27,9 +27,11 @@ class PermutadorDataSheetForm(forms.Form):
     comprimento_casco_mm = forms.FloatField(label="Comprimento da virola/casco (mm)", min_value=1)
     diametro_casco_mm = forms.FloatField(label="Diâmetro do casco (mm)", min_value=1)
     esp_casco_mm = forms.FloatField(label="Espessura da virola (mm)", min_value=0.1)
-    # metalurgia (escala horas de caldeiraria/solda)
-    classe_metalurgica = forms.ChoiceField(
-        label="Classe metalúrgica", choices=LIGA_CHOICES, initial="CS")
+    # metalurgia por lado (liga escala MO; densidade escala peso) — suporta bimetálico
+    classe_feixe = forms.ChoiceField(
+        label="Classe metalúrgica — feixe", choices=LIGA_CHOICES, initial="CS")
+    classe_casco = forms.ChoiceField(
+        label="Classe metalúrgica — casco", choices=LIGA_CHOICES, initial="CS")
     # mão de obra
     fator_correcao_mo = forms.FloatField(
         label="Fator de correção de MO", min_value=0.1, initial=1.0)

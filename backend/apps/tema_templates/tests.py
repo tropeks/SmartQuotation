@@ -118,7 +118,8 @@ class ComposeViewTests(TestCase):
         data = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
                 "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
                 "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
-                "esp_casco_mm": 9.5, "classe_metalurgica": "CS", "fator_correcao_mo": 1.0}
+                "esp_casco_mm": 9.5, "classe_feixe": "CS", "classe_casco": "CS",
+                "fator_correcao_mo": 1.0}
         data.update(over)
         return self.client.post("/tema/permutador/", data)
 
@@ -157,13 +158,25 @@ class ComposeViewTests(TestCase):
         grosso = estimate_complete("BEU", params=p)
         self.assertGreater(grosso["custo_total"], base["custo_total"] + 5000)
 
-    def test_liga_inox_sobe_mao_de_obra(self):
-        """#3: liga (inox) multiplica a MO de caldeiraria; material não muda."""
+    def test_liga_feixe_inox_sobe_so_mo_do_feixe(self):
+        """Bimetálico: feixe inox sobe MO (lado feixe); material e MO do casco não mudam."""
         from apps.tema_templates.services import estimate_complete
-        cs = estimate_complete("BEU", liga_fator_mo=1.0)
-        inox = estimate_complete("BEU", liga_fator_mo=1.3)
-        self.assertAlmostEqual(inox["custo_mao_obra"], cs["custo_mao_obra"] * 1.3, places=0)
+        cs = estimate_complete("BEU")
+        inox = estimate_complete("BEU", liga_por_lado={"feixe": 1.4, "casco": 1.0})
+        self.assertGreater(inox["custo_mao_obra"], cs["custo_mao_obra"])
         self.assertAlmostEqual(inox["custo_material"], cs["custo_material"], places=2)
+
+    def test_densidade_niquel_sobe_peso_do_lado(self):
+        """Densidade por liga: níquel no casco aumenta o peso (custo) do material do casco."""
+        from apps.tema_templates.services import estimate_complete
+        cs = estimate_complete("BEU")
+        ni = estimate_complete("BEU", dens_por_lado={"casco": 8.80 / 7.85})
+        self.assertGreater(ni["custo_material"], cs["custo_material"] + 1000)
+
+    def test_scrap_disco_maior_que_tubo(self):
+        """#agy: chapa circular (espelho) tem perda maior que tubo."""
+        from pricing_engine.beu_geometry import perda_familia
+        self.assertGreater(perda_familia("disco"), perda_familia("tubo"))
 
     def test_folga_cabecote_flutuante(self):
         """#5: cabeçote flutuante (S) exige folga radial maior que fixo (M)."""

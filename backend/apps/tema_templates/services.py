@@ -14,14 +14,27 @@ COSTABLE = set(designacoes_disponiveis())
 
 # fator multiplicador de horas de caldeiraria/solda por classe metalúrgica (#3 agy).
 # Aço-carbono = 1,0 (referência). Defaults de engenharia EDITÁVEIS — não medidos.
-# LIMITAÇÃO: é um fator GLOBAL — não modela construção bimetálica (ex.: feixe inox +
-# casco CS); nesse caso o custo de MO fica entre os dois. Desacoplar por componente é
-# milestone futura (precisa material por componente no data sheet).
+# Aplicado POR LADO (feixe/casco) → suporta construção bimetálica (feixe inox + casco CS).
 LIGA_FATOR = {
     "CS": 1.0, "INOX": 1.4, "DUPLEX": 1.7, "NIQUEL": 2.3,
 }
+# densidade por classe (kgf/mm³) p/ ajuste de peso do material (níquel ~12% mais pesado).
+CLASSE_DENSIDADE = {
+    "CS": 7.85e-6, "INOX": 7.93e-6, "DUPLEX": 7.80e-6, "NIQUEL": 8.80e-6,
+}
 LIGA_CHOICES = [("CS", "Aço Carbono"), ("INOX", "Aço Inox (300/400)"),
                 ("DUPLEX", "Duplex / Superduplex"), ("NIQUEL", "Liga de Níquel (Inconel…)")]
+
+
+def _metalurgia(cleaned):
+    """(liga_por_lado, dens_por_lado) a partir das classes do feixe e do casco. CS → 1,0."""
+    cf = cleaned.get("classe_feixe", "CS")
+    cc = cleaned.get("classe_casco", "CS")
+    liga = {"feixe": LIGA_FATOR.get(cf, 1.0), "casco": LIGA_FATOR.get(cc, 1.0)}
+    base = CLASSE_DENSIDADE["CS"]
+    dens = {"feixe": CLASSE_DENSIDADE.get(cf, base) / base,
+            "casco": CLASSE_DENSIDADE.get(cc, base) / base}
+    return liga, dens
 
 
 def tenant_cost_chain():
@@ -127,8 +140,8 @@ def _physical_params(designacao, cleaned):
 
 
 def estimate_complete(designacao: str, dims_override: dict | None = None,
-                      fator_correcao_mo: float | None = None,
-                      params: dict | None = None, liga_fator_mo: float = 1.0):
+                      fator_correcao_mo: float | None = None, params: dict | None = None,
+                      liga_por_lado: dict | None = None, dens_por_lado: dict | None = None):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
 
     dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
@@ -146,7 +159,8 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
     if fator_correcao_mo is not None:
         chain.fator_correcao_mo = float(fator_correcao_mo)
     return quote_completo(d, cost_chain=chain, dims_override=dims_override or None,
-                          params=params or None, liga_fator_mo=liga_fator_mo)
+                          params=params or None, liga_por_lado=liga_por_lado or None,
+                          dens_por_lado=dens_por_lado or None)
 
 
 def layout_avisos(designacao, cleaned):

@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import os
 
-from .beu_geometry import peso_liquido_geom, RHO
+from .beu_geometry import peso_liquido_geom, perda_familia, RHO
 
 _SEEDS = os.path.join(os.path.dirname(__file__), "seeds")
 
@@ -105,6 +105,24 @@ def _escala_op(o, params):
     return setup + (1.0 - setup) * razao
 
 
+# parâmetro físico → LADO do equipamento, p/ metalurgia por componente (#agy: bimetálico).
+_PARAM_LADO = {
+    "tubos": "feixe", "chicanas": "feixe", "furacao_chicana": "feixe",
+    "comprimento": "casco", "diametro": "casco", "solda_long": "casco",
+    "solda_circ": "casco", "solda": "casco", "massa": "casco", "area": "casco", "volume": "casco",
+}
+
+
+def _lado_da_op(o):
+    """Lado (feixe|casco) de uma operação — define qual liga aplicar. None = sem liga."""
+    return _PARAM_LADO.get(_param_da_op(o))
+
+
+def _lado_do_material(secao):
+    """Lado de um material pela seção do seed (feixe_material→feixe; casco/cabecote→casco)."""
+    return "feixe" if (secao or "").startswith("feixe") else "casco"
+
+
 def _load(nome):
     with open(os.path.join(_SEEDS, nome), encoding="utf-8") as f:
         return json.load(f)
@@ -125,14 +143,20 @@ def designacoes_disponiveis():
 
 def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: float = 1.0,
                    fator_preco: float = 1.25, impostos_pct: float = 9.0,
-                   dims_override: dict | None = None,
-                   params: dict | None = None, liga_fator_mo: float = 1.0) -> dict:
+                   dims_override: dict | None = None, params: dict | None = None,
+                   liga_por_lado: dict | None = None, dens_por_lado: dict | None = None) -> dict:
     """params: {parâmetro: razão proj/ref} p/ escalar as HORAS de fabricação E serviços por
     DRIVER físico (tubos, chicanas, comprimento, diametro, solda, massa, area, volume), com
     parcela de setup fixo. Razão 1,0 = caso de referência → reconcilia 0,0%. Operações
     administrativas/config (nº de bocais/flanges, data book, transporte) não escalam.
     Aproximações geométricas (massa/solda/area/volume) e setup fractions são calibrações
-    de engenharia documentadas — limitações conhecidas (ver auditoria adversarial)."""
+    de engenharia documentadas — limitações conhecidas (ver auditoria adversarial).
+
+    liga_por_lado/dens_por_lado: {lado: fator} — metalurgia POR LADO (feixe|casco) p/
+    construção bimetálica. liga multiplica as HORAS de MO do lado; dens multiplica o PESO
+    do material do lado (níquel mais pesado). Tudo 1,0 (aço-carbono) → reconcilia 0,0%."""
+    liga_lado = liga_por_lado or {}
+    dens_lado = dens_por_lado or {}
     d = designacao.lower()
     mats = _load(f"{d}_materiais.json")["materiais"]
     ops = _load(f"{d}_operacoes.json")["operacoes"]
@@ -164,20 +188,24 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                 liq = peso_liquido_geom(m["familia"], dims, rho=_rho(m.get("material")))
                 if liq is not None:
                     qtd = float(m.get("dims", {}).get("QUANTIDADE", 1) or 1)
-                    perda = (m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq") else 1.10
+                    # perda real do seed se houver; senão a típica da família (#agy scrap)
+                    perda = ((m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq")
+                             else perda_familia(m["familia"]))
                     peso_bruto = liq * qtd * perda
+            # densidade por liga do LADO do material (níquel mais pesado que aço-carbono)
+            peso_bruto *= float(dens_lado.get(_lado_do_material(m["secao"]), 1.0))
             custo = peso_bruto * preco_kgf(m.get("material"), m["familia"], m["price_kgf"])
         custo_material += custo
         secoes[m["secao"]] = secoes.get(m["secao"], 0.0) + custo
 
-    _SOLDA_PARAMS = ("solda", "solda_long", "solda_circ")
     custo_mo = custo_servico = 0.0
     custo_por_param = {}
     for o in ops:
         eff = _escala_op(o, params)                    # setup + (1-setup)×razão (1,0 no ref)
         pnome = _param_da_op(o) or "fixo"
-        # fator de liga metalúrgica (#3): MO de caldeiraria e soldas (mesmo serviço de solda)
-        liga = liga_fator_mo if (o["tipo"] == "mao_obra" or pnome in _SOLDA_PARAMS) else 1.0
+        # fator de liga metalúrgica POR LADO (#3 + bimetálico): MO e serviços de solda do lado
+        lado = _lado_da_op(o)
+        liga = float(liga_lado.get(lado, 1.0)) if lado else 1.0
         if o["tipo"] == "mao_obra":
             ajuste = o.get("ajuste", 0.0)
             base = o["preco_gabarito"] - ajuste        # parcela de MO (R$ a FC=1, ref)
@@ -204,7 +232,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         "custo_total": round(custo_total, 2),
         "por_secao": {k: round(v, 2) for k, v in secoes.items()},
         "fator_correcao_mo": fc,
-        "liga_fator_mo": liga_fator_mo,
+        "liga_por_lado": {k: round(v, 3) for k, v in liga_lado.items()} or {"feixe": 1.0, "casco": 1.0},
         "fator_preco": fator_preco,
         "impostos_pct": impostos_pct,
         "preco_com_impostos": round(preco_com_impostos, 2),
