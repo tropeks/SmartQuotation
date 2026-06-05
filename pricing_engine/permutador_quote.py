@@ -116,8 +116,9 @@ _PARAM_LADO = {
 # peças/operações do FEIXE p/ fins de metalurgia (liga do lado do feixe), mesmo quando o
 # param de escala aponta p/ casco/None: tirantes, barras, curvas-U, mandrilagem, espelho
 # (usinar/furar/escarear/alargar/grooves/rasgos), expansão tubo-espelho (#agy 1.A/§4).
-_FEIXE_LABEL_KW = ("TIRANTE", "BARRA", "CURVA", "TUBOS U", "MANDRIL", "ESPELHO",
-                   "RASGO", "EXPAN", "ESCAREAR", "ALARGAR", "GROOVES", "TUBO")
+_FEIXE_LABEL_KW = ("TIRANTE", "SELAGEM", "DESLIZAMENTO", "CURVAR", "CURVAS DOS TUBOS",
+                   "TUBOS U", "MANDRIL", "ESPELHO", "RASGO", "EXPAN", "ESCAREAR",
+                   "ALARGAR", "GROOVES", "INTRODUZIR OS TUBOS", "MONTAR ESTRUTURA DO FEIXE")
 
 
 def _lado_da_op(o):
@@ -198,14 +199,22 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         else:
             peso_bruto = m["peso_bruto"]
             if dims_override and m["label"] in dims_override:
-                dims = {**m.get("dims", {}), **dims_override[m["label"]]}
-                liq = peso_liquido_geom(m["familia"], dims, rho=_rho(m.get("material")))
-                if liq is not None:
-                    qtd = float(m.get("dims", {}).get("QUANTIDADE", 1) or 1)
-                    # perda real do seed se houver; senão a típica da família (#agy scrap)
-                    perda = ((m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq")
-                             else perda_familia(m["familia"]))
-                    peso_bruto = liq * qtd * perda
+                seed_dims = m.get("dims", {})
+                dims = {**seed_dims, **dims_override[m["label"]]}
+                rho = _rho(m.get("material"))
+                liq_new = peso_liquido_geom(m["familia"], dims, rho=rho)
+                liq_seed = peso_liquido_geom(m["familia"], seed_dims, rho=rho)
+                if liq_new is not None:
+                    qtd = float(seed_dims.get("QUANTIDADE", 1) or 1)
+                    if liq_seed:
+                        # perda AUTO-CALIBRADA = bruto_seed / geometria_seed: reproduz o bruto do
+                        # seed na referência e escala sem DUPLA CONTAGEM de furação (espelho) —
+                        # #agy review7 1.B. (a razão bruto/líq do seed embute o refugo dos furos.)
+                        perda_eff = m["peso_bruto"] / (liq_seed * qtd)
+                    else:
+                        perda_eff = ((m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq")
+                                     else perda_familia(m["familia"]))
+                    peso_bruto = liq_new * qtd * perda_eff
             # densidade por liga do LADO do material (níquel mais pesado que aço-carbono)
             peso_bruto *= float(dens_lado.get(lado_mat, 1.0))
             # preço/kg da liga do lado (inox/níquel custam várias vezes o aço-carbono) — #agy 1.C
