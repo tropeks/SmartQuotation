@@ -113,9 +113,11 @@ _PARAM_LADO = {
 }
 
 
-# peças do FEIXE cujo param de escala é 'diametro' (escalam com Ø do casco) mas a
-# metalurgia é do lado do FEIXE: tirantes, barras de selagem, curvas dos tubos-U (#agy 1.A).
-_FEIXE_LABEL_KW = ("TIRANTE", "BARRA", "CURVA", "TUBOS U", "MANDRIL")
+# peças/operações do FEIXE p/ fins de metalurgia (liga do lado do feixe), mesmo quando o
+# param de escala aponta p/ casco/None: tirantes, barras, curvas-U, mandrilagem, espelho
+# (usinar/furar/escarear/alargar/grooves/rasgos), expansão tubo-espelho (#agy 1.A/§4).
+_FEIXE_LABEL_KW = ("TIRANTE", "BARRA", "CURVA", "TUBOS U", "MANDRIL", "ESPELHO",
+                   "RASGO", "EXPAN", "ESCAREAR", "ALARGAR", "GROOVES", "TUBO")
 
 
 def _lado_da_op(o):

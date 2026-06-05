@@ -20,7 +20,7 @@ RHO = 7.85e-6  # kgf/mm³ (aço-carbono) — default quando a densidade do mater
 # peça circular cortada de chapa retangular tem perda mínima de (4−π)/4 ≈ 21,5% + margem de
 # corte → espelho/chicana/tampo perdem MUITO mais que tubo/chapa. Defaults editáveis.
 PERDA_POR_FAMILIA = {
-    "disco": 1.25, "perfurado": 1.25, "tampo_2_1": 1.20, "anel": 1.15,
+    "disco": 1.25, "espelho": 1.25, "perfurado": 1.25, "tampo_2_1": 1.20, "anel": 1.15,
     "chapa_retangular": 1.10, "tubo": 1.10, "pipe": 1.10,
 }
 PERDA_PADRAO = 1.10
@@ -86,6 +86,9 @@ GEOMETRIZAVEIS = {
     "chapa_retangular": (peso_chapa_retangular, ("ESP.", "LARGURA", "COMPR.")),
     "anel": (peso_anel, ("OD", "ID", "ESP.")),
     "disco": (peso_disco, ("OD", "ESP.")),
+    # espelho = disco maciço furado: peso BRUTO da chapa-disco original (os furos saem como
+    # refugo, capturados na perda). Fora do gate geométrico estrito (peso_liq desconta furos).
+    "espelho": (peso_disco, ("OD", "ESP.")),
     "tampo_2_1": (peso_tampo_2_1, ("OD DISCO", "ESP.")),
 }
 

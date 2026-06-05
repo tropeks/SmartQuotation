@@ -36,6 +36,8 @@ def _metalurgia(cleaned):
     liga escala MO; dens escala peso; preço escala R$/kg da matéria-prima (#agy 1.C)."""
     cf = cleaned.get("classe_feixe", "CS")
     cc = cleaned.get("classe_casco", "CS")
+    # base = densidade do aço-carbono: os pesos do seed BEU/BEM foram extraídos em CS, então a
+    # razão classe/CS é correta. (Se um dia houver seed nativo em liga, derivar a base do seed.)
     base = CLASSE_DENSIDADE["CS"]
     liga = {"feixe": LIGA_FATOR.get(cf, 1.0), "casco": LIGA_FATOR.get(cc, 1.0)}
     dens = {"feixe": CLASSE_DENSIDADE.get(cf, base) / base,
