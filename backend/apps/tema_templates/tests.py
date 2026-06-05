@@ -104,28 +104,40 @@ class ComposeViewTests(TestCase):
         self.assertContains(r, "Custeio paramétrico")
         self.assertContains(r, "Custo total")
 
+    def test_bem_mostra_custeio_completo(self):
+        r = self._check("B", "E", "M")          # designação BEM = permutador completo custeável
+        self.assertContains(r, "BEM")
+        self.assertContains(r, "Custeio paramétrico")
+
     def test_designacao_nao_custeavel_sem_breakdown(self):
         r = self._check("A", "E", "L")          # AEL não tem custeio completo validado
         self.assertNotContains(r, "Custeio paramétrico · permutador completo")
         self.assertContains(r, "em validação")
 
 
-class BeuEngineTests(TestCase):
-    """Motor de custeio do permutador BEU (via serviço, com cadeia de custos do tenant)."""
+class PermutadorEngineTests(TestCase):
+    """Motor de custeio do permutador completo (via serviço, com cadeia de custos do tenant)."""
+
+    GABARITO = {"BEU": 128160.0, "BEM": 119295.0}
 
     def test_estimate_complete_reconcilia_gabarito(self):
         from apps.tema_templates.services import estimate_complete
-        q = estimate_complete("BEU")
-        self.assertIsNotNone(q)
-        # custo total dentro de ±10% do gabarito ENGEMATEX (R$ 128.160)
-        self.assertAlmostEqual(q["custo_total"], 128160.0, delta=128160.0 * 0.10)
-        self.assertEqual(q["designacao_tema"], "BEU")
-        self.assertGreater(q["custo_material"], 0)
-        self.assertGreater(q["custo_mao_obra"], 0)
+        for desig, gab in self.GABARITO.items():
+            q = estimate_complete(desig)
+            self.assertIsNotNone(q, desig)
+            self.assertAlmostEqual(q["custo_total"], gab, delta=gab * 0.10)
+            self.assertEqual(q["designacao_tema"], desig)
+            self.assertGreater(q["custo_material"], 0)
+            self.assertGreater(q["custo_mao_obra"], 0)
 
     def test_estimate_complete_none_para_nao_custeavel(self):
         from apps.tema_templates.services import estimate_complete
         self.assertIsNone(estimate_complete("AEL"))
+
+    def test_bem_difere_de_beu(self):
+        from pricing_engine.permutador_quote import quote_completo
+        self.assertNotAlmostEqual(quote_completo("BEU")["custo_total"],
+                                  quote_completo("BEM")["custo_total"], delta=1000)
 
     def test_fator_mo_escala_mao_de_obra(self):
         from pricing_engine.beu_quote import quote_beu

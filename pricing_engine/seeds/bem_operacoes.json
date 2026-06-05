@@ -1,24 +1,24 @@
 {
-  "fonte": "Planilha Padrão - Permutador 'BEU' - Rev.0.xlsx",
-  "designacao_tema": "BEU",
-  "n_ops": 169,
-  "n_mao_obra": 103,
-  "n_servico": 66,
+  "fonte": "Planilha Padrão - Permutador 'BEM' - Rev.0.xlsx",
+  "designacao_tema": "BEM",
+  "n_ops": 147,
+  "n_mao_obra": 90,
+  "n_servico": 57,
   "operacoes": [
     {
-      "code": "FAB-ESPELHOUSINAR-1",
-      "row": 440,
+      "code": "FAB-ESPELHOSUSINAR-1",
+      "row": 444,
       "secao": "fabricacao",
-      "label": "ESPELHO - USINAR",
+      "label": "ESPELHOS - USINAR",
       "tipo": "mao_obra",
-      "preco_gabarito": 600.0,
+      "preco_gabarito": 1200.0,
       "ajuste": 0.0,
-      "horas": 4.0,
+      "horas": 8.0,
       "rate": 150.0
     },
     {
       "code": "FAB-TRAÇARFUROS-1",
-      "row": 444,
+      "row": 448,
       "secao": "fabricacao",
       "label": "TRAÇAR FUROS",
       "tipo": "mao_obra",
@@ -29,31 +29,20 @@
     },
     {
       "code": "FAB-FURAR-1",
-      "row": 448,
+      "row": 452,
       "secao": "fabricacao",
       "label": "FURAR",
       "tipo": "mao_obra",
-      "preco_gabarito": 330.0,
+      "preco_gabarito": 660.0,
       "ajuste": 0.0,
-      "horas": 3.0,
+      "horas": 6.0,
       "rate": 110.0
     },
     {
       "code": "FAB-ESCAREAR-1",
-      "row": 452,
-      "secao": "fabricacao",
-      "label": "ESCAREAR",
-      "tipo": "mao_obra",
-      "preco_gabarito": 110.0,
-      "ajuste": 0.0,
-      "horas": 1.0,
-      "rate": 110.0
-    },
-    {
-      "code": "FAB-ALARGAR-1",
       "row": 456,
       "secao": "fabricacao",
-      "label": "ALARGAR",
+      "label": "ESCAREAR",
       "tipo": "mao_obra",
       "preco_gabarito": 220.0,
       "ajuste": 0.0,
@@ -61,19 +50,30 @@
       "rate": 110.0
     },
     {
-      "code": "FAB-GROOVES-1",
+      "code": "FAB-ALARGAR-1",
       "row": 460,
+      "secao": "fabricacao",
+      "label": "ALARGAR",
+      "tipo": "mao_obra",
+      "preco_gabarito": 330.0,
+      "ajuste": 0.0,
+      "horas": 3.0,
+      "rate": 110.0
+    },
+    {
+      "code": "FAB-GROOVES-1",
+      "row": 464,
       "secao": "fabricacao",
       "label": "GROOVES",
       "tipo": "mao_obra",
-      "preco_gabarito": 110.0,
+      "preco_gabarito": 220.0,
       "ajuste": 0.0,
-      "horas": 1.0,
+      "horas": 2.0,
       "rate": 110.0
     },
     {
       "code": "FAB-USINARFUROSPTIRANT-1",
-      "row": 464,
+      "row": 468,
       "secao": "fabricacao",
       "label": "USINAR FUROS P/ TIRANTES",
       "tipo": "mao_obra",
@@ -84,7 +84,7 @@
     },
     {
       "code": "FAB-TRAÇARRASGOS-1",
-      "row": 468,
+      "row": 472,
       "secao": "fabricacao",
       "label": "TRAÇAR RASGOS",
       "tipo": "mao_obra",
@@ -95,7 +95,7 @@
     },
     {
       "code": "FAB-USINARRASGOS-1",
-      "row": 472,
+      "row": 476,
       "secao": "fabricacao",
       "label": "USINAR RASGOS",
       "tipo": "mao_obra",
@@ -106,7 +106,7 @@
     },
     {
       "code": "FAB-ACABAMENTO-1",
-      "row": 476,
+      "row": 480,
       "secao": "fabricacao",
       "label": "ACABAMENTO",
       "tipo": "mao_obra",
@@ -117,7 +117,7 @@
     },
     {
       "code": "FAB-INSPECIONAR-1",
-      "row": 480,
+      "row": 484,
       "secao": "fabricacao",
       "label": "INSPECIONAR",
       "tipo": "servico",
@@ -126,7 +126,7 @@
     },
     {
       "code": "FAB-TRAÇARERECORTAR-1",
-      "row": 484,
+      "row": 488,
       "secao": "fabricacao",
       "label": "TRAÇAR E RECORTAR",
       "tipo": "mao_obra",
@@ -137,7 +137,7 @@
     },
     {
       "code": "FAB-TRAÇARFUROS-2",
-      "row": 488,
+      "row": 492,
       "secao": "fabricacao",
       "label": "TRAÇAR FUROS",
       "tipo": "mao_obra",
@@ -148,7 +148,7 @@
     },
     {
       "code": "FAB-FORMARPACOTE-1",
-      "row": 492,
+      "row": 496,
       "secao": "fabricacao",
       "label": "FORMAR PACOTE",
       "tipo": "mao_obra",
@@ -159,18 +159,18 @@
     },
     {
       "code": "FAB-FURAR-2",
-      "row": 496,
+      "row": 500,
       "secao": "fabricacao",
       "label": "FURAR",
       "tipo": "mao_obra",
-      "preco_gabarito": 880.0,
+      "preco_gabarito": 1650.0,
       "ajuste": 0.0,
-      "horas": 8.0,
+      "horas": 15.0,
       "rate": 110.0
     },
     {
       "code": "FAB-CHICANASPREPARAÇÃO-1",
-      "row": 500,
+      "row": 504,
       "secao": "fabricacao",
       "label": "CHICANAS - PREPARAÇÃO PARA USINAR",
       "tipo": "mao_obra",
@@ -181,7 +181,7 @@
     },
     {
       "code": "FAB-USINAR-1",
-      "row": 504,
+      "row": 508,
       "secao": "fabricacao",
       "label": "USINAR",
       "tipo": "mao_obra",
@@ -192,7 +192,7 @@
     },
     {
       "code": "FAB-CHICANASTRAÇARRECO-1",
-      "row": 508,
+      "row": 512,
       "secao": "fabricacao",
       "label": "CHICANAS - TRAÇAR RECORTES",
       "tipo": "mao_obra",
@@ -203,18 +203,18 @@
     },
     {
       "code": "FAB-ESCAREAR-2",
-      "row": 512,
+      "row": 516,
       "secao": "fabricacao",
       "label": "ESCAREAR",
       "tipo": "mao_obra",
-      "preco_gabarito": 330.0,
+      "preco_gabarito": 550.0,
       "ajuste": 0.0,
-      "horas": 3.0,
+      "horas": 5.0,
       "rate": 110.0
     },
     {
       "code": "FAB-CHICANASRECORTARED-1",
-      "row": 516,
+      "row": 520,
       "secao": "fabricacao",
       "label": "CHICANAS - RECORTAR E DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -225,7 +225,7 @@
     },
     {
       "code": "FAB-INSPECIONAR-2",
-      "row": 520,
+      "row": 524,
       "secao": "fabricacao",
       "label": "INSPECIONAR",
       "tipo": "servico",
@@ -234,7 +234,7 @@
     },
     {
       "code": "FAB-PREPARARTIRANTES-1",
-      "row": 524,
+      "row": 528,
       "secao": "fabricacao",
       "label": "PREPARAR TIRANTES",
       "tipo": "mao_obra",
@@ -245,7 +245,7 @@
     },
     {
       "code": "FAB-PREPARARESPAÇADORE-1",
-      "row": 528,
+      "row": 532,
       "secao": "fabricacao",
       "label": "PREPARAR ESPAÇADORES",
       "tipo": "mao_obra",
@@ -255,66 +255,8 @@
       "rate": 150.0
     },
     {
-      "code": "FAB-CURVARTUBOSTERCEIR-1",
-      "row": 532,
-      "secao": "fabricacao",
-      "label": "CURVAR TUBOS TERCEIROS",
-      "tipo": "servico",
-      "preco_gabarito": 1360.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-TRANSPORTEPARACURV-1",
-      "row": 536,
-      "secao": "fabricacao",
-      "label": "TRANSPORTE PARA CURVAMENTO EM TERCEIROS",
-      "tipo": "servico",
-      "preco_gabarito": 800.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-PREPARARTUBOSUPARA-1",
-      "row": 544,
-      "secao": "fabricacao",
-      "label": "PREPARAR TUBOS U PARA TRATAMENTO TÉRMICO",
-      "tipo": "mao_obra",
-      "preco_gabarito": 960.0,
-      "ajuste": 0.0,
-      "horas": 6.0,
-      "rate": 160.0
-    },
-    {
-      "code": "FAB-TRANSPORTEPARATRAT-1",
-      "row": 548,
-      "secao": "fabricacao",
-      "label": "TRANSPORTE PARA TRATAMENTO TÉRMICO TUBOS",
-      "tipo": "servico",
-      "preco_gabarito": 800.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-TRATAMENTOTÉRMICOA-1",
-      "row": 552,
-      "secao": "fabricacao",
-      "label": "TRATAMENTO TÉRMICO ALÍVIO DE TENSÕES - TUBOS U",
-      "tipo": "servico",
-      "preco_gabarito": 2000.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-EXAMEDELPNASCURVAS-1",
-      "row": 556,
-      "secao": "fabricacao",
-      "label": "EXAME DE L. P. NAS CURVAS DOS TUBOS U",
-      "tipo": "mao_obra",
-      "preco_gabarito": 2400.0,
-      "ajuste": 0.0,
-      "horas": 12.0,
-      "rate": 200.0
-    },
-    {
       "code": "FAB-MONTARESTRUTURADOF-1",
-      "row": 560,
+      "row": 536,
       "secao": "fabricacao",
       "label": "MONTAR ESTRUTURA DO FEIXE",
       "tipo": "mao_obra",
@@ -325,7 +267,7 @@
     },
     {
       "code": "FAB-QUEBRAJATO-1",
-      "row": 564,
+      "row": 540,
       "secao": "fabricacao",
       "label": "QUEBRA JATO",
       "tipo": "mao_obra",
@@ -336,18 +278,18 @@
     },
     {
       "code": "FAB-INTRODUZIROSTUBOSN-1",
-      "row": 568,
+      "row": 544,
       "secao": "fabricacao",
       "label": "INTRODUZIR OS TUBOS NO PRIMEIRO ESPELHO",
       "tipo": "mao_obra",
-      "preco_gabarito": 400.0,
+      "preco_gabarito": 160.0,
       "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 200.0
+      "horas": 4.0,
+      "rate": 40.0
     },
     {
       "code": "FAB-CALANDRARCILINDROS-1",
-      "row": 572,
+      "row": 548,
       "secao": "fabricacao",
       "label": "CALANDRAR CILINDROS LADO DO CASCO",
       "tipo": "servico",
@@ -356,7 +298,7 @@
     },
     {
       "code": "FAB-SOLDASLONGITUDINAI-1",
-      "row": 576,
+      "row": 552,
       "secao": "fabricacao",
       "label": "SOLDAS LONGITUDINAIS",
       "tipo": "mao_obra",
@@ -367,7 +309,7 @@
     },
     {
       "code": "FAB-MONTAROSCILINDROS-1",
-      "row": 580,
+      "row": 556,
       "secao": "fabricacao",
       "label": "MONTAR OS CILINDROS",
       "tipo": "mao_obra",
@@ -378,7 +320,7 @@
     },
     {
       "code": "FAB-SOLDASCIRCUNFERÊNC-1",
-      "row": 584,
+      "row": 560,
       "secao": "fabricacao",
       "label": "SOLDAS CIRCUNFERÊNCIAIS",
       "tipo": "mao_obra",
@@ -389,7 +331,7 @@
     },
     {
       "code": "FAB-DARACABAMENTO-1",
-      "row": 588,
+      "row": 564,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -400,7 +342,7 @@
     },
     {
       "code": "FAB-EXAMELP-1",
-      "row": 592,
+      "row": 568,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -408,196 +350,8 @@
       "ajuste": 0.0
     },
     {
-      "code": "FAB-TRAÇARERECORTARDIS-1",
-      "row": 596,
-      "secao": "fabricacao",
-      "label": "TRAÇAR E RECORTAR DISCOS DOS TAMPOS",
-      "tipo": "mao_obra",
-      "preco_gabarito": 180.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 90.0
-    },
-    {
-      "code": "FAB-REBORDEAMENTOTERCE-1",
-      "row": 600,
-      "secao": "fabricacao",
-      "label": "REBORDEAMENTO - TERCEIROS",
-      "tipo": "servico",
-      "preco_gabarito": 1100.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-BISELAR-1",
-      "row": 604,
-      "secao": "fabricacao",
-      "label": "BISELAR",
-      "tipo": "mao_obra",
-      "preco_gabarito": 180.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 90.0
-    },
-    {
-      "code": "FAB-DARACABAMENTO-2",
-      "row": 608,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "tipo": "mao_obra",
-      "preco_gabarito": 80.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 40.0
-    },
-    {
-      "code": "FAB-EXAMELP-2",
-      "row": 612,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "tipo": "servico",
-      "preco_gabarito": 100.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-MONTAROCILINDRONOT-1",
-      "row": 616,
-      "secao": "fabricacao",
-      "label": "MONTAR O CILINDRO NO TAMPO",
-      "tipo": "mao_obra",
-      "preco_gabarito": 400.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 200.0
-    },
-    {
-      "code": "FAB-SOLDASCIRCUNFERÊNC-2",
-      "row": 620,
-      "secao": "fabricacao",
-      "label": "SOLDAS CIRCUNFERÊNCIAIS",
-      "tipo": "mao_obra",
-      "preco_gabarito": 630.0,
-      "ajuste": 0.0,
-      "horas": 7.0,
-      "rate": 90.0
-    },
-    {
-      "code": "FAB-DARACABAMENTO-3",
-      "row": 624,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "tipo": "mao_obra",
-      "preco_gabarito": 80.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 40.0
-    },
-    {
-      "code": "FAB-EXAMELP-3",
-      "row": 628,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "tipo": "servico",
-      "preco_gabarito": 100.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-USINARFLANGESPRINC-1",
-      "row": 632,
-      "secao": "fabricacao",
-      "label": "USINAR FLANGES PRINCIPAIS",
-      "tipo": "mao_obra",
-      "preco_gabarito": 900.0,
-      "ajuste": 0.0,
-      "horas": 6.0,
-      "rate": 150.0
-    },
-    {
-      "code": "FAB-TRAÇARFUROSFLANGES-1",
-      "row": 636,
-      "secao": "fabricacao",
-      "label": "TRAÇAR FUROS FLANGES PRINCIPAIS",
-      "tipo": "mao_obra",
-      "preco_gabarito": 240.0,
-      "ajuste": 0.0,
-      "horas": 3.0,
-      "rate": 80.0
-    },
-    {
-      "code": "FAB-FURARFLANGESPRINCI-1",
-      "row": 640,
-      "secao": "fabricacao",
-      "label": "FURAR FLANGES PRINCIPAIS",
-      "tipo": "mao_obra",
-      "preco_gabarito": 880.0,
-      "ajuste": 0.0,
-      "horas": 8.0,
-      "rate": 110.0
-    },
-    {
-      "code": "FAB-INSPECIONARFLANGES-1",
-      "row": 644,
-      "secao": "fabricacao",
-      "label": "INSPECIONAR FLANGES PRINCIPAIS",
-      "tipo": "mao_obra",
-      "preco_gabarito": 220.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 110.0
-    },
-    {
-      "code": "FAB-MONTAROSCILINDROSN-1",
-      "row": 648,
-      "secao": "fabricacao",
-      "label": "MONTAR OS CILINDROS NOS FLANGES",
-      "tipo": "mao_obra",
-      "preco_gabarito": 400.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 200.0
-    },
-    {
-      "code": "FAB-SOLDASCIRCUNFERÊNC-3",
-      "row": 652,
-      "secao": "fabricacao",
-      "label": "SOLDAS CIRCUNFERÊNCIAIS",
-      "tipo": "mao_obra",
-      "preco_gabarito": 630.0,
-      "ajuste": 0.0,
-      "horas": 7.0,
-      "rate": 90.0
-    },
-    {
-      "code": "FAB-DARACABAMENTO-4",
-      "row": 656,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "tipo": "mao_obra",
-      "preco_gabarito": 80.0,
-      "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 40.0
-    },
-    {
-      "code": "FAB-EXAMELP-4",
-      "row": 660,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "tipo": "servico",
-      "preco_gabarito": 100.0,
-      "ajuste": 0.0
-    },
-    {
-      "code": "FAB-EXAMEDEULTRASSOM-1",
-      "row": 664,
-      "secao": "fabricacao",
-      "label": "EXAME DE ULTRASSOM",
-      "tipo": "servico",
-      "preco_gabarito": 1100.0,
-      "ajuste": 0.0
-    },
-    {
       "code": "FAB-EXAMERAIOX-1",
-      "row": 668,
+      "row": 572,
       "secao": "fabricacao",
       "label": "EXAME RAIO X",
       "tipo": "servico",
@@ -606,7 +360,7 @@
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃOBOCAI-1",
-      "row": 672,
+      "row": 576,
       "secao": "fabricacao",
       "label": "TRAÇAR POSIÇÃO BOCAIS",
       "tipo": "mao_obra",
@@ -617,7 +371,7 @@
     },
     {
       "code": "FAB-RECORTAREBISELAR-1",
-      "row": 676,
+      "row": 580,
       "secao": "fabricacao",
       "label": "RECORTAR E BISELAR",
       "tipo": "mao_obra",
@@ -627,8 +381,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-EXAMELP-5",
-      "row": 680,
+      "code": "FAB-EXAMELP-2",
+      "row": 584,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -637,7 +391,7 @@
     },
     {
       "code": "FAB-MONTARFLANGENOPESC-1",
-      "row": 684,
+      "row": 588,
       "secao": "fabricacao",
       "label": "MONTAR FLANGE NO PESCOÇO",
       "tipo": "mao_obra",
@@ -648,7 +402,7 @@
     },
     {
       "code": "FAB-SOLDARFLANGENOPESC-1",
-      "row": 688,
+      "row": 592,
       "secao": "fabricacao",
       "label": "SOLDAR FLANGE NO PESCOÇO S1",
       "tipo": "mao_obra",
@@ -658,8 +412,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-5",
-      "row": 692,
+      "code": "FAB-DARACABAMENTO-2",
+      "row": 596,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -669,8 +423,8 @@
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-6",
-      "row": 696,
+      "code": "FAB-EXAMELP-3",
+      "row": 600,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -679,7 +433,7 @@
     },
     {
       "code": "FAB-EXAMERAIOX-2",
-      "row": 700,
+      "row": 604,
       "secao": "fabricacao",
       "label": "EXAME RAIO X",
       "tipo": "servico",
@@ -688,7 +442,7 @@
     },
     {
       "code": "FAB-TRANSPORTEPARARAIO-1",
-      "row": 704,
+      "row": 608,
       "secao": "fabricacao",
       "label": "TRANSPORTE PARA RAIO X",
       "tipo": "servico",
@@ -697,7 +451,7 @@
     },
     {
       "code": "FAB-EXAMEULTRASSOM-1",
-      "row": 708,
+      "row": 612,
       "secao": "fabricacao",
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
@@ -706,7 +460,7 @@
     },
     {
       "code": "FAB-CALANDRARANÉISDERE-1",
-      "row": 712,
+      "row": 616,
       "secao": "fabricacao",
       "label": "CALANDRAR ANÉIS DE REFORÇO",
       "tipo": "servico",
@@ -715,7 +469,7 @@
     },
     {
       "code": "FAB-TRAÇARERECORTARANÉ-1",
-      "row": 716,
+      "row": 620,
       "secao": "fabricacao",
       "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
@@ -724,7 +478,7 @@
     },
     {
       "code": "FAB-USINARFUROSNPT14-1",
-      "row": 720,
+      "row": 624,
       "secao": "fabricacao",
       "label": "USINAR FUROS NPT 1/4\"",
       "tipo": "servico",
@@ -733,7 +487,7 @@
     },
     {
       "code": "FAB-MONTARANÉISDEREFOR-1",
-      "row": 724,
+      "row": 628,
       "secao": "fabricacao",
       "label": "MONTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
@@ -742,7 +496,7 @@
     },
     {
       "code": "FAB-SOLDARANÉISDEREFOR-1",
-      "row": 728,
+      "row": 632,
       "secao": "fabricacao",
       "label": "SOLDAR ANÉIS DE REFORÇO",
       "tipo": "mao_obra",
@@ -752,8 +506,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-6",
-      "row": 732,
+      "code": "FAB-DARACABAMENTO-3",
+      "row": 636,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -763,8 +517,8 @@
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-7",
-      "row": 736,
+      "code": "FAB-EXAMELP-4",
+      "row": 640,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -773,7 +527,7 @@
     },
     {
       "code": "FAB-EXAMEULTRASSOM-2",
-      "row": 740,
+      "row": 644,
       "secao": "fabricacao",
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
@@ -782,7 +536,7 @@
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃODASLU-1",
-      "row": 744,
+      "row": 648,
       "secao": "fabricacao",
       "label": "TRAÇAR POSIÇÃO DAS LUVAS",
       "tipo": "mao_obra",
@@ -793,7 +547,7 @@
     },
     {
       "code": "FAB-RECORTAREBISELAR-2",
-      "row": 748,
+      "row": 652,
       "secao": "fabricacao",
       "label": "RECORTAR E BISELAR",
       "tipo": "mao_obra",
@@ -804,7 +558,7 @@
     },
     {
       "code": "FAB-EXAMEDELP-1",
-      "row": 752,
+      "row": 656,
       "secao": "fabricacao",
       "label": "EXAME DE L.P.",
       "tipo": "servico",
@@ -813,7 +567,7 @@
     },
     {
       "code": "FAB-MONTARASLUVAS-1",
-      "row": 756,
+      "row": 660,
       "secao": "fabricacao",
       "label": "MONTAR AS LUVAS",
       "tipo": "mao_obra",
@@ -824,7 +578,7 @@
     },
     {
       "code": "FAB-SOLDARASLUVAS-1",
-      "row": 760,
+      "row": 664,
       "secao": "fabricacao",
       "label": "SOLDAR AS LUVAS",
       "tipo": "mao_obra",
@@ -834,8 +588,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-7",
-      "row": 764,
+      "code": "FAB-DARACABAMENTO-4",
+      "row": 668,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -845,8 +599,8 @@
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-8",
-      "row": 768,
+      "code": "FAB-EXAMELP-5",
+      "row": 672,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -855,7 +609,7 @@
     },
     {
       "code": "FAB-FABRICAROSPEDESTAI-1",
-      "row": 772,
+      "row": 676,
       "secao": "fabricacao",
       "label": "FABRICAR OS PEDESTAIS",
       "tipo": "mao_obra",
@@ -866,7 +620,7 @@
     },
     {
       "code": "FAB-MONTAROSPEDESTAIS-1",
-      "row": 776,
+      "row": 680,
       "secao": "fabricacao",
       "label": "MONTAR OS PEDESTAIS",
       "tipo": "mao_obra",
@@ -877,7 +631,7 @@
     },
     {
       "code": "FAB-SOLDAROSPEDESTAIS-1",
-      "row": 780,
+      "row": 684,
       "secao": "fabricacao",
       "label": "SOLDAR OS PEDESTAIS",
       "tipo": "mao_obra",
@@ -887,8 +641,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-8",
-      "row": 784,
+      "code": "FAB-DARACABAMENTO-5",
+      "row": 688,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -898,8 +652,8 @@
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-9",
-      "row": 788,
+      "code": "FAB-EXAMELP-6",
+      "row": 692,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -908,7 +662,7 @@
     },
     {
       "code": "FAB-MONTARPEDESTAISNOC-1",
-      "row": 792,
+      "row": 696,
       "secao": "fabricacao",
       "label": "MONTAR PEDESTAIS NO CASCO",
       "tipo": "mao_obra",
@@ -919,7 +673,7 @@
     },
     {
       "code": "FAB-SOLDAROSPEDESTAISN-1",
-      "row": 796,
+      "row": 700,
       "secao": "fabricacao",
       "label": "SOLDAR OS PEDESTAIS NO CASCO",
       "tipo": "mao_obra",
@@ -929,8 +683,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-9",
-      "row": 800,
+      "code": "FAB-DARACABAMENTO-6",
+      "row": 704,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -940,8 +694,8 @@
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-10",
-      "row": 804,
+      "code": "FAB-EXAMELP-7",
+      "row": 708,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -950,7 +704,7 @@
     },
     {
       "code": "FAB-GABARITAROCASCO-1",
-      "row": 808,
+      "row": 712,
       "secao": "fabricacao",
       "label": "GABARITAR O CASCO",
       "tipo": "mao_obra",
@@ -961,18 +715,40 @@
     },
     {
       "code": "FAB-INTRODUZIRFEIXENOC-1",
-      "row": 812,
+      "row": 716,
       "secao": "fabricacao",
       "label": "INTRODUZIR FEIXE NO CASCO",
       "tipo": "mao_obra",
-      "preco_gabarito": 400.0,
+      "preco_gabarito": 160.0,
       "ajuste": 0.0,
-      "horas": 2.0,
-      "rate": 200.0
+      "horas": 4.0,
+      "rate": 40.0
+    },
+    {
+      "code": "FAB-MONTAROSEGUNDOESPE-1",
+      "row": 720,
+      "secao": "fabricacao",
+      "label": "MONTAR O SEGUNDO ESPELHO",
+      "tipo": "mao_obra",
+      "preco_gabarito": 480.0,
+      "ajuste": 0.0,
+      "horas": 3.0,
+      "rate": 160.0
+    },
+    {
+      "code": "FAB-MONTAROSTUBOS-1",
+      "row": 724,
+      "secao": "fabricacao",
+      "label": "MONTAR OS TUBOS",
+      "tipo": "mao_obra",
+      "preco_gabarito": 200.0,
+      "ajuste": 0.0,
+      "horas": 5.0,
+      "rate": 40.0
     },
     {
       "code": "FAB-SOLDAROSESPELHOSNO-1",
-      "row": 824,
+      "row": 728,
       "secao": "fabricacao",
       "label": "SOLDAR OS ESPELHOS NO CASCO",
       "tipo": "mao_obra",
@@ -982,8 +758,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-10",
-      "row": 828,
+      "code": "FAB-DARACABAMENTO-7",
+      "row": 732,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -994,7 +770,7 @@
     },
     {
       "code": "FAB-EXAMEDELP-2",
-      "row": 832,
+      "row": 736,
       "secao": "fabricacao",
       "label": "EXAME DE L.P.",
       "tipo": "servico",
@@ -1002,8 +778,8 @@
       "ajuste": 0.0
     },
     {
-      "code": "FAB-EXAMEDEULTRASSOM-2",
-      "row": 836,
+      "code": "FAB-EXAMEDEULTRASSOM-1",
+      "row": 740,
       "secao": "fabricacao",
       "label": "EXAME DE ULTRASSOM",
       "tipo": "servico",
@@ -1012,40 +788,40 @@
     },
     {
       "code": "FAB-GABARITARTUBOS-1",
-      "row": 840,
+      "row": 744,
       "secao": "fabricacao",
       "label": "GABARITAR - TUBOS",
       "tipo": "mao_obra",
-      "preco_gabarito": 640.0,
+      "preco_gabarito": 80.0,
       "ajuste": 0.0,
-      "horas": 4.0,
-      "rate": 160.0
+      "horas": 2.0,
+      "rate": 40.0
     },
     {
       "code": "FAB-MANDRILAR-1",
-      "row": 844,
+      "row": 748,
       "secao": "fabricacao",
       "label": "MANDRILAR",
       "tipo": "mao_obra",
-      "preco_gabarito": 360.0,
+      "preco_gabarito": 720.0,
       "ajuste": 0.0,
-      "horas": 3.0,
+      "horas": 6.0,
       "rate": 80.0
     },
     {
       "code": "FAB-REBAIXAREDARACABAM-1",
-      "row": 848,
+      "row": 752,
       "secao": "fabricacao",
       "label": "REBAIXAR E DAR ACABAMENTO",
       "tipo": "mao_obra",
-      "preco_gabarito": 120.0,
+      "preco_gabarito": 240.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 60.0
     },
     {
       "code": "FAB-INSPECIONARTUBOSMO-1",
-      "row": 868,
+      "row": 772,
       "secao": "fabricacao",
       "label": "INSPECIONAR TUBOS MONTADOS",
       "tipo": "servico",
@@ -1054,7 +830,7 @@
     },
     {
       "code": "FAB-MONTARBARRAS-1",
-      "row": 872,
+      "row": 776,
       "secao": "fabricacao",
       "label": "MONTAR BARRAS",
       "tipo": "mao_obra",
@@ -1065,7 +841,7 @@
     },
     {
       "code": "FAB-SOLDARBARRAS-1",
-      "row": 876,
+      "row": 780,
       "secao": "fabricacao",
       "label": "SOLDAR BARRAS",
       "tipo": "mao_obra",
@@ -1076,7 +852,7 @@
     },
     {
       "code": "FAB-DARACABAMENTOBARRA-1",
-      "row": 880,
+      "row": 784,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO BARRAS",
       "tipo": "mao_obra",
@@ -1087,7 +863,7 @@
     },
     {
       "code": "FAB-INSPECIONARBARRASM-1",
-      "row": 884,
+      "row": 788,
       "secao": "fabricacao",
       "label": "INSPECIONAR BARRAS MONTADAS",
       "tipo": "servico",
@@ -1096,7 +872,7 @@
     },
     {
       "code": "FAB-MONTARALÇABATENTE-1",
-      "row": 888,
+      "row": 792,
       "secao": "fabricacao",
       "label": "MONTAR ALÇA / BATENTE",
       "tipo": "mao_obra",
@@ -1107,7 +883,7 @@
     },
     {
       "code": "FAB-SOLDARALÇABATENTE-1",
-      "row": 892,
+      "row": 796,
       "secao": "fabricacao",
       "label": "SOLDAR ALÇA / BATENTE",
       "tipo": "mao_obra",
@@ -1118,7 +894,7 @@
     },
     {
       "code": "FAB-DARACABAMENTOALÇAB-1",
-      "row": 896,
+      "row": 800,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO ALÇA / BATENTE",
       "tipo": "mao_obra",
@@ -1129,7 +905,7 @@
     },
     {
       "code": "FAB-EXAMELPNASOLDAALÇA-1",
-      "row": 900,
+      "row": 804,
       "secao": "fabricacao",
       "label": "EXAME L. P. NA SOLDA ALÇA / BATENTE",
       "tipo": "servico",
@@ -1138,7 +914,7 @@
     },
     {
       "code": "FAB-INSPECIONARALÇABAT-1",
-      "row": 904,
+      "row": 808,
       "secao": "fabricacao",
       "label": "INSPECIONAR ALÇA / BATENTE",
       "tipo": "servico",
@@ -1146,19 +922,19 @@
       "ajuste": 0.0
     },
     {
-      "code": "FAB-TRAÇARERECORTARDIS-2",
-      "row": 908,
+      "code": "FAB-TRAÇARERECORTARDIS-1",
+      "row": 812,
       "secao": "fabricacao",
       "label": "TRAÇAR E RECORTAR DISCOS DOS TAMPOS",
       "tipo": "mao_obra",
-      "preco_gabarito": 180.0,
+      "preco_gabarito": 360.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 90.0
     },
     {
-      "code": "FAB-REBORDEAMENTOTERCE-2",
-      "row": 912,
+      "code": "FAB-REBORDEAMENTOTERCE-1",
+      "row": 816,
       "secao": "fabricacao",
       "label": "REBORDEAMENTO - TERCEIROS",
       "tipo": "servico",
@@ -1166,101 +942,101 @@
       "ajuste": 0.0
     },
     {
-      "code": "FAB-BISELAR-2",
-      "row": 916,
+      "code": "FAB-BISELAR-1",
+      "row": 820,
       "secao": "fabricacao",
       "label": "BISELAR",
       "tipo": "mao_obra",
-      "preco_gabarito": 180.0,
+      "preco_gabarito": 360.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-11",
-      "row": 920,
+      "code": "FAB-DARACABAMENTO-8",
+      "row": 824,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
-      "preco_gabarito": 80.0,
+      "preco_gabarito": 160.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-11",
-      "row": 924,
+      "code": "FAB-EXAMELP-8",
+      "row": 828,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
-      "preco_gabarito": 100.0,
+      "preco_gabarito": 200.0,
       "ajuste": 0.0
     },
     {
       "code": "FAB-CALANDRARCILINDROS-2",
-      "row": 928,
+      "row": 832,
       "secao": "fabricacao",
       "label": "CALANDRAR CILINDROS DOS CABEÇOTES",
       "tipo": "servico",
-      "preco_gabarito": 167.0,
+      "preco_gabarito": 334.0,
       "ajuste": 0.0
     },
     {
       "code": "FAB-SOLDASLONGITUDINAI-2",
-      "row": 932,
+      "row": 836,
       "secao": "fabricacao",
       "label": "SOLDAS LONGITUDINAIS",
       "tipo": "mao_obra",
-      "preco_gabarito": 270.0,
+      "preco_gabarito": 540.0,
       "ajuste": 0.0,
-      "horas": 3.0,
+      "horas": 6.0,
       "rate": 90.0
     },
     {
-      "code": "FAB-MONTAROSCILINDROSN-2",
-      "row": 936,
+      "code": "FAB-MONTAROSCILINDROSN-1",
+      "row": 840,
       "secao": "fabricacao",
       "label": "MONTAR OS CILINDROS NOS TAMPOS",
       "tipo": "mao_obra",
-      "preco_gabarito": 400.0,
+      "preco_gabarito": 800.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 200.0
     },
     {
-      "code": "FAB-SOLDASCIRCUNFERÊNC-4",
-      "row": 940,
+      "code": "FAB-SOLDASCIRCUNFERÊNC-2",
+      "row": 844,
       "secao": "fabricacao",
       "label": "SOLDAS CIRCUNFERÊNCIAIS",
       "tipo": "mao_obra",
-      "preco_gabarito": 630.0,
+      "preco_gabarito": 1350.0,
       "ajuste": 0.0,
-      "horas": 7.0,
+      "horas": 15.0,
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-12",
-      "row": 944,
+      "code": "FAB-DARACABAMENTO-9",
+      "row": 848,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
-      "preco_gabarito": 80.0,
+      "preco_gabarito": 160.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-12",
-      "row": 948,
+      "code": "FAB-EXAMELP-9",
+      "row": 852,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
-      "preco_gabarito": 100.0,
+      "preco_gabarito": 200.0,
       "ajuste": 0.0
     },
     {
       "code": "FAB-EXAMERAIOX-3",
-      "row": 952,
+      "row": 856,
       "secao": "fabricacao",
       "label": "EXAME RAIO X",
       "tipo": "servico",
@@ -1268,94 +1044,94 @@
       "ajuste": 0.0
     },
     {
-      "code": "FAB-USINARFLANGESPRINC-2",
-      "row": 956,
+      "code": "FAB-USINARFLANGESPRINC-1",
+      "row": 860,
       "secao": "fabricacao",
       "label": "USINAR FLANGES PRINCIPAIS",
       "tipo": "mao_obra",
-      "preco_gabarito": 900.0,
+      "preco_gabarito": 1800.0,
       "ajuste": 0.0,
-      "horas": 6.0,
+      "horas": 12.0,
       "rate": 150.0
     },
     {
-      "code": "FAB-TRAÇARFUROSFLANGES-2",
-      "row": 960,
+      "code": "FAB-TRAÇARFUROSFLANGES-1",
+      "row": 864,
       "secao": "fabricacao",
       "label": "TRAÇAR FUROS FLANGES PRINCIPAIS",
       "tipo": "mao_obra",
-      "preco_gabarito": 240.0,
+      "preco_gabarito": 480.0,
       "ajuste": 0.0,
-      "horas": 3.0,
+      "horas": 6.0,
       "rate": 80.0
     },
     {
-      "code": "FAB-FURARFLANGESPRINCI-2",
-      "row": 964,
+      "code": "FAB-FURARFLANGESPRINCI-1",
+      "row": 868,
       "secao": "fabricacao",
       "label": "FURAR FLANGES PRINCIPAIS",
       "tipo": "mao_obra",
-      "preco_gabarito": 880.0,
+      "preco_gabarito": 1760.0,
       "ajuste": 0.0,
-      "horas": 8.0,
+      "horas": 16.0,
       "rate": 110.0
     },
     {
-      "code": "FAB-INSPECIONARFLANGES-2",
-      "row": 968,
+      "code": "FAB-INSPECIONARFLANGES-1",
+      "row": 872,
       "secao": "fabricacao",
       "label": "INSPECIONAR FLANGES PRINCIPAIS",
       "tipo": "mao_obra",
-      "preco_gabarito": 220.0,
+      "preco_gabarito": 440.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 110.0
     },
     {
-      "code": "FAB-MONTAROSCILINDROSN-3",
-      "row": 972,
+      "code": "FAB-MONTAROSCILINDROSN-2",
+      "row": 876,
       "secao": "fabricacao",
       "label": "MONTAR OS CILINDROS NOS FLANGES",
       "tipo": "mao_obra",
-      "preco_gabarito": 400.0,
+      "preco_gabarito": 800.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 200.0
     },
     {
-      "code": "FAB-SOLDASCIRCUNFERÊNC-5",
-      "row": 976,
+      "code": "FAB-SOLDASCIRCUNFERÊNC-3",
+      "row": 880,
       "secao": "fabricacao",
       "label": "SOLDAS CIRCUNFERÊNCIAIS",
       "tipo": "mao_obra",
-      "preco_gabarito": 630.0,
+      "preco_gabarito": 1350.0,
       "ajuste": 0.0,
-      "horas": 7.0,
+      "horas": 15.0,
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-13",
-      "row": 980,
+      "code": "FAB-DARACABAMENTO-10",
+      "row": 884,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
-      "preco_gabarito": 80.0,
+      "preco_gabarito": 160.0,
       "ajuste": 0.0,
-      "horas": 2.0,
+      "horas": 4.0,
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-13",
-      "row": 984,
+      "code": "FAB-EXAMELP-10",
+      "row": 888,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
-      "preco_gabarito": 100.0,
+      "preco_gabarito": 200.0,
       "ajuste": 0.0
     },
     {
-      "code": "FAB-EXAMEDEULTRASSOM-3",
-      "row": 988,
+      "code": "FAB-EXAMEDEULTRASSOM-2",
+      "row": 892,
       "secao": "fabricacao",
       "label": "EXAME DE ULTRASSOM",
       "tipo": "servico",
@@ -1364,7 +1140,7 @@
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃOBOCAI-2",
-      "row": 992,
+      "row": 896,
       "secao": "fabricacao",
       "label": "TRAÇAR POSIÇÃO BOCAIS",
       "tipo": "mao_obra",
@@ -1375,7 +1151,7 @@
     },
     {
       "code": "FAB-RECORTAREBISELAR-3",
-      "row": 996,
+      "row": 900,
       "secao": "fabricacao",
       "label": "RECORTAR E BISELAR",
       "tipo": "mao_obra",
@@ -1385,8 +1161,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-EXAMELP-14",
-      "row": 1000,
+      "code": "FAB-EXAMELP-11",
+      "row": 904,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -1395,7 +1171,7 @@
     },
     {
       "code": "FAB-MONTARFLANGENOPESC-2",
-      "row": 1004,
+      "row": 908,
       "secao": "fabricacao",
       "label": "MONTAR FLANGE NO PESCOÇO",
       "tipo": "mao_obra",
@@ -1406,9 +1182,9 @@
     },
     {
       "code": "FAB-SOLDARFLANGENOPESC-2",
-      "row": 1008,
+      "row": 912,
       "secao": "fabricacao",
-      "label": "SOLDAR FLANGE NO PESCOÇO",
+      "label": "SOLDAR FLANGE NO PESCOÇO S1",
       "tipo": "mao_obra",
       "preco_gabarito": 540.0,
       "ajuste": 0.0,
@@ -1416,8 +1192,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-14",
-      "row": 1012,
+      "code": "FAB-DARACABAMENTO-11",
+      "row": 916,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -1427,8 +1203,8 @@
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-15",
-      "row": 1016,
+      "code": "FAB-EXAMELP-12",
+      "row": 920,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -1437,7 +1213,7 @@
     },
     {
       "code": "FAB-EXAMERAIOX-4",
-      "row": 1020,
+      "row": 924,
       "secao": "fabricacao",
       "label": "EXAME RAIO X",
       "tipo": "servico",
@@ -1446,7 +1222,7 @@
     },
     {
       "code": "FAB-TRANSPORTEPARARAIO-2",
-      "row": 1024,
+      "row": 928,
       "secao": "fabricacao",
       "label": "TRANSPORTE PARA RAIO X",
       "tipo": "servico",
@@ -1455,7 +1231,7 @@
     },
     {
       "code": "FAB-EXAMEULTRASSOM-3",
-      "row": 1028,
+      "row": 932,
       "secao": "fabricacao",
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
@@ -1464,7 +1240,7 @@
     },
     {
       "code": "FAB-CALANDRARANÉISDERE-2",
-      "row": 1032,
+      "row": 936,
       "secao": "fabricacao",
       "label": "CALANDRAR ANÉIS DE REFORÇO",
       "tipo": "servico",
@@ -1473,7 +1249,7 @@
     },
     {
       "code": "FAB-TRAÇARERECORTARANÉ-2",
-      "row": 1036,
+      "row": 940,
       "secao": "fabricacao",
       "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
@@ -1482,7 +1258,7 @@
     },
     {
       "code": "FAB-USINARFUROSNPT14-2",
-      "row": 1040,
+      "row": 944,
       "secao": "fabricacao",
       "label": "USINAR FUROS NPT 1/4\"",
       "tipo": "servico",
@@ -1491,7 +1267,7 @@
     },
     {
       "code": "FAB-MONTARANÉISDEREFOR-2",
-      "row": 1044,
+      "row": 948,
       "secao": "fabricacao",
       "label": "MONTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
@@ -1500,7 +1276,7 @@
     },
     {
       "code": "FAB-SOLDARANÉISDEREFOR-2",
-      "row": 1048,
+      "row": 952,
       "secao": "fabricacao",
       "label": "SOLDAR ANÉIS DE REFORÇO",
       "tipo": "mao_obra",
@@ -1510,8 +1286,8 @@
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-15",
-      "row": 1052,
+      "code": "FAB-DARACABAMENTO-12",
+      "row": 956,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
@@ -1521,8 +1297,8 @@
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-16",
-      "row": 1056,
+      "code": "FAB-EXAMELP-13",
+      "row": 960,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -1531,7 +1307,7 @@
     },
     {
       "code": "FAB-EXAMEULTRASSOM-4",
-      "row": 1060,
+      "row": 964,
       "secao": "fabricacao",
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
@@ -1540,29 +1316,29 @@
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃODASLU-2",
-      "row": 1064,
+      "row": 968,
       "secao": "fabricacao",
       "label": "TRAÇAR POSIÇÃO DAS LUVAS",
       "tipo": "mao_obra",
-      "preco_gabarito": 360.0,
+      "preco_gabarito": 180.0,
       "ajuste": 0.0,
-      "horas": 4.0,
+      "horas": 2.0,
       "rate": 90.0
     },
     {
       "code": "FAB-RECORTAREBISELAR-4",
-      "row": 1068,
+      "row": 972,
       "secao": "fabricacao",
       "label": "RECORTAR E BISELAR",
       "tipo": "mao_obra",
-      "preco_gabarito": 540.0,
+      "preco_gabarito": 270.0,
       "ajuste": 0.0,
-      "horas": 6.0,
+      "horas": 3.0,
       "rate": 90.0
     },
     {
       "code": "FAB-EXAMEDELP-3",
-      "row": 1072,
+      "row": 976,
       "secao": "fabricacao",
       "label": "EXAME DE L.P.",
       "tipo": "servico",
@@ -1571,40 +1347,40 @@
     },
     {
       "code": "FAB-MONTARASLUVAS-2",
-      "row": 1076,
+      "row": 980,
       "secao": "fabricacao",
       "label": "MONTAR AS LUVAS",
       "tipo": "mao_obra",
-      "preco_gabarito": 720.0,
+      "preco_gabarito": 360.0,
       "ajuste": 0.0,
-      "horas": 8.0,
+      "horas": 4.0,
       "rate": 90.0
     },
     {
       "code": "FAB-SOLDARASLUVAS-2",
-      "row": 1080,
+      "row": 984,
       "secao": "fabricacao",
       "label": "SOLDAR AS LUVAS",
       "tipo": "mao_obra",
-      "preco_gabarito": 900.0,
+      "preco_gabarito": 450.0,
       "ajuste": 0.0,
-      "horas": 10.0,
+      "horas": 5.0,
       "rate": 90.0
     },
     {
-      "code": "FAB-DARACABAMENTO-16",
-      "row": 1084,
+      "code": "FAB-DARACABAMENTO-13",
+      "row": 988,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "tipo": "mao_obra",
-      "preco_gabarito": 240.0,
+      "preco_gabarito": 120.0,
       "ajuste": 0.0,
-      "horas": 6.0,
+      "horas": 3.0,
       "rate": 40.0
     },
     {
-      "code": "FAB-EXAMELP-17",
-      "row": 1088,
+      "code": "FAB-EXAMELP-14",
+      "row": 992,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "tipo": "servico",
@@ -1613,7 +1389,7 @@
     },
     {
       "code": "FAB-CHAPADIVISORA-1",
-      "row": 1092,
+      "row": 996,
       "secao": "fabricacao",
       "label": "CHAPA DIVISORA",
       "tipo": "mao_obra",
@@ -1624,7 +1400,7 @@
     },
     {
       "code": "FAB-MONTAROSCABEÇOTESN-1",
-      "row": 1096,
+      "row": 1000,
       "secao": "fabricacao",
       "label": "MONTAR OS CABEÇOTES NO CASCO + FEIXE",
       "tipo": "mao_obra",
@@ -1635,7 +1411,7 @@
     },
     {
       "code": "FAB-INSPEÇÃODIMENSIONA-1",
-      "row": 1112,
+      "row": 1016,
       "secao": "fabricacao",
       "label": "INSPEÇÃO DIMENSIONAL",
       "tipo": "servico",
@@ -1644,7 +1420,7 @@
     },
     {
       "code": "FAB-TESTEHIDROSTÁTICO-1",
-      "row": 1120,
+      "row": 1024,
       "secao": "fabricacao",
       "label": "TESTE HIDROSTÁTICO",
       "tipo": "servico",
@@ -1653,7 +1429,7 @@
     },
     {
       "code": "FAB-TRANSPORTEPREPARAÇ-1",
-      "row": 1124,
+      "row": 1028,
       "secao": "fabricacao",
       "label": "TRANSPORTE - PREPARAÇÃO E EMBALAGEM",
       "tipo": "servico",
@@ -1662,7 +1438,7 @@
     },
     {
       "code": "FAB-PETROBRASRPBC-1",
-      "row": 1128,
+      "row": 1032,
       "secao": "fabricacao",
       "label": "PETROBRAS - RPBC",
       "tipo": "servico",
@@ -1671,7 +1447,7 @@
     },
     {
       "code": "FIN-PIT-1",
-      "row": 1144,
+      "row": 1048,
       "secao": "finalizacao",
       "label": "PIT",
       "tipo": "servico",
@@ -1680,7 +1456,7 @@
     },
     {
       "code": "FIN-PS-1",
-      "row": 1148,
+      "row": 1052,
       "secao": "finalizacao",
       "label": "PS",
       "tipo": "servico",
@@ -1689,7 +1465,7 @@
     },
     {
       "code": "FIN-DATABOOK-1",
-      "row": 1152,
+      "row": 1056,
       "secao": "finalizacao",
       "label": "DATA BOOK",
       "tipo": "servico",
@@ -1698,7 +1474,7 @@
     },
     {
       "code": "FIN-INSPEÇÃOTIPOQ-1",
-      "row": 1156,
+      "row": 1060,
       "secao": "finalizacao",
       "label": "INSPEÇÃO TIPO \"Q\"",
       "tipo": "servico",
@@ -1707,7 +1483,7 @@
     },
     {
       "code": "FIN-FERRAMENTAS-1",
-      "row": 1164,
+      "row": 1068,
       "secao": "finalizacao",
       "label": "FERRAMENTAS",
       "tipo": "servico",
@@ -1716,7 +1492,7 @@
     },
     {
       "code": "FIN-CONSUMÍVEISDESOLDA-1",
-      "row": 1168,
+      "row": 1072,
       "secao": "finalizacao",
       "label": "CONSUMÍVEIS DE SOLDAGEM",
       "tipo": "servico",
@@ -1725,11 +1501,11 @@
     },
     {
       "code": "FIN-EXPANDIDORES-1",
-      "row": 1172,
+      "row": 1076,
       "secao": "finalizacao",
       "label": "EXPANDIDORES",
       "tipo": "servico",
-      "preco_gabarito": 177.0,
+      "preco_gabarito": 354.0,
       "ajuste": 0.0
     }
   ]

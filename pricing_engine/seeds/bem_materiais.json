@@ -1,10 +1,10 @@
 {
-  "fonte": "Planilha Padrão - Permutador 'BEU' - Rev.0.xlsx",
-  "designacao_tema": "BEU",
-  "n_materiais": 45,
+  "fonte": "Planilha Padrão - Permutador 'BEM' - Rev.0.xlsx",
+  "designacao_tema": "BEM",
+  "n_materiais": 46,
   "materiais": [
     {
-      "row": 204,
+      "row": 200,
       "secao": "feixe_material",
       "label": "TUBOS DE TROCA TÉRMICA",
       "familia": "tubo",
@@ -12,16 +12,16 @@
       "dims": {
         "OD": 19.05,
         "ESP.": 2.108,
-        "COMPR.": 13000,
-        "QUANTIDADE": 68
+        "COMPR.": 6096,
+        "QUANTIDADE": 136
       },
-      "preco": 11562.98,
-      "peso_bruto": 856.517,
-      "peso_liq": 778.652,
+      "preco": 10844.29,
+      "peso_bruto": 803.281,
+      "peso_liq": 730.255,
       "price_kgf": 13.5
     },
     {
-      "row": 208,
+      "row": 204,
       "secao": "feixe_material",
       "label": "ESPELHO FIXO",
       "familia": "perfurado",
@@ -35,7 +35,25 @@
       },
       "preco": 534.1,
       "peso_bruto": 82.17,
-      "peso_liq": 42.123,
+      "peso_liq": 36.95,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 208,
+      "secao": "feixe_material",
+      "label": "ESPELHO FIXO",
+      "familia": "perfurado",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "OD": 412,
+        "ESP.": 34,
+        "ESP. BR.": 44.5,
+        "QUANTIDADE": 1,
+        "SA-516 GR 70": "AÇO CARBONO"
+      },
+      "preco": 404.36,
+      "peso_bruto": 62.209,
+      "peso_liq": 25.236,
       "price_kgf": 6.5
     },
     {
@@ -54,7 +72,7 @@
       },
       "preco": 1518.98,
       "peso_bruto": 233.689,
-      "peso_liq": 239.087,
+      "peso_liq": 237.186,
       "price_kgf": 6.5
     },
     {
@@ -72,7 +90,7 @@
       },
       "preco": 116.18,
       "peso_bruto": 17.874,
-      "peso_liq": 11.486,
+      "peso_liq": 9.585,
       "price_kgf": 6.5
     },
     {
@@ -345,39 +363,6 @@
     {
       "row": 304,
       "secao": "casco_material",
-      "label": "TAMPO 2:1",
-      "familia": "tampo_2_1",
-      "material": "SA-516 GR 70",
-      "dims": {
-        "ESP.": 9.5,
-        "OD DISCO": 680.915,
-        "QUANTIDADE": 1
-      },
-      "preco": 247.22,
-      "peso_bruto": 38.034,
-      "peso_liq": 34.576,
-      "price_kgf": 6.5
-    },
-    {
-      "row": 308,
-      "secao": "casco_material",
-      "label": "FLANGE PRINCIPAL",
-      "familia": "anel",
-      "material": "SA-105",
-      "dims": {
-        "OD": 1076,
-        "ID": 914,
-        "ESP.": 104,
-        "QUANTIDADE": 1
-      },
-      "preco": 5167.74,
-      "peso_bruto": 206.71,
-      "peso_liq": 185.885,
-      "price_kgf": 25.0
-    },
-    {
-      "row": 312,
-      "secao": "casco_material",
       "label": "FLANGE",
       "familia": "flange_wn",
       "material": "SA-105",
@@ -395,7 +380,7 @@
       "price_kgf": 26.806
     },
     {
-      "row": 316,
+      "row": 308,
       "secao": "casco_material",
       "label": "PESCOÇO DO BOCAL",
       "familia": "pipe",
@@ -412,7 +397,7 @@
       "price_kgf": 15.0
     },
     {
-      "row": 320,
+      "row": 312,
       "secao": "casco_material",
       "label": "ANEL DE REFORÇO",
       "familia": "anel",
@@ -429,7 +414,7 @@
       "price_kgf": 6.5
     },
     {
-      "row": 324,
+      "row": 316,
       "secao": "casco_material",
       "label": "FLANGE",
       "familia": "flange_wn",
@@ -448,7 +433,7 @@
       "price_kgf": 17.289
     },
     {
-      "row": 328,
+      "row": 320,
       "secao": "casco_material",
       "label": "PESCOÇO DO BOCAL",
       "familia": "pipe",
@@ -465,7 +450,7 @@
       "price_kgf": 15.0
     },
     {
-      "row": 332,
+      "row": 324,
       "secao": "casco_material",
       "label": "ANEL DE REFORÇO",
       "familia": "anel",
@@ -482,7 +467,7 @@
       "price_kgf": 6.5
     },
     {
-      "row": 336,
+      "row": 328,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "familia": "catalogo",
@@ -500,7 +485,7 @@
       "price_kgf": 53.191
     },
     {
-      "row": 340,
+      "row": 332,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "familia": "catalogo",
@@ -517,7 +502,7 @@
       "price_kgf": 88.235
     },
     {
-      "row": 344,
+      "row": 336,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "familia": "catalogo",
@@ -535,7 +520,7 @@
       "price_kgf": 32.258
     },
     {
-      "row": 348,
+      "row": 340,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "familia": "catalogo",
@@ -552,7 +537,7 @@
       "price_kgf": 58.824
     },
     {
-      "row": 352,
+      "row": 344,
       "secao": "casco_material",
       "label": "SUPORTE",
       "familia": "catalogo",
@@ -569,7 +554,7 @@
       "price_kgf": 6.5
     },
     {
-      "row": 356,
+      "row": 348,
       "secao": "casco_material",
       "label": "PLACA DE IDENTIFICAÇÃO",
       "familia": "catalogo",
@@ -581,7 +566,7 @@
       "peso_bruto": null
     },
     {
-      "row": 372,
+      "row": 364,
       "secao": "cabecote_material",
       "label": "VIROLA",
       "familia": "chapa_retangular",
@@ -595,6 +580,39 @@
       "preco": 434.83,
       "peso_bruto": 66.898,
       "peso_liq": 60.816,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 368,
+      "secao": "cabecote_material",
+      "label": "VIROLA",
+      "familia": "chapa_retangular",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "LARGURA": 500,
+        "COMPR.": 1631,
+        "QUANTIDADE": 1
+      },
+      "preco": 434.83,
+      "peso_bruto": 66.898,
+      "peso_liq": 60.816,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 372,
+      "secao": "cabecote_material",
+      "label": "TAMPO 2:1",
+      "familia": "tampo_2_1",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "OD DISCO": 680.915,
+        "QUANTIDADE": 1
+      },
+      "preco": 247.22,
+      "peso_bruto": 38.034,
+      "peso_liq": 34.576,
       "price_kgf": 6.5
     },
     {
@@ -614,24 +632,24 @@
       "price_kgf": 6.5
     },
     {
-      "row": 380,
+      "row": 388,
       "secao": "cabecote_material",
-      "label": "CHAPA DIVISORA",
-      "familia": "chapa_retangular",
-      "material": "SA-516 GR 70",
+      "label": "FLANGE PRINCIPAL",
+      "familia": "anel",
+      "material": "SA-105",
       "dims": {
-        "ESP.": 9.5,
-        "LARGURA": 500,
-        "COMPR.": 600,
+        "OD": 1076,
+        "ID": 914,
+        "ESP.": 104,
         "QUANTIDADE": 1
       },
-      "preco": 159.96,
-      "peso_bruto": 24.61,
-      "peso_liq": 22.372,
-      "price_kgf": 6.5
+      "preco": 5167.74,
+      "peso_bruto": 206.71,
+      "peso_liq": 185.885,
+      "price_kgf": 25.0
     },
     {
-      "row": 388,
+      "row": 392,
       "secao": "cabecote_material",
       "label": "FLANGE PRINCIPAL",
       "familia": "anel",
@@ -648,7 +666,7 @@
       "price_kgf": 25.0
     },
     {
-      "row": 396,
+      "row": 400,
       "secao": "cabecote_material",
       "label": "PESCOÇO DO BOCAL",
       "familia": "pipe",
@@ -665,7 +683,7 @@
       "price_kgf": 15.0
     },
     {
-      "row": 400,
+      "row": 404,
       "secao": "cabecote_material",
       "label": "ANEL DE REFORÇO",
       "familia": "anel",
@@ -682,7 +700,7 @@
       "price_kgf": 6.501
     },
     {
-      "row": 408,
+      "row": 412,
       "secao": "cabecote_material",
       "label": "PESCOÇO DO BOCAL",
       "familia": "pipe",
@@ -699,7 +717,7 @@
       "price_kgf": 15.0
     },
     {
-      "row": 412,
+      "row": 416,
       "secao": "cabecote_material",
       "label": "ANEL DE REFORÇO",
       "familia": "anel",
@@ -716,7 +734,7 @@
       "price_kgf": 6.501
     },
     {
-      "row": 416,
+      "row": 420,
       "secao": "cabecote_material",
       "label": "CONEXÃO",
       "familia": "catalogo",
@@ -726,29 +744,12 @@
         "ND": "3/4\"",
         "RATING": "6000#",
         "FACE": "NPT",
-        "QUANTIDADE": 2
+        "QUANTIDADE": 1
       },
-      "preco": 50.0,
-      "peso_bruto": 0.94,
-      "peso_liq": 0.94,
+      "preco": 25.0,
+      "peso_bruto": 0.47,
+      "peso_liq": 0.47,
       "price_kgf": 53.191
-    },
-    {
-      "row": 420,
-      "secao": "cabecote_material",
-      "label": "CONEXÃO",
-      "familia": "catalogo",
-      "material": "SA-105",
-      "dims": {
-        "TIPO": "PLUG",
-        "ND": "3/4\"",
-        "FACE": "NPT",
-        "QUANTIDADE": 2
-      },
-      "preco": 30.0,
-      "peso_bruto": 0.17,
-      "peso_liq": 0.17,
-      "price_kgf": 176.471
     },
     {
       "row": 424,
@@ -757,16 +758,15 @@
       "familia": "catalogo",
       "material": "SA-105",
       "dims": {
-        "TIPO": "LUVA",
-        "ND": "1\"",
-        "RATING": "6000#",
+        "TIPO": "PLUG",
+        "ND": "3/4\"",
         "FACE": "NPT",
-        "QUANTIDADE": 2
+        "QUANTIDADE": 1
       },
-      "preco": 60.0,
-      "peso_bruto": 1.86,
-      "peso_liq": 1.86,
-      "price_kgf": 32.258
+      "preco": 15.0,
+      "peso_bruto": 0.17,
+      "peso_liq": 0.17,
+      "price_kgf": 88.235
     },
     {
       "row": 428,
@@ -775,15 +775,33 @@
       "familia": "catalogo",
       "material": "SA-105",
       "dims": {
+        "TIPO": "LUVA",
+        "ND": "1\"",
+        "RATING": "6000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 1
+      },
+      "preco": 30.0,
+      "peso_bruto": 0.93,
+      "peso_liq": 0.93,
+      "price_kgf": 32.258
+    },
+    {
+      "row": 432,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "familia": "catalogo",
+      "material": "SA-105",
+      "dims": {
         "TIPO": "PLUG",
         "ND": "1\"",
         "FACE": "NPT",
-        "QUANTIDADE": 2
+        "QUANTIDADE": 1
       },
-      "preco": 40.0,
+      "preco": 20.0,
       "peso_bruto": 0.34,
       "peso_liq": 0.34,
-      "price_kgf": 117.647
+      "price_kgf": 58.824
     }
   ]
 }
