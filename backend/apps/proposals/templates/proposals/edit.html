@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ p.number }} — Editar Proposta{% endblock %}
+{% block content %}
+<div class="eyebrow">PROPOSTA · Editar · {{ p.template.name }}</div>
+<div class="q-number">{{ p.number }}</div>
+<p class="mono" style="color:var(--g-gray-1)">Cotação {{ q.number }} · {{ q.customer.company_name }} ·
+  Preço R$ {{ q.preco_com_impostos|floatformat:2 }}</p>
+<p style="color:var(--g-gray-1);font-size:12px">
+  O texto vem do template configurável <b>{{ p.template.name }}</b> e pode ser customizado para este caso.
+  A tabela de itens e o preço são computados da cotação.
+</p>
+
+<form method="post">
+  {% csrf_token %}
+  <section class="g-section">
+    <header class="g-section-head"><h3>Introdução</h3></header>
+    <div class="g-section-body"><textarea name="intro_text" rows="3" style="width:100%;font-family:var(--font-mono);border:var(--border-thin);padding:8px">{{ p.intro_text }}</textarea></div>
+  </section>
+  <section class="g-section">
+    <header class="g-section-head"><h3>Escopo</h3></header>
+    <div class="g-section-body"><textarea name="scope_text" rows="3" style="width:100%;font-family:var(--font-mono);border:var(--border-thin);padding:8px">{{ p.scope_text }}</textarea></div>
+  </section>
+  <section class="g-section">
+    <header class="g-section-head"><h3>Condições</h3></header>
+    <div class="g-section-body"><textarea name="terms_text" rows="3" style="width:100%;font-family:var(--font-mono);border:var(--border-thin);padding:8px">{{ p.terms_text }}</textarea></div>
+  </section>
+  <section class="g-section">
+    <header class="g-section-head"><h3>Fecho</h3></header>
+    <div class="g-section-body"><textarea name="closing_text" rows="3" style="width:100%;font-family:var(--font-mono);border:var(--border-thin);padding:8px">{{ p.closing_text }}</textarea></div>
+  </section>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <button class="q-btn" name="save" value="1">Salvar Rascunho</button>
+    <button class="q-btn primary" name="generate" value="1">Salvar e Gerar DOCX + PDF</button>
+  </div>
+</form>
+{% endblock %}

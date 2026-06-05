@@ -43,9 +43,9 @@ TENANT_APPS = [
     "apps.materials",
     "apps.engineering_params",
     "apps.quotations",
+    "apps.proposals",
     # domínio (criados nas tasks seguintes):
-    # "apps.templates_lib", "apps.costing",
-    # "apps.proposals", "apps.cost_discovery",
+    # "apps.templates_lib", "apps.costing", "apps.cost_discovery",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [a for a in TENANT_APPS if a not in SHARED_APPS]
@@ -123,6 +123,8 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # django-encrypted-model-fields (preços/margens cifrados)
 FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="zHengIv2_t3vYh0Qm6m6Y8oF1n0YH3y7wE7c0pXq3kM=")
