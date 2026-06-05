@@ -48,6 +48,59 @@ _FAMILIA_FORMA = {
     "disco": "chapa", "tampo_2_1": "chapa", "anel": "forjado", "flange_wn": "forjado",
 }
 
+# ── Escala de HORAS por PARÂMETRO físico (v2, refinamentos da auditoria adversarial) ──
+# Cada operação escala por UM parâmetro físico (razão projeto/referência), não por grupo
+# monolítico (#2). Soldas separam direção (#5): longitudinal∝comprimento, circunf∝diâmetro.
+_DRIVER_PARAM = {
+    "Nº TUBOS": "tubos", "Nº FUROS": "tubos", "FUROS": "tubos",
+    "Nº TIRANTES": "diametro", "Nº BARRAS": "diametro",     # #2: ∝ diâmetro do casco, não nº tubos
+    "Nº CHICANAS": "chicanas", "ESP PACOTE": "chicanas",
+    "Nº Soldas": "diametro", "Nº Cilindros": "comprimento", "COMPR. (m)": "comprimento",
+}
+# parcela de SETUP fixo por parâmetro (#1): horas = horas_ref × (setup + (1-setup)×razão).
+# Defaults de engenharia (editáveis): furação/calandragem têm setup alto; ensaios baixo.
+_SETUP_FRAC = {
+    "tubos": 0.20, "chicanas": 0.20, "comprimento": 0.15, "diametro": 0.15,
+    "solda": 0.10, "massa": 0.10, "area": 0.10, "volume": 0.10,
+}
+# operações ADMINISTRATIVAS / de configuração — não escalam (param None → fator 1,0)
+_ADMIN_KW = ("INSPEÇÃO DIMENSIONAL", "PIT", "DATA BOOK", "DATA-BOOK", "PETROBRAS",
+             "FERRAMENTAS", "TRANSPORTE", "ANEL", "ANÉIS", "EXPANDIDORES", "PLACA")
+
+
+def _param_da_op(o):
+    """Parâmetro físico que escala uma operação (None = fixo). Une MO e serviços (#1,#2,#3,#5)."""
+    lbl = (o.get("label") or "").upper()
+    if any(k in lbl for k in _ADMIN_KW):
+        return None
+    # serviços/ensaios por palavra-chave (#3)
+    if "RAIO X" in lbl or "ULTRASSOM" in lbl or "EXAME" in lbl or "L.P" in lbl or "L. P" in lbl:
+        return "solda"
+    if "CONSUM" in lbl:
+        return "solda"
+    if "TÉRMICO" in lbl or "CALANDRAR" in lbl:
+        return "massa"
+    if "HIDROST" in lbl:
+        return "volume"
+    if "PINTURA" in lbl or "JATEAMENTO" in lbl:
+        return "area"
+    # soldas do casco por direção (#5)
+    if "LONGITUDINA" in lbl:
+        return "comprimento"
+    if "CIRCUNFER" in lbl:
+        return "diametro"
+    return _DRIVER_PARAM.get(o.get("driver"))
+
+
+def _escala_op(o, params):
+    """Fator efetivo de horas da op: setup + (1-setup)×razão_do_parâmetro. 1,0 no referência."""
+    p = _param_da_op(o)
+    if not p:
+        return 1.0
+    razao = float((params or {}).get(p, 1.0))
+    setup = _SETUP_FRAC.get(p, 0.15)
+    return setup + (1.0 - setup) * razao
+
 
 def _load(nome):
     with open(os.path.join(_SEEDS, nome), encoding="utf-8") as f:
@@ -70,12 +123,13 @@ def designacoes_disponiveis():
 def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: float = 1.0,
                    fator_preco: float = 1.25, impostos_pct: float = 9.0,
                    dims_override: dict | None = None,
-                   scale_factors: dict | None = None) -> dict:
-    """scale_factors: {grupo: fator} p/ escalar as HORAS de fabricação pelo driver físico
-    (feixe=nº tubos, chicanas=nº chicanas, casco=comprimento). Calibrado do job de
-    referência (fator 1,0 = caso de referência → reconcilia 0,0%). Grupo 'fixo' (config:
-    nº de bocais/flanges) e serviços de terceiros NÃO escalam — limitação conhecida."""
-    sf = scale_factors or {}
+                   params: dict | None = None) -> dict:
+    """params: {parâmetro: razão proj/ref} p/ escalar as HORAS de fabricação E serviços por
+    DRIVER físico (tubos, chicanas, comprimento, diametro, solda, massa, area, volume), com
+    parcela de setup fixo. Razão 1,0 = caso de referência → reconcilia 0,0%. Operações
+    administrativas/config (nº de bocais/flanges, data book, transporte) não escalam.
+    Aproximações geométricas (massa/solda/area/volume) e setup fractions são calibrações
+    de engenharia documentadas — limitações conhecidas (ver auditoria adversarial)."""
     d = designacao.lower()
     mats = _load(f"{d}_materiais.json")["materiais"]
     ops = _load(f"{d}_operacoes.json")["operacoes"]
@@ -114,19 +168,19 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         secoes[m["secao"]] = secoes.get(m["secao"], 0.0) + custo
 
     custo_mo = custo_servico = 0.0
-    mo_por_grupo = {}
+    custo_por_param = {}
     for o in ops:
+        eff = _escala_op(o, params)                    # setup + (1-setup)×razão (1,0 no ref)
+        pnome = _param_da_op(o) or "fixo"
         if o["tipo"] == "mao_obra":
             ajuste = o.get("ajuste", 0.0)
-            grupo = o.get("grupo", "fixo")
-            fator = float(sf.get(grupo, 1.0))         # escala de horas pelo driver físico
-            base = o["preco_gabarito"] - ajuste       # parcela de MO (R$ a FC=1, ref)
-            c = base * fator * fc + ajuste
+            base = o["preco_gabarito"] - ajuste        # parcela de MO (R$ a FC=1, ref)
+            c = base * eff * fc + ajuste
             custo_mo += c
-            mo_por_grupo[grupo] = round(mo_por_grupo.get(grupo, 0.0) + c, 2)
         else:
-            c = o["preco_gabarito"]                    # serviço/terceiro: fixo (não escala)
+            c = o["preco_gabarito"] * eff              # serviço: escala se tiver driver físico
             custo_servico += c
+        custo_por_param[pnome] = round(custo_por_param.get(pnome, 0.0) + c, 2)
         secoes[o["secao"]] = secoes.get(o["secao"], 0.0) + c
 
     custo_total = custo_material + custo_mo + custo_servico
@@ -139,7 +193,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         "designacao_tema": designacao.upper(),
         "custo_material": round(custo_material, 2),
         "custo_mao_obra": round(custo_mo, 2),
-        "custo_mo_por_grupo": mo_por_grupo,
+        "custo_por_param": custo_por_param,
         "custo_servicos": round(custo_servico, 2),
         "custo_total": round(custo_total, 2),
         "por_secao": {k: round(v, 2) for k, v in secoes.items()},

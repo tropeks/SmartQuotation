@@ -25,6 +25,8 @@ class PermutadorDataSheetForm(forms.Form):
     n_chicanas = forms.IntegerField(label="Nº de chicanas", min_value=1)
     # casco (paramétrico — recomputa peso das virolas + escala horas de solda/calandragem)
     comprimento_casco_mm = forms.FloatField(label="Comprimento da virola/casco (mm)", min_value=1)
+    diametro_casco_mm = forms.FloatField(label="Diâmetro do casco (mm)", min_value=1)
+    esp_casco_mm = forms.FloatField(label="Espessura da virola (mm)", min_value=0.1)
     # mão de obra
     fator_correcao_mo = forms.FloatField(
         label="Fator de correção de MO", min_value=0.1, initial=1.0)

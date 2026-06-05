@@ -117,7 +117,8 @@ class ComposeViewTests(TestCase):
     def _post(self, **over):
         data = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
                 "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
-                "comprimento_casco_mm": 1631, "fator_correcao_mo": 1.0}
+                "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
+                "esp_casco_mm": 9.5, "fator_correcao_mo": 1.0}
         data.update(over)
         return self.client.post("/tema/permutador/", data)
 
@@ -128,13 +129,24 @@ class ComposeViewTests(TestCase):
 
     def test_data_sheet_mais_tubos_sobe_mao_de_obra(self):
         """Parametria plena: mais tubos → mais horas de fabricação (não só material)."""
-        from apps.tema_templates.services import estimate_complete, _scale_factors
+        from apps.tema_templates.services import estimate_complete, _physical_params
         ref = estimate_complete("BEU")
-        sf = _scale_factors("BEU", {"n_tubos": 136, "n_chicanas": 18, "comprimento_casco_mm": 1631})
-        maior = estimate_complete("BEU", scale_factors=sf)
-        self.assertGreater(maior["custo_mao_obra"], ref["custo_mao_obra"] + 1000)
-        self.assertGreater(maior["custo_mo_por_grupo"]["feixe"],
-                           ref["custo_mo_por_grupo"]["feixe"])
+        params = _physical_params("BEU", {"n_tubos": 136, "comprimento_tubo_mm": 13000,
+                                           "diametro_casco_mm": 764, "n_chicanas": 18})
+        maior = estimate_complete("BEU", params=params)
+        self.assertGreater(maior["custo_mao_obra"], ref["custo_mao_obra"] + 500)
+
+    def test_servicos_escalam_com_massa(self):
+        """#3: tratamento térmico/consumíveis escalam com a massa (proxy D·L)."""
+        from apps.tema_templates.services import estimate_complete
+        ref = estimate_complete("BEU")
+        maior = estimate_complete("BEU", params={"massa": 2.0, "solda": 2.0})
+        self.assertGreater(maior["custo_servicos"], ref["custo_servicos"] + 1000)
+
+    def test_layout_aviso_tubos_demais(self):
+        """#4: muitos tubos num casco pequeno gera aviso de arranjo inviável."""
+        r = self._post(n_tubos=500, diametro_casco_mm=400)
+        self.assertContains(r, "inviável")
 
     def test_designacao_nao_custeavel_sem_breakdown(self):
         r = self._check("A", "E", "L")          # AEL não tem custeio completo validado

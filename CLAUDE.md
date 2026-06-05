@@ -17,11 +17,14 @@ pricing_engine/        # MOTOR de custeio — Python PURO (zero Django). Não ed
   BEU R$ 128.160, BEM R$ 119.295. Seeds {d}_{materiais,operacoes,ground_truth}.json gerados
   por scripts/extract_permutador.py. beu_quote.quote_beu = wrapper compat. beu_geometry.py=pesos
   (ρ por material via materials.density; tampo 2:1 = CALIB 4/π, calibração não fórmula física).
-  Parametria: dims_override recomputa peso pela geometria; scale_factors escala as HORAS de
-  fabricação por grupo de driver (feixe=nº tubos, chicanas=nº chicanas, casco=comprimento) —
-  calibrado do job de referência (fator 1,0 → gate 0,0%). Data sheet em apps/tema_templates.
-  LIMITAÇÃO: MO 'fixo' (config bocais/flanges) + serviços de terceiros não escalam; escala
-  linear calibrada a 1 job (sem 2º gabarito p/ validar linearidade).
+  Parametria v2: dims_override recomputa peso pela geometria; params={parâmetro: razão} escala
+  HORAS de MO E serviços por driver físico com setup fixo (horas=horas_ref×(setup+(1-setup)×razão)).
+  Parâmetros: tubos·chicanas·comprimento·diametro·solda·massa·area·volume. _param_da_op mapeia
+  cada op (tirantes/barras→diametro; RT/UT→solda; TT/consumíveis→massa; hidro→volume; soldas
+  long∝comprimento/circ∝diametro). permutador_layout.check_layout avisa geometria inviável
+  (feixe não cabe no casco). Razão 1,0 = referência → gate 0,0%. LIMITAÇÃO: massa/solda/area/
+  volume são proxies (≈D·L…); setup fractions são defaults; calibração a 1 job. Data sheet em
+  apps/tema_templates (inputs: tubos, comprimento, OD, parede, nº chicanas, D casco, esp).
 
 backend/               # Django 5.2 + django-tenants (schema-per-tenant) + session auth (sem JWT)
   apps/tenants/        # Tenant/Domain/Plan (public). provision_tenant cria schema isolado.
