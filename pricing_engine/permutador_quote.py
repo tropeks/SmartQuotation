@@ -53,15 +53,18 @@ _FAMILIA_FORMA = {
 # monolítico (#2). Soldas separam direção (#5): longitudinal∝comprimento, circunf∝diâmetro.
 _DRIVER_PARAM = {
     "Nº TUBOS": "tubos", "Nº FUROS": "tubos", "FUROS": "tubos",
-    "Nº TIRANTES": "diametro", "Nº BARRAS": "diametro",     # #2: ∝ diâmetro do casco, não nº tubos
-    "Nº CHICANAS": "chicanas", "ESP PACOTE": "chicanas",
-    "Nº Soldas": "diametro", "Nº Cilindros": "comprimento", "COMPR. (m)": "comprimento",
+    "Nº TIRANTES": "diametro", "Nº BARRAS": "diametro",     # ∝ diâmetro do casco, não nº tubos
+    "Nº CHICANAS": "chicanas",
+    "ESP PACOTE": "furacao_chicana",   # #6: furação do pacote ∝ nº tubos × nº chicanas
+    "Nº Soldas": "solda_circ", "Nº Cilindros": "comprimento", "COMPR. (m)": "solda_long",
 }
 # parcela de SETUP fixo por parâmetro (#1): horas = horas_ref × (setup + (1-setup)×razão).
 # Defaults de engenharia (editáveis): furação/calandragem têm setup alto; ensaios baixo.
 _SETUP_FRAC = {
-    "tubos": 0.20, "chicanas": 0.20, "comprimento": 0.15, "diametro": 0.15,
-    "solda": 0.10, "massa": 0.10, "area": 0.10, "volume": 0.10,
+    "tubos": 0.20, "chicanas": 0.20, "furacao_chicana": 0.20,
+    "comprimento": 0.15, "diametro": 0.15,
+    "solda": 0.10, "solda_long": 0.10, "solda_circ": 0.10,
+    "massa": 0.10, "area": 0.10, "volume": 0.10,
 }
 # operações ADMINISTRATIVAS / de configuração — não escalam (param None → fator 1,0)
 _ADMIN_KW = ("INSPEÇÃO DIMENSIONAL", "PIT", "DATA BOOK", "DATA-BOOK", "PETROBRAS",
@@ -84,11 +87,11 @@ def _param_da_op(o):
         return "volume"
     if "PINTURA" in lbl or "JATEAMENTO" in lbl:
         return "area"
-    # soldas do casco por direção (#5)
+    # soldas do casco por direção (#5) com espessura² embutida no param (#2)
     if "LONGITUDINA" in lbl:
-        return "comprimento"
+        return "solda_long"
     if "CIRCUNFER" in lbl:
-        return "diametro"
+        return "solda_circ"
     return _DRIVER_PARAM.get(o.get("driver"))
 
 
@@ -123,7 +126,7 @@ def designacoes_disponiveis():
 def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: float = 1.0,
                    fator_preco: float = 1.25, impostos_pct: float = 9.0,
                    dims_override: dict | None = None,
-                   params: dict | None = None) -> dict:
+                   params: dict | None = None, liga_fator_mo: float = 1.0) -> dict:
     """params: {parâmetro: razão proj/ref} p/ escalar as HORAS de fabricação E serviços por
     DRIVER físico (tubos, chicanas, comprimento, diametro, solda, massa, area, volume), com
     parcela de setup fixo. Razão 1,0 = caso de referência → reconcilia 0,0%. Operações
@@ -167,18 +170,21 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         custo_material += custo
         secoes[m["secao"]] = secoes.get(m["secao"], 0.0) + custo
 
+    _SOLDA_PARAMS = ("solda", "solda_long", "solda_circ")
     custo_mo = custo_servico = 0.0
     custo_por_param = {}
     for o in ops:
         eff = _escala_op(o, params)                    # setup + (1-setup)×razão (1,0 no ref)
         pnome = _param_da_op(o) or "fixo"
+        # fator de liga metalúrgica (#3): MO de caldeiraria e soldas (mesmo serviço de solda)
+        liga = liga_fator_mo if (o["tipo"] == "mao_obra" or pnome in _SOLDA_PARAMS) else 1.0
         if o["tipo"] == "mao_obra":
             ajuste = o.get("ajuste", 0.0)
             base = o["preco_gabarito"] - ajuste        # parcela de MO (R$ a FC=1, ref)
-            c = base * eff * fc + ajuste
+            c = base * eff * liga * fc + ajuste
             custo_mo += c
         else:
-            c = o["preco_gabarito"] * eff              # serviço: escala se tiver driver físico
+            c = o["preco_gabarito"] * eff * liga       # serviço: escala se tiver driver físico
             custo_servico += c
         custo_por_param[pnome] = round(custo_por_param.get(pnome, 0.0) + c, 2)
         secoes[o["secao"]] = secoes.get(o["secao"], 0.0) + c
@@ -198,6 +204,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         "custo_total": round(custo_total, 2),
         "por_secao": {k: round(v, 2) for k, v in secoes.items()},
         "fator_correcao_mo": fc,
+        "liga_fator_mo": liga_fator_mo,
         "fator_preco": fator_preco,
         "impostos_pct": impostos_pct,
         "preco_com_impostos": round(preco_com_impostos, 2),

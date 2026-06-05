@@ -64,9 +64,14 @@
       metros de solda, massa, área, volume) com parcela de <b>setup fixo</b>. Ensaios (raio-X,
       ultrassom), tratamento térmico e consumíveis agora respondem; soldas separam
       longitudinal (∝comprimento) de circunferencial (∝diâmetro).
-      <b>Limitações conhecidas:</b> (1) MO administrativa/config (data book, bocais/flanges)
-      é fixa; (2) <b>massa/solda/área/volume</b> são proxies geométricos (≈D·L, ≈½L+½D…) e as
-      <b>frações de setup</b> são defaults de engenharia; (3) escala calibrada a 1 job real.</div>
+      Soldas escalam com <b>espessura²</b> (chapa grossa = mais passes + NDT); furação de
+      chicana ∝ nº tubos × nº chicanas; folga feixe↔casco conforme o cabeçote TEMA; horas de
+      caldeiraria ×<b>fator de liga</b> ({{ custo.liga_fator_mo }}).
+      <b>Limitações conhecidas:</b> (1) MO administrativa/config é fixa; (2) proxies geométricos
+      (massa/solda/área/volume), <b>frações de setup</b> e <b>fatores de liga</b> são defaults
+      de engenharia editáveis (não medidos); (3) calibração a 1 job real.
+      <b>Deferido p/ o engenheiro de domínio:</b> pressão de projeto → espessura ASME VIII e
+      tabela de flanges por classe de pressão.</div>
   </div>
 </section>
 {% endif %}

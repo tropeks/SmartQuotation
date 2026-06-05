@@ -14,8 +14,20 @@ from __future__ import annotations
 import math
 
 PITCH_RATIO_PADRAO = 1.25
-FOLGA_CASCO_MM = 12.0          # folga típica feixe↔casco (bypass + diametral clearance)
+FOLGA_CASCO_MM = 12.0          # folga típica feixe↔casco (espelho fixo/U): bypass + clearance
 _AREA_TUBO = {"triangular": 0.866, "quadrado": 1.0}
+
+# folga radial feixe↔casco por tipo de cabeçote traseiro TEMA (#5 agy). Cabeçote flutuante
+# (P/S/T/W) exige folga muito maior p/ anel bipartido + flange de fechamento. Valores típicos.
+FOLGA_POR_CABECOTE = {
+    "L": 12.0, "M": 12.0, "N": 12.0, "U": 15.0,        # espelho fixo / feixe em U
+    "P": 50.0, "S": 60.0, "T": 75.0, "W": 45.0,        # flutuante (anel bipartido / pull-through)
+}
+
+
+def folga_cabecote(letra) -> float:
+    """Folga feixe↔casco (mm) conforme a letra do cabeçote traseiro TEMA."""
+    return FOLGA_POR_CABECOTE.get((letra or "").upper(), FOLGA_CASCO_MM)
 
 
 def d_feixe_min(n_tubos: int, od_tubo_mm: float, pitch_ratio: float = PITCH_RATIO_PADRAO,
@@ -30,13 +42,16 @@ def d_feixe_min(n_tubos: int, od_tubo_mm: float, pitch_ratio: float = PITCH_RATI
 
 
 def check_layout(n_tubos: int, od_tubo_mm: float, d_casco_mm: float,
-                 pitch_ratio: float = PITCH_RATIO_PADRAO, layout: str = "triangular") -> list[str]:
-    """Avisos de arranjo (vazio = ok). NÃO bloqueia — apenas alerta o orçamentista."""
+                 pitch_ratio: float = PITCH_RATIO_PADRAO, layout: str = "triangular",
+                 cabecote: str | None = None) -> list[str]:
+    """Avisos de arranjo (vazio = ok). NÃO bloqueia — apenas alerta o orçamentista.
+    cabecote = letra TEMA do cabeçote traseiro (define a folga radial necessária, #5)."""
     avisos = []
     if not d_casco_mm:
         return avisos
     d_feixe = d_feixe_min(n_tubos, od_tubo_mm, pitch_ratio, layout)
-    necessario = d_feixe + FOLGA_CASCO_MM
+    folga = folga_cabecote(cabecote)
+    necessario = d_feixe + folga
     if necessario > d_casco_mm:
         avisos.append(
             f"Arranjo inviável: {n_tubos} tubos Ø{od_tubo_mm:g}mm (pitch {pitch_ratio:g}×OD, "

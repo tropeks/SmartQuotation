@@ -24,7 +24,11 @@ pricing_engine/        # MOTOR de custeio — Python PURO (zero Django). Não ed
   long∝comprimento/circ∝diametro). permutador_layout.check_layout avisa geometria inviável
   (feixe não cabe no casco). Razão 1,0 = referência → gate 0,0%. LIMITAÇÃO: massa/solda/area/
   volume são proxies (≈D·L…); setup fractions são defaults; calibração a 1 job. Data sheet em
-  apps/tema_templates (inputs: tubos, comprimento, OD, parede, nº chicanas, D casco, esp).
+  apps/tema_templates (inputs: tubos, comprimento, OD, parede, nº chicanas, D casco, esp, liga).
+  Refinos v3 (sem domínio): soldas ∝ espessura² (solda_long/circ/NDT); furação chicana ∝
+  tubos×chicanas; fator de liga na MO (LIGA_FATOR CS1,0/inox1,3/duplex1,6/níquel2,0, editável);
+  folga feixe↔casco por cabeçote TEMA (permutador_layout.FOLGA_POR_CABECOTE). DEFERIDO p/
+  Wellington: pressão→espessura ASME VIII (tensão admissível) e tabela de flanges B16.5.
 
 backend/               # Django 5.2 + django-tenants (schema-per-tenant) + session auth (sem JWT)
   apps/tenants/        # Tenant/Domain/Plan (public). provision_tenant cria schema isolado.
