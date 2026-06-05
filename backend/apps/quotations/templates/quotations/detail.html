@@ -41,4 +41,20 @@
   <span>Markup: {{ q.fator_preco }}</span>
   <span>Impostos: {{ q.impostos_pct }}%</span>
 </div>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Proposta Comercial</h3>
+    <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">+ Gerar Proposta</a>
+  </header>
+  <div class="g-section-body">
+    {% for p in q.proposals.all %}
+      <p><a href="{% url 'proposals:detail' p.pk %}" class="mono" style="color:var(--g-orange)">{{ p.number }}</a>
+         · {{ p.get_status_display }}
+         {% if p.pdf_path %}· <a href="{% url 'proposals:download' p.pk 'pdf' %}">PDF</a>
+         · <a href="{% url 'proposals:download' p.pk 'docx' %}">DOCX</a>{% endif %}</p>
+    {% empty %}
+      <p style="color:var(--g-gray-1)">Nenhuma proposta ainda. Gere a partir do template configurável.</p>
+    {% endfor %}
+  </div>
+</section>
 {% endblock %}

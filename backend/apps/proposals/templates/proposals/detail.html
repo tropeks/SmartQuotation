@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ p.number }}{% endblock %}
+{% block content %}
+<div class="eyebrow">PROPOSTA · Detalhe</div>
+<div class="q-number">{{ p.number }}</div>
+<p class="mono" style="color:var(--g-gray-1)">Cotação {{ q.number }} · {{ q.customer.company_name }} ·
+  {{ p.get_status_display }}{% if p.generated_at %} · gerada {{ p.generated_at|date:"d/m/Y H:i" }}{% endif %}</p>
+
+<div class="price-line">
+  <span class="lbl">Preço de Venda</span>
+  <span class="val mono">R$ {{ q.preco_com_impostos|floatformat:2 }}</span>
+</div>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Arquivos</h3>
+    <a class="q-btn" href="{% url 'proposals:edit' p.pk %}">Editar texto</a>
+  </header>
+  <div class="g-section-body">
+    {% if p.pdf_path %}
+      <p><a class="q-btn primary" href="{% url 'proposals:download' p.pk 'pdf' %}">⤓ Download PDF</a>
+         <a class="q-btn" href="{% url 'proposals:download' p.pk 'docx' %}">⤓ Download DOCX</a></p>
+      <p class="mono" style="font-size:10px;color:var(--g-gray-1)">
+        PDF sha256 {{ p.pdf_sha256|slice:":16" }}… · DOCX sha256 {{ p.docx_sha256|slice:":16" }}…</p>
+    {% else %}
+      <p style="color:var(--g-gray-1)">Ainda não gerada. <a href="{% url 'proposals:edit' p.pk %}">Editar e gerar</a>.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

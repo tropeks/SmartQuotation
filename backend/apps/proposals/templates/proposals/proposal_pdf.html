@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8">
+<style>
+  @page { size:A4; margin:18mm 16mm; }
+  * { box-sizing:border-box; }
+  body { font-family:'Archivo','Helvetica Neue',Arial,sans-serif; color:#16151a; font-size:11pt; line-height:1.5; }
+  .head { border-bottom:2px solid #16151a; padding-bottom:8px; margin-bottom:14px;
+    display:flex; justify-content:space-between; align-items:flex-end; }
+  .brand { font-weight:800; font-size:18pt; text-transform:uppercase; letter-spacing:-0.02em; }
+  .brand b { color:#d94e1f; }
+  .doc-id { font-family:'JetBrains Mono',monospace; font-size:10pt; text-align:right; color:#555; }
+  h2 { font-size:11pt; text-transform:uppercase; letter-spacing:0.08em; margin:16px 0 4px;
+    border-left:4px solid #d94e1f; padding-left:8px; }
+  .meta b { display:inline-block; min-width:90px; }
+  p { margin:6px 0; white-space:pre-line; }
+  table { width:100%; border-collapse:collapse; margin-top:6px; font-size:10pt; }
+  thead th { background:#16151a; color:#f4f1ea; text-align:left; padding:5px 8px;
+    text-transform:uppercase; font-size:8.5pt; letter-spacing:0.06em; }
+  thead th.num, tbody td.num { text-align:right; font-family:'JetBrains Mono',monospace; }
+  tbody td { padding:5px 8px; border-bottom:1px solid #e3dfd2; }
+  .price { background:#16151a; color:#f5c542; display:flex; justify-content:space-between;
+    align-items:center; padding:12px 16px; margin-top:14px; }
+  .price .l { font-weight:800; text-transform:uppercase; letter-spacing:0.08em; }
+  .price .v { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:20pt; }
+  .foot { margin-top:18px; font-size:8pt; color:#888; border-top:1px solid #e3dfd2; padding-top:6px; }
+</style></head>
+<body>
+  <div class="head">
+    <div class="brand">{{ p.template.company_name|default:"ENGEMATEX" }}</div>
+    <div class="doc-id">PROPOSTA {{ p.number }}<br>{{ data|date:"d/m/Y" }}</div>
+  </div>
+
+  <p class="meta"><b>Cliente:</b> {{ q.customer.company_name }}<br>
+     <b>Cotação:</b> {{ q.number }} · Rev. {{ q.revision }}<br>
+     <b>Equipamento:</b> {{ q.get_scope_display }} — {{ q.title }}</p>
+
+  <p>{{ p.intro_text }}</p>
+
+  <h2>Escopo</h2>
+  <p>{{ p.scope_text }}</p>
+
+  <h2>Composição</h2>
+  <table>
+    <thead><tr><th>Cód.</th><th>Item</th><th class="num">Material</th><th class="num">Mão de Obra</th><th class="num">Total</th></tr></thead>
+    <tbody>
+      {% for it in itens %}
+      <tr><td>{{ it.codigo_item }}</td><td>{{ it.descricao }}</td>
+        <td class="num">R$ {{ it.custo_material|floatformat:2 }}</td>
+        <td class="num">R$ {{ it.custo_mo|floatformat:2 }}</td>
+        <td class="num">R$ {{ it.custo_total|floatformat:2 }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="price"><span class="l">Preço de Venda</span>
+    <span class="v">R$ {{ q.preco_com_impostos|floatformat:2 }}</span></div>
+
+  <h2>Condições</h2>
+  <p>{{ p.terms_text }}</p>
+  <p>{{ p.closing_text }}</p>
+
+  <div class="foot">Documento gerado por SmartQuotation · {{ p.number }} · {{ data|date:"d/m/Y" }}</div>
+</body></html>

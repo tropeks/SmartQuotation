@@ -41,7 +41,9 @@ python manage.py provision_tenant --name "ENGEMATEX" --schema engematex --domain
 python manage.py migrate_schemas --tenant
 python manage.py tenant_command seed_materials --schema=engematex
 python manage.py tenant_command seed_engineering_params --schema=engematex
+python manage.py tenant_command seed_proposal_template --schema=engematex
 python manage.py runserver 0.0.0.0:8000     # acessar via engematex.localhost:8000
+# PDF da proposta: WeasyPrint (Docker) ou google-chrome --print-to-pdf (fallback). DOCX: python-docx.
 ```
 
 ## Testes
