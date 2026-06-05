@@ -12,6 +12,17 @@ from pricing_engine.permutador_quote import designacoes_disponiveis
 # designações cujo custeio paramétrico já foi validado contra gabarito real
 COSTABLE = set(designacoes_disponiveis())
 
+# fator multiplicador de horas de caldeiraria/solda por classe metalúrgica (#3 agy).
+# Aço-carbono = 1,0 (referência). Defaults de engenharia EDITÁVEIS — não medidos.
+# LIMITAÇÃO: é um fator GLOBAL — não modela construção bimetálica (ex.: feixe inox +
+# casco CS); nesse caso o custo de MO fica entre os dois. Desacoplar por componente é
+# milestone futura (precisa material por componente no data sheet).
+LIGA_FATOR = {
+    "CS": 1.0, "INOX": 1.4, "DUPLEX": 1.7, "NIQUEL": 2.3,
+}
+LIGA_CHOICES = [("CS", "Aço Carbono"), ("INOX", "Aço Inox (300/400)"),
+                ("DUPLEX", "Duplex / Superduplex"), ("NIQUEL", "Liga de Níquel (Inconel…)")]
+
 
 def tenant_cost_chain():
     """Monta a TenantCostChain do tenant (preços de material cifrados + fator de MO),
@@ -95,11 +106,21 @@ def _physical_params(designacao, cleaned):
     chicanas = r("n_chicanas")
     comprimento = r("comprimento_tubo_mm")   # comprimento axial do casco ∝ comprimento do tubo
     diametro = r("diametro_casco_mm")
+    esp_casco_ratio = r("esp_casco_mm")       # espessura proj/ref (linear)
+    esp2 = esp_casco_ratio ** 2               # #2: volume de chanfro/solda ∝ espessura²
     return {
         "tubos": tubos, "chicanas": chicanas, "comprimento": comprimento, "diametro": diametro,
+        # furação do pacote de chicanas ∝ nº tubos × nº chicanas (cada chicana furada com o
+        # padrão completo de tubos) — #6 agy
+        "furacao_chicana": tubos * chicanas,
         # massa cresce mais que linear com D (seção ∝ D² e a espessura cresce com D) — #2.2 agy
         "massa": diametro * diametro * comprimento,
-        "solda": 0.5 * comprimento + 0.5 * diametro,
+        # soldas DE DEPOSIÇÃO escalam com comprimento/diâmetro E espessura² (volume de chanfro)
+        "solda_long": comprimento * esp2,
+        "solda_circ": diametro * esp2,
+        # NDT (raio-X/ultrassom) é cobrado por metro de junta → linear, NÃO t² (correção #2 agy:
+        # t² superestimaria o RT em chapas grossas em até 16×). Espessura entra só linear.
+        "solda": (0.5 * comprimento + 0.5 * diametro) * (esp_casco_ratio),
         "area": diametro * comprimento,            # superfície de pintura πDL
         "volume": diametro * diametro * comprimento,
     }
@@ -107,7 +128,7 @@ def _physical_params(designacao, cleaned):
 
 def estimate_complete(designacao: str, dims_override: dict | None = None,
                       fator_correcao_mo: float | None = None,
-                      params: dict | None = None):
+                      params: dict | None = None, liga_fator_mo: float = 1.0):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
 
     dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
@@ -125,15 +146,17 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
     if fator_correcao_mo is not None:
         chain.fator_correcao_mo = float(fator_correcao_mo)
     return quote_completo(d, cost_chain=chain, dims_override=dims_override or None,
-                          params=params or None)
+                          params=params or None, liga_fator_mo=liga_fator_mo)
 
 
 def layout_avisos(designacao, cleaned):
     """Avisos de arranjo (feixe vs casco) — achado #4. Vazio = ok."""
     from pricing_engine.permutador_layout import check_layout
+    rear = (designacao or "")[2:3]   # 3ª letra TEMA = cabeçote traseiro (BEU→U, BEM→M)
     try:
         return check_layout(int(cleaned.get("n_tubos") or 0),
                             float(cleaned.get("od_tubo_mm") or 0),
-                            float(cleaned.get("diametro_casco_mm") or 0))
+                            float(cleaned.get("diametro_casco_mm") or 0),
+                            cabecote=rear)
     except Exception:
         return []

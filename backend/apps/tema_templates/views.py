@@ -4,7 +4,7 @@ from django.shortcuts import render
 
 from apps.tema_templates.models import ComponentTemplate, check_compatibility
 from apps.tema_templates.services import (
-    estimate_complete, reference_inputs, _physical_params, layout_avisos, COSTABLE)
+    estimate_complete, reference_inputs, _physical_params, layout_avisos, LIGA_FATOR, COSTABLE)
 from apps.tema_templates.forms import PermutadorDataSheetForm
 from apps.engineering_params.models import TenantParamConfig
 
@@ -47,8 +47,9 @@ def data_sheet(request):
             override, fc = form.to_dims_override()
             params = _physical_params(desig, form.cleaned_data)
             avisos = layout_avisos(desig, form.cleaned_data)
-            custo = estimate_complete(desig, dims_override=override,
-                                      fator_correcao_mo=fc, params=params)
+            liga = LIGA_FATOR.get(form.cleaned_data.get("classe_metalurgica"), 1.0)
+            custo = estimate_complete(desig, dims_override=override, fator_correcao_mo=fc,
+                                      params=params, liga_fator_mo=liga)
     else:
         desig = request.GET.get("designacao") or (sorted(COSTABLE)[0] if COSTABLE else "")
         ref = reference_inputs(desig)
