@@ -34,19 +34,27 @@
     <table class="g-table">
       <tbody>
         <tr><td>Matéria-prima (recomputada da geometria)</td><td class="num mono">R$ {{ custo.custo_material|floatformat:2 }}</td></tr>
-        <tr><td>Mão de obra (× F.C. {{ custo.fator_correcao_mo }})</td><td class="num mono">R$ {{ custo.custo_mao_obra|floatformat:2 }}</td></tr>
+        <tr><td>Mão de obra (× F.C. {{ custo.fator_correcao_mo }})
+          <span style="font-size:.78rem;color:var(--g-gray-1)">
+          — feixe R$ {{ custo.custo_mo_por_grupo.feixe|default:0|floatformat:0 }} ·
+          casco R$ {{ custo.custo_mo_por_grupo.casco|default:0|floatformat:0 }} ·
+          chicanas R$ {{ custo.custo_mo_por_grupo.chicanas|default:0|floatformat:0 }} ·
+          fixo R$ {{ custo.custo_mo_por_grupo.fixo|default:0|floatformat:0 }}</span></td>
+          <td class="num mono">R$ {{ custo.custo_mao_obra|floatformat:2 }}</td></tr>
         <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|floatformat:2 }}</td></tr>
         <tr style="border-top:2px solid var(--g-ink,#111)"><td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|floatformat:2 }}</b></td></tr>
         <tr><td>Preço de venda c/ impostos</td><td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|floatformat:2 }}</td></tr>
       </tbody>
     </table>
-    <div class="g-note" style="margin-top:10px;padding:10px 12px;border-left:3px solid var(--g-orange)">
-      <b>⚠️ Parametria parcial (limitação conhecida).</b> Hoje só a <b>matéria-prima</b>
-      (~31% do custo) responde às dimensões via geometria. As <b>operações de fabricação</b>
-      (~64% — furação de espelhos, calandragem, soldas, mandrilamento) e os serviços (~5%)
-      ainda usam horas fixas do job de referência. Logo, mudar comprimento/nº de tubos move
-      pouco o total. Escalonar as horas de fabricação com os drivers físicos (nº de furos,
-      metros de solda, área) é a próxima milestone para parametria plena.</div>
+    <div class="g-note" style="margin-top:10px;padding:10px 12px;border-left:3px solid var(--g-green,#27ae60)">
+      <b>✓ Material + mão de obra escalam com as dimensões.</b> A matéria-prima é recomputada
+      pela geometria; as horas de fabricação escalam pelo driver físico — grupo <b>feixe</b>
+      (furação, mandrilagem, montagem de tubos) com o nº de tubos, <b>chicanas</b> com o nº de
+      chicanas, <b>casco</b> (soldas, calandragem) com o comprimento.
+      <b>Limitações conhecidas:</b> (1) a MO de <b>config fixa</b> (montagem de bocais/flanges)
+      e os <b>serviços de terceiros</b> (raio-X, tratamento térmico, consumíveis) ainda usam
+      custo fixo do job de referência; (2) a escala é linear calibrada a 1 job real (sem 2º
+      gabarito p/ validar a linearidade).</div>
   </div>
 </section>
 {% endif %}

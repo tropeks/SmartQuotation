@@ -21,7 +21,9 @@ class PermutadorDataSheetForm(forms.Form):
     comprimento_tubo_mm = forms.FloatField(label="Comprimento do tubo (mm)", min_value=1)
     od_tubo_mm = forms.FloatField(label="OD do tubo (mm)", min_value=1)
     esp_tubo_mm = forms.FloatField(label="Parede do tubo (mm)", min_value=0.1)
-    # casco (paramétrico — recomputa peso das virolas)
+    # chicanas (paramétrico — escala horas do grupo chicanas)
+    n_chicanas = forms.IntegerField(label="Nº de chicanas", min_value=1)
+    # casco (paramétrico — recomputa peso das virolas + escala horas de solda/calandragem)
     comprimento_casco_mm = forms.FloatField(label="Comprimento da virola/casco (mm)", min_value=1)
     # mão de obra
     fator_correcao_mo = forms.FloatField(

@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from apps.tema_templates.models import ComponentTemplate, check_compatibility
-from apps.tema_templates.services import estimate_complete, reference_inputs, COSTABLE
+from apps.tema_templates.services import (
+    estimate_complete, reference_inputs, _scale_factors, COSTABLE)
 from apps.tema_templates.forms import PermutadorDataSheetForm
 from apps.engineering_params.models import TenantParamConfig
 
@@ -41,9 +42,11 @@ def data_sheet(request):
     if request.method == "POST":
         form = PermutadorDataSheetForm(request.POST)
         if form.is_valid():
+            desig = form.cleaned_data["designacao"]
             override, fc = form.to_dims_override()
-            custo = estimate_complete(form.cleaned_data["designacao"],
-                                      dims_override=override, fator_correcao_mo=fc)
+            sf = _scale_factors(desig, form.cleaned_data)
+            custo = estimate_complete(desig, dims_override=override,
+                                      fator_correcao_mo=fc, scale_factors=sf)
     else:
         desig = request.GET.get("designacao") or (sorted(COSTABLE)[0] if COSTABLE else "")
         ref = reference_inputs(desig)

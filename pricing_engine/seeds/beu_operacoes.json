@@ -13,6 +13,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 600.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 4.0,
       "rate": 150.0
     },
@@ -24,6 +27,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 160.0,
       "ajuste": 0.0,
+      "driver": "Nº FUROS",
+      "grupo": "feixe",
+      "driver_ref": 136.0,
       "horas": 2.0,
       "rate": 80.0
     },
@@ -35,6 +41,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 330.0,
       "ajuste": 0.0,
+      "driver": "Nº FUROS",
+      "grupo": "feixe",
+      "driver_ref": 136.0,
       "horas": 3.0,
       "rate": 110.0
     },
@@ -46,6 +55,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 110.0,
       "ajuste": 0.0,
+      "driver": "Nº FUROS",
+      "grupo": "feixe",
+      "driver_ref": 136.0,
       "horas": 1.0,
       "rate": 110.0
     },
@@ -57,6 +69,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 220.0,
       "ajuste": 0.0,
+      "driver": "Nº FUROS",
+      "grupo": "feixe",
+      "driver_ref": 136.0,
       "horas": 2.0,
       "rate": 110.0
     },
@@ -68,6 +83,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 110.0,
       "ajuste": 0.0,
+      "driver": "Nº FUROS",
+      "grupo": "feixe",
+      "driver_ref": 136.0,
       "horas": 1.0,
       "rate": 110.0
     },
@@ -79,6 +97,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 220.0,
       "ajuste": 0.0,
+      "driver": "Nº TIRANTES",
+      "grupo": "feixe",
+      "driver_ref": 12.0,
       "horas": 2.0,
       "rate": 110.0
     },
@@ -90,6 +111,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº RASGOS",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 1.0,
       "rate": 80.0
     },
@@ -101,6 +125,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 600.0,
       "ajuste": 0.0,
+      "driver": "Nº RASGOS",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 4.0,
       "rate": 150.0
     },
@@ -112,6 +139,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº RASGOS",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -122,7 +152,10 @@
       "label": "INSPECIONAR",
       "tipo": "servico",
       "preco_gabarito": 110.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-TRAÇARERECORTAR-1",
@@ -132,6 +165,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 630.0,
       "ajuste": 0.0,
+      "driver": "Nº CHICANAS",
+      "grupo": "chicanas",
+      "driver_ref": 19.0,
       "horas": 7.0,
       "rate": 90.0
     },
@@ -143,6 +179,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 160.0,
       "ajuste": 0.0,
+      "driver": "Nº TUBOS",
+      "grupo": "feixe",
+      "driver_ref": 68.0,
       "horas": 2.0,
       "rate": 80.0
     },
@@ -154,6 +193,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 240.0,
       "ajuste": 0.0,
+      "driver": "Nº CHICANAS",
+      "grupo": "chicanas",
+      "driver_ref": 19.0,
       "horas": 2.0,
       "rate": 120.0
     },
@@ -165,6 +207,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 880.0,
       "ajuste": 0.0,
+      "driver": "ESP PACOTE",
+      "grupo": "feixe",
+      "driver_ref": 237.5,
       "horas": 8.0,
       "rate": 110.0
     },
@@ -176,6 +221,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 240.0,
       "ajuste": 0.0,
+      "driver": "Nº CHICANAS",
+      "grupo": "chicanas",
+      "driver_ref": 19.0,
       "horas": 2.0,
       "rate": 120.0
     },
@@ -187,6 +235,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 450.0,
       "ajuste": 0.0,
+      "driver": "Nº CHICANAS",
+      "grupo": "chicanas",
+      "driver_ref": 19.0,
       "horas": 3.0,
       "rate": 150.0
     },
@@ -198,6 +249,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 630.0,
       "ajuste": 0.0,
+      "driver": "Nº CHICANAS",
+      "grupo": "chicanas",
+      "driver_ref": 19.0,
       "horas": 7.0,
       "rate": 90.0
     },
@@ -209,6 +263,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 330.0,
       "ajuste": 0.0,
+      "driver": "Nº FUROS",
+      "grupo": "feixe",
+      "driver_ref": 1224.0,
       "horas": 3.0,
       "rate": 110.0
     },
@@ -220,6 +277,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 780.0,
       "ajuste": 0.0,
+      "driver": "Nº CHICANAS",
+      "grupo": "chicanas",
+      "driver_ref": 19.0,
       "horas": 6.0,
       "rate": 130.0
     },
@@ -230,7 +290,10 @@
       "label": "INSPECIONAR",
       "tipo": "servico",
       "preco_gabarito": 110.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-PREPARARTIRANTES-1",
@@ -240,6 +303,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 360.0,
       "ajuste": 0.0,
+      "driver": "Nº TIRANTES",
+      "grupo": "feixe",
+      "driver_ref": 12.0,
       "horas": 3.0,
       "rate": 120.0
     },
@@ -251,6 +317,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 450.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 3.0,
       "rate": 150.0
     },
@@ -261,7 +330,10 @@
       "label": "CURVAR TUBOS TERCEIROS",
       "tipo": "servico",
       "preco_gabarito": 1360.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº TUBOS",
+      "grupo": "feixe",
+      "driver_ref": 68.0
     },
     {
       "code": "FAB-TRANSPORTEPARACURV-1",
@@ -270,7 +342,10 @@
       "label": "TRANSPORTE PARA CURVAMENTO EM TERCEIROS",
       "tipo": "servico",
       "preco_gabarito": 800.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-PREPARARTUBOSUPARA-1",
@@ -280,6 +355,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 960.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 6.0,
       "rate": 160.0
     },
@@ -290,7 +368,10 @@
       "label": "TRANSPORTE PARA TRATAMENTO TÉRMICO TUBOS",
       "tipo": "servico",
       "preco_gabarito": 800.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-TRATAMENTOTÉRMICOA-1",
@@ -299,7 +380,10 @@
       "label": "TRATAMENTO TÉRMICO ALÍVIO DE TENSÕES - TUBOS U",
       "tipo": "servico",
       "preco_gabarito": 2000.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-EXAMEDELPNASCURVAS-1",
@@ -309,6 +393,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 2400.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 12.0,
       "rate": 200.0
     },
@@ -320,6 +407,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 640.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 4.0,
       "rate": 160.0
     },
@@ -331,6 +421,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 270.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 3.0,
       "rate": 90.0
     },
@@ -342,6 +435,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 400.0,
       "ajuste": 0.0,
+      "driver": "Nº TUBOS",
+      "grupo": "feixe",
+      "driver_ref": 68.0,
       "horas": 2.0,
       "rate": 200.0
     },
@@ -352,7 +448,10 @@
       "label": "CALANDRAR CILINDROS LADO DO CASCO",
       "tipo": "servico",
       "preco_gabarito": 1824.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "PESO kgf",
+      "grupo": "fixo",
+      "driver_ref": 729.7909500000001
     },
     {
       "code": "FAB-SOLDASLONGITUDINAI-1",
@@ -362,6 +461,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 2700.0,
       "ajuste": 0.0,
+      "driver": "COMPR. (m)",
+      "grupo": "casco",
+      "driver_ref": 6.0,
       "horas": 30.0,
       "rate": 90.0
     },
@@ -373,6 +475,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 1200.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 3.0,
       "horas": 6.0,
       "rate": 200.0
     },
@@ -384,6 +489,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 1350.0,
       "ajuste": 0.0,
+      "driver": "Nº Soldas",
+      "grupo": "casco",
+      "driver_ref": 2.0,
       "horas": 15.0,
       "rate": 90.0
     },
@@ -395,6 +503,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 240.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 3.0,
       "horas": 6.0,
       "rate": 40.0
     },
@@ -405,7 +516,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 300.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 3.0
     },
     {
       "code": "FAB-TRAÇARERECORTARDIS-1",
@@ -415,6 +529,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 180.0,
       "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 90.0
     },
@@ -425,7 +542,10 @@
       "label": "REBORDEAMENTO - TERCEIROS",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-BISELAR-1",
@@ -435,6 +555,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 180.0,
       "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 90.0
     },
@@ -446,6 +569,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -456,7 +582,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-MONTAROCILINDRONOT-1",
@@ -466,6 +595,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 400.0,
       "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 200.0
     },
@@ -477,6 +609,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 630.0,
       "ajuste": 0.0,
+      "driver": "Nº Soldas",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 7.0,
       "rate": 90.0
     },
@@ -488,6 +623,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -498,7 +636,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-USINARFLANGESPRINC-1",
@@ -508,6 +649,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 900.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 6.0,
       "rate": 150.0
     },
@@ -519,6 +663,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 240.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 3.0,
       "rate": 80.0
     },
@@ -530,6 +677,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 880.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 8.0,
       "rate": 110.0
     },
@@ -541,6 +691,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 220.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 110.0
     },
@@ -552,6 +705,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 400.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 200.0
     },
@@ -563,6 +719,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 630.0,
       "ajuste": 0.0,
+      "driver": "Nº Soldas",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 7.0,
       "rate": 90.0
     },
@@ -574,6 +733,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -584,7 +746,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-EXAMEDEULTRASSOM-1",
@@ -593,7 +758,10 @@
       "label": "EXAME DE ULTRASSOM",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMERAIOX-1",
@@ -602,7 +770,10 @@
       "label": "EXAME RAIO X",
       "tipo": "servico",
       "preco_gabarito": 4000.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃOBOCAI-1",
@@ -612,6 +783,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 780.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 3.0,
       "horas": 6.0,
       "rate": 130.0
     },
@@ -623,6 +797,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 1080.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 3.0,
       "horas": 12.0,
       "rate": 90.0
     },
@@ -633,7 +810,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 150.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-MONTARFLANGENOPESC-1",
@@ -643,6 +823,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 540.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 3.0,
       "horas": 6.0,
       "rate": 90.0
     },
@@ -654,6 +837,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 810.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 3.0,
       "horas": 9.0,
       "rate": 90.0
     },
@@ -665,6 +851,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 120.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 3.0,
       "horas": 3.0,
       "rate": 40.0
     },
@@ -675,7 +864,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 150.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMERAIOX-2",
@@ -684,7 +876,10 @@
       "label": "EXAME RAIO X",
       "tipo": "servico",
       "preco_gabarito": 300.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-TRANSPORTEPARARAIO-1",
@@ -693,7 +888,10 @@
       "label": "TRANSPORTE PARA RAIO X",
       "tipo": "servico",
       "preco_gabarito": 200.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMEULTRASSOM-1",
@@ -702,7 +900,10 @@
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-CALANDRARANÉISDERE-1",
@@ -711,7 +912,10 @@
       "label": "CALANDRAR ANÉIS DE REFORÇO",
       "tipo": "servico",
       "preco_gabarito": 360.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 3.0
     },
     {
       "code": "FAB-TRAÇARERECORTARANÉ-1",
@@ -720,7 +924,10 @@
       "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
       "preco_gabarito": 540.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 3.0
     },
     {
       "code": "FAB-USINARFUROSNPT14-1",
@@ -729,7 +936,10 @@
       "label": "USINAR FUROS NPT 1/4\"",
       "tipo": "servico",
       "preco_gabarito": 110.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-MONTARANÉISDEREFOR-1",
@@ -738,7 +948,10 @@
       "label": "MONTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
       "preco_gabarito": 1080.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 3.0
     },
     {
       "code": "FAB-SOLDARANÉISDEREFOR-1",
@@ -748,6 +961,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 1080.0,
       "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 3.0,
       "horas": 12.0,
       "rate": 90.0
     },
@@ -759,6 +975,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 240.0,
       "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 3.0,
       "horas": 6.0,
       "rate": 40.0
     },
@@ -769,7 +988,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMEULTRASSOM-2",
@@ -778,7 +1000,10 @@
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃODASLU-1",
@@ -788,6 +1013,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 180.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 2.0,
       "rate": 90.0
     },
@@ -799,6 +1027,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 270.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 3.0,
       "rate": 90.0
     },
@@ -809,7 +1040,10 @@
       "label": "EXAME DE L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-MONTARASLUVAS-1",
@@ -819,6 +1053,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 360.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 4.0,
       "rate": 90.0
     },
@@ -830,6 +1067,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 450.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 5.0,
       "rate": 90.0
     },
@@ -841,6 +1081,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 120.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 3.0,
       "rate": 40.0
     },
@@ -851,7 +1094,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-FABRICAROSPEDESTAI-1",
@@ -861,6 +1107,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 540.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 6.0,
       "rate": 90.0
     },
@@ -872,6 +1121,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 780.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 6.0,
       "rate": 130.0
     },
@@ -883,6 +1135,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 810.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 9.0,
       "rate": 90.0
     },
@@ -894,6 +1149,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 160.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 4.0,
       "rate": 40.0
     },
@@ -904,7 +1162,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 150.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-MONTARPEDESTAISNOC-1",
@@ -914,6 +1175,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 600.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 3.0,
       "rate": 200.0
     },
@@ -925,6 +1189,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 540.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 6.0,
       "rate": 90.0
     },
@@ -936,6 +1203,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 40.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 1.0,
       "rate": 40.0
     },
@@ -946,7 +1216,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-GABARITAROCASCO-1",
@@ -956,6 +1229,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 720.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 6.0,
       "rate": 120.0
     },
@@ -967,6 +1243,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 400.0,
       "ajuste": 0.0,
+      "driver": "Nº TUBOS",
+      "grupo": "feixe",
+      "driver_ref": 68.0,
       "horas": 2.0,
       "rate": 200.0
     },
@@ -978,6 +1257,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 1620.0,
       "ajuste": 0.0,
+      "driver": "Nº Soldas",
+      "grupo": "casco",
+      "driver_ref": 2.0,
       "horas": 18.0,
       "rate": 90.0
     },
@@ -989,6 +1271,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 160.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 4.0,
       "rate": 40.0
     },
@@ -999,7 +1284,10 @@
       "label": "EXAME DE L.P.",
       "tipo": "servico",
       "preco_gabarito": 150.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMEDEULTRASSOM-2",
@@ -1008,7 +1296,10 @@
       "label": "EXAME DE ULTRASSOM",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-GABARITARTUBOS-1",
@@ -1018,6 +1309,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 640.0,
       "ajuste": 0.0,
+      "driver": "Nº TUBOS",
+      "grupo": "feixe",
+      "driver_ref": 68.0,
       "horas": 4.0,
       "rate": 160.0
     },
@@ -1029,6 +1323,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 360.0,
       "ajuste": 0.0,
+      "driver": "Nº FUROS",
+      "grupo": "feixe",
+      "driver_ref": 136.0,
       "horas": 3.0,
       "rate": 80.0
     },
@@ -1040,6 +1337,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 120.0,
       "ajuste": 0.0,
+      "driver": "Nº TUBOS",
+      "grupo": "feixe",
+      "driver_ref": 68.0,
       "horas": 2.0,
       "rate": 60.0
     },
@@ -1050,7 +1350,10 @@
       "label": "INSPECIONAR TUBOS MONTADOS",
       "tipo": "servico",
       "preco_gabarito": 110.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-MONTARBARRAS-1",
@@ -1060,6 +1363,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 510.0,
       "ajuste": 0.0,
+      "driver": "Nº BARRAS",
+      "grupo": "feixe",
+      "driver_ref": 6.0,
       "horas": 3.0,
       "rate": 170.0
     },
@@ -1071,6 +1377,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 450.0,
       "ajuste": 0.0,
+      "driver": "Nº BARRAS",
+      "grupo": "feixe",
+      "driver_ref": 6.0,
       "horas": 5.0,
       "rate": 90.0
     },
@@ -1082,6 +1391,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 200.0,
       "ajuste": 0.0,
+      "driver": "Nº BARRAS",
+      "grupo": "feixe",
+      "driver_ref": 6.0,
       "horas": 5.0,
       "rate": 40.0
     },
@@ -1092,7 +1404,10 @@
       "label": "INSPECIONAR BARRAS MONTADAS",
       "tipo": "servico",
       "preco_gabarito": 110.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-MONTARALÇABATENTE-1",
@@ -1102,6 +1417,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 270.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 3.0,
       "rate": 90.0
     },
@@ -1113,6 +1431,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 270.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 3.0,
       "rate": 90.0
     },
@@ -1124,6 +1445,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -1134,7 +1458,10 @@
       "label": "EXAME L. P. NA SOLDA ALÇA / BATENTE",
       "tipo": "servico",
       "preco_gabarito": 80.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-INSPECIONARALÇABAT-1",
@@ -1143,7 +1470,10 @@
       "label": "INSPECIONAR ALÇA / BATENTE",
       "tipo": "servico",
       "preco_gabarito": 110.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-TRAÇARERECORTARDIS-2",
@@ -1153,6 +1483,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 180.0,
       "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 90.0
     },
@@ -1163,7 +1496,10 @@
       "label": "REBORDEAMENTO - TERCEIROS",
       "tipo": "servico",
       "preco_gabarito": 600.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-BISELAR-2",
@@ -1173,6 +1509,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 180.0,
       "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 90.0
     },
@@ -1184,6 +1523,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -1194,7 +1536,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Tampos",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-CALANDRARCILINDROS-2",
@@ -1203,7 +1548,10 @@
       "label": "CALANDRAR CILINDROS DOS CABEÇOTES",
       "tipo": "servico",
       "preco_gabarito": 167.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "PESO kgf",
+      "grupo": "fixo",
+      "driver_ref": 66.89750375
     },
     {
       "code": "FAB-SOLDASLONGITUDINAI-2",
@@ -1213,6 +1561,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 270.0,
       "ajuste": 0.0,
+      "driver": "COMPR. (m)",
+      "grupo": "casco",
+      "driver_ref": 0.5,
       "horas": 3.0,
       "rate": 90.0
     },
@@ -1224,6 +1575,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 400.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 200.0
     },
@@ -1235,6 +1589,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 630.0,
       "ajuste": 0.0,
+      "driver": "Nº Soldas",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 7.0,
       "rate": 90.0
     },
@@ -1246,6 +1603,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -1256,7 +1616,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-EXAMERAIOX-3",
@@ -1265,7 +1628,10 @@
       "label": "EXAME RAIO X",
       "tipo": "servico",
       "preco_gabarito": 1000.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-USINARFLANGESPRINC-2",
@@ -1275,6 +1641,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 900.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 6.0,
       "rate": 150.0
     },
@@ -1286,6 +1655,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 240.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 3.0,
       "rate": 80.0
     },
@@ -1297,6 +1669,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 880.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 8.0,
       "rate": 110.0
     },
@@ -1308,6 +1683,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 220.0,
       "ajuste": 0.0,
+      "driver": "Nº Flanges",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 110.0
     },
@@ -1319,6 +1697,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 400.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 200.0
     },
@@ -1330,6 +1711,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 630.0,
       "ajuste": 0.0,
+      "driver": "Nº Soldas",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 7.0,
       "rate": 90.0
     },
@@ -1341,6 +1725,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -1351,7 +1738,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Cilindros",
+      "grupo": "casco",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-EXAMEDEULTRASSOM-3",
@@ -1360,7 +1750,10 @@
       "label": "EXAME DE ULTRASSOM",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃOBOCAI-2",
@@ -1370,6 +1763,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 520.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 4.0,
       "rate": 130.0
     },
@@ -1381,6 +1777,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 720.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 8.0,
       "rate": 90.0
     },
@@ -1391,7 +1790,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 150.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-MONTARFLANGENOPESC-2",
@@ -1401,6 +1803,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 360.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 4.0,
       "rate": 90.0
     },
@@ -1412,6 +1817,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 540.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 6.0,
       "rate": 90.0
     },
@@ -1423,6 +1831,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 80.0,
       "ajuste": 0.0,
+      "driver": "Nº Bocais",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 2.0,
       "rate": 40.0
     },
@@ -1433,7 +1844,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 150.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMERAIOX-4",
@@ -1442,7 +1856,10 @@
       "label": "EXAME RAIO X",
       "tipo": "servico",
       "preco_gabarito": 300.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-TRANSPORTEPARARAIO-2",
@@ -1451,7 +1868,10 @@
       "label": "TRANSPORTE PARA RAIO X",
       "tipo": "servico",
       "preco_gabarito": 200.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMEULTRASSOM-3",
@@ -1460,7 +1880,10 @@
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-CALANDRARANÉISDERE-2",
@@ -1469,7 +1892,10 @@
       "label": "CALANDRAR ANÉIS DE REFORÇO",
       "tipo": "servico",
       "preco_gabarito": 240.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 2.0
     },
     {
       "code": "FAB-TRAÇARERECORTARANÉ-2",
@@ -1478,7 +1904,10 @@
       "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
       "preco_gabarito": 360.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 2.0
     },
     {
       "code": "FAB-USINARFUROSNPT14-2",
@@ -1487,7 +1916,10 @@
       "label": "USINAR FUROS NPT 1/4\"",
       "tipo": "servico",
       "preco_gabarito": 110.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-MONTARANÉISDEREFOR-2",
@@ -1496,7 +1928,10 @@
       "label": "MONTAR ANÉIS DE REFORÇO",
       "tipo": "servico",
       "preco_gabarito": 720.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 2.0
     },
     {
       "code": "FAB-SOLDARANÉISDEREFOR-2",
@@ -1506,6 +1941,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 720.0,
       "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 8.0,
       "rate": 90.0
     },
@@ -1517,6 +1955,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 160.0,
       "ajuste": 0.0,
+      "driver": "Nº Anéis",
+      "grupo": "fixo",
+      "driver_ref": 2.0,
       "horas": 4.0,
       "rate": 40.0
     },
@@ -1527,7 +1968,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-EXAMEULTRASSOM-4",
@@ -1536,7 +1980,10 @@
       "label": "EXAME ULTRASSOM",
       "tipo": "servico",
       "preco_gabarito": 1100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-TRAÇARPOSIÇÃODASLU-2",
@@ -1546,6 +1993,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 360.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 4.0,
       "horas": 4.0,
       "rate": 90.0
     },
@@ -1557,6 +2007,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 540.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 4.0,
       "horas": 6.0,
       "rate": 90.0
     },
@@ -1567,7 +2020,10 @@
       "label": "EXAME DE L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-MONTARASLUVAS-2",
@@ -1577,6 +2033,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 720.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 4.0,
       "horas": 8.0,
       "rate": 90.0
     },
@@ -1588,6 +2047,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 900.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 4.0,
       "horas": 10.0,
       "rate": 90.0
     },
@@ -1599,6 +2061,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 240.0,
       "ajuste": 0.0,
+      "driver": "Nº Luvas",
+      "grupo": "fixo",
+      "driver_ref": 4.0,
       "horas": 6.0,
       "rate": 40.0
     },
@@ -1609,7 +2074,10 @@
       "label": "EXAME L.P.",
       "tipo": "servico",
       "preco_gabarito": 100.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null
     },
     {
       "code": "FAB-CHAPADIVISORA-1",
@@ -1619,6 +2087,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 180.0,
       "ajuste": 0.0,
+      "driver": "Nº Div.",
+      "grupo": "fixo",
+      "driver_ref": 1.0,
       "horas": 2.0,
       "rate": 90.0
     },
@@ -1630,6 +2101,9 @@
       "tipo": "mao_obra",
       "preco_gabarito": 600.0,
       "ajuste": 0.0,
+      "driver": null,
+      "grupo": "fixo",
+      "driver_ref": null,
       "horas": 4.0,
       "rate": 150.0
     },
@@ -1640,7 +2114,10 @@
       "label": "INSPEÇÃO DIMENSIONAL",
       "tipo": "servico",
       "preco_gabarito": 600.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-TESTEHIDROSTÁTICO-1",
@@ -1649,7 +2126,10 @@
       "label": "TESTE HIDROSTÁTICO",
       "tipo": "servico",
       "preco_gabarito": 600.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-TRANSPORTEPREPARAÇ-1",
@@ -1658,7 +2138,10 @@
       "label": "TRANSPORTE - PREPARAÇÃO E EMBALAGEM",
       "tipo": "servico",
       "preco_gabarito": 200.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FAB-PETROBRASRPBC-1",
@@ -1667,7 +2150,10 @@
       "label": "PETROBRAS - RPBC",
       "tipo": "servico",
       "preco_gabarito": 1600.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FIN-PIT-1",
@@ -1676,7 +2162,10 @@
       "label": "PIT",
       "tipo": "servico",
       "preco_gabarito": 500.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FIN-PS-1",
@@ -1685,7 +2174,10 @@
       "label": "PS",
       "tipo": "servico",
       "preco_gabarito": 500.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FIN-DATABOOK-1",
@@ -1694,7 +2186,10 @@
       "label": "DATA BOOK",
       "tipo": "servico",
       "preco_gabarito": 500.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FIN-INSPEÇÃOTIPOQ-1",
@@ -1703,7 +2198,10 @@
       "label": "INSPEÇÃO TIPO \"Q\"",
       "tipo": "servico",
       "preco_gabarito": 2000.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FIN-FERRAMENTAS-1",
@@ -1712,7 +2210,10 @@
       "label": "FERRAMENTAS",
       "tipo": "servico",
       "preco_gabarito": 500.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "QUANT.",
+      "grupo": "fixo",
+      "driver_ref": 1.0
     },
     {
       "code": "FIN-CONSUMÍVEISDESOLDA-1",
@@ -1721,7 +2222,10 @@
       "label": "CONSUMÍVEIS DE SOLDAGEM",
       "tipo": "servico",
       "preco_gabarito": 2730.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "PESO",
+      "grupo": "fixo",
+      "driver_ref": 91.0
     },
     {
       "code": "FIN-EXPANDIDORES-1",
@@ -1730,7 +2234,10 @@
       "label": "EXPANDIDORES",
       "tipo": "servico",
       "preco_gabarito": 177.0,
-      "ajuste": 0.0
+      "ajuste": 0.0,
+      "driver": "FUROS",
+      "grupo": "feixe",
+      "driver_ref": 136.0
     }
   ]
 }
