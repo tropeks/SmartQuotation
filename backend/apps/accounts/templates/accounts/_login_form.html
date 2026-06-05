@@ -1,0 +1,21 @@
+{# Partial do formulário de login — reusada em full page e em respostas HTMX. #}
+<form id="login-form" method="post" action="{% url 'login' %}"
+      hx-post="{% url 'login' %}" hx-target="#login-form" hx-swap="outerHTML">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+  <ul class="errors" role="alert">
+    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% for field in form %}
+  <p>
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for error in field.errors %}<span class="error">{{ error }}</span>{% endfor %}
+  </p>
+  {% endfor %}
+
+  <button type="submit">Entrar</button>
+</form>

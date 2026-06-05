@@ -3,11 +3,19 @@ SmartQuotation — Base Settings
 Django 5.2 + django-tenants (schema-per-tenant). Session auth (não JWT).
 Padrão adaptado do Vitali (fundação sólida), sem apps de saúde.
 """
+import sys
 from pathlib import Path
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env(DEBUG=(bool, False))
+
+# pricing_engine (lib pura, zero Django) importável: repo root local ou /app no Docker.
+for _candidate in (BASE_DIR.parent, Path("/app")):
+    if (_candidate / "pricing_engine" / "__init__.py").exists():
+        if str(_candidate) not in sys.path:
+            sys.path.insert(0, str(_candidate))
+        break
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-change-me")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
@@ -31,10 +39,12 @@ TENANT_APPS = [
     "rest_framework",
     "drf_spectacular",
     "django_filters",
+    "apps.accounts",
     "apps.materials",
+    "apps.engineering_params",
+    "apps.quotations",
     # domínio (criados nas tasks seguintes):
-    # "apps.accounts", "apps.engineering_params",
-    # "apps.templates_lib", "apps.quotations", "apps.costing",
+    # "apps.templates_lib", "apps.costing",
     # "apps.proposals", "apps.cost_discovery",
 ]
 
@@ -112,6 +122,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # django-encrypted-model-fields (preços/margens cifrados)
 FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="zHengIv2_t3vYh0Qm6m6Y8oF1n0YH3y7wE7c0pXq3kM=")

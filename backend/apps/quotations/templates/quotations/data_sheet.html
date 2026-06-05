@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Nova Cotação — Feixe Tubular{% endblock %}
+{% block content %}
+<div class="eyebrow">COT · Novo · Feixe Tubular</div>
+<div class="q-number">NOVA COTAÇÃO <span class="rev">FEIXE</span></div>
+
+<form id="ds-form" hx-post="{% url 'quotations:recompute' %}" hx-target="#results"
+      hx-trigger="change delay:250ms from:#ds-form, submit"
+      hx-swap="outerHTML">
+  {% csrf_token %}
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>§1 · Identificação</h3></header>
+    <div class="g-section-body">
+      <div class="g-form">
+        <div class="field col-6"><label>{{ form.title.label }}</label>{{ form.title }}</div>
+        <div class="field col-4"><label>{{ form.customer_name.label }}</label>{{ form.customer_name }}</div>
+        <div class="field col-2"><label>{{ form.tipo.label }}</label>{{ form.tipo }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>§2 · Tubos</h3></header>
+    <div class="g-section-body"><div class="g-form">
+      <div class="field col-2"><label>{{ form.n_tubos.label }}</label>{{ form.n_tubos }}</div>
+      <div class="field col-3"><label>{{ form.tubo_material.label }}</label>{{ form.tubo_material }}</div>
+      <div class="field col-2"><label>{{ form.tubo_od_spec.label }}</label>{{ form.tubo_od_spec }}</div>
+      <div class="field col-2"><label>{{ form.tubo_wall_spec.label }}</label>{{ form.tubo_wall_spec }}</div>
+      <div class="field col-3"><label>{{ form.tubo_comp_mm.label }}</label>{{ form.tubo_comp_mm }}</div>
+    </div></div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>§3 · Espelhos</h3></header>
+    <div class="g-section-body"><div class="g-form">
+      <div class="field col-3"><label>{{ form.espelho_material.label }}</label>{{ form.espelho_material }}</div>
+      <div class="field col-3"><label>{{ form.espelho_od_mm.label }}</label>{{ form.espelho_od_mm }}</div>
+      <div class="field col-3"><label>{{ form.espelho_flutuante_od_mm.label }}</label>{{ form.espelho_flutuante_od_mm }}</div>
+      <div class="field col-3"><label>{{ form.espelho_esp_bruta_mm.label }}</label>{{ form.espelho_esp_bruta_mm }}</div>
+    </div></div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>§4 · Chicanas + Tirantes</h3></header>
+    <div class="g-section-body"><div class="g-form">
+      <div class="field col-2"><label>{{ form.chicana_qty.label }}</label>{{ form.chicana_qty }}</div>
+      <div class="field col-3"><label>{{ form.chicana_od_mm.label }}</label>{{ form.chicana_od_mm }}</div>
+      <div class="field col-2"><label>{{ form.chicana_esp_mm.label }}</label>{{ form.chicana_esp_mm }}</div>
+      <div class="field col-3"><label>{{ form.chicana_cut_remaining_mm.label }}</label>{{ form.chicana_cut_remaining_mm }}</div>
+      <div class="field col-2"><label>{{ form.tirante_qty.label }}</label>{{ form.tirante_qty }}</div>
+    </div></div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>§5 · Requisitos</h3></header>
+    <div class="g-section-body"><div class="g-form">
+      <div class="field col-4"><label>{{ form.teste_hidrostatico.label }}</label>{{ form.teste_hidrostatico }}</div>
+      <div class="field col-4"><label>{{ form.tratamento_termico.label }}</label>{{ form.tratamento_termico }}</div>
+      <div class="field col-4"><label>{{ form.inspecao_q.label }}</label>{{ form.inspecao_q }}</div>
+    </div></div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>§6 · Resultado</h3>
+      <button class="q-btn primary" type="button"
+              hx-post="{% url 'quotations:create' %}" hx-include="#ds-form" hx-target="body" hx-push-url="true">
+        Salvar Cotação
+      </button>
+    </header>
+    <div class="g-section-body">
+      {% include "quotations/_results.html" %}
+    </div>
+  </section>
+</form>
+{% endblock %}

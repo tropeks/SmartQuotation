@@ -1,0 +1,120 @@
+/* ============================================================
+   SmartQuotation — Design System G · Refined Bauhaus
+   Fiel ao UX_SPEC v2.0 (§3). Geometria reta, cor blocada,
+   Archivo + JetBrains Mono. Zero radius, zero shadow, zero gradiente.
+   ============================================================ */
+:root {
+  /* Neutros */
+  --g-paper:#f4f1ea; --g-paper-2:#fafaf2; --g-white:#ffffff; --g-black:#16151a;
+  /* Acentos */
+  --g-orange:#d94e1f; --g-yellow:#f5c542;
+  /* Semânticos */
+  --g-green:#2d6a3e; --g-red:#a23a2f; --g-blue:#2950b0; --g-amber:#b8851a;
+  /* Cinzas/bordas */
+  --g-gray-1:#888278; --g-gray-2:#e3dfd2; --g-gray-3:#c8c2b2;
+  /* Tipografia */
+  --font-display:'Archivo',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --ls-up:0.10em; --ls-eyebrow:0.14em;
+  /* Espaçamento (múltiplos de 2px) */
+  --s2:4px; --s3:6px; --s4:8px; --s6:12px; --s8:16px; --s10:20px; --s12:24px; --s16:32px;
+  --border-thin:1px solid var(--g-gray-2);
+  --border-strong:1.5px solid var(--g-black);
+  --radius:0;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; background:var(--g-paper); color:var(--g-black);
+  font-family:var(--font-display); font-size:13px; letter-spacing:-0.005em;
+}
+.mono { font-family:var(--font-mono); font-feature-settings:'tnum'; }
+a { color:var(--g-orange); }
+
+/* ---- Rail + layout ---- */
+.g-rail { display:flex; align-items:center; gap:var(--s8); padding:var(--s6) var(--s12);
+  background:var(--g-black); color:var(--g-paper); }
+.g-rail .brand { font-weight:800; text-transform:uppercase; letter-spacing:var(--ls-up); }
+.g-rail .brand b { color:var(--g-yellow); }
+.g-rail .spacer { flex:1; }
+.g-rail .tenant { font-family:var(--font-mono); font-size:11px; color:var(--g-gray-3);
+  border-left:3px solid var(--g-orange); padding-left:var(--s6); }
+.g-main { max-width:1180px; margin:0 auto; padding:var(--s12); }
+
+/* ---- Section (cabeçalho preto + faixa laranja) ---- */
+.g-section { background:var(--g-white); border:var(--border-thin); margin-bottom:var(--s8); }
+.g-section-head { border-bottom:var(--border-strong); padding:var(--s6) var(--s10);
+  display:flex; align-items:center; justify-content:space-between; gap:var(--s8); }
+.g-section-head h3 { margin:0; font-weight:700; font-size:13px; letter-spacing:var(--ls-up);
+  text-transform:uppercase; }
+.g-section-head h3::before { content:''; display:inline-block; width:16px; height:3px;
+  background:var(--g-orange); vertical-align:middle; margin-right:var(--s4); }
+.g-section-body { padding:var(--s10); }
+
+/* ---- Eyebrow + número ---- */
+.eyebrow { font-family:var(--font-mono); font-size:10px; letter-spacing:var(--ls-eyebrow);
+  text-transform:uppercase; color:var(--g-gray-1); }
+.q-number { font-weight:800; font-size:28px; letter-spacing:-0.025em; text-transform:uppercase; }
+.q-number .rev { color:var(--g-orange); font-family:var(--font-mono); font-size:16px; }
+
+/* ---- Formulário (data sheet) ---- */
+.g-form { display:grid; grid-template-columns:repeat(12,1fr); gap:var(--s8); }
+.field { display:flex; flex-direction:column; gap:var(--s2); }
+.field.col-2{grid-column:span 2}.field.col-3{grid-column:span 3}
+.field.col-4{grid-column:span 4}.field.col-6{grid-column:span 6}.field.col-12{grid-column:span 12}
+.field label { font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--g-gray-1); }
+.field input, .field select {
+  border:var(--border-thin); border-radius:0; padding:var(--s4) var(--s6);
+  font-family:var(--font-mono); font-size:13px; background:var(--g-paper-2); color:var(--g-black);
+}
+.field input:focus, .field select:focus { outline:2px solid var(--g-orange); outline-offset:-1px; }
+
+/* ---- Botões (QBtn) ---- */
+.q-btn { font-family:var(--font-display); font-weight:700; text-transform:uppercase;
+  letter-spacing:0.08em; font-size:11px; padding:var(--s4) var(--s10); border:var(--border-strong);
+  background:var(--g-white); color:var(--g-black); cursor:pointer; }
+.q-btn.primary { background:var(--g-black); color:var(--g-paper); }
+.q-btn.primary:hover { background:var(--g-orange); border-color:var(--g-orange); }
+
+/* ---- StatRow (4 KPIs, faixa colorida no topo) ---- */
+.stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--s2);
+  border:var(--border-strong); background:var(--g-black); }
+.stat { background:var(--g-white); padding:var(--s8) var(--s10); border-top:3px solid var(--g-orange); }
+.stat:nth-child(2){border-top-color:var(--g-yellow)} .stat:nth-child(3){border-top-color:var(--g-green)}
+.stat:nth-child(4){border-top-color:var(--g-black)}
+.stat .lbl { font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--g-gray-1); }
+.stat .val { font-family:var(--font-mono); font-weight:600; font-size:26px; }
+.stat .val .u { font-size:13px; color:var(--g-gray-1); margin-left:2px; }
+.stat .delta { font-family:var(--font-mono); font-size:11px; color:var(--g-gray-1); }
+
+/* ---- CompCard (item da EAP) ---- */
+.comp-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:var(--s6); }
+.comp-card { border:var(--border-thin); border-left:4px solid var(--g-green); background:var(--g-white);
+  padding:var(--s6) var(--s8); }
+.comp-card .name { font-weight:700; text-transform:uppercase; font-size:12px; letter-spacing:0.04em; }
+.comp-card .name small { display:block; font-family:var(--font-mono); font-weight:400;
+  font-size:10px; color:var(--g-gray-1); text-transform:none; letter-spacing:0; }
+.comp-card .res { display:flex; gap:var(--s12); margin-top:var(--s4); }
+.comp-card .res .v { font-family:var(--font-mono); font-weight:600; font-size:15px; }
+.comp-card .res .l { font-size:10px; text-transform:uppercase; color:var(--g-gray-1); }
+
+/* ---- Tabela G ---- */
+.g-table { width:100%; border-collapse:collapse; }
+.g-table thead th { background:var(--g-black); color:var(--g-paper); font-weight:700;
+  font-size:10px; letter-spacing:var(--ls-up); text-transform:uppercase; padding:var(--s4) var(--s6); text-align:left; }
+.g-table thead th.num { text-align:right; }
+.g-table tbody td { padding:var(--s4) var(--s6); border-bottom:var(--border-thin); font-size:12px; }
+.g-table tbody td.num { text-align:right; font-family:var(--font-mono); font-feature-settings:'tnum'; }
+.g-table tbody tr:hover td { background:var(--g-paper-2); }
+
+/* ---- Linha "Preço de Venda" — assinatura canônica G (preto + amarelo) ---- */
+.price-line { display:flex; align-items:center; justify-content:space-between;
+  background:var(--g-black); color:var(--g-yellow); padding:var(--s10) var(--s12); margin-top:var(--s8); }
+.price-line .lbl { font-weight:800; text-transform:uppercase; letter-spacing:var(--ls-up); font-size:14px; }
+.price-line .val { font-family:var(--font-mono); font-weight:700; font-size:32px; }
+.price-sub { display:flex; gap:var(--s16); padding:var(--s4) var(--s12); font-family:var(--font-mono);
+  font-size:11px; color:var(--g-gray-1); }
+
+/* ---- Login (mínimo, no DNA G) ---- */
+.login-wrap { max-width:360px; margin:80px auto; }
+.login-wrap .g-section-body { display:flex; flex-direction:column; gap:var(--s8); }
+.error { color:var(--g-red); font-size:12px; }

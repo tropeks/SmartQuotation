@@ -1,0 +1,48 @@
+{# Partial HTMX: resultados do recálculo ao vivo (StatRow + CompCards + preço) #}
+<div id="results">
+  <div class="stat-row">
+    <div class="stat">
+      <div class="lbl">Custo Total</div>
+      <div class="val mono">R$ {{ results.cot.custo_total|floatformat:0 }}</div>
+      <div class="delta">material + mão de obra</div>
+    </div>
+    <div class="stat">
+      <div class="lbl">Peso Bruto</div>
+      <div class="val mono">{{ results.peso_bruto|floatformat:0 }}<span class="u">kg</span></div>
+      <div class="delta">base de custo (cobra perdas)</div>
+    </div>
+    <div class="stat">
+      <div class="lbl">Refugo de Material</div>
+      <div class="val mono">{{ results.perda|floatformat:0 }}<span class="u">kg</span></div>
+      <div class="delta">{{ results.perda_pct|floatformat:1 }}% (bruto − líquido)</div>
+    </div>
+    <div class="stat">
+      <div class="lbl">Margem (impostos)</div>
+      <div class="val mono">{{ results.cot.impostos_pct|floatformat:1 }}<span class="u">%</span></div>
+      <div class="delta">+ markup {{ results.cot.fator_preco }}</div>
+    </div>
+  </div>
+
+  <div class="comp-grid" style="margin-top:16px">
+    {% for it in results.itens %}
+      <div class="comp-card">
+        <div class="name">{{ it.descricao }}<small>{{ it.codigo_item }}</small></div>
+        <div class="res">
+          <div><div class="l">Material</div><div class="v mono">R$ {{ it.custo_material|floatformat:0 }}</div></div>
+          <div><div class="l">Mão de Obra</div><div class="v mono">R$ {{ it.custo_mo|floatformat:0 }}</div></div>
+          <div><div class="l">Total</div><div class="v mono">R$ {{ it.custo_total|floatformat:0 }}</div></div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# Linha "Preço de Venda" — assinatura canônica do G (preto + amarelo) #}
+  <div class="price-line">
+    <span class="lbl">Preço de Venda</span>
+    <span class="val mono">R$ {{ results.cot.preco_com_impostos|floatformat:2 }}</span>
+  </div>
+  <div class="price-sub">
+    <span>Sem impostos: R$ {{ results.cot.preco_sem_impostos|floatformat:2 }}</span>
+    <span>Custo: R$ {{ results.cot.custo_total|floatformat:2 }}</span>
+  </div>
+</div>

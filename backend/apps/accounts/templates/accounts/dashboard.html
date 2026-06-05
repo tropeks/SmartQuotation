@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+{# Placeholder do dashboard (protegido por login). #}
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel — SmartQuotation</title>
+</head>
+<body>
+  <main>
+    <h1>Painel</h1>
+    <p>Olá, {{ user.get_username }}.</p>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit">Sair</button>
+    </form>
+  </main>
+</body>
+</html>

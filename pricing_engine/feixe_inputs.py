@@ -39,12 +39,30 @@ class FeixeInputs:
     chicana_qty: int = 18                 # AP31
     chicana_esp_mm: float = 12.5          # BK31
     chicana_od_mm: float = 416.8          # AW31
+    chicana_material: str = "SA-36"
+    chicana_cut_remaining_mm: float = 300.0  # "CORTE": altura que sobra (hc = od - este)
     chapa_suporte_qty: int = 1            # AP35
     chapa_suporte_esp_mm: float = 12.5    # BD35
 
+    espelho_flutuante_od_mm: float = 412.0   # OD do espelho flutuante (2b)
+
+    # --- chapa suporte ---
+    chapa_suporte_material: str = "SA-36"
+
     # --- tirantes / barras ---
     tirante_qty: int = 12                 # AT132 (furos p/ tirantes) ~ qtd tirantes
+    tirante_material: str = "SAE-1020"
+    tirante_od_spec: str = '3/8"'
+    tirante_comp_mm: float = 6000.0
     n_barras_selagem_desliz: int = 6      # AP55+AP59+AP63 (2+2+2)
+
+    # --- acessórios (specs padrão do caso 136; viram defaults parametrizáveis) ---
+    espacador_qty: int = 12
+    espacador_material: str = "SA-214"
+    espacador_comp_mm: float = 6096.0     # comprimento de COMPRA (Opção A); ver espaçador
+    porcas_qty: int = 24
+    plugues_qty: int = 2                  # cada conjunto (1) e (2)
+    olhais_qty: int = 2
 
     # --- rasgos (espelho flutuante) ---
     num_rasgos: int = 0                   # BR23+BR27

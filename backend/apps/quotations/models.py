@@ -1,0 +1,113 @@
+"""
+Cotação + Estrutura Analítica (EAP/WBS) persistida (TENANT schema).
+
+Espinha dorsal (alinhamento @WellToMcAt):
+  Quotation (N0) -> QuotationItem (N1) -> {ItemMaterial (N2), ItemOperation (N2)}
+Os códigos (item/mp/op) viram BOM + roteiro de fabricação no H2 (zero retrabalho).
+
+Persistência = SNAPSHOT do que o pricing_engine computou (deep-copy, não referência viva).
+Dinheiro em Decimal (centavos). Peso BRUTO = base de custo (Opção A — cobra perdas);
+peso LÍQUIDO informativo (refugo = bruto - líquido).
+"""
+from decimal import Decimal
+from django.conf import settings
+from django.db import models
+
+
+class Customer(models.Model):
+    company_name = models.CharField(max_length=255)
+    cnpj = models.CharField(max_length=18, blank=True)
+    contact_name = models.CharField(max_length=255, blank=True)
+    email = models.EmailField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=2, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.company_name
+
+
+class Quotation(models.Model):
+    STATUS = [("draft", "Rascunho"), ("in_review", "Em Revisão"),
+              ("approved", "Aprovada"), ("sent", "Enviada"),
+              ("won", "Ganha"), ("lost", "Perdida")]
+    SCOPE = [("tube_bundle", "Feixe Tubular"), ("complete", "Equipamento Completo")]
+
+    number = models.CharField(max_length=50, unique=True)
+    revision = models.PositiveSmallIntegerField(default=0)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="quotations")
+    title = models.CharField(max_length=500)
+    scope = models.CharField(max_length=20, choices=SCOPE, default="tube_bundle")
+    status = models.CharField(max_length=20, choices=STATUS, default="draft")
+
+    # --- inputs do data sheet do feixe (params que o orçamentista preenche) ---
+    inputs = models.JSONField(default=dict, blank=True)   # serializa FeixeInputs
+
+    # --- formação de preço (config do tenant; default reproduz gabarito) ---
+    fator_preco = models.DecimalField(max_digits=8, decimal_places=5, default=Decimal("1.01377"))
+    impostos_pct = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal("23.303"))
+
+    # --- totais computados (snapshot do roll-up) ---
+    custo_material = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    custo_mo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    custo_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    preco_sem_impostos = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    preco_com_impostos = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    peso_bruto_kg = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    peso_liquido_kg = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                   on_delete=models.SET_NULL, related_name="quotations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    computed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.number} — {self.title}"
+
+    @property
+    def perda_kg(self):
+        return self.peso_bruto_kg - self.peso_liquido_kg
+
+
+class QuotationItem(models.Model):
+    """Nível 1 — componente/grupo da EAP (tubos, espelhos, chicanas, montagem...)."""
+    quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name="itens")
+    codigo_item = models.CharField(max_length=30)
+    descricao = models.CharField(max_length=255)
+    custo_material = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    custo_mo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "codigo_item"]
+
+    @property
+    def custo_total(self):
+        return self.custo_material + self.custo_mo
+
+
+class ItemMaterial(models.Model):
+    """Nível 2 — matéria-prima de um item (peso bruto/líquido, custo)."""
+    item = models.ForeignKey(QuotationItem, on_delete=models.CASCADE, related_name="materiais")
+    codigo_mp = models.CharField(max_length=30)
+    descricao = models.CharField(max_length=255)
+    material = models.CharField(max_length=50)
+    forma = models.CharField(max_length=20)
+    peso_bruto_kg = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    peso_liquido_kg = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    preco_kgf = models.DecimalField(max_digits=10, decimal_places=4, default=0)
+    custo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+
+class ItemOperation(models.Model):
+    """Nível 2 — operação do roteiro de um item (custo)."""
+    item = models.ForeignKey(QuotationItem, on_delete=models.CASCADE, related_name="operacoes")
+    codigo_op = models.CharField(max_length=40)
+    descricao = models.CharField(max_length=255)
+    metodo = models.CharField(max_length=20, blank=True)
+    custo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    aplicavel = models.BooleanField(default=True)

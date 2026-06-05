@@ -123,8 +123,63 @@ def peso_componente(c: CompSpec) -> tuple[float, str]:
     return 0.0, f"PENDENTE: forma '{f}' não implementada"
 
 
-# --- Componentes do caso real 136 tubos (da seção MATÉRIA PRIMA da planilha) ---
+def componentes_from_inputs(inp) -> list[CompSpec]:
+    """Constrói os componentes do feixe a partir dos inputs (paramétrico).
+    Os preços (rkg) são defaults ENGEMATEX; no app Django o adapter pode
+    sobrescrever por material via MaterialPrice (cadeia de custos do tenant).
+    """
+    return [
+        CompSpec("TUB-01", "Tubos de Troca Térmica", inp.tubo_material, "tubo", inp.n_tubos,
+                 od_spec=inp.tubo_od_spec, wall_spec=inp.tubo_wall_spec,
+                 comp_mm=inp.tubo_comp_mm, rkg=13.5),
+        CompSpec("ESP-2a", "Espelho Fixo", inp.espelho_material, "disco", 1,
+                 od_mm=inp.espelho_od_mm, esp_mm=inp.espelho_esp_bruta_mm, rkg=6.5,
+                 n_tubes=inp.n_tubos, tube_od_mm=inp.tubo_od_mm),
+        CompSpec("ESP-2b", "Espelho Flutuante", inp.espelho_material, "disco", 1,
+                 od_mm=inp.espelho_flutuante_od_mm, esp_mm=inp.espelho_esp_bruta_mm, rkg=6.5,
+                 n_tubes=inp.n_tubos, tube_od_mm=inp.tubo_od_mm),
+        CompSpec("CHI-3", "Chicanas Transversais", inp.chicana_material, "chicana", inp.chicana_qty,
+                 od_mm=inp.chicana_od_mm, esp_mm=inp.chicana_esp_mm, rkg=6.5,
+                 cut_remaining_mm=inp.chicana_cut_remaining_mm, n_tubes=inp.n_tubos,
+                 tube_od_mm=inp.tubo_od_mm),
+        CompSpec("SUP-4", "Chapa Suporte", inp.chapa_suporte_material, "chicana", inp.chapa_suporte_qty,
+                 od_mm=inp.chicana_od_mm, esp_mm=inp.chapa_suporte_esp_mm, rkg=6.5,
+                 cut_remaining_mm=0, n_tubes=inp.n_tubos, tube_od_mm=inp.tubo_od_mm),
+        CompSpec("TIR-7", "Tirantes", inp.tirante_material, "barra_redonda", inp.tirante_qty,
+                 od_spec=inp.tirante_od_spec, comp_mm=inp.tirante_comp_mm, rkg=4.5),
+        CompSpec("BSE1-9.1", "Barras de Selagem (1)", "SA-36", "barra_chata", 2,
+                 larg_mm=50, esp_mm=6.3, comp_mm=6000, rkg=4.5),
+        CompSpec("BSE2-9.2", "Barras de Selagem (2)", "SA-36", "barra_chata", 2,
+                 larg_mm=75, esp_mm=6.3, comp_mm=6000, rkg=4.5),
+        CompSpec("BDE-10", "Barras de Deslizamento", "SA-36", "barra_chata", 2,
+                 larg_mm=50, esp_mm=12.5, comp_mm=6000, rkg=4.5),
+        CompSpec("IMP-11", "Chapa de Impacto", "SA-36", "barra_chata", 1,
+                 larg_mm=250, esp_mm=6.3, comp_mm=250, rkg=6.5),
+        CompSpec("ESC-6a", "Espaçador BWG", inp.espacador_material, "tubo", inp.espacador_qty,
+                 od_spec=inp.tubo_od_spec, wall_spec=inp.tubo_wall_spec,
+                 comp_mm=inp.espacador_comp_mm, rkg=9),
+        CompSpec("ALC-16", "Alça", "SA-36", "barra_chata", 2,
+                 larg_mm=37, esp_mm=12.5, comp_mm=30, rkg=10),
+        CompSpec("PLG1-19", "Plugues (1)", "AISI-304", "barra_redonda", inp.plugues_qty,
+                 od_spec='5/8"', comp_mm=25, rkg=50),
+        CompSpec("PLG2-20", "Plugues (2)", "AISI-304", "barra_redonda", inp.plugues_qty,
+                 od_spec='3/4"', comp_mm=30, rkg=50),
+        CompSpec("OLH1-W1", "Olhais (1)", "SAE-1045", "barra_redonda", inp.olhais_qty,
+                 od_spec='5/8"', comp_mm=200, rkg=50),
+        CompSpec("OLH2-W2", "Olhais (2)", "SAE-1045", "barra_redonda", inp.olhais_qty,
+                 od_spec='3/4"', comp_mm=220, rkg=50),
+        CompSpec("POR-8", "Porcas Sextavadas", "SA-194 GR 2H", "porca", inp.porcas_qty,
+                 od_spec='3/8"', rkg=0.5),
+    ]
+
+
+# --- Componentes do caso real 136 tubos (delegado ao paramétrico) ---
 def feixe_136_componentes() -> list[CompSpec]:
+    from .feixe_inputs import caso_136_tubos
+    return componentes_from_inputs(caso_136_tubos())
+
+
+def _feixe_136_componentes_LEGADO() -> list[CompSpec]:
     return [
         CompSpec("TUB-01", "Tubos de Troca Térmica", "SA-179", "tubo", 136,
                  od_spec='3/4"', wall_spec="BWG 14", comp_mm=6096, rkg=13.5),
