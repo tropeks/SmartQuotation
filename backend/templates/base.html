@@ -17,6 +17,7 @@
     {% if user.is_authenticated %}
       <span class="tenant">{{ request.tenant.name|default:"—" }}</span>
       <a class="q-btn" href="{% url 'quotations:list' %}">Cotações</a>
+      <a class="q-btn" href="{% url 'cost_discovery:home' %}">Custos</a>
       <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}
         <button class="q-btn">Sair</button></form>
     {% endif %}

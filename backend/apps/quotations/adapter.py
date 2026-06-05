@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from pricing_engine.feixe_inputs import FeixeInputs, caso_136_tubos
 from pricing_engine.feixe_quote import quote_feixe
+from pricing_engine.rates import TenantCostChain
 from apps.quotations.models import QuotationItem, ItemMaterial, ItemOperation
 
 _FIELD_NAMES = {f.name for f in fields(FeixeInputs)}
@@ -38,11 +39,42 @@ def to_feixe_inputs(quotation) -> FeixeInputs:
     return FeixeInputs(**merged)
 
 
+def build_cost_chain(quotation) -> TenantCostChain:
+    """Monta a CADEIA DE CUSTOS do tenant a partir do banco (wizard A1-c popula/calibra):
+    preços de material (por material×forma), fator de correção de MO, markup e impostos.
+    """
+    from datetime import date
+    chain = TenantCostChain(
+        fator_preco=float(quotation.fator_preco),
+        impostos_pct=float(quotation.impostos_pct),
+    )
+    # preços de material vigentes (cifrados) por (sigla, forma)
+    try:
+        from apps.materials.models import MaterialPrice
+        hoje = date.today()
+        for mp in MaterialPrice.objects.select_related("material").filter(valid_from__lte=hoje):
+            if mp.valid_until and mp.valid_until < hoje:
+                continue
+            try:
+                chain.material_price[(mp.material.sigla.upper(), mp.forma.lower())] = float(mp.preco_brl_kg)
+            except (TypeError, ValueError):
+                continue
+    except Exception:
+        pass
+    # fator de correção de MO (knob calibrado pelo back-solve)
+    try:
+        from apps.engineering_params.models import TenantParamConfig
+        cfg = TenantParamConfig.get_solo()
+        chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
+    except Exception:
+        pass
+    return chain
+
+
 def recompute(quotation) -> None:
-    """Recomputa a cotação via pricing_engine e persiste a EAP (snapshot)."""
+    """Recomputa a cotação via pricing_engine (com a cadeia de custos do tenant) e persiste a EAP."""
     inp = to_feixe_inputs(quotation)
-    cot = quote_feixe(inp, fator_preco=float(quotation.fator_preco),
-                      impostos_pct=float(quotation.impostos_pct))
+    cot = quote_feixe(inp, cost_chain=build_cost_chain(quotation))
 
     # limpa EAP anterior (deep-copy/snapshot, não referência viva)
     quotation.itens.all().delete()

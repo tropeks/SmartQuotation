@@ -18,7 +18,13 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
   apps/materials/      # Material (423 seed, densidade de norma) + MaterialPrice (cifrado, por forma)
   apps/engineering_params/  # Rate + ProcessParameter (seed ENGEMATEX) + regra furação radial≤600<CNC
   apps/quotations/     # EAP persistida + ADAPTER (único acoplamento Django↔motor) + data sheet UI
+  apps/proposals/      # proposta DOCX/PDF (template configurável + editável por caso)
+  apps/cost_discovery/ # wizard A1-c: cadeia de custos (seed top-down + back-solve de calibração)
   static/css/design-system-g.css   # Design System G·Refined Bauhaus (UX_SPEC v2)
+
+# Cadeia de custos: o adapter monta TenantCostChain do banco (MaterialPrice por forma,
+# fator_correcao_mo, markup, impostos) e injeta no motor. O back-solve calibra o fator de
+# MO contra um job real conhecido (erro <0,1% vs realidade da empresa).
 ```
 
 **Regra de ouro:** `pricing_engine` é lib pura. O único ponto que importa Django↔motor é

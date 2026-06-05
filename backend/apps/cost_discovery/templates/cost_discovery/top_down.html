@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Seed Top-Down{% endblock %}
+{% block content %}
+<div class="eyebrow">CADEIA DE CUSTOS · Seed</div>
+<div class="q-number">DEFINIR CUSTOS <span class="rev">TOP-DOWN</span></div>
+<p style="color:var(--g-gray-1);font-size:12px">Informe os preços de material da sua empresa (por forma) e o fator de mão de obra.
+  Estes valores passam a ser usados nas cotações.</p>
+
+<form method="post">
+  {% csrf_token %}
+  <section class="g-section">
+    <header class="g-section-head"><h3>Preços de Material (R$/kg)</h3></header>
+    <div class="g-section-body">
+      <table class="g-table">
+        <thead><tr><th>Material (sigla)</th><th>Forma</th><th>Preço R$/kg</th></tr></thead>
+        <tbody>
+          {% for i in "12345" %}
+          <tr>
+            <td><input name="sigla" placeholder="SA-179" style="border:var(--border-thin);padding:4px;font-family:var(--font-mono)"></td>
+            <td><select name="forma" style="border:var(--border-thin);padding:4px">
+              <option value="chapa">chapa</option><option value="tubo">tubo</option>
+              <option value="barra">barra</option><option value="forjado">forjado</option></select></td>
+            <td><input name="preco" placeholder="13.50" style="border:var(--border-thin);padding:4px;font-family:var(--font-mono)"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="g-section">
+    <header class="g-section-head"><h3>Fator de Correção de MO</h3></header>
+    <div class="g-section-body"><div class="g-form">
+      <div class="field col-3"><label>Fator (1.0 = padrão)</label><input name="fator_mo" value="{{ fator_mo }}"></div>
+    </div></div>
+  </section>
+  <button class="q-btn primary" name="save" value="1">Salvar Cadeia de Custos</button>
+</form>
+{% endblock %}
