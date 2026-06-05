@@ -97,8 +97,11 @@ def familia(label, dims):
         return "chapa_retangular"
     if "SUPORTE" in L:
         return "catalogo"
-    # espelho (furado) e chicana/segmento (TRANSVERSAL) não são discos cheios
-    if "ESPELHO" in L or "CHICANA" in L or "TRANSVERSAL" in L:
+    # espelho = disco furado (geometrizável como disco maciço, fora do gate por causa dos furos)
+    if "ESPELHO" in L:
+        return "espelho"
+    # chicana/segmento (TRANSVERSAL) = recorte, não é disco cheio
+    if "CHICANA" in L or "TRANSVERSAL" in L:
         return "perfurado"
     if "DIVISORA" in L or "CHAPA" in L:
         return "chapa_retangular"

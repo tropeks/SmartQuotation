@@ -178,6 +178,19 @@ class ComposeViewTests(TestCase):
         from pricing_engine.beu_geometry import perda_familia
         self.assertGreater(perda_familia("disco"), perda_familia("tubo"))
 
+    def test_espelho_geometrizavel_responde_a_dims(self):
+        """Polimento agy §4: o espelho agora recomputa pela geometria no dims_override."""
+        from apps.tema_templates.services import estimate_complete
+        base = estimate_complete("BEU")
+        maior = estimate_complete("BEU", dims_override={"ESPELHO FIXO": {"OD": 700}})
+        self.assertGreater(maior["custo_material"], base["custo_material"])
+
+    def test_usinagem_espelho_segue_liga_do_feixe(self):
+        """Polimento agy §4: usinar/furar espelho em inox segue a liga do FEIXE, não do casco."""
+        from pricing_engine.permutador_quote import _lado_da_op
+        self.assertEqual(_lado_da_op({"label": "ESPELHO - USINAR", "driver": None}), "feixe")
+        self.assertEqual(_lado_da_op({"label": "USINAR RASGOS", "driver": "Nº RASGOS"}), "feixe")
+
     def test_preco_liga_sobe_material(self):
         """#agy 1.C: liga nobre multiplica o preço/kg da matéria-prima do lado (efeito dominante)."""
         from apps.tema_templates.services import estimate_complete

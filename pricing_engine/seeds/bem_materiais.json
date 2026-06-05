@@ -24,7 +24,7 @@
       "row": 204,
       "secao": "feixe_material",
       "label": "ESPELHO FIXO",
-      "familia": "perfurado",
+      "familia": "espelho",
       "material": "SA-516 GR 70",
       "dims": {
         "OD": 475,
@@ -42,7 +42,7 @@
       "row": 208,
       "secao": "feixe_material",
       "label": "ESPELHO FIXO",
-      "familia": "perfurado",
+      "familia": "espelho",
       "material": "SA-516 GR 70",
       "dims": {
         "OD": 412,

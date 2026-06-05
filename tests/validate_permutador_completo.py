@@ -37,8 +37,9 @@ def check_geometria(designacao):
         ref = m["peso_liq"]
         if ref < 5:
             continue
-        # placas de suporte são SEGMENTOS recortados (não disco cheio): fora do gate.
-        if "SUPORTE" in (m["label"] or "").upper():
+        # placas de suporte (segmentos) e espelhos (disco FURADO) não batem a fórmula de
+        # disco cheio — o peso_liq desconta furos/recortes. Fora do gate geométrico estrito.
+        if "SUPORTE" in (m["label"] or "").upper() or m.get("familia") == "espelho":
             continue
         checados += 1
         desvio = abs(liq * qtd - ref) / ref
