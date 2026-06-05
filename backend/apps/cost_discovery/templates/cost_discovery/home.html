@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Cadeia de Custos{% endblock %}
+{% block content %}
+<div class="eyebrow">CONFIG · Cadeia de Custos</div>
+<div class="q-number">CADEIA DE CUSTOS</div>
+<p style="color:var(--g-gray-1);font-size:12px">Defina os custos da sua empresa. O motor usa estes valores
+  para precificar — quanto mais fiéis à sua realidade, mais precisa a cotação.</p>
+
+<div class="stat-row" style="margin-top:8px">
+  <div class="stat"><div class="lbl">Fator de Correção MO</div><div class="val mono">{{ fator_mo }}</div><div class="delta">eficiência de mão de obra</div></div>
+  <div class="stat"><div class="lbl">Preços de Material</div><div class="val mono">{{ n_precos }}</div><div class="delta">registros vigentes</div></div>
+  <div class="stat"><div class="lbl">Seed Top-Down</div><div class="val mono" style="font-size:14px"><a href="{% url 'cost_discovery:top_down' %}">Definir →</a></div></div>
+  <div class="stat"><div class="lbl">Calibrar (Back-Solve)</div><div class="val mono" style="font-size:14px"><a href="{% url 'cost_discovery:back_solve' %}">Calibrar →</a></div></div>
+</div>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Sessões de Descoberta de Custo</h3></header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th>Data</th><th>Método</th><th class="num">Fator MO</th><th class="num">Erro</th><th>Notas</th></tr></thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr><td class="mono">{{ s.created_at|date:"d/m/Y H:i" }}</td><td>{{ s.get_method_display }}</td>
+          <td class="num">{{ s.solved_fator_mo|default:"—" }}</td>
+          <td class="num">{% if s.error_pct != None %}{{ s.error_pct }}%{% else %}—{% endif %}</td>
+          <td>{{ s.notes }}</td></tr>
+        {% empty %}<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--g-gray-1)">Nenhuma sessão ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

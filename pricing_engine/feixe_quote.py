@@ -34,14 +34,40 @@ _COMP_ITEM = {
 
 def quote_feixe(inp: FeixeInputs, cost_chain=None,
                 fator_preco: float = 1.01377, impostos_pct: float = 23.303) -> Cotacao:
-    """Monta a EAP completa do feixe e forma o preço."""
+    """Monta a EAP completa do feixe e forma o preço.
+
+    cost_chain (opcional, rates.TenantCostChain): a CADEIA DE CUSTOS do tenant.
+    Quando presente, sobrescreve preços de material (por material×forma) e os fatores
+    (correção MO, markup, impostos) — é o que o wizard A1-c popula/calibra. Sem ela,
+    usa os defaults ENGEMATEX embutidos (validados a -2,9%).
+    """
+    import copy as _copy
+    if cost_chain is not None:
+        # fator de correção de MO (knob de calibração do back-solve) sobrescreve o input
+        if getattr(cost_chain, "fator_correcao_mo", None):
+            inp = _copy.copy(inp)
+            inp.fator_correcao_mo = float(cost_chain.fator_correcao_mo)
+        if getattr(cost_chain, "fator_preco", None):
+            fator_preco = float(cost_chain.fator_preco)
+        if getattr(cost_chain, "impostos_pct", None) is not None:
+            impostos_pct = float(cost_chain.impostos_pct)
+
+    def _preco_material(material, forma, default):
+        if cost_chain is None:
+            return default
+        try:
+            return float(cost_chain.price_kgf(material, forma))
+        except (KeyError, Exception):
+            return default
+
     itens: dict[str, Item] = {code: Item(code, desc) for code, desc in ITENS.items()}
 
     # --- matérias-primas (peso computado da geometria, paramétrico) ---
     for c in componentes_from_inputs(inp):
         peso, status = peso_componente(c)        # BRUTO (base de custo, Opção A)
         item_code = _COMP_ITEM.get(c.codigo, "MON-01")
-        mp = MateriaPrima(c.codigo, c.descricao, c.material, c.forma, peso, c.rkg)
+        preco = _preco_material(c.material, c.forma, c.rkg)   # tenant price ou default
+        mp = MateriaPrima(c.codigo, c.descricao, c.material, c.forma, peso, preco)
         mp.peso_liquido = peso_liquido_componente(c)   # informativo (refugo = bruto - líquido)
         itens[item_code].materias_primas.append(mp)
 
