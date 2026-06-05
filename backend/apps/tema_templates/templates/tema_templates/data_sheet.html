@@ -40,10 +40,13 @@
         <tr><td>Preço de venda c/ impostos</td><td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|floatformat:2 }}</td></tr>
       </tbody>
     </table>
-    <p style="margin-top:8px;font-size:.82rem;color:var(--g-gray-1)">
-      Matéria-prima respondendo às dimensões via geometria. <b>Limitação conhecida (#6):</b>
-      operações de serviço (ensaios, teste hidrostático, PWHT, pintura) ainda usam o custo
-      fixo do job de referência — não escalam com o tamanho do equipamento.</p>
+    <div class="g-note" style="margin-top:10px;padding:10px 12px;border-left:3px solid var(--g-orange)">
+      <b>⚠️ Parametria parcial (limitação conhecida).</b> Hoje só a <b>matéria-prima</b>
+      (~31% do custo) responde às dimensões via geometria. As <b>operações de fabricação</b>
+      (~64% — furação de espelhos, calandragem, soldas, mandrilamento) e os serviços (~5%)
+      ainda usam horas fixas do job de referência. Logo, mudar comprimento/nº de tubos move
+      pouco o total. Escalonar as horas de fabricação com os drivers físicos (nº de furos,
+      metros de solda, área) é a próxima milestone para parametria plena.</div>
   </div>
 </section>
 {% endif %}

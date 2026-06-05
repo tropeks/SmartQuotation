@@ -101,7 +101,11 @@ def _aba_orcamento(wb, designacao):
 
 
 def extrair(designacao):
-    p = glob.glob(f"/home/rcosta00/dev/uploads/*{designacao}*.xlsx")[0]
+    achados = glob.glob(f"/home/rcosta00/dev/uploads/*{designacao}*.xlsx")
+    if not achados:
+        raise FileNotFoundError(
+            f"Planilha do permutador {designacao!r} não encontrada em ~/dev/uploads/")
+    p = achados[0]
     wb = openpyxl.load_workbook(p, data_only=True, read_only=True)
     ws = _aba_orcamento(wb, designacao)
     rows = list(ws.iter_rows(min_row=1, max_row=ws.max_row, max_col=90, values_only=True))
