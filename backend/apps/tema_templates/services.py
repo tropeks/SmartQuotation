@@ -128,7 +128,10 @@ def _physical_params(designacao, cleaned):
 
     tubos = r("n_tubos")
     chicanas = r("n_chicanas")
-    rasgos = r("n_passes_tubos")              # rasgos de partição ∝ nº de passes dos tubos
+    # divisórias de passe = nº de passes − 1 (1 passe→0, 2→1, 4→3...). Razão (N−1)/(ref−1).
+    np_ref = float(ref.get("n_passes_tubos") or 2)
+    np_proj = float(cleaned.get("n_passes_tubos") or np_ref)
+    rasgos = max(np_proj - 1.0, 0.0) / max(np_ref - 1.0, 1.0)
     comprimento = r("comprimento_tubo_mm")   # comprimento axial do casco ∝ comprimento do tubo
     diametro = r("diametro_casco_mm")
     esp_casco_ratio = r("esp_casco_mm")       # espessura proj/ref (linear)

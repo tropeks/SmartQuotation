@@ -57,12 +57,14 @@ _DRIVER_PARAM = {
     "Nº CHICANAS": "chicanas",
     "ESP PACOTE": "furacao_chicana",   # #6: furação do pacote ∝ nº tubos × nº chicanas
     "Nº Soldas": "solda_circ", "Nº Cilindros": "comprimento", "COMPR. (m)": "solda_long",
-    "Nº RASGOS": "rasgos",             # rasgos de partição ∝ nº de passes dos tubos (agy §5)
+    "Nº RASGOS": "rasgos",             # rasgos de partição ∝ (nº passes − 1) (agy §5)
+    "Nº Div.": "rasgos",               # chapa divisora de passe escala igual (= nº passes − 1)
 }
 # parcela de SETUP fixo por parâmetro (#1): horas = horas_ref × (setup + (1-setup)×razão).
 # Defaults de engenharia (editáveis): furação/calandragem têm setup alto; ensaios baixo.
 _SETUP_FRAC = {
-    "tubos": 0.20, "chicanas": 0.20, "furacao_chicana": 0.20, "rasgos": 0.25,
+    "tubos": 0.20, "chicanas": 0.20, "furacao_chicana": 0.20,
+    "rasgos": 0.0,   # divisórias são features DISCRETAS: 0 passes-extra → 0 custo (sem setup)
     "comprimento": 0.15, "diametro": 0.15,
     "solda": 0.10, "solda_long": 0.10, "solda_circ": 0.10,
     "massa": 0.10, "area": 0.10, "volume": 0.10,
@@ -215,7 +217,9 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                     else:
                         perda_eff = ((m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq")
                                      else perda_familia(m["familia"]))
-                    peso_bruto = liq_new * qtd * perda_eff
+                    # perda nunca < 1,0 (não se cria matéria) — guarda contra peso_liq do seed
+                    # maior que o bruto em alguns itens (#agy review8).
+                    peso_bruto = liq_new * qtd * max(perda_eff, 1.0)
             # densidade por liga do LADO do material (níquel mais pesado que aço-carbono)
             peso_bruto *= float(dens_lado.get(lado_mat, 1.0))
             # preço/kg da liga do lado (inox/níquel custam várias vezes o aço-carbono) — #agy 1.C
