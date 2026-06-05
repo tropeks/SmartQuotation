@@ -11,6 +11,9 @@ pricing_engine/        # MOTOR de custeio — Python PURO (zero Django). Não ed
   64 operações + 17 componentes paramétricos, fiéis à planilha ENGEMATEX.
   ProcessParameter (física → horas) ≠ Rate (custo → R$). Validado a -2,9% vs gabarito real.
   quote_feixe(FeixeInputs) → Cotacao.   Custo = peso BRUTO (cobra perdas) + bruto/líquido/perda.
+  beu_geometry.py + beu_quote.py → PERMUTADOR COMPLETO (TEMA BEU: bonnet+casco+feixe-U).
+  quote_beu(cost_chain) compõe matéria-prima (peso geométrico×preço) + operações (horas×rate,
+  FC escala MO) + serviços. Validado a -0,3% vs gabarito BEU (R$ 128.160). Seeds: beu_*.json.
 
 backend/               # Django 5.2 + django-tenants (schema-per-tenant) + session auth (sem JWT)
   apps/tenants/        # Tenant/Domain/Plan (public). provision_tenant cria schema isolado.
@@ -54,12 +57,13 @@ python manage.py runserver 0.0.0.0:8000     # acessar via engematex.localhost:80
 
 ## Testes
 ```bash
-python -m tests.validate_feixe_completo      # gate do motor (falha se regredir >10%)
-cd backend && python manage.py test apps     # 37 testes (django-tenants TenantTestCase)
+python -m tests.validate_feixe_completo      # gate do FEIXE (falha se regredir >10%)
+python -m tests.validate_beu_completo        # gate do PERMUTADOR BEU completo (±10% + geometria)
+cd backend && python manage.py test apps     # 71 testes (django-tenants TenantTestCase)
 ```
 
 ## CI
-`.github/workflows/ci.yml`: gate do motor (±10%) + Django check + makemigrations --check.
+`.github/workflows/ci.yml`: gates do motor feixe+BEU (±10%) + Django check + makemigrations --check.
 
 ## Docs de domínio
 `~/.gstack/projects/tropeks-SmartQuotation/`: design doc (Approach C), spec do motor de custeio,

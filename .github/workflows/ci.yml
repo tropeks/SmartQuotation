@@ -15,8 +15,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validar motor vs gabarito ENGEMATEX (stdlib puro)
+      - name: Validar motor do FEIXE vs gabarito ENGEMATEX (stdlib puro)
         run: python -m tests.validate_feixe_completo
+      - name: Validar motor do PERMUTADOR BEU completo vs gabarito (stdlib puro)
+        run: python -m tests.validate_beu_completo
 
   django-check:
     name: Django check + migrations

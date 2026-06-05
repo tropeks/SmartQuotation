@@ -97,3 +97,41 @@ class ComposeViewTests(TestCase):
         r = self._check("A", "E", "S")
         self.assertNotContains(r, "BLOQUEADO")
         self.assertContains(r, "livre")
+
+    def test_beu_mostra_custeio_completo(self):
+        r = self._check("B", "E", "U")          # designação BEU = permutador completo custeável
+        self.assertContains(r, "BEU")
+        self.assertContains(r, "Custeio paramétrico")
+        self.assertContains(r, "Custo total")
+
+    def test_designacao_nao_custeavel_sem_breakdown(self):
+        r = self._check("A", "E", "L")          # AEL não tem custeio completo validado
+        self.assertNotContains(r, "Custeio paramétrico · permutador completo")
+        self.assertContains(r, "em validação")
+
+
+class BeuEngineTests(TestCase):
+    """Motor de custeio do permutador BEU (via serviço, com cadeia de custos do tenant)."""
+
+    def test_estimate_complete_reconcilia_gabarito(self):
+        from apps.tema_templates.services import estimate_complete
+        q = estimate_complete("BEU")
+        self.assertIsNotNone(q)
+        # custo total dentro de ±10% do gabarito ENGEMATEX (R$ 128.160)
+        self.assertAlmostEqual(q["custo_total"], 128160.0, delta=128160.0 * 0.10)
+        self.assertEqual(q["designacao_tema"], "BEU")
+        self.assertGreater(q["custo_material"], 0)
+        self.assertGreater(q["custo_mao_obra"], 0)
+
+    def test_estimate_complete_none_para_nao_custeavel(self):
+        from apps.tema_templates.services import estimate_complete
+        self.assertIsNone(estimate_complete("AEL"))
+
+    def test_fator_mo_escala_mao_de_obra(self):
+        from pricing_engine.beu_quote import quote_beu
+        base = quote_beu()
+        alto = quote_beu(fator_correcao_mo=1.20)
+        # MO escala 20%; material e serviços não mudam
+        self.assertAlmostEqual(alto["custo_mao_obra"], base["custo_mao_obra"] * 1.20, places=0)
+        self.assertAlmostEqual(alto["custo_material"], base["custo_material"], places=2)
+        self.assertAlmostEqual(alto["custo_servicos"], base["custo_servicos"], places=2)
