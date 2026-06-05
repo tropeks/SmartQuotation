@@ -28,6 +28,29 @@
         ✓ Combinação compatível.
       </div>
     {% endif %}
+
+    {% if custo %}
+    <div class="eyebrow" style="margin-top:18px">Custeio paramétrico · permutador completo</div>
+    <table class="g-table" style="margin-top:6px">
+      <tbody>
+        <tr><td>Matéria-prima</td><td class="num mono">R$ {{ custo.custo_material|floatformat:2 }}</td></tr>
+        <tr><td>Mão de obra</td><td class="num mono">R$ {{ custo.custo_mao_obra|floatformat:2 }}</td></tr>
+        <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|floatformat:2 }}</td></tr>
+        <tr style="border-top:2px solid var(--g-ink,#111)">
+          <td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|floatformat:2 }}</b></td></tr>
+        <tr><td>Preço de venda c/ impostos</td>
+          <td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|floatformat:2 }}</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:6px;font-size:.82rem;color:var(--g-gray-1)">
+      {{ custo.n_materiais }} materiais · {{ custo.n_operacoes }} operações ·
+      F.C. mão-de-obra {{ custo.fator_correcao_mo }} · markup {{ custo.fator_preco }}.
+      Validado a −0,3% do gabarito ENGEMATEX.</p>
+    {% elif designacao and not bloqueado %}
+    <p style="margin-top:14px;font-size:.85rem;color:var(--g-gray-1)">
+      ℹ️ Custeio paramétrico completo disponível para: {{ costable|join:", " }}.
+      Demais designações cotam o feixe; casco/cabeçote em validação.</p>
+    {% endif %}
   </div>
 </section>
 {% else %}

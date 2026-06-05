@@ -1,0 +1,803 @@
+{
+  "fonte": "Planilha Padrão - Permutador 'BEU' - Rev.0.xlsx",
+  "n_materiais": 44,
+  "soma_preco": 39121.67,
+  "familias": {
+    "tubo": 1,
+    "disco": 2,
+    "outro": 21,
+    "chapa_retangular": 6,
+    "tampo_2_1": 2,
+    "anel": 6,
+    "flange_wn": 2,
+    "pipe": 4
+  },
+  "materiais": [
+    {
+      "row": 204,
+      "secao": "feixe_material",
+      "label": "TUBOS DE TROCA TÉRMICA",
+      "familia": "tubo",
+      "material": "SA-179",
+      "dims": {
+        "OD": 19.05,
+        "ESP.": 2.108,
+        "COMPR.": 13000,
+        "QUANTIDADE": 68,
+        "PESO LIQ.": 778.652
+      },
+      "peso_liq": 778.652,
+      "peso_bruto": 856.517,
+      "preco": 11562.98,
+      "price_kgf": 13.5
+    },
+    {
+      "row": 208,
+      "secao": "feixe_material",
+      "label": "ESPELHO FIXO",
+      "familia": "disco",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "OD": 475,
+        "ESP.": 34,
+        "ESP. BR.": 44.5,
+        "QUANTIDADE": 1,
+        "SA-516 GR 70": "AÇO CARBONO",
+        "PESO LIQ.": 42.123
+      },
+      "peso_liq": 42.123,
+      "peso_bruto": 82.17,
+      "preco": 534.1,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 212,
+      "secao": "feixe_material",
+      "label": "CHICANAS TRANSVERSAIS",
+      "familia": "outro",
+      "material": "SA-36",
+      "dims": {
+        "CHICANAS TRANSVERSAIS": "TRANSVERSAL",
+        "LARG.": 416.8,
+        "COMPR.": 300,
+        "ESP.": 12.5,
+        "QUANTIDADE": 18,
+        "SA-36": "AÇO CARBONO",
+        "PESO LIQ.": 239.087
+      },
+      "peso_liq": 239.087,
+      "peso_bruto": 233.689,
+      "preco": 1518.98,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 216,
+      "secao": "feixe_material",
+      "label": "CHAPA SUPORTE",
+      "familia": "disco",
+      "material": "SA-36",
+      "dims": {
+        "CHAPA SUPORTE": "TRANSVERSAL",
+        "OD": 416.8,
+        "ESP.": 12.5,
+        "QUANTIDADE": 1,
+        "SA-36": "AÇO CARBONO",
+        "PESO LIQ.": 11.486
+      },
+      "peso_liq": 11.486,
+      "peso_bruto": 17.874,
+      "preco": 116.18,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 220,
+      "secao": "feixe_material",
+      "label": "TIRANTES",
+      "familia": "outro",
+      "material": "SAE-1020",
+      "dims": {
+        "OD": 9.525,
+        "COMPR.": 6000,
+        "QUANTIDADE": 12,
+        "SAE-1020": "AÇO CARBONO",
+        "PESO LIQ.": 40.274
+      },
+      "peso_liq": 40.274,
+      "peso_bruto": 40.274,
+      "preco": 181.23,
+      "price_kgf": 4.5
+    },
+    {
+      "row": 224,
+      "secao": "feixe_material",
+      "label": "PORCAS",
+      "familia": "outro",
+      "material": "SA-194 GR 2H",
+      "dims": {
+        "PORCAS": "SEXTAVADAS",
+        "OD": "3/8\"",
+        "ROSCA": "UNC",
+        "QUANTIDADE": 24,
+        "SA-194 GR 2H": "AÇO CARBONO",
+        "PESO LIQ.": 0.338
+      },
+      "peso_liq": 0.338,
+      "peso_bruto": 0.338,
+      "preco": 12.0,
+      "price_kgf": 35.527
+    },
+    {
+      "row": 228,
+      "secao": "feixe_material",
+      "label": "ESPAÇADOR BWG",
+      "familia": "outro",
+      "material": "SA-214",
+      "dims": {
+        "OD": 19.05,
+        "ESP.": 2.108,
+        "COMPR.": 6096,
+        "QUANTIDADE": 12,
+        "SA-214": "AÇO CARBONO",
+        "PESO LIQ.": 64.434
+      },
+      "peso_liq": 64.434,
+      "peso_bruto": 70.878,
+      "preco": 637.9,
+      "price_kgf": 9.0
+    },
+    {
+      "row": 236,
+      "secao": "feixe_material",
+      "label": "BARRAS DE SELAGEM (1)",
+      "familia": "outro",
+      "material": "SA-36",
+      "dims": {
+        "ESP.": 6.3,
+        "LARG.": 50,
+        "COMPR.": 6000,
+        "QUANTIDADE": 2,
+        "SA-36": "AÇO CARBONO",
+        "PESO LIQ.": 29.673
+      },
+      "peso_liq": 29.673,
+      "peso_bruto": 31.157,
+      "preco": 140.2,
+      "price_kgf": 4.5
+    },
+    {
+      "row": 240,
+      "secao": "feixe_material",
+      "label": "BARRAS DE SELAGEM (2)",
+      "familia": "outro",
+      "material": "SA-36",
+      "dims": {
+        "ESP.": 6.3,
+        "LARG.": 75,
+        "COMPR.": 6000,
+        "QUANTIDADE": 2,
+        "SA-36": "AÇO CARBONO",
+        "PESO LIQ.": 44.509
+      },
+      "peso_liq": 44.509,
+      "peso_bruto": 46.735,
+      "preco": 210.31,
+      "price_kgf": 4.5
+    },
+    {
+      "row": 244,
+      "secao": "feixe_material",
+      "label": "BARRAS DE DESLIZAMENTO",
+      "familia": "outro",
+      "material": "SA-36",
+      "dims": {
+        "ESP.": 12.5,
+        "LARG.": 50,
+        "COMPR.": 6000,
+        "QUANTIDADE": 2,
+        "SA-36": "AÇO CARBONO",
+        "PESO LIQ.": 58.875
+      },
+      "peso_liq": 58.875,
+      "peso_bruto": 61.819,
+      "preco": 278.18,
+      "price_kgf": 4.5
+    },
+    {
+      "row": 248,
+      "secao": "feixe_material",
+      "label": "CHAPA DE IMPACTO",
+      "familia": "chapa_retangular",
+      "material": "SA-36",
+      "dims": {
+        "ESP.": 6.3,
+        "LARG.": 250,
+        "COMPR.": 250,
+        "QUANTIDADE": 1,
+        "SA-36": "AÇO CARBONO",
+        "PESO LIQ.": 3.091
+      },
+      "peso_liq": 3.091,
+      "peso_bruto": 3.245,
+      "preco": 21.1,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 256,
+      "secao": "feixe_material",
+      "label": "ALÇA",
+      "familia": "outro",
+      "material": "SA-36",
+      "dims": {
+        "ALÇA": "ALÇA IÇAMENTO",
+        "ESP.": 12.5,
+        "LARG.": 30,
+        "COMPR.": 37,
+        "QUANTIDADE": 2,
+        "SA-36": "AÇO CARBONO",
+        "PESO LIQ.": 0.218
+      },
+      "peso_liq": 0.218,
+      "peso_bruto": 0.229,
+      "preco": 20.0,
+      "price_kgf": 87.44
+    },
+    {
+      "row": 260,
+      "secao": "feixe_material",
+      "label": "PLUGUES (1)",
+      "familia": "outro",
+      "material": "AISI-304",
+      "dims": {
+        "PLUGUES (1)": "ALÇA IÇAMENTO",
+        "OD": 15.875,
+        "COMPR.": 25,
+        "QUANTIDADE": 2,
+        "AISI-304": "AÇO INOX SS-300",
+        "PESO LIQ.": 0.079
+      },
+      "peso_liq": 0.079,
+      "peso_bruto": 0.087,
+      "preco": 100.0,
+      "price_kgf": 1147.229
+    },
+    {
+      "row": 264,
+      "secao": "feixe_material",
+      "label": "PLUGUES (2)",
+      "familia": "outro",
+      "material": "AISI-304",
+      "dims": {
+        "PLUGUES (2)": "ALÇA IÇAMENTO",
+        "OD": 19.05,
+        "COMPR.": 30,
+        "QUANTIDADE": 2,
+        "AISI-304": "AÇO INOX SS-300",
+        "PESO LIQ.": 0.137
+      },
+      "peso_liq": 0.137,
+      "peso_bruto": 0.151,
+      "preco": 100.0,
+      "price_kgf": 663.906
+    },
+    {
+      "row": 268,
+      "secao": "feixe_material",
+      "label": "OLHAIS (1)",
+      "familia": "outro",
+      "material": "SAE-1045",
+      "dims": {
+        "OLHAIS (1)": "ALÇA IÇAMENTO",
+        "OD": 15.875,
+        "COMPR.": 200,
+        "QUANTIDADE": 2,
+        "SAE-1045": "AÇO CARBONO",
+        "PESO LIQ.": 0.622
+      },
+      "peso_liq": 0.622,
+      "peso_bruto": 0.684,
+      "preco": 100.0,
+      "price_kgf": 146.272
+    },
+    {
+      "row": 272,
+      "secao": "feixe_material",
+      "label": "OLHAIS (2)",
+      "familia": "outro",
+      "material": "SAE-1045",
+      "dims": {
+        "OLHAIS (2)": "ALÇA IÇAMENTO",
+        "OD": 19.05,
+        "COMPR.": 220,
+        "QUANTIDADE": 2,
+        "SAE-1045": "AÇO CARBONO",
+        "PESO LIQ.": 0.984
+      },
+      "peso_liq": 0.984,
+      "peso_bruto": 1.083,
+      "preco": 100.0,
+      "price_kgf": 92.343
+    },
+    {
+      "row": 292,
+      "secao": "casco_material",
+      "label": "VIROLA",
+      "familia": "chapa_retangular",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "LARGURA": 2400,
+        "COMPR.": 1631,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 291.916,
+      "peso_bruto": 321.108,
+      "preco": 2087.2,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 296,
+      "secao": "casco_material",
+      "label": "VIROLA",
+      "familia": "chapa_retangular",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "LARGURA": 2400,
+        "COMPR.": 1631,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 291.916,
+      "peso_bruto": 321.108,
+      "preco": 2087.2,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 300,
+      "secao": "casco_material",
+      "label": "VIROLA",
+      "familia": "chapa_retangular",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "LARGURA": 1200,
+        "COMPR.": 1631,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 145.958,
+      "peso_bruto": 160.554,
+      "preco": 1043.6,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 304,
+      "secao": "casco_material",
+      "label": "TAMPO 2:1",
+      "familia": "tampo_2_1",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "OD DISCO": 680.915,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 34.576,
+      "peso_bruto": 38.034,
+      "preco": 247.22,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 308,
+      "secao": "casco_material",
+      "label": "FLANGE PRINCIPAL",
+      "familia": "anel",
+      "material": "SA-105",
+      "dims": {
+        "OD": 1076,
+        "ID": 914,
+        "ESP.": 104,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 185.885,
+      "peso_bruto": 206.71,
+      "preco": 5167.74,
+      "price_kgf": 25.0
+    },
+    {
+      "row": 312,
+      "secao": "casco_material",
+      "label": "FLANGE",
+      "familia": "flange_wn",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "WN",
+        "FACE": "RF",
+        "ND": "8\"",
+        "SCH": 80,
+        "RATING": "600#",
+        "QUANTIDADE": 2
+      },
+      "peso_liq": 111.914,
+      "peso_bruto": 111.914,
+      "preco": 3000.0,
+      "price_kgf": 26.806
+    },
+    {
+      "row": 316,
+      "secao": "casco_material",
+      "label": "PESCOÇO DO BOCAL",
+      "familia": "pipe",
+      "material": "SA-106 GR B",
+      "dims": {
+        "OD": 219.075,
+        "ESP.": 12.7,
+        "COMPR.": 300,
+        "QUANTIDADE": 2
+      },
+      "peso_liq": 38.782,
+      "peso_bruto": 42.66,
+      "preco": 639.91,
+      "price_kgf": 15.0
+    },
+    {
+      "row": 320,
+      "secao": "casco_material",
+      "label": "ANEL DE REFORÇO",
+      "familia": "anel",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "OD": 300,
+        "ID": 222.075,
+        "ESP.": 9.5,
+        "QUANTIDADE": 2
+      },
+      "peso_liq": 4.766,
+      "peso_bruto": 13.423,
+      "preco": 87.25,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 324,
+      "secao": "casco_material",
+      "label": "FLANGE",
+      "familia": "flange_wn",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "WN",
+        "FACE": "RF",
+        "ND": "10\"",
+        "SCH": 40,
+        "RATING": "600#",
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 86.76,
+      "peso_bruto": 86.76,
+      "preco": 1500.0,
+      "price_kgf": 17.289
+    },
+    {
+      "row": 328,
+      "secao": "casco_material",
+      "label": "PESCOÇO DO BOCAL",
+      "familia": "pipe",
+      "material": "SA-106 GR B",
+      "dims": {
+        "OD": 273.05,
+        "ESP.": 9.271,
+        "COMPR.": 300,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 18.093,
+      "peso_bruto": 19.902,
+      "preco": 298.53,
+      "price_kgf": 15.0
+    },
+    {
+      "row": 332,
+      "secao": "casco_material",
+      "label": "ANEL DE REFORÇO",
+      "familia": "anel",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "OD": 400,
+        "ID": 276.05,
+        "ESP.": 9.5,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 4.908,
+      "peso_bruto": 11.932,
+      "preco": 77.56,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 336,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "LUVA",
+        "ND": "3/4\"",
+        "RATING": "6000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 0.47,
+      "peso_bruto": 0.47,
+      "preco": 25.0,
+      "price_kgf": 53.191
+    },
+    {
+      "row": 340,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "PLUG",
+        "ND": "3/4\"",
+        "FACE": "NPT",
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 0.17,
+      "peso_bruto": 0.17,
+      "preco": 15.0,
+      "price_kgf": 88.235
+    },
+    {
+      "row": 344,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "LUVA",
+        "ND": "1\"",
+        "RATING": "6000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 0.93,
+      "peso_bruto": 0.93,
+      "preco": 30.0,
+      "price_kgf": 32.258
+    },
+    {
+      "row": 348,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "PLUG",
+        "ND": "1\"",
+        "FACE": "NPT",
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 0.34,
+      "peso_bruto": 0.34,
+      "preco": 20.0,
+      "price_kgf": 58.824
+    },
+    {
+      "row": 352,
+      "secao": "casco_material",
+      "label": "SUPORTE",
+      "familia": "outro",
+      "material": "AÇO CARBONO",
+      "dims": {
+        "SUPORTE": "SIMPLES",
+        "DN CASCO": 20,
+        "NORMA": "N-466",
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 45.0,
+      "peso_bruto": 67.5,
+      "preco": 438.75,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 372,
+      "secao": "cabecote_material",
+      "label": "VIROLA",
+      "familia": "chapa_retangular",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "LARGURA": 500,
+        "COMPR.": 1631,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 60.816,
+      "peso_bruto": 66.898,
+      "preco": 434.83,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 376,
+      "secao": "cabecote_material",
+      "label": "TAMPO 2:1",
+      "familia": "tampo_2_1",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "OD DISCO": 680.915,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 34.576,
+      "peso_bruto": 38.034,
+      "preco": 247.22,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 380,
+      "secao": "cabecote_material",
+      "label": "CHAPA DIVISORA",
+      "familia": "chapa_retangular",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "ESP.": 9.5,
+        "LARGURA": 500,
+        "COMPR.": 600,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 22.372,
+      "peso_bruto": 24.61,
+      "preco": 159.96,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 388,
+      "secao": "cabecote_material",
+      "label": "FLANGE PRINCIPAL",
+      "familia": "anel",
+      "material": "SA-105",
+      "dims": {
+        "OD": 1076,
+        "ID": 914,
+        "ESP.": 104,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 194.441,
+      "peso_bruto": 206.71,
+      "preco": 5167.74,
+      "price_kgf": 25.0
+    },
+    {
+      "row": 396,
+      "secao": "cabecote_material",
+      "label": "PESCOÇO DO BOCAL",
+      "familia": "pipe",
+      "material": "SA-106 GR B",
+      "dims": {
+        "OD": 219.075,
+        "ESP.": 12.7,
+        "COMPR.": 300,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 19.391,
+      "peso_bruto": 21.33,
+      "preco": 319.95,
+      "price_kgf": 15.0
+    },
+    {
+      "row": 400,
+      "secao": "cabecote_material",
+      "label": "ANEL DE REFORÇO",
+      "familia": "anel",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "OD": 300,
+        "ID": 222.075,
+        "ESP.": 9.5,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 2.383,
+      "peso_bruto": 6.712,
+      "preco": 43.63,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 408,
+      "secao": "cabecote_material",
+      "label": "PESCOÇO DO BOCAL",
+      "familia": "pipe",
+      "material": "SA-106 GR B",
+      "dims": {
+        "OD": 168.275,
+        "ESP.": 7.112,
+        "COMPR.": 300,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 8.48,
+      "peso_bruto": 9.328,
+      "preco": 139.92,
+      "price_kgf": 15.0
+    },
+    {
+      "row": 412,
+      "secao": "cabecote_material",
+      "label": "ANEL DE REFORÇO",
+      "familia": "anel",
+      "material": "SA-516 GR 70",
+      "dims": {
+        "OD": 250,
+        "ID": 171.275,
+        "ESP.": 9.5,
+        "QUANTIDADE": 1
+      },
+      "peso_liq": 1.943,
+      "peso_bruto": 4.661,
+      "preco": 30.3,
+      "price_kgf": 6.5
+    },
+    {
+      "row": 416,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "LUVA",
+        "ND": "3/4\"",
+        "RATING": "6000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "peso_liq": 0.94,
+      "peso_bruto": 0.94,
+      "preco": 50.0,
+      "price_kgf": 53.191
+    },
+    {
+      "row": 420,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "PLUG",
+        "ND": "3/4\"",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "peso_liq": 0.17,
+      "peso_bruto": 0.17,
+      "preco": 30.0,
+      "price_kgf": 176.471
+    },
+    {
+      "row": 424,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "LUVA",
+        "ND": "1\"",
+        "RATING": "6000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "peso_liq": 1.86,
+      "peso_bruto": 1.86,
+      "preco": 60.0,
+      "price_kgf": 32.258
+    },
+    {
+      "row": 428,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "familia": "outro",
+      "material": "SA-105",
+      "dims": {
+        "TIPO": "PLUG",
+        "ND": "1\"",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "peso_liq": 0.34,
+      "peso_bruto": 0.34,
+      "preco": 40.0,
+      "price_kgf": 117.647
+    }
+  ]
+}

@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from apps.tema_templates.models import ComponentTemplate, check_compatibility
+from apps.tema_templates.services import estimate_complete, COSTABLE
 from apps.engineering_params.models import TenantParamConfig
 
 
@@ -48,7 +49,12 @@ def compose_check(request):
         blocos.append(f"Cabeçote Frontal {front.upper()}")
     if rear and rear.upper() != "U":
         blocos.append(f"Cabeçote Traseiro {rear.upper()}")
+    bloqueado = bool(avisos) and mode == "block"
+    # custeio paramétrico do permutador completo (se a designação for custeável e não bloqueada)
+    custo = None
+    if designacao and not bloqueado:
+        custo = estimate_complete(designacao)
     return render(request, "tema_templates/_compose_result.html", {
         "designacao": designacao, "avisos": avisos, "mode": mode, "blocos": blocos,
-        "bloqueado": bool(avisos) and mode == "block",
+        "bloqueado": bloqueado, "custo": custo, "costable": sorted(COSTABLE),
     })

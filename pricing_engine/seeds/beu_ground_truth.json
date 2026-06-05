@@ -1,0 +1,1701 @@
+{
+  "fonte": "Planilha Padrão - Permutador 'BEU' - Rev.0.xlsx",
+  "aba": "PERMUTADOR \"BEM\" - ORÇAMENTO",
+  "designacao_tema": "BEU",
+  "descricao": "Permutador de calor casco-tubo BEU (bonnet + casco 1 passe + feixe em U) — Petrobras RPBC",
+  "custo_total_com_impostos": 128160.0,
+  "preco_venda_com_impostos": 160200.0,
+  "preco_venda_sem_impostos": 146103.0,
+  "fator_comercial": 1.25,
+  "icms_pct": 9.0,
+  "ipi_pct": 0.0,
+  "ncm": "8419 5090",
+  "peso_liquido_total_kgf": 3016.0,
+  "soma_blocos": 128159.67,
+  "n_blocos": 214,
+  "por_secao": {
+    "feixe_material": 15633.16,
+    "casco_material": 17064.96,
+    "cabecote_material": 6723.55,
+    "feixe_ops": 16200.0,
+    "casco_ops": 42924.0,
+    "cabecote_ops": 19707.0,
+    "finalizacao": 9907.0
+  },
+  "blocos": [
+    {
+      "row": 204,
+      "secao": "feixe_material",
+      "label": "TUBOS DE TROCA TÉRMICA",
+      "preco": 11562.98,
+      "peso_bruto": 856.517,
+      "peso_liq": 778.652,
+      "material": "SA-179",
+      "price_kgf": 13.5,
+      "tipo": "material"
+    },
+    {
+      "row": 208,
+      "secao": "feixe_material",
+      "label": "ESPELHO FIXO",
+      "preco": 534.1,
+      "peso_bruto": 82.17,
+      "peso_liq": 42.123,
+      "material": "AÇO CARBONO",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 212,
+      "secao": "feixe_material",
+      "label": "TRANSVERSAL",
+      "preco": 1518.98,
+      "peso_bruto": 233.689,
+      "peso_liq": 239.087,
+      "material": "AÇO CARBONO",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 216,
+      "secao": "feixe_material",
+      "label": "TRANSVERSAL",
+      "preco": 116.18,
+      "peso_bruto": 17.874,
+      "peso_liq": 11.486,
+      "material": "AÇO CARBONO",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 220,
+      "secao": "feixe_material",
+      "label": "TIRANTES",
+      "preco": 181.23,
+      "peso_bruto": 40.274,
+      "peso_liq": 40.274,
+      "material": "AÇO CARBONO",
+      "price_kgf": 4.5,
+      "tipo": "material"
+    },
+    {
+      "row": 224,
+      "secao": "feixe_material",
+      "label": "SEXTAVADAS",
+      "preco": 12.0,
+      "peso_bruto": 0.338,
+      "peso_liq": 0.338,
+      "material": "AÇO CARBONO",
+      "price_kgf": 35.527,
+      "tipo": "material"
+    },
+    {
+      "row": 228,
+      "secao": "feixe_material",
+      "label": "ESPAÇADOR BWG",
+      "preco": 637.9,
+      "peso_bruto": 70.878,
+      "peso_liq": 64.434,
+      "material": "AÇO CARBONO",
+      "price_kgf": 9.0,
+      "tipo": "material"
+    },
+    {
+      "row": 236,
+      "secao": "feixe_material",
+      "label": "BARRAS DE SELAGEM (1)",
+      "preco": 140.2,
+      "peso_bruto": 31.157,
+      "peso_liq": 29.673,
+      "material": "AÇO CARBONO",
+      "price_kgf": 4.5,
+      "tipo": "material"
+    },
+    {
+      "row": 240,
+      "secao": "feixe_material",
+      "label": "BARRAS DE SELAGEM (2)",
+      "preco": 210.31,
+      "peso_bruto": 46.735,
+      "peso_liq": 44.509,
+      "material": "AÇO CARBONO",
+      "price_kgf": 4.5,
+      "tipo": "material"
+    },
+    {
+      "row": 244,
+      "secao": "feixe_material",
+      "label": "BARRAS DE DESLIZAMENTO",
+      "preco": 278.18,
+      "peso_bruto": 61.819,
+      "peso_liq": 58.875,
+      "material": "AÇO CARBONO",
+      "price_kgf": 4.5,
+      "tipo": "material"
+    },
+    {
+      "row": 248,
+      "secao": "feixe_material",
+      "label": "CHAPA DE IMPACTO",
+      "preco": 21.1,
+      "peso_bruto": 3.245,
+      "peso_liq": 3.091,
+      "material": "AÇO CARBONO",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 256,
+      "secao": "feixe_material",
+      "label": "ALÇA IÇAMENTO",
+      "preco": 20.0,
+      "peso_bruto": 0.229,
+      "peso_liq": 0.218,
+      "material": "AÇO CARBONO",
+      "price_kgf": 87.44,
+      "tipo": "material"
+    },
+    {
+      "row": 260,
+      "secao": "feixe_material",
+      "label": "ALÇA IÇAMENTO",
+      "preco": 100.0,
+      "peso_bruto": 0.087,
+      "peso_liq": 0.079,
+      "material": "AÇO INOX SS-300",
+      "price_kgf": 1147.229,
+      "tipo": "material"
+    },
+    {
+      "row": 264,
+      "secao": "feixe_material",
+      "label": "ALÇA IÇAMENTO",
+      "preco": 100.0,
+      "peso_bruto": 0.151,
+      "peso_liq": 0.137,
+      "material": "AÇO INOX SS-300",
+      "price_kgf": 663.906,
+      "tipo": "material"
+    },
+    {
+      "row": 268,
+      "secao": "feixe_material",
+      "label": "ALÇA IÇAMENTO",
+      "preco": 100.0,
+      "peso_bruto": 0.684,
+      "peso_liq": 0.622,
+      "material": "AÇO CARBONO",
+      "price_kgf": 146.272,
+      "tipo": "material"
+    },
+    {
+      "row": 272,
+      "secao": "feixe_material",
+      "label": "ALÇA IÇAMENTO",
+      "preco": 100.0,
+      "peso_bruto": 1.083,
+      "peso_liq": 0.984,
+      "material": "AÇO CARBONO",
+      "price_kgf": 92.343,
+      "tipo": "material"
+    },
+    {
+      "row": 292,
+      "secao": "casco_material",
+      "label": "VIROLA",
+      "preco": 2087.2,
+      "peso_bruto": 321.108,
+      "peso_liq": 291.916,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 296,
+      "secao": "casco_material",
+      "label": "VIROLA",
+      "preco": 2087.2,
+      "peso_bruto": 321.108,
+      "peso_liq": 291.916,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 300,
+      "secao": "casco_material",
+      "label": "VIROLA",
+      "preco": 1043.6,
+      "peso_bruto": 160.554,
+      "peso_liq": 145.958,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 304,
+      "secao": "casco_material",
+      "label": "TAMPO 2:1",
+      "preco": 247.22,
+      "peso_bruto": 38.034,
+      "peso_liq": 34.576,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 308,
+      "secao": "casco_material",
+      "label": "FLANGE PRINCIPAL",
+      "preco": 5167.74,
+      "peso_bruto": 206.71,
+      "peso_liq": 185.885,
+      "material": "SA-105",
+      "price_kgf": 25.0,
+      "tipo": "material"
+    },
+    {
+      "row": 312,
+      "secao": "casco_material",
+      "label": "FLANGE",
+      "preco": 3000.0,
+      "peso_bruto": 111.914,
+      "peso_liq": 111.914,
+      "material": "SA-105",
+      "price_kgf": 26.806,
+      "tipo": "material"
+    },
+    {
+      "row": 316,
+      "secao": "casco_material",
+      "label": "PESCOÇO DO BOCAL",
+      "preco": 639.91,
+      "peso_bruto": 42.66,
+      "peso_liq": 38.782,
+      "material": "SA-106 GR B",
+      "price_kgf": 15.0,
+      "tipo": "material"
+    },
+    {
+      "row": 320,
+      "secao": "casco_material",
+      "label": "ANEL DE REFORÇO",
+      "preco": 87.25,
+      "peso_bruto": 13.423,
+      "peso_liq": 4.766,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 324,
+      "secao": "casco_material",
+      "label": "FLANGE",
+      "preco": 1500.0,
+      "peso_bruto": 86.76,
+      "peso_liq": 86.76,
+      "material": "SA-105",
+      "price_kgf": 17.289,
+      "tipo": "material"
+    },
+    {
+      "row": 328,
+      "secao": "casco_material",
+      "label": "PESCOÇO DO BOCAL",
+      "preco": 298.53,
+      "peso_bruto": 19.902,
+      "peso_liq": 18.093,
+      "material": "SA-106 GR B",
+      "price_kgf": 15.0,
+      "tipo": "material"
+    },
+    {
+      "row": 332,
+      "secao": "casco_material",
+      "label": "ANEL DE REFORÇO",
+      "preco": 77.56,
+      "peso_bruto": 11.932,
+      "peso_liq": 4.908,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 336,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "preco": 25.0,
+      "peso_bruto": 0.47,
+      "peso_liq": 0.47,
+      "material": "SA-105",
+      "price_kgf": 53.191,
+      "tipo": "material"
+    },
+    {
+      "row": 340,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "preco": 15.0,
+      "peso_bruto": 0.17,
+      "peso_liq": 0.17,
+      "material": "SA-105",
+      "price_kgf": 88.235,
+      "tipo": "material"
+    },
+    {
+      "row": 344,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "preco": 30.0,
+      "peso_bruto": 0.93,
+      "peso_liq": 0.93,
+      "material": "SA-105",
+      "price_kgf": 32.258,
+      "tipo": "material"
+    },
+    {
+      "row": 348,
+      "secao": "casco_material",
+      "label": "CONEXÃO",
+      "preco": 20.0,
+      "peso_bruto": 0.34,
+      "peso_liq": 0.34,
+      "material": "SA-105",
+      "price_kgf": 58.824,
+      "tipo": "material"
+    },
+    {
+      "row": 352,
+      "secao": "casco_material",
+      "label": "SUPORTE",
+      "preco": 438.75,
+      "peso_bruto": 67.5,
+      "peso_liq": 45.0,
+      "material": "AÇO CARBONO",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 356,
+      "secao": "casco_material",
+      "label": "PLACA DE IDENTIFICAÇÃO",
+      "preco": 300.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 372,
+      "secao": "cabecote_material",
+      "label": "VIROLA",
+      "preco": 434.83,
+      "peso_bruto": 66.898,
+      "peso_liq": 60.816,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 376,
+      "secao": "cabecote_material",
+      "label": "TAMPO 2:1",
+      "preco": 247.22,
+      "peso_bruto": 38.034,
+      "peso_liq": 34.576,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 380,
+      "secao": "cabecote_material",
+      "label": "CHAPA DIVISORA",
+      "preco": 159.96,
+      "peso_bruto": 24.61,
+      "peso_liq": 22.372,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 388,
+      "secao": "cabecote_material",
+      "label": "FLANGE PRINCIPAL",
+      "preco": 5167.74,
+      "peso_bruto": 206.71,
+      "peso_liq": 194.441,
+      "material": "SA-105",
+      "price_kgf": 25.0,
+      "tipo": "material"
+    },
+    {
+      "row": 396,
+      "secao": "cabecote_material",
+      "label": "PESCOÇO DO BOCAL",
+      "preco": 319.95,
+      "peso_bruto": 21.33,
+      "peso_liq": 19.391,
+      "material": "SA-106 GR B",
+      "price_kgf": 15.0,
+      "tipo": "material"
+    },
+    {
+      "row": 400,
+      "secao": "cabecote_material",
+      "label": "ANEL DE REFORÇO",
+      "preco": 43.63,
+      "peso_bruto": 6.712,
+      "peso_liq": 2.383,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 408,
+      "secao": "cabecote_material",
+      "label": "PESCOÇO DO BOCAL",
+      "preco": 139.92,
+      "peso_bruto": 9.328,
+      "peso_liq": 8.48,
+      "material": "SA-106 GR B",
+      "price_kgf": 15.0,
+      "tipo": "material"
+    },
+    {
+      "row": 412,
+      "secao": "cabecote_material",
+      "label": "ANEL DE REFORÇO",
+      "preco": 30.3,
+      "peso_bruto": 4.661,
+      "peso_liq": 1.943,
+      "material": "SA-516 GR 70",
+      "price_kgf": 6.5,
+      "tipo": "material"
+    },
+    {
+      "row": 416,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "preco": 50.0,
+      "peso_bruto": 0.94,
+      "peso_liq": 0.94,
+      "material": "SA-105",
+      "price_kgf": 53.191,
+      "tipo": "material"
+    },
+    {
+      "row": 420,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "preco": 30.0,
+      "peso_bruto": 0.17,
+      "peso_liq": 0.17,
+      "material": "SA-105",
+      "price_kgf": 176.471,
+      "tipo": "material"
+    },
+    {
+      "row": 424,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "preco": 60.0,
+      "peso_bruto": 1.86,
+      "peso_liq": 1.86,
+      "material": "SA-105",
+      "price_kgf": 32.258,
+      "tipo": "material"
+    },
+    {
+      "row": 428,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "preco": 40.0,
+      "peso_bruto": 0.34,
+      "peso_liq": 0.34,
+      "material": "SA-105",
+      "price_kgf": 117.647,
+      "tipo": "material"
+    },
+    {
+      "row": 440,
+      "secao": "feixe_ops",
+      "label": "ESPELHO - USINAR",
+      "preco": 600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 444,
+      "secao": "feixe_ops",
+      "label": "TRAÇAR FUROS",
+      "preco": 160.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 448,
+      "secao": "feixe_ops",
+      "label": "FURAR",
+      "preco": 330.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 452,
+      "secao": "feixe_ops",
+      "label": "ESCAREAR",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 456,
+      "secao": "feixe_ops",
+      "label": "ALARGAR",
+      "preco": 220.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 460,
+      "secao": "feixe_ops",
+      "label": "GROOVES",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 464,
+      "secao": "feixe_ops",
+      "label": "USINAR FUROS P/ TIRANTES",
+      "preco": 220.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 468,
+      "secao": "feixe_ops",
+      "label": "TRAÇAR RASGOS",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 472,
+      "secao": "feixe_ops",
+      "label": "USINAR RASGOS",
+      "preco": 600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 476,
+      "secao": "feixe_ops",
+      "label": "ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 480,
+      "secao": "feixe_ops",
+      "label": "INSPECIONAR",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 484,
+      "secao": "feixe_ops",
+      "label": "TRAÇAR E RECORTAR",
+      "preco": 630.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 488,
+      "secao": "feixe_ops",
+      "label": "TRAÇAR FUROS",
+      "preco": 160.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 492,
+      "secao": "feixe_ops",
+      "label": "FORMAR PACOTE",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 496,
+      "secao": "feixe_ops",
+      "label": "FURAR",
+      "preco": 880.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 500,
+      "secao": "feixe_ops",
+      "label": "CHICANAS - PREPARAÇÃO PARA USINAR",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 504,
+      "secao": "feixe_ops",
+      "label": "USINAR",
+      "preco": 450.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 508,
+      "secao": "feixe_ops",
+      "label": "CHICANAS - TRAÇAR RECORTES",
+      "preco": 630.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 512,
+      "secao": "feixe_ops",
+      "label": "ESCAREAR",
+      "preco": 330.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 516,
+      "secao": "feixe_ops",
+      "label": "CHICANAS - RECORTAR E DAR ACABAMENTO",
+      "preco": 780.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 520,
+      "secao": "feixe_ops",
+      "label": "INSPECIONAR",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 524,
+      "secao": "feixe_ops",
+      "label": "PREPARAR TIRANTES",
+      "preco": 360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 528,
+      "secao": "feixe_ops",
+      "label": "PREPARAR ESPAÇADORES",
+      "preco": 450.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 532,
+      "secao": "feixe_ops",
+      "label": "CURVAR TUBOS TERCEIROS",
+      "preco": 1360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 536,
+      "secao": "feixe_ops",
+      "label": "TRANSPORTE PARA CURVAMENTO EM TERCEIROS",
+      "preco": 800.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 544,
+      "secao": "feixe_ops",
+      "label": "PREPARAR TUBOS U PARA TRATAMENTO TÉRMICO",
+      "preco": 960.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 548,
+      "secao": "feixe_ops",
+      "label": "TRANSPORTE PARA TRATAMENTO TÉRMICO TUBOS",
+      "preco": 800.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 552,
+      "secao": "feixe_ops",
+      "label": "TRATAMENTO TÉRMICO ALÍVIO DE TENSÕES - TUBOS U",
+      "preco": 2000.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 556,
+      "secao": "feixe_ops",
+      "label": "EXAME DE L. P. NAS CURVAS DOS TUBOS U",
+      "preco": 2400.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 560,
+      "secao": "casco_ops",
+      "label": "MONTAR ESTRUTURA DO FEIXE",
+      "preco": 640.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 564,
+      "secao": "casco_ops",
+      "label": "QUEBRA JATO",
+      "preco": 270.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 568,
+      "secao": "casco_ops",
+      "label": "INTRODUZIR OS TUBOS NO PRIMEIRO ESPELHO",
+      "preco": 400.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 572,
+      "secao": "casco_ops",
+      "label": "CALANDRAR CILINDROS LADO DO CASCO",
+      "preco": 1824.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 576,
+      "secao": "casco_ops",
+      "label": "SOLDAS LONGITUDINAIS",
+      "preco": 2700.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 580,
+      "secao": "casco_ops",
+      "label": "MONTAR OS CILINDROS",
+      "preco": 1200.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 584,
+      "secao": "casco_ops",
+      "label": "SOLDAS CIRCUNFERÊNCIAIS",
+      "preco": 1350.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 588,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 592,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 300.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 596,
+      "secao": "casco_ops",
+      "label": "TRAÇAR E RECORTAR DISCOS DOS TAMPOS",
+      "preco": 180.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 600,
+      "secao": "casco_ops",
+      "label": "REBORDEAMENTO - TERCEIROS",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 604,
+      "secao": "casco_ops",
+      "label": "BISELAR",
+      "preco": 180.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 608,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 612,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 616,
+      "secao": "casco_ops",
+      "label": "MONTAR O CILINDRO NO TAMPO",
+      "preco": 400.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 620,
+      "secao": "casco_ops",
+      "label": "SOLDAS CIRCUNFERÊNCIAIS",
+      "preco": 630.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 624,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 628,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 632,
+      "secao": "casco_ops",
+      "label": "USINAR FLANGES PRINCIPAIS",
+      "preco": 900.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 636,
+      "secao": "casco_ops",
+      "label": "TRAÇAR FUROS FLANGES PRINCIPAIS",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 640,
+      "secao": "casco_ops",
+      "label": "FURAR FLANGES PRINCIPAIS",
+      "preco": 880.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 644,
+      "secao": "casco_ops",
+      "label": "INSPECIONAR FLANGES PRINCIPAIS",
+      "preco": 220.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 648,
+      "secao": "casco_ops",
+      "label": "MONTAR OS CILINDROS NOS FLANGES",
+      "preco": 400.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 652,
+      "secao": "casco_ops",
+      "label": "SOLDAS CIRCUNFERÊNCIAIS",
+      "preco": 630.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 656,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 660,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 664,
+      "secao": "casco_ops",
+      "label": "EXAME DE ULTRASSOM",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 668,
+      "secao": "casco_ops",
+      "label": "EXAME RAIO X",
+      "preco": 4000.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 672,
+      "secao": "casco_ops",
+      "label": "TRAÇAR POSIÇÃO BOCAIS",
+      "preco": 780.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 676,
+      "secao": "casco_ops",
+      "label": "RECORTAR E BISELAR",
+      "preco": 1080.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 680,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 150.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 684,
+      "secao": "casco_ops",
+      "label": "MONTAR FLANGE NO PESCOÇO",
+      "preco": 540.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 688,
+      "secao": "casco_ops",
+      "label": "SOLDAR FLANGE NO PESCOÇO S1",
+      "preco": 810.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 692,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 696,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 150.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 700,
+      "secao": "casco_ops",
+      "label": "EXAME RAIO X",
+      "preco": 300.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 704,
+      "secao": "casco_ops",
+      "label": "TRANSPORTE PARA RAIO X",
+      "preco": 200.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 708,
+      "secao": "casco_ops",
+      "label": "EXAME ULTRASSOM",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 712,
+      "secao": "casco_ops",
+      "label": "CALANDRAR ANÉIS DE REFORÇO",
+      "preco": 360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 716,
+      "secao": "casco_ops",
+      "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
+      "preco": 540.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 720,
+      "secao": "casco_ops",
+      "label": "USINAR FUROS NPT 1/4\"",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 724,
+      "secao": "casco_ops",
+      "label": "MONTAR ANÉIS DE REFORÇO",
+      "preco": 1080.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 728,
+      "secao": "casco_ops",
+      "label": "SOLDAR ANÉIS DE REFORÇO",
+      "preco": 1080.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 732,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 736,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 740,
+      "secao": "casco_ops",
+      "label": "EXAME ULTRASSOM",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 744,
+      "secao": "casco_ops",
+      "label": "TRAÇAR POSIÇÃO DAS LUVAS",
+      "preco": 180.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 748,
+      "secao": "casco_ops",
+      "label": "RECORTAR E BISELAR",
+      "preco": 270.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 752,
+      "secao": "casco_ops",
+      "label": "EXAME DE L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 756,
+      "secao": "casco_ops",
+      "label": "MONTAR AS LUVAS",
+      "preco": 360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 760,
+      "secao": "casco_ops",
+      "label": "SOLDAR AS LUVAS",
+      "preco": 450.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 764,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 768,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 772,
+      "secao": "casco_ops",
+      "label": "FABRICAR OS PEDESTAIS",
+      "preco": 540.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 776,
+      "secao": "casco_ops",
+      "label": "MONTAR OS PEDESTAIS",
+      "preco": 780.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 780,
+      "secao": "casco_ops",
+      "label": "SOLDAR OS PEDESTAIS",
+      "preco": 810.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 784,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 788,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 150.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 792,
+      "secao": "casco_ops",
+      "label": "MONTAR PEDESTAIS NO CASCO",
+      "preco": 600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 796,
+      "secao": "casco_ops",
+      "label": "SOLDAR OS PEDESTAIS NO CASCO",
+      "preco": 540.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 800,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 40.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 804,
+      "secao": "casco_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 808,
+      "secao": "casco_ops",
+      "label": "GABARITAR O CASCO",
+      "preco": 720.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 812,
+      "secao": "casco_ops",
+      "label": "INTRODUZIR FEIXE NO CASCO",
+      "preco": 400.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 824,
+      "secao": "casco_ops",
+      "label": "SOLDAR OS ESPELHOS NO CASCO",
+      "preco": 1620.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 828,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 832,
+      "secao": "casco_ops",
+      "label": "EXAME DE L.P.",
+      "preco": 150.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 836,
+      "secao": "casco_ops",
+      "label": "EXAME DE ULTRASSOM",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 840,
+      "secao": "casco_ops",
+      "label": "GABARITAR - TUBOS",
+      "preco": 640.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 844,
+      "secao": "casco_ops",
+      "label": "MANDRILAR",
+      "preco": 360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 848,
+      "secao": "casco_ops",
+      "label": "REBAIXAR E DAR ACABAMENTO",
+      "preco": 120.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 868,
+      "secao": "casco_ops",
+      "label": "INSPECIONAR TUBOS MONTADOS",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 872,
+      "secao": "casco_ops",
+      "label": "MONTAR BARRAS",
+      "preco": 510.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 876,
+      "secao": "casco_ops",
+      "label": "SOLDAR BARRAS",
+      "preco": 450.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 880,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO BARRAS",
+      "preco": 200.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 884,
+      "secao": "casco_ops",
+      "label": "INSPECIONAR BARRAS MONTADAS",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 888,
+      "secao": "casco_ops",
+      "label": "MONTAR ALÇA / BATENTE",
+      "preco": 270.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 892,
+      "secao": "casco_ops",
+      "label": "SOLDAR ALÇA / BATENTE",
+      "preco": 270.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 896,
+      "secao": "casco_ops",
+      "label": "DAR ACABAMENTO ALÇA / BATENTE",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 900,
+      "secao": "casco_ops",
+      "label": "EXAME L. P. NA SOLDA ALÇA / BATENTE",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 904,
+      "secao": "casco_ops",
+      "label": "INSPECIONAR ALÇA / BATENTE",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 908,
+      "secao": "cabecote_ops",
+      "label": "TRAÇAR E RECORTAR DISCOS DOS TAMPOS",
+      "preco": 180.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 912,
+      "secao": "cabecote_ops",
+      "label": "REBORDEAMENTO - TERCEIROS",
+      "preco": 600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 916,
+      "secao": "cabecote_ops",
+      "label": "BISELAR",
+      "preco": 180.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 920,
+      "secao": "cabecote_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 924,
+      "secao": "cabecote_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 928,
+      "secao": "cabecote_ops",
+      "label": "CALANDRAR CILINDROS DOS CABEÇOTES",
+      "preco": 167.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 932,
+      "secao": "cabecote_ops",
+      "label": "SOLDAS LONGITUDINAIS",
+      "preco": 270.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 936,
+      "secao": "cabecote_ops",
+      "label": "MONTAR OS CILINDROS NOS TAMPOS",
+      "preco": 400.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 940,
+      "secao": "cabecote_ops",
+      "label": "SOLDAS CIRCUNFERÊNCIAIS",
+      "preco": 630.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 944,
+      "secao": "cabecote_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 948,
+      "secao": "cabecote_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 952,
+      "secao": "cabecote_ops",
+      "label": "EXAME RAIO X",
+      "preco": 1000.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 956,
+      "secao": "cabecote_ops",
+      "label": "USINAR FLANGES PRINCIPAIS",
+      "preco": 900.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 960,
+      "secao": "cabecote_ops",
+      "label": "TRAÇAR FUROS FLANGES PRINCIPAIS",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 964,
+      "secao": "cabecote_ops",
+      "label": "FURAR FLANGES PRINCIPAIS",
+      "preco": 880.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 968,
+      "secao": "cabecote_ops",
+      "label": "INSPECIONAR FLANGES PRINCIPAIS",
+      "preco": 220.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 972,
+      "secao": "cabecote_ops",
+      "label": "MONTAR OS CILINDROS NOS FLANGES",
+      "preco": 400.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 976,
+      "secao": "cabecote_ops",
+      "label": "SOLDAS CIRCUNFERÊNCIAIS",
+      "preco": 630.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 980,
+      "secao": "cabecote_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 984,
+      "secao": "cabecote_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 988,
+      "secao": "cabecote_ops",
+      "label": "EXAME DE ULTRASSOM",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 992,
+      "secao": "cabecote_ops",
+      "label": "TRAÇAR POSIÇÃO BOCAIS",
+      "preco": 520.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 996,
+      "secao": "cabecote_ops",
+      "label": "RECORTAR E BISELAR",
+      "preco": 720.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1000,
+      "secao": "cabecote_ops",
+      "label": "EXAME L.P.",
+      "preco": 150.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1004,
+      "secao": "cabecote_ops",
+      "label": "MONTAR FLANGE NO PESCOÇO",
+      "preco": 360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1008,
+      "secao": "cabecote_ops",
+      "label": "SOLDAR FLANGE NO PESCOÇO",
+      "preco": 540.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1012,
+      "secao": "cabecote_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1016,
+      "secao": "cabecote_ops",
+      "label": "EXAME L.P.",
+      "preco": 150.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1020,
+      "secao": "cabecote_ops",
+      "label": "EXAME RAIO X",
+      "preco": 300.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1024,
+      "secao": "cabecote_ops",
+      "label": "TRANSPORTE PARA RAIO X",
+      "preco": 200.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1028,
+      "secao": "cabecote_ops",
+      "label": "EXAME ULTRASSOM",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1032,
+      "secao": "cabecote_ops",
+      "label": "CALANDRAR ANÉIS DE REFORÇO",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1036,
+      "secao": "cabecote_ops",
+      "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
+      "preco": 360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1040,
+      "secao": "cabecote_ops",
+      "label": "USINAR FUROS NPT 1/4\"",
+      "preco": 110.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1044,
+      "secao": "cabecote_ops",
+      "label": "MONTAR ANÉIS DE REFORÇO",
+      "preco": 720.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1048,
+      "secao": "cabecote_ops",
+      "label": "SOLDAR ANÉIS DE REFORÇO",
+      "preco": 720.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1052,
+      "secao": "cabecote_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1056,
+      "secao": "cabecote_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1060,
+      "secao": "cabecote_ops",
+      "label": "EXAME ULTRASSOM",
+      "preco": 1100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1064,
+      "secao": "cabecote_ops",
+      "label": "TRAÇAR POSIÇÃO DAS LUVAS",
+      "preco": 360.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1068,
+      "secao": "cabecote_ops",
+      "label": "RECORTAR E BISELAR",
+      "preco": 540.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1072,
+      "secao": "cabecote_ops",
+      "label": "EXAME DE L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1076,
+      "secao": "cabecote_ops",
+      "label": "MONTAR AS LUVAS",
+      "preco": 720.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1080,
+      "secao": "cabecote_ops",
+      "label": "SOLDAR AS LUVAS",
+      "preco": 900.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1084,
+      "secao": "cabecote_ops",
+      "label": "DAR ACABAMENTO",
+      "preco": 240.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1088,
+      "secao": "cabecote_ops",
+      "label": "EXAME L.P.",
+      "preco": 100.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1092,
+      "secao": "cabecote_ops",
+      "label": "CHAPA DIVISORA",
+      "preco": 180.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1096,
+      "secao": "cabecote_ops",
+      "label": "MONTAR OS CABEÇOTES NO CASCO + FEIXE",
+      "preco": 600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1112,
+      "secao": "finalizacao",
+      "label": "INSPEÇÃO DIMENSIONAL",
+      "preco": 600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1120,
+      "secao": "finalizacao",
+      "label": "TESTE HIDROSTÁTICO",
+      "preco": 600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1124,
+      "secao": "finalizacao",
+      "label": "TRANSPORTE - PREPARAÇÃO E EMBALAGEM",
+      "preco": 200.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1128,
+      "secao": "finalizacao",
+      "label": "PETROBRAS - RPBC",
+      "preco": 1600.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1144,
+      "secao": "finalizacao",
+      "label": "PIT",
+      "preco": 500.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1148,
+      "secao": "finalizacao",
+      "label": "PS",
+      "preco": 500.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1152,
+      "secao": "finalizacao",
+      "label": "DATA BOOK",
+      "preco": 500.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1156,
+      "secao": "finalizacao",
+      "label": "INSPEÇÃO TIPO \"Q\"",
+      "preco": 2000.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1164,
+      "secao": "finalizacao",
+      "label": "FERRAMENTAS",
+      "preco": 500.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1168,
+      "secao": "finalizacao",
+      "label": "CONSUMÍVEIS DE SOLDAGEM",
+      "preco": 2730.0,
+      "tipo": "operacao"
+    },
+    {
+      "row": 1172,
+      "secao": "finalizacao",
+      "label": "EXPANDIDORES",
+      "preco": 177.0,
+      "tipo": "operacao"
+    }
+  ]
+}
