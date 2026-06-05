@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartquotation}
+      POSTGRES_USER: ${POSTGRES_USER:-sq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sq}
+    ports:
+      - "5436:5432"            # 5436 p/ não colidir com Vitali (5435)
+    volumes:
+      - sq_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sq} -d ${POSTGRES_DB:-smartquotation}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"            # 6380 p/ não colidir
+    volumes:
+      - sq_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./backend:/app
+      - ./pricing_engine:/app/pricing_engine:ro
+    ports:
+      - "8001:8000"
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  worker:
+    build: ./backend
+    command: celery -A smartquotation worker -l info
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./backend:/app
+      - ./pricing_engine:/app/pricing_engine:ro
+    depends_on:
+      - redis
+      - db
+
+volumes:
+  sq_postgres_data:
+  sq_redis_data:

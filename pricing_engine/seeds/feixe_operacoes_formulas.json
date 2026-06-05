@@ -1,0 +1,639 @@
+[
+ {
+  "label_row": 202,
+  "op": "ESPELHOS - USINAR",
+  "X": "SIM",
+  "AF": "=IF(AND($B$19=\"TUBO RETO\",$AW$23<1000),8,IF(AND(B19=\"TUBO RETO\",AW23<1200),9,IF(AND(B19=\"TUBO RETO\",AW23>=1200),10,IF(AND($B$19=\"TUBO U\",$AW$23<1000),4,IF(AND(B19=\"TUBO U\",AW23<1200),5,IF(AND(B19=\"TUBO U\",AW23>=1200),6))))))*$B$31",
+  "AN": "=IF($AW$23>1100,200,150)",
+  "AV": 0,
+  "CF": "=IF(X204=\"SIM\",(AF204*AN204+AV204),0)"
+ },
+ {
+  "label_row": 206,
+  "op": "ESPELHOS - TRAÇAR FUROS",
+  "X": "SIM",
+  "AF": "=$AP$19*2",
+  "AN": "=IF(AF208<400,2,IF(AF208<800,4,IF(AF208<1200,5,IF(AF208<2400,6,IF(AF208<3600,8,12)))))*$B$31",
+  "AV": 80,
+  "BD": 0,
+  "CF": "=IF(X208=\"SIM\",(AN208*AV208+BD208),0)"
+ },
+ {
+  "label_row": 210,
+  "op": "ESPELHOS - FURAR",
+  "X": "SIM",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP($BK$23/40/60*AF212,0)*$B$31",
+  "AV": 110,
+  "BD": "=IF($X$112=25.4,AN212*AV212,0)",
+  "CF": "=IF(X212=\"SIM\",(AN212*AV212+BD212),0)"
+ },
+ {
+  "label_row": 214,
+  "op": "ESPELHOS - ESCAREAR",
+  "X": "SIM",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP(0.25*AF216/60,0)*$B$31",
+  "AV": 110,
+  "BD": 0,
+  "CF": "=IF(X216=\"SIM\",(AN216*AV216+BD216),0)"
+ },
+ {
+  "label_row": 218,
+  "op": "ESPELHOS - ALARGAR",
+  "X": "SIM",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP($BK$23/70/60*AF220,0)*$B$31",
+  "AV": 110,
+  "BD": "=IF($X$112=25.4,AN220*AV220,0)",
+  "CF": "=IF(X220=\"SIM\",(AN220*AV220+BD220),0)"
+ },
+ {
+  "label_row": 222,
+  "op": "ESPELHOS - GROOVES",
+  "X": "=IF(B27=\"SOLDA DE RESISTÊNCIA\",\"NÃO\",IF(B27=\"SOLDA DE SELAGEM\",\"NÃO\",IF(B27=\"EXPANSÃO + 2 GROOVES\",\"SIM\",IF(B27=\"EXPANSÃO + 3 GROOVES\",\"SIM\"))))",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP(0.35*AF224/60,0)*$B$31",
+  "AV": 110,
+  "BD": 0,
+  "CF": "=IF(X224=\"SIM\",(AN224*AV224+BD224),0)"
+ },
+ {
+  "label_row": 226,
+  "op": "ESPELHOS - USINAR FUROS P/ TIRANTES",
+  "X": "SIM",
+  "AF": "=$AT$132",
+  "AN": "=IF(AF228<10,1,2)*$B$31",
+  "AV": 110,
+  "BD": 0,
+  "CF": "=IF(X228=\"SIM\",(AN228*AV228+BD228),0)"
+ },
+ {
+  "label_row": 230,
+  "op": "ESPELHOS - TRAÇAR RASGOS",
+  "X": "=IF(OR($BR$23>0,$BR$27>0),\"SIM\",\"NÃO\")",
+  "AF": "=$BR$23+$BR$27",
+  "AN": "=IF(AF232=0,0,IF(AF232<2,1,IF(AF232<3,2,IF(AF232<4,3,IF(AF232<5,4,IF(AF232<6,5,IF(AF232<7,6,8)))))))*$B$31",
+  "AV": 80,
+  "BD": 0,
+  "CF": "=IF(X232=\"SIM\",(AN232*AV232+BD232),0)"
+ },
+ {
+  "label_row": 234,
+  "op": "ESPELHOS - USINAR RASGOS",
+  "X": "=IF(OR($BR$23>0,$BR$27>0),\"SIM\",\"NÃO\")",
+  "AF": "=$BR$23+$BR$27",
+  "AN": "=IF(AF236=0,0,IF(AF236<2,4,IF(AF236<3,6,IF(AF236<4,8,IF(AF236<6,10,12)))))*$B$31",
+  "AV": "=IF($AW$23>1000,200,150)",
+  "BD": 0,
+  "CF": "=IF(X236=\"SIM\",(AN236*AV236+BD236),0)"
+ },
+ {
+  "label_row": 238,
+  "op": "ESPELHOS - ACABAMENTO",
+  "X": "SIM",
+  "AF": "=$BR$23+$BR$27",
+  "AN": "=IF(AF240<=1,2,IF(AF240<4,3,4))*$B$31",
+  "AV": 40,
+  "BD": 0,
+  "CF": "=IF(X240=\"SIM\",(AN240*AV240+BD240),0)"
+ },
+ {
+  "label_row": 242,
+  "op": "ESPELHOS - INSPECIONAR",
+  "X": "SIM",
+  "AF": "=IF(AF240<=1,1,2)*$B$31",
+  "AN": 110,
+  "AV": 0,
+  "CF": "=IF(X244=\"SIM\",AF244*AN244+AV244,0)"
+ },
+ {
+  "label_row": 246,
+  "op": "CHICANAS - TRAÇAR E RECORTAR",
+  "X": "SIM",
+  "AF": "=$AT$124+$AT$128",
+  "AN": "=IF(AF248<11,5,IF(AF248<31,7,8))*$B$31",
+  "AV": 90,
+  "BD": 0,
+  "CF": "=IF(X248=\"SIM\",(AN248*AV248+BD248),0)"
+ },
+ {
+  "label_row": 250,
+  "op": "CHICANAS - TRAÇAR FUROS",
+  "X": "SIM",
+  "AF": "=$AP$19",
+  "AN": "=IF(AF252<300,2,IF(AF252<1000,3,IF(AF252<1500,4,IF(AF252<2000,5,6))))*$B$31",
+  "AV": 80,
+  "BD": 0,
+  "CF": "=IF(X252=\"SIM\",(AN252*AV252+BD252),0)"
+ },
+ {
+  "label_row": 254,
+  "op": "CHICANAS - FORMAR PACOTE",
+  "X": "SIM",
+  "AF": "=$AT$124+$AT$128",
+  "AN": "=$AW$31",
+  "AV": "=IF(AF256<5,1,IF(AN256<500,2,4))*$B$31",
+  "BD": 120,
+  "BL": 0,
+  "CF": "=IF(X256=\"SIM\",(AV256*BD256+BL256),0)"
+ },
+ {
+  "label_row": 258,
+  "op": "CHICANAS - FURAR",
+  "X": "SIM",
+  "AF": "=$AP$31*$BK$31+$AP$35*$BD$35",
+  "AN": "=ROUNDUP(AF260/36/60*$AP$19,0)*$B$31",
+  "AV": 110,
+  "BD": "=IF($X$112=25.4,AN260*AV260,0)",
+  "CF": "=IF(X260=\"SIM\",(AN260*AV260+BD260),0)"
+ },
+ {
+  "label_row": 262,
+  "op": "CHICANAS - PREPARAÇÃO PARA USINAR",
+  "X": "SIM",
+  "AF": "=$AT$124+$AT$128",
+  "AN": "=$AW$31",
+  "AV": "=IF(AF264<5,1,IF(AN264<500,2,IF(AN264<1000,3,4)))*$B$31",
+  "BD": 120,
+  "BL": 0,
+  "CF": "=IF(X264=\"SIM\",(AV264*BD264+BL264),0)"
+ },
+ {
+  "label_row": 266,
+  "op": "CHICANAS - USINAR",
+  "X": "SIM",
+  "AF": "=$AT$124+$AT$128",
+  "AN": "=$AW$31",
+  "AV": "=IF(AF268<5,2,3)*$B$31",
+  "BD": "=IF(AN268>1100,200,150)",
+  "BL": 0,
+  "CF": "=IF(X268=\"SIM\",(AV268*BD268+BL268),0)"
+ },
+ {
+  "label_row": 270,
+  "op": "CHICANAS - TRAÇAR RECORTES",
+  "X": "SIM",
+  "AF": "=$AT$124+$AT$128",
+  "AN": "=IF(AF272<11,5,IF(AF272<31,7,8))*$B$31",
+  "AV": 90,
+  "BD": 0,
+  "CF": "=IF(X272=\"SIM\",(AN272*AV272+BD272),0)"
+ },
+ {
+  "label_row": 274,
+  "op": "CHICANAS - ESCAREAR",
+  "X": "SIM",
+  "AF": "=$AP$19*$AP$31",
+  "AN": "=ROUNDUP(0.1*AF276/60,0)*$B$31",
+  "AV": 110,
+  "BD": 0,
+  "CF": "=IF(X276=\"SIM\",(AN276*AV276+BD276),0)"
+ },
+ {
+  "label_row": 278,
+  "op": "CHICANAS - RECORTAR E DAR ACABAMENTO",
+  "X": "SIM",
+  "AF": "=$AT$124+$AT$128",
+  "AN": "=IF(AF280<5,2,IF(AF280<10,4,IF(AF280<20,6,IF(AF280<30,8,IF(AF280<40,9,10)))))*$B$31",
+  "AV": 130,
+  "BD": 0,
+  "CF": "=IF(X280=\"SIM\",(AN280*AV280+BD280),0)"
+ },
+ {
+  "label_row": 282,
+  "op": "CHICANAS - INSPECIONAR",
+  "X": "SIM",
+  "AF": "=1*$B$31",
+  "AN": 110,
+  "AV": 0,
+  "CF": "=IF(X284=\"SIM\",AF284*AN284+AV284,0)"
+ },
+ {
+  "label_row": 286,
+  "op": "PREPARAR TIRANTES",
+  "X": "SIM",
+  "AF": "=$AT$132",
+  "AN": "=IF(AF288<10,2,3)*$B$31",
+  "AV": 120,
+  "BD": 0,
+  "CF": "=IF(X288=\"SIM\",(AN288*AV288+BD288),0)"
+ },
+ {
+  "label_row": 290,
+  "op": "PREPARAR ESPAÇADORES",
+  "X": "SIM",
+  "AF": "=3*$B$31",
+  "AN": 150,
+  "AV": 0,
+  "CF": "=IF(X292=\"SIM\",(AF292*AN292+AV292),0)"
+ },
+ {
+  "label_row": 294,
+  "op": "MONTAR ESTRUTURA DO FEIXE",
+  "X": "SIM",
+  "AF": "=4*$B$31",
+  "AN": 160,
+  "AV": 0,
+  "CF": "=IF(X296=\"SIM\",(AF296*AN296+AV296),0)"
+ },
+ {
+  "label_row": 298,
+  "op": "QUEBRA JATO",
+  "X": "=IF(AP67=\"\",\"NÃO\",\"SIM\")",
+  "AF": "=3*$B$31",
+  "AN": 90,
+  "AV": 0,
+  "CF": "=IF(X300=\"SIM\",(AF300*AN300+AV300),0)"
+ },
+ {
+  "label_row": 302,
+  "op": "CURVAR TUBOS TERCEIROS",
+  "X": "=IF($B$19=\"TUBO RETO\",\"NÃO\",IF($B$19=\"TUBO U\",\"SIM\",\"ERRO\"))",
+  "AF": 0,
+  "AN": 160,
+  "AV": 0,
+  "CF": "=IF(X304=\"SIM\",AF304*AN304+AV304,0)"
+ },
+ {
+  "label_row": 306,
+  "op": "TRANSPORTE PARA CURVAMENTO EM TERCEIROS",
+  "X": "=IF($B$19=\"TUBO RETO\",\"NÃO\",IF($B$19=\"TUBO U\",\"SIM\",\"ERRO\"))",
+  "AF": "=IF(X308=\"SIM\",1,0)",
+  "AN": 800,
+  "AV": 0,
+  "CF": "=IF(X308=\"SIM\",AF308*AN308+AV308,0)"
+ },
+ {
+  "label_row": 310,
+  "op": "CURVAMENTO DE TUBOS ENGEMATEX",
+  "X": "=IF($B$19=\"TUBO RETO\",\"NÃO\",IF($B$19=\"TUBO U\",\"SIM\",\"ERRO\"))",
+  "AF": "=IF(X312=\"NÃO\",0,$AP$19-AF304)",
+  "AN": "=ROUNDUP(AF312/20,0)*$B$31",
+  "AV": 160,
+  "BD": 0,
+  "CF": "=IF(X312=\"SIM\",(AN312*AV312+BD312),0)"
+ },
+ {
+  "label_row": 314,
+  "op": "PREPARAR TUBOS U PARA TRATAMENTO TÉRMICO",
+  "X": "=IF($B$19=\"TUBO RETO\",\"NÃO\",IF($B$19=\"TUBO U\",\"SIM\",\"ERRO\"))",
+  "AF": "=6*$B$31",
+  "AN": 160,
+  "AV": 0,
+  "CF": "=IF(X316=\"SIM\",(AF316*AN316+AV316),0)"
+ },
+ {
+  "label_row": 318,
+  "op": "TRANSPORTE PARA TRATAMENTO TÉRMICO TUBOS",
+  "X": "=IF($B$19=\"TUBO RETO\",\"NÃO\",IF($B$19=\"TUBO U\",\"SIM\",\"ERRO\"))",
+  "AF": "=IF(X320=\"SIM\",1,0)*$B$31",
+  "AN": 800,
+  "AV": 0,
+  "CF": "=IF(X320=\"SIM\",AF320*AN320+AV320,0)"
+ },
+ {
+  "label_row": 322,
+  "op": "TRATAMENTO TÉRMICO ALÍVIO DE TENSÕES - TUBOS U",
+  "X": "=IF($B$19=\"TUBO RETO\",\"NÃO\",IF($B$19=\"TUBO U\",\"SIM\",\"ERRO\"))",
+  "AF": "=IF(X324=\"SIM\",1,0)*$B$31",
+  "AN": 2000,
+  "AV": 0,
+  "CF": "=IF(X324=\"SIM\",AF324*AN324+AV324,0)"
+ },
+ {
+  "label_row": 326,
+  "op": "EXAME DE L. P. NAS CURVAS DOS TUBOS U",
+  "X": "=IF($B$19=\"TUBO RETO\",\"NÃO\",IF($B$19=\"TUBO U\",\"SIM\",\"ERRO\"))",
+  "AF": "=IF(X328=\"SIM\",12,0)*$B$31",
+  "AN": 200,
+  "AV": 0,
+  "CF": "=IF(X328=\"SIM\",(AF328*AN328+AV328),0)"
+ },
+ {
+  "label_row": 330,
+  "op": "INTRODUZIR OS TUBOS",
+  "X": "SIM",
+  "AF": "=$AP$19",
+  "AN": "=ROUNDUP(AF332*1.5/60,0)*$B$31",
+  "AV": "=IF($B$19=\"TUBO RETO\",40,IF($B$19=\"TUBO U\",200))",
+  "BD": 0,
+  "CF": "=IF(X332=\"SIM\",(AN332*AV332+BD332),0)"
+ },
+ {
+  "label_row": 334,
+  "op": "MONTAR O ESPELHO FLUTUANTE",
+  "X": "=IF($B$19=\"TUBO RETO\",\"SIM\",IF($B$19=\"TUBO U\",\"NÃO\",\"ERRO\"))",
+  "AF": "=3*$B$31",
+  "AN": 160,
+  "AV": 0,
+  "CF": "=IF(X336=\"SIM\",(AF336*AN336+AV336),0)"
+ },
+ {
+  "label_row": 338,
+  "op": "MONTAR OS TUBOS",
+  "X": "=IF($B$19=\"TUBO RETO\",\"SIM\",IF($B$19=\"TUBO U\",\"NÃO\",\"ERRO\"))",
+  "AF": "=$AP$19",
+  "AN": "=ROUNDUP(IF(AF340<500,AF340/50,IF(AF340<1000,AF340/80,AF340/100)),0)*$B$31",
+  "AV": 40,
+  "BD": 0,
+  "CF": "=IF(X340=\"SIM\",(AN340*AV340+BD340),0)"
+ },
+ {
+  "label_row": 342,
+  "op": "GABARITAR - TUBOS",
+  "X": "SIM",
+  "AF": "=$AP$19",
+  "AN": "=ROUNDUP(IF(AND($B$19=\"TUBO U\",AF344<500),AF344/20,IF(AND($B$19=\"TUBO U\",AF344>500),AF344/30,IF(AND($B$19=\"TUBO RETO\",AF344<200),AF344/70,IF(AND($B$19=\"TUBO RETO\",AF344<600),AF344/120,AF344/170)))),0)*$B$31",
+  "AV": "=IF($B$19=\"TUBO RETO\",40,IF($B$19=\"TUBO U\",160))",
+  "BD": 0,
+  "CF": "=IF(X344=\"SIM\",(AN344*AV344+BD344),0)"
+ },
+ {
+  "label_row": 346,
+  "op": "MANDRILAR",
+  "X": "SIM",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP((0.5*AF348/60/2),0)*$B$31",
+  "AV": 120,
+  "BD": "=AN348*3",
+  "BL": 80,
+  "CF": "=IF(X348=\"SIM\",(AN348*AV348+BD348*BL348),0)"
+ },
+ {
+  "label_row": 350,
+  "op": "REBAIXAR E DAR ACABAMENTO",
+  "X": "SIM",
+  "AF": "=$AP$19",
+  "AN": "=ROUNDUP(IF(AF352<500,AF352/40,IF(AF352<1000,AF352/60,AF352/65)),0)*$B$31",
+  "AV": 60,
+  "BD": 0,
+  "CF": "=IF(X352=\"SIM\",(AN352*AV352+BD352),0)"
+ },
+ {
+  "label_row": 354,
+  "op": "SOLDAR PASSE DE RAIZ",
+  "X": "=IF($B$27=\"SOLDA DE RESISTÊNCIA\",\"SIM\",IF($B$27=\"SOLDA DE SELAGEM\",\"SIM\",IF($B$27=\"EXPANSÃO + 2 GROOVES\",\"NÃO\",IF($B$27=\"EXPANSÃO + 3 GROOVES\",\"NÃO\",\"ERRO\"))))",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP(AF356/40,0)*$B$31",
+  "AV": 90,
+  "BD": 0,
+  "CF": "=IF(X356=\"SIM\",(AN356*AV356+BD356),0)"
+ },
+ {
+  "label_row": 358,
+  "op": "EXAME L. P.  PASSE RAIZ",
+  "X": "=IF($B$27=\"SOLDA DE RESISTÊNCIA\",\"SIM\",IF($B$27=\"SOLDA DE SELAGEM\",\"SIM\",IF($B$27=\"EXPANSÃO + 2 GROOVES\",\"NÃO\",IF($B$27=\"EXPANSÃO + 3 GROOVES\",\"NÃO\",\"ERRO\"))))",
+  "AF": 1,
+  "AN": 200,
+  "AV": 0,
+  "CF": "=IF(X360=\"SIM\",AF360*AN360+AV360,0)"
+ },
+ {
+  "label_row": 362,
+  "op": "SOLDAR PASSE DE ACABAMENTO",
+  "X": "=IF($B$27=\"SOLDA DE RESISTÊNCIA\",\"SIM\",IF($B$27=\"SOLDA DE SELAGEM\",\"SIM\",IF($B$27=\"EXPANSÃO + 2 GROOVES\",\"NÃO\",IF($B$27=\"EXPANSÃO + 3 GROOVES\",\"NÃO\",\"ERRO\"))))",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP(AF364/40,0)*$B$31",
+  "AV": 90,
+  "BD": 0,
+  "CF": "=IF(X364=\"SIM\",(AN364*AV364+BD364),0)"
+ },
+ {
+  "label_row": 366,
+  "op": "EXAME L. P.  PASSE DE ACABAMENTO",
+  "X": "=IF($B$27=\"SOLDA DE RESISTÊNCIA\",\"SIM\",IF($B$27=\"SOLDA DE SELAGEM\",\"SIM\",IF($B$27=\"EXPANSÃO + 2 GROOVES\",\"NÃO\",IF($B$27=\"EXPANSÃO + 3 GROOVES\",\"NÃO\",\"ERRO\"))))",
+  "AF": 1,
+  "AN": 200,
+  "AV": 0,
+  "CF": "=IF(X368=\"SIM\",AF368*AN368+AV368,0)"
+ },
+ {
+  "label_row": 370,
+  "op": "INSPECIONAR TUBOS MONTADOS",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": "=IF(X372=\"SIM\",AF372*AN372+AV372,0)"
+ },
+ {
+  "label_row": 374,
+  "op": "MONTAR BARRAS",
+  "X": "=IF(AF376=0,\"NÃO\",\"SIM\")",
+  "AF": "=$AP$55+$AP$59+$AP$63",
+  "AN": "=IF(AF376=0,0,IF(AF376<4,2,IF(AF376<10,3,4)))*$B$31",
+  "AV": 170,
+  "BD": 0,
+  "CF": "=IF(X376=\"SIM\",(AN376*AV376+BD376),0)"
+ },
+ {
+  "label_row": 378,
+  "op": "SOLDAR BARRAS",
+  "X": "=IF(AF380=0,\"NÃO\",\"SIM\")",
+  "AF": "=$AP$55+$AP$59+$AP$63",
+  "AN": "=IF(AF380=0,0,IF(AF380<3,2,IF(AF380<4,3,IF(AF380<5,4,IF(AF380<7,5,6)))))*$B$31",
+  "AV": 90,
+  "BD": 0,
+  "CF": "=IF(X380=\"SIM\",(AN380*AV380+BD380),0)"
+ },
+ {
+  "label_row": 382,
+  "op": "DAR ACABAMENTO BARRAS",
+  "X": "=IF(AF384=0,\"NÃO\",\"SIM\")",
+  "AF": "=$AP$55+$AP$59+$AP$63",
+  "AN": "=IF(AF384=0,0,IF(AF384<3,2,IF(AF384<4,3,IF(AF384<5,4,IF(AF384<7,5,6)))))*$B$31",
+  "AV": 40,
+  "BD": 0,
+  "CF": "=IF(X384=\"SIM\",(AN384*AV384+BD384),0)"
+ },
+ {
+  "label_row": 386,
+  "op": "INSPECIONAR BARRAS MONTADAS",
+  "X": "=X384",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": "=IF(X388=\"SIM\",(AF388*AN388+AV388),0)"
+ },
+ {
+  "label_row": 390,
+  "op": "MONTAR ALÇA / BATENTE",
+  "X": "=IF($AP$75=\"\",\"NÃO\",\"SIM\")",
+  "AF": "=3*$B$31",
+  "AN": 90,
+  "AV": 0,
+  "CF": "=IF(X392=\"SIM\",(AF392*AN392+AV392),0)"
+ },
+ {
+  "label_row": 394,
+  "op": "SOLDAR ALÇA / BATENTE",
+  "X": "=$X$392",
+  "AF": "=3*$B$31",
+  "AN": 90,
+  "AV": 0,
+  "CF": "=IF(X396=\"SIM\",(AF396*AN396+AV396),0)"
+ },
+ {
+  "label_row": 398,
+  "op": "DAR ACABAMENTO ALÇA / BATENTE",
+  "X": "=$X$392",
+  "AF": "=2*$B$31",
+  "AN": 40,
+  "AV": 0,
+  "CF": "=IF(X400=\"SIM\",(AF400*AN400+AV400),0)"
+ },
+ {
+  "label_row": 402,
+  "op": "EXAME L. P. NA SOLDA ALÇA / BATENTE",
+  "X": "=$X$392",
+  "AF": 1,
+  "AN": 80,
+  "AV": 0,
+  "CF": "=IF(X404=\"SIM\",AF404*AN404+AV404,0)"
+ },
+ {
+  "label_row": 406,
+  "op": "INSPECIONAR ALÇA / BATENTE",
+  "X": "=$X$392",
+  "AF": 1,
+  "AN": 110,
+  "AV": 0,
+  "CF": "=IF(X408=\"SIM\",AF408*AN408+AV408,0)"
+ },
+ {
+  "label_row": 410,
+  "op": "TRATAMENTO TÉRMICO EQUIPAMENTO",
+  "X": "=IF($B$35=\"REQUERIDO - EQUIPAMENTO\",\"SIM\",\"NÃO\")",
+  "AF": 1,
+  "AN": 5000,
+  "AV": 0,
+  "CF": "=IF(X412=\"SIM\",AF412*AN412+AV412,0)"
+ },
+ {
+  "label_row": 414,
+  "op": "EXAME DE LÍQUIDO PENETRANTE",
+  "X": "=IF($B$27=\"SOLDA DE RESISTÊNCIA\",\"SIM\",IF($B$27=\"SOLDA DE SELAGEM\",\"SIM\",IF($B$27=\"EXPANSÃO + 2 GROOVES\",\"NÃO\",IF($B$27=\"EXPANSÃO + 3 GROOVES\",\"NÃO\",\"ERRO\"))))",
+  "AF": 1,
+  "AN": 200,
+  "AV": 0,
+  "CF": "=IF(X416=\"SIM\",AF416*AN416+AV416,0)"
+ },
+ {
+  "label_row": 418,
+  "op": "MEDIR DUREZA",
+  "X": "=IF($B$27=\"SOLDA DE RESISTÊNCIA\",\"SIM\",IF($B$27=\"SOLDA DE SELAGEM\",\"SIM\",IF($B$27=\"EXPANSÃO + 2 GROOVES\",\"NÃO\",IF($B$27=\"EXPANSÃO + 3 GROOVES\",\"NÃO\",\"ERRO\"))))",
+  "AF": 1,
+  "AN": 150,
+  "AV": 0,
+  "CF": "=IF(X420=\"SIM\",AF420*AN420+AV420,0)"
+ },
+ {
+  "label_row": 422,
+  "op": "INSPEÇÃO DIMENSIONAL",
+  "X": "SIM",
+  "AF": "=IF(X424=\"SIM\",1/$BX$2,0)",
+  "AN": 600,
+  "AV": 0,
+  "CF": "=IF(X424=\"SIM\",AF424*AN424+AV424,0)"
+ },
+ {
+  "label_row": 426,
+  "op": "P.M.I.",
+  "X": "=IF($B$51=\"APLICÁVEL\",\"SIM\",\"NÃO\")",
+  "AF": "=IF(X428=\"SIM\",1/$BX$2,0)",
+  "AN": 1500,
+  "AV": 0,
+  "CF": "=IF(X428=\"SIM\",AF428*AN428+AV428,0)"
+ },
+ {
+  "label_row": 430,
+  "op": "TESTE HIDROSTÁTICO",
+  "X": "=IF(B39=\"REQUERIDO\",\"SIM\",\"NÃO\")",
+  "AF": 0,
+  "AN": 0,
+  "AV": 0,
+  "CF": "=IF(X432=\"SIM\",AF432*AN432+AV432,0)"
+ },
+ {
+  "label_row": 434,
+  "op": "TRANSPORTE - PREPARAÇÃO E EMBALAGEM",
+  "X": "SIM",
+  "AF": 1,
+  "AN": 150,
+  "AV": 0,
+  "CF": "=IF(X436=\"SIM\",AF436*AN436+AV436,0)"
+ },
+ {
+  "label_row": 438,
+  "op": "TRANSPORTE: ENGEMATEX P/",
+  "X": "SIM",
+  "AF": "=IF(X440=\"SIM\",1/$BX$2,0)",
+  "AN": 1600,
+  "AV": 0,
+  "CF": "=IF(X440=\"SIM\",AF440*AN440+AV440,0)"
+ },
+ {
+  "label_row": 450,
+  "op": "PROJETO - DETALHAMENTO DESENHOS P/ CLIENTE",
+  "X": "=IF($B$43=\"REQUERIDO\",\"SIM\",\"NÃO\")",
+  "AF": "=IF(X452=\"SIM\",1/$BX$2,0)",
+  "AN": 1600,
+  "AV": 0,
+  "CF": "=IF(X452=\"SIM\",AF452*AN452+AV452,0)"
+ },
+ {
+  "label_row": 454,
+  "op": "PLANO DE INSPEÇÃO E TESTES (PIT)",
+  "X": "SIM",
+  "AF": "=IF(X456=\"SIM\",1/$BX$2,0)",
+  "AN": 150,
+  "AV": 0,
+  "CF": "=IF(X456=\"SIM\",AF456*AN456+AV456,0)"
+ },
+ {
+  "label_row": 458,
+  "op": "PLANO DE SOLDA (PS)",
+  "X": "SIM",
+  "AF": "=IF(X460=\"SIM\",1/$BX$2,0)",
+  "AN": 250,
+  "AV": 0,
+  "CF": "=IF(X460=\"SIM\",AF460*AN460+AV460,0)"
+ },
+ {
+  "label_row": 462,
+  "op": "DATA BOOK",
+  "X": "SIM",
+  "AF": "=IF(X464=\"SIM\",1/$BX$2,0)",
+  "AN": 250,
+  "AV": 0,
+  "CF": "=IF(X464=\"SIM\",AF464*AN464+AV464,0)"
+ },
+ {
+  "label_row": 466,
+  "op": "INSPEÇÃO TIPO \"Q\"",
+  "X": "=IF($B$47=\"APLICÁVEL\",\"SIM\",\"NÃO\")",
+  "AF": "=IF(X468=\"SIM\",1/$BX$2,0)",
+  "AN": 1500,
+  "AV": 0,
+  "CF": "=IF(X468=\"SIM\",AF468*AN468+AV468,0)"
+ },
+ {
+  "label_row": 474,
+  "op": "FERRAMENTAS",
+  "X": "SIM",
+  "AF": "=IF(X476=\"SIM\",1,0)",
+  "AN": 150,
+  "AV": 0,
+  "CF": "=IF(X476=\"SIM\",AF476*AN476+AV476,0)"
+ },
+ {
+  "label_row": 478,
+  "op": "EXPANDIDORES",
+  "X": "SIM",
+  "AF": "=$AP$19*2",
+  "AN": "=ROUNDUP(AF480*0.65*2,0)",
+  "AV": 0,
+  "CF": "=IF(X480=\"SIM\",AN480+AV480,0)"
+ }
+]
