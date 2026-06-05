@@ -1,34 +1,40 @@
 {
-  "fonte": "Planilha Padrão - Permutador 'BEU' - Rev.0.xlsx",
-  "designacao_tema": "BEU",
-  "descricao": "BEU (bonnet + casco 1 passe + feixe em U)",
-  "custo_total_com_impostos": 128160.0,
-  "preco_venda_com_impostos": 160200.0,
-  "preco_venda_sem_impostos": 146103.0,
+  "fonte": "Planilha Padrão - Permutador 'BEM' - Rev.0.xlsx",
+  "designacao_tema": "BEM",
+  "descricao": "BEM (bonnet + casco 1 passe + cabeçote traseiro fixo, tubos retos)",
+  "custo_total_com_impostos": 119295.0,
+  "preco_venda_com_impostos": 149119.0,
+  "preco_venda_sem_impostos": 135997.0,
   "fator_comercial": 1.25,
   "icms_pct": 9.0,
-  "peso_liquido_total_kgf": 3016.0,
-  "soma_blocos": 128159.67,
-  "n_blocos": 214,
+  "peso_liquido_total_kgf": 3021.0,
+  "soma_blocos": 119294.21,
+  "n_blocos": 193,
   "por_secao": {
-    "feixe_material": 15633.16,
-    "casco_material": 17064.96,
-    "cabecote_material": 6723.55,
-    "fabricacao": 81831.0,
-    "finalizacao": 6907.0
+    "feixe_material": 15318.83,
+    "casco_material": 11650.0,
+    "cabecote_material": 12323.38,
+    "fabricacao": 72918.0,
+    "finalizacao": 7084.0
   },
   "blocos": [
     {
-      "row": 204,
+      "row": 200,
       "secao": "feixe_material",
       "label": "TUBOS DE TROCA TÉRMICA",
-      "preco": 11562.98
+      "preco": 10844.29
+    },
+    {
+      "row": 204,
+      "secao": "feixe_material",
+      "label": "ESPELHO FIXO",
+      "preco": 534.1
     },
     {
       "row": 208,
       "secao": "feixe_material",
       "label": "ESPELHO FIXO",
-      "preco": 534.1
+      "preco": 404.36
     },
     {
       "row": 212,
@@ -135,92 +141,92 @@
     {
       "row": 304,
       "secao": "casco_material",
-      "label": "TAMPO 2:1",
-      "preco": 247.22
-    },
-    {
-      "row": 308,
-      "secao": "casco_material",
-      "label": "FLANGE PRINCIPAL",
-      "preco": 5167.74
-    },
-    {
-      "row": 312,
-      "secao": "casco_material",
       "label": "FLANGE",
       "preco": 3000.0
     },
     {
-      "row": 316,
+      "row": 308,
       "secao": "casco_material",
       "label": "PESCOÇO DO BOCAL",
       "preco": 639.91
     },
     {
-      "row": 320,
+      "row": 312,
       "secao": "casco_material",
       "label": "ANEL DE REFORÇO",
       "preco": 87.25
     },
     {
-      "row": 324,
+      "row": 316,
       "secao": "casco_material",
       "label": "FLANGE",
       "preco": 1500.0
     },
     {
-      "row": 328,
+      "row": 320,
       "secao": "casco_material",
       "label": "PESCOÇO DO BOCAL",
       "preco": 298.53
     },
     {
-      "row": 332,
+      "row": 324,
       "secao": "casco_material",
       "label": "ANEL DE REFORÇO",
       "preco": 77.56
     },
     {
-      "row": 336,
+      "row": 328,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "preco": 25.0
     },
     {
-      "row": 340,
+      "row": 332,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "preco": 15.0
     },
     {
-      "row": 344,
+      "row": 336,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "preco": 30.0
     },
     {
-      "row": 348,
+      "row": 340,
       "secao": "casco_material",
       "label": "CONEXÃO",
       "preco": 20.0
     },
     {
-      "row": 352,
+      "row": 344,
       "secao": "casco_material",
       "label": "SUPORTE",
       "preco": 438.75
     },
     {
-      "row": 356,
+      "row": 348,
       "secao": "casco_material",
       "label": "PLACA DE IDENTIFICAÇÃO",
       "preco": 300.0
     },
     {
-      "row": 372,
+      "row": 364,
       "secao": "cabecote_material",
       "label": "VIROLA",
       "preco": 434.83
+    },
+    {
+      "row": 368,
+      "secao": "cabecote_material",
+      "label": "VIROLA",
+      "preco": 434.83
+    },
+    {
+      "row": 372,
+      "secao": "cabecote_material",
+      "label": "TAMPO 2:1",
+      "preco": 247.22
     },
     {
       "row": 376,
@@ -229,1078 +235,946 @@
       "preco": 247.22
     },
     {
-      "row": 380,
-      "secao": "cabecote_material",
-      "label": "CHAPA DIVISORA",
-      "preco": 159.96
-    },
-    {
       "row": 388,
       "secao": "cabecote_material",
       "label": "FLANGE PRINCIPAL",
       "preco": 5167.74
     },
     {
-      "row": 396,
+      "row": 392,
+      "secao": "cabecote_material",
+      "label": "FLANGE PRINCIPAL",
+      "preco": 5167.74
+    },
+    {
+      "row": 400,
       "secao": "cabecote_material",
       "label": "PESCOÇO DO BOCAL",
       "preco": 319.95
     },
     {
-      "row": 400,
+      "row": 404,
       "secao": "cabecote_material",
       "label": "ANEL DE REFORÇO",
       "preco": 43.63
     },
     {
-      "row": 408,
+      "row": 412,
       "secao": "cabecote_material",
       "label": "PESCOÇO DO BOCAL",
       "preco": 139.92
     },
     {
-      "row": 412,
+      "row": 416,
       "secao": "cabecote_material",
       "label": "ANEL DE REFORÇO",
       "preco": 30.3
     },
     {
-      "row": 416,
-      "secao": "cabecote_material",
-      "label": "CONEXÃO",
-      "preco": 50.0
-    },
-    {
       "row": 420,
       "secao": "cabecote_material",
       "label": "CONEXÃO",
-      "preco": 30.0
+      "preco": 25.0
     },
     {
       "row": 424,
       "secao": "cabecote_material",
       "label": "CONEXÃO",
-      "preco": 60.0
+      "preco": 15.0
     },
     {
       "row": 428,
       "secao": "cabecote_material",
       "label": "CONEXÃO",
-      "preco": 40.0
+      "preco": 30.0
     },
     {
-      "row": 440,
-      "secao": "fabricacao",
-      "label": "ESPELHO - USINAR",
-      "preco": 600.0
+      "row": 432,
+      "secao": "cabecote_material",
+      "label": "CONEXÃO",
+      "preco": 20.0
     },
     {
       "row": 444,
+      "secao": "fabricacao",
+      "label": "ESPELHOS - USINAR",
+      "preco": 1200.0
+    },
+    {
+      "row": 448,
       "secao": "fabricacao",
       "label": "TRAÇAR FUROS",
       "preco": 160.0
     },
     {
-      "row": 448,
-      "secao": "fabricacao",
-      "label": "FURAR",
-      "preco": 330.0
-    },
-    {
       "row": 452,
       "secao": "fabricacao",
-      "label": "ESCAREAR",
-      "preco": 110.0
+      "label": "FURAR",
+      "preco": 660.0
     },
     {
       "row": 456,
       "secao": "fabricacao",
-      "label": "ALARGAR",
+      "label": "ESCAREAR",
       "preco": 220.0
     },
     {
       "row": 460,
       "secao": "fabricacao",
-      "label": "GROOVES",
-      "preco": 110.0
+      "label": "ALARGAR",
+      "preco": 330.0
     },
     {
       "row": 464,
       "secao": "fabricacao",
-      "label": "USINAR FUROS P/ TIRANTES",
+      "label": "GROOVES",
       "preco": 220.0
     },
     {
       "row": 468,
       "secao": "fabricacao",
+      "label": "USINAR FUROS P/ TIRANTES",
+      "preco": 220.0
+    },
+    {
+      "row": 472,
+      "secao": "fabricacao",
       "label": "TRAÇAR RASGOS",
       "preco": 80.0
     },
     {
-      "row": 472,
+      "row": 476,
       "secao": "fabricacao",
       "label": "USINAR RASGOS",
       "preco": 600.0
     },
     {
-      "row": 476,
+      "row": 480,
       "secao": "fabricacao",
       "label": "ACABAMENTO",
       "preco": 80.0
     },
     {
-      "row": 480,
+      "row": 484,
       "secao": "fabricacao",
       "label": "INSPECIONAR",
       "preco": 110.0
     },
     {
-      "row": 484,
+      "row": 488,
       "secao": "fabricacao",
       "label": "TRAÇAR E RECORTAR",
       "preco": 630.0
     },
     {
-      "row": 488,
+      "row": 492,
       "secao": "fabricacao",
       "label": "TRAÇAR FUROS",
       "preco": 160.0
     },
     {
-      "row": 492,
+      "row": 496,
       "secao": "fabricacao",
       "label": "FORMAR PACOTE",
       "preco": 240.0
     },
     {
-      "row": 496,
+      "row": 500,
       "secao": "fabricacao",
       "label": "FURAR",
-      "preco": 880.0
+      "preco": 1650.0
     },
     {
-      "row": 500,
+      "row": 504,
       "secao": "fabricacao",
       "label": "CHICANAS - PREPARAÇÃO PARA USINAR",
       "preco": 240.0
     },
     {
-      "row": 504,
+      "row": 508,
       "secao": "fabricacao",
       "label": "USINAR",
       "preco": 450.0
     },
     {
-      "row": 508,
+      "row": 512,
       "secao": "fabricacao",
       "label": "CHICANAS - TRAÇAR RECORTES",
       "preco": 630.0
     },
     {
-      "row": 512,
+      "row": 516,
       "secao": "fabricacao",
       "label": "ESCAREAR",
-      "preco": 330.0
+      "preco": 550.0
     },
     {
-      "row": 516,
+      "row": 520,
       "secao": "fabricacao",
       "label": "CHICANAS - RECORTAR E DAR ACABAMENTO",
       "preco": 780.0
     },
     {
-      "row": 520,
+      "row": 524,
       "secao": "fabricacao",
       "label": "INSPECIONAR",
       "preco": 110.0
     },
     {
-      "row": 524,
+      "row": 528,
       "secao": "fabricacao",
       "label": "PREPARAR TIRANTES",
       "preco": 360.0
     },
     {
-      "row": 528,
+      "row": 532,
       "secao": "fabricacao",
       "label": "PREPARAR ESPAÇADORES",
       "preco": 450.0
     },
     {
-      "row": 532,
-      "secao": "fabricacao",
-      "label": "CURVAR TUBOS TERCEIROS",
-      "preco": 1360.0
-    },
-    {
       "row": 536,
-      "secao": "fabricacao",
-      "label": "TRANSPORTE PARA CURVAMENTO EM TERCEIROS",
-      "preco": 800.0
-    },
-    {
-      "row": 544,
-      "secao": "fabricacao",
-      "label": "PREPARAR TUBOS U PARA TRATAMENTO TÉRMICO",
-      "preco": 960.0
-    },
-    {
-      "row": 548,
-      "secao": "fabricacao",
-      "label": "TRANSPORTE PARA TRATAMENTO TÉRMICO TUBOS",
-      "preco": 800.0
-    },
-    {
-      "row": 552,
-      "secao": "fabricacao",
-      "label": "TRATAMENTO TÉRMICO ALÍVIO DE TENSÕES - TUBOS U",
-      "preco": 2000.0
-    },
-    {
-      "row": 556,
-      "secao": "fabricacao",
-      "label": "EXAME DE L. P. NAS CURVAS DOS TUBOS U",
-      "preco": 2400.0
-    },
-    {
-      "row": 560,
       "secao": "fabricacao",
       "label": "MONTAR ESTRUTURA DO FEIXE",
       "preco": 640.0
     },
     {
-      "row": 564,
+      "row": 540,
       "secao": "fabricacao",
       "label": "QUEBRA JATO",
       "preco": 270.0
     },
     {
-      "row": 568,
+      "row": 544,
       "secao": "fabricacao",
       "label": "INTRODUZIR OS TUBOS NO PRIMEIRO ESPELHO",
-      "preco": 400.0
+      "preco": 160.0
     },
     {
-      "row": 572,
+      "row": 548,
       "secao": "fabricacao",
       "label": "CALANDRAR CILINDROS LADO DO CASCO",
       "preco": 1824.0
     },
     {
-      "row": 576,
+      "row": 552,
       "secao": "fabricacao",
       "label": "SOLDAS LONGITUDINAIS",
       "preco": 2700.0
     },
     {
-      "row": 580,
+      "row": 556,
       "secao": "fabricacao",
       "label": "MONTAR OS CILINDROS",
       "preco": 1200.0
     },
     {
-      "row": 584,
+      "row": 560,
       "secao": "fabricacao",
       "label": "SOLDAS CIRCUNFERÊNCIAIS",
       "preco": 1350.0
     },
     {
-      "row": 588,
+      "row": 564,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 240.0
     },
     {
-      "row": 592,
+      "row": 568,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 300.0
     },
     {
-      "row": 596,
-      "secao": "fabricacao",
-      "label": "TRAÇAR E RECORTAR DISCOS DOS TAMPOS",
-      "preco": 180.0
-    },
-    {
-      "row": 600,
-      "secao": "fabricacao",
-      "label": "REBORDEAMENTO - TERCEIROS",
-      "preco": 1100.0
-    },
-    {
-      "row": 604,
-      "secao": "fabricacao",
-      "label": "BISELAR",
-      "preco": 180.0
-    },
-    {
-      "row": 608,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "preco": 80.0
-    },
-    {
-      "row": 612,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 100.0
-    },
-    {
-      "row": 616,
-      "secao": "fabricacao",
-      "label": "MONTAR O CILINDRO NO TAMPO",
-      "preco": 400.0
-    },
-    {
-      "row": 620,
-      "secao": "fabricacao",
-      "label": "SOLDAS CIRCUNFERÊNCIAIS",
-      "preco": 630.0
-    },
-    {
-      "row": 624,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "preco": 80.0
-    },
-    {
-      "row": 628,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 100.0
-    },
-    {
-      "row": 632,
-      "secao": "fabricacao",
-      "label": "USINAR FLANGES PRINCIPAIS",
-      "preco": 900.0
-    },
-    {
-      "row": 636,
-      "secao": "fabricacao",
-      "label": "TRAÇAR FUROS FLANGES PRINCIPAIS",
-      "preco": 240.0
-    },
-    {
-      "row": 640,
-      "secao": "fabricacao",
-      "label": "FURAR FLANGES PRINCIPAIS",
-      "preco": 880.0
-    },
-    {
-      "row": 644,
-      "secao": "fabricacao",
-      "label": "INSPECIONAR FLANGES PRINCIPAIS",
-      "preco": 220.0
-    },
-    {
-      "row": 648,
-      "secao": "fabricacao",
-      "label": "MONTAR OS CILINDROS NOS FLANGES",
-      "preco": 400.0
-    },
-    {
-      "row": 652,
-      "secao": "fabricacao",
-      "label": "SOLDAS CIRCUNFERÊNCIAIS",
-      "preco": 630.0
-    },
-    {
-      "row": 656,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "preco": 80.0
-    },
-    {
-      "row": 660,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 100.0
-    },
-    {
-      "row": 664,
-      "secao": "fabricacao",
-      "label": "EXAME DE ULTRASSOM",
-      "preco": 1100.0
-    },
-    {
-      "row": 668,
+      "row": 572,
       "secao": "fabricacao",
       "label": "EXAME RAIO X",
       "preco": 4000.0
     },
     {
-      "row": 672,
+      "row": 576,
       "secao": "fabricacao",
       "label": "TRAÇAR POSIÇÃO BOCAIS",
       "preco": 780.0
     },
     {
-      "row": 676,
+      "row": 580,
       "secao": "fabricacao",
       "label": "RECORTAR E BISELAR",
       "preco": 1080.0
     },
     {
-      "row": 680,
+      "row": 584,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 150.0
     },
     {
-      "row": 684,
+      "row": 588,
       "secao": "fabricacao",
       "label": "MONTAR FLANGE NO PESCOÇO",
       "preco": 540.0
     },
     {
-      "row": 688,
+      "row": 592,
       "secao": "fabricacao",
       "label": "SOLDAR FLANGE NO PESCOÇO S1",
       "preco": 810.0
     },
     {
-      "row": 692,
+      "row": 596,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 120.0
     },
     {
-      "row": 696,
+      "row": 600,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 150.0
     },
     {
-      "row": 700,
+      "row": 604,
       "secao": "fabricacao",
       "label": "EXAME RAIO X",
       "preco": 300.0
     },
     {
-      "row": 704,
+      "row": 608,
       "secao": "fabricacao",
       "label": "TRANSPORTE PARA RAIO X",
       "preco": 200.0
     },
     {
-      "row": 708,
+      "row": 612,
       "secao": "fabricacao",
       "label": "EXAME ULTRASSOM",
       "preco": 1100.0
     },
     {
-      "row": 712,
+      "row": 616,
       "secao": "fabricacao",
       "label": "CALANDRAR ANÉIS DE REFORÇO",
       "preco": 360.0
     },
     {
-      "row": 716,
+      "row": 620,
       "secao": "fabricacao",
       "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
       "preco": 540.0
     },
     {
-      "row": 720,
+      "row": 624,
       "secao": "fabricacao",
       "label": "USINAR FUROS NPT 1/4\"",
       "preco": 110.0
     },
     {
-      "row": 724,
+      "row": 628,
       "secao": "fabricacao",
       "label": "MONTAR ANÉIS DE REFORÇO",
       "preco": 1080.0
     },
     {
-      "row": 728,
+      "row": 632,
       "secao": "fabricacao",
       "label": "SOLDAR ANÉIS DE REFORÇO",
       "preco": 1080.0
     },
     {
-      "row": 732,
+      "row": 636,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 240.0
     },
     {
-      "row": 736,
+      "row": 640,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 100.0
     },
     {
-      "row": 740,
+      "row": 644,
       "secao": "fabricacao",
       "label": "EXAME ULTRASSOM",
       "preco": 1100.0
     },
     {
-      "row": 744,
+      "row": 648,
       "secao": "fabricacao",
       "label": "TRAÇAR POSIÇÃO DAS LUVAS",
       "preco": 180.0
     },
     {
-      "row": 748,
+      "row": 652,
       "secao": "fabricacao",
       "label": "RECORTAR E BISELAR",
       "preco": 270.0
     },
     {
-      "row": 752,
+      "row": 656,
       "secao": "fabricacao",
       "label": "EXAME DE L.P.",
       "preco": 100.0
     },
     {
-      "row": 756,
+      "row": 660,
       "secao": "fabricacao",
       "label": "MONTAR AS LUVAS",
       "preco": 360.0
     },
     {
-      "row": 760,
+      "row": 664,
       "secao": "fabricacao",
       "label": "SOLDAR AS LUVAS",
       "preco": 450.0
     },
     {
-      "row": 764,
+      "row": 668,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 120.0
     },
     {
-      "row": 768,
+      "row": 672,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 100.0
     },
     {
-      "row": 772,
+      "row": 676,
       "secao": "fabricacao",
       "label": "FABRICAR OS PEDESTAIS",
       "preco": 540.0
     },
     {
-      "row": 776,
+      "row": 680,
       "secao": "fabricacao",
       "label": "MONTAR OS PEDESTAIS",
       "preco": 780.0
     },
     {
-      "row": 780,
+      "row": 684,
       "secao": "fabricacao",
       "label": "SOLDAR OS PEDESTAIS",
       "preco": 810.0
     },
     {
-      "row": 784,
+      "row": 688,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 160.0
     },
     {
-      "row": 788,
+      "row": 692,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 150.0
     },
     {
-      "row": 792,
+      "row": 696,
       "secao": "fabricacao",
       "label": "MONTAR PEDESTAIS NO CASCO",
       "preco": 600.0
     },
     {
-      "row": 796,
+      "row": 700,
       "secao": "fabricacao",
       "label": "SOLDAR OS PEDESTAIS NO CASCO",
       "preco": 540.0
     },
     {
-      "row": 800,
+      "row": 704,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 40.0
     },
     {
-      "row": 804,
+      "row": 708,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 100.0
     },
     {
-      "row": 808,
+      "row": 712,
       "secao": "fabricacao",
       "label": "GABARITAR O CASCO",
       "preco": 720.0
     },
     {
-      "row": 812,
+      "row": 716,
       "secao": "fabricacao",
       "label": "INTRODUZIR FEIXE NO CASCO",
-      "preco": 400.0
+      "preco": 160.0
     },
     {
-      "row": 824,
+      "row": 720,
+      "secao": "fabricacao",
+      "label": "MONTAR O SEGUNDO ESPELHO",
+      "preco": 480.0
+    },
+    {
+      "row": 724,
+      "secao": "fabricacao",
+      "label": "MONTAR OS TUBOS",
+      "preco": 200.0
+    },
+    {
+      "row": 728,
       "secao": "fabricacao",
       "label": "SOLDAR OS ESPELHOS NO CASCO",
       "preco": 1620.0
     },
     {
-      "row": 828,
+      "row": 732,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 160.0
     },
     {
-      "row": 832,
+      "row": 736,
       "secao": "fabricacao",
       "label": "EXAME DE L.P.",
       "preco": 150.0
     },
     {
-      "row": 836,
+      "row": 740,
       "secao": "fabricacao",
       "label": "EXAME DE ULTRASSOM",
       "preco": 1100.0
     },
     {
-      "row": 840,
+      "row": 744,
       "secao": "fabricacao",
       "label": "GABARITAR - TUBOS",
-      "preco": 640.0
+      "preco": 80.0
     },
     {
-      "row": 844,
+      "row": 748,
       "secao": "fabricacao",
       "label": "MANDRILAR",
-      "preco": 360.0
+      "preco": 720.0
     },
     {
-      "row": 848,
+      "row": 752,
       "secao": "fabricacao",
       "label": "REBAIXAR E DAR ACABAMENTO",
-      "preco": 120.0
+      "preco": 240.0
     },
     {
-      "row": 868,
+      "row": 772,
       "secao": "fabricacao",
       "label": "INSPECIONAR TUBOS MONTADOS",
       "preco": 110.0
     },
     {
-      "row": 872,
+      "row": 776,
       "secao": "fabricacao",
       "label": "MONTAR BARRAS",
       "preco": 510.0
     },
     {
-      "row": 876,
+      "row": 780,
       "secao": "fabricacao",
       "label": "SOLDAR BARRAS",
       "preco": 450.0
     },
     {
-      "row": 880,
+      "row": 784,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO BARRAS",
       "preco": 200.0
     },
     {
-      "row": 884,
+      "row": 788,
       "secao": "fabricacao",
       "label": "INSPECIONAR BARRAS MONTADAS",
       "preco": 110.0
     },
     {
-      "row": 888,
+      "row": 792,
       "secao": "fabricacao",
       "label": "MONTAR ALÇA / BATENTE",
       "preco": 270.0
     },
     {
-      "row": 892,
+      "row": 796,
       "secao": "fabricacao",
       "label": "SOLDAR ALÇA / BATENTE",
       "preco": 270.0
     },
     {
-      "row": 896,
+      "row": 800,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO ALÇA / BATENTE",
       "preco": 80.0
     },
     {
-      "row": 900,
+      "row": 804,
       "secao": "fabricacao",
       "label": "EXAME L. P. NA SOLDA ALÇA / BATENTE",
       "preco": 80.0
     },
     {
-      "row": 904,
+      "row": 808,
       "secao": "fabricacao",
       "label": "INSPECIONAR ALÇA / BATENTE",
       "preco": 110.0
     },
     {
-      "row": 908,
+      "row": 812,
       "secao": "fabricacao",
       "label": "TRAÇAR E RECORTAR DISCOS DOS TAMPOS",
-      "preco": 180.0
+      "preco": 360.0
     },
     {
-      "row": 912,
+      "row": 816,
       "secao": "fabricacao",
       "label": "REBORDEAMENTO - TERCEIROS",
       "preco": 600.0
     },
     {
-      "row": 916,
+      "row": 820,
       "secao": "fabricacao",
       "label": "BISELAR",
-      "preco": 180.0
-    },
-    {
-      "row": 920,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "preco": 80.0
-    },
-    {
-      "row": 924,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 100.0
-    },
-    {
-      "row": 928,
-      "secao": "fabricacao",
-      "label": "CALANDRAR CILINDROS DOS CABEÇOTES",
-      "preco": 167.0
-    },
-    {
-      "row": 932,
-      "secao": "fabricacao",
-      "label": "SOLDAS LONGITUDINAIS",
-      "preco": 270.0
-    },
-    {
-      "row": 936,
-      "secao": "fabricacao",
-      "label": "MONTAR OS CILINDROS NOS TAMPOS",
-      "preco": 400.0
-    },
-    {
-      "row": 940,
-      "secao": "fabricacao",
-      "label": "SOLDAS CIRCUNFERÊNCIAIS",
-      "preco": 630.0
-    },
-    {
-      "row": 944,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "preco": 80.0
-    },
-    {
-      "row": 948,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 100.0
-    },
-    {
-      "row": 952,
-      "secao": "fabricacao",
-      "label": "EXAME RAIO X",
-      "preco": 1000.0
-    },
-    {
-      "row": 956,
-      "secao": "fabricacao",
-      "label": "USINAR FLANGES PRINCIPAIS",
-      "preco": 900.0
-    },
-    {
-      "row": 960,
-      "secao": "fabricacao",
-      "label": "TRAÇAR FUROS FLANGES PRINCIPAIS",
-      "preco": 240.0
-    },
-    {
-      "row": 964,
-      "secao": "fabricacao",
-      "label": "FURAR FLANGES PRINCIPAIS",
-      "preco": 880.0
-    },
-    {
-      "row": 968,
-      "secao": "fabricacao",
-      "label": "INSPECIONAR FLANGES PRINCIPAIS",
-      "preco": 220.0
-    },
-    {
-      "row": 972,
-      "secao": "fabricacao",
-      "label": "MONTAR OS CILINDROS NOS FLANGES",
-      "preco": 400.0
-    },
-    {
-      "row": 976,
-      "secao": "fabricacao",
-      "label": "SOLDAS CIRCUNFERÊNCIAIS",
-      "preco": 630.0
-    },
-    {
-      "row": 980,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "preco": 80.0
-    },
-    {
-      "row": 984,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 100.0
-    },
-    {
-      "row": 988,
-      "secao": "fabricacao",
-      "label": "EXAME DE ULTRASSOM",
-      "preco": 1100.0
-    },
-    {
-      "row": 992,
-      "secao": "fabricacao",
-      "label": "TRAÇAR POSIÇÃO BOCAIS",
-      "preco": 520.0
-    },
-    {
-      "row": 996,
-      "secao": "fabricacao",
-      "label": "RECORTAR E BISELAR",
-      "preco": 720.0
-    },
-    {
-      "row": 1000,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 150.0
-    },
-    {
-      "row": 1004,
-      "secao": "fabricacao",
-      "label": "MONTAR FLANGE NO PESCOÇO",
       "preco": 360.0
     },
     {
-      "row": 1008,
-      "secao": "fabricacao",
-      "label": "SOLDAR FLANGE NO PESCOÇO",
-      "preco": 540.0
-    },
-    {
-      "row": 1012,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
-      "preco": 80.0
-    },
-    {
-      "row": 1016,
-      "secao": "fabricacao",
-      "label": "EXAME L.P.",
-      "preco": 150.0
-    },
-    {
-      "row": 1020,
-      "secao": "fabricacao",
-      "label": "EXAME RAIO X",
-      "preco": 300.0
-    },
-    {
-      "row": 1024,
-      "secao": "fabricacao",
-      "label": "TRANSPORTE PARA RAIO X",
-      "preco": 200.0
-    },
-    {
-      "row": 1028,
-      "secao": "fabricacao",
-      "label": "EXAME ULTRASSOM",
-      "preco": 1100.0
-    },
-    {
-      "row": 1032,
-      "secao": "fabricacao",
-      "label": "CALANDRAR ANÉIS DE REFORÇO",
-      "preco": 240.0
-    },
-    {
-      "row": 1036,
-      "secao": "fabricacao",
-      "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
-      "preco": 360.0
-    },
-    {
-      "row": 1040,
-      "secao": "fabricacao",
-      "label": "USINAR FUROS NPT 1/4\"",
-      "preco": 110.0
-    },
-    {
-      "row": 1044,
-      "secao": "fabricacao",
-      "label": "MONTAR ANÉIS DE REFORÇO",
-      "preco": 720.0
-    },
-    {
-      "row": 1048,
-      "secao": "fabricacao",
-      "label": "SOLDAR ANÉIS DE REFORÇO",
-      "preco": 720.0
-    },
-    {
-      "row": 1052,
+      "row": 824,
       "secao": "fabricacao",
       "label": "DAR ACABAMENTO",
       "preco": 160.0
     },
     {
-      "row": 1056,
+      "row": 828,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
-      "preco": 100.0
+      "preco": 200.0
     },
     {
-      "row": 1060,
+      "row": 832,
+      "secao": "fabricacao",
+      "label": "CALANDRAR CILINDROS DOS CABEÇOTES",
+      "preco": 334.0
+    },
+    {
+      "row": 836,
+      "secao": "fabricacao",
+      "label": "SOLDAS LONGITUDINAIS",
+      "preco": 540.0
+    },
+    {
+      "row": 840,
+      "secao": "fabricacao",
+      "label": "MONTAR OS CILINDROS NOS TAMPOS",
+      "preco": 800.0
+    },
+    {
+      "row": 844,
+      "secao": "fabricacao",
+      "label": "SOLDAS CIRCUNFERÊNCIAIS",
+      "preco": 1350.0
+    },
+    {
+      "row": 848,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0
+    },
+    {
+      "row": 852,
+      "secao": "fabricacao",
+      "label": "EXAME L.P.",
+      "preco": 200.0
+    },
+    {
+      "row": 856,
+      "secao": "fabricacao",
+      "label": "EXAME RAIO X",
+      "preco": 1000.0
+    },
+    {
+      "row": 860,
+      "secao": "fabricacao",
+      "label": "USINAR FLANGES PRINCIPAIS",
+      "preco": 1800.0
+    },
+    {
+      "row": 864,
+      "secao": "fabricacao",
+      "label": "TRAÇAR FUROS FLANGES PRINCIPAIS",
+      "preco": 480.0
+    },
+    {
+      "row": 868,
+      "secao": "fabricacao",
+      "label": "FURAR FLANGES PRINCIPAIS",
+      "preco": 1760.0
+    },
+    {
+      "row": 872,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR FLANGES PRINCIPAIS",
+      "preco": 440.0
+    },
+    {
+      "row": 876,
+      "secao": "fabricacao",
+      "label": "MONTAR OS CILINDROS NOS FLANGES",
+      "preco": 800.0
+    },
+    {
+      "row": 880,
+      "secao": "fabricacao",
+      "label": "SOLDAS CIRCUNFERÊNCIAIS",
+      "preco": 1350.0
+    },
+    {
+      "row": 884,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0
+    },
+    {
+      "row": 888,
+      "secao": "fabricacao",
+      "label": "EXAME L.P.",
+      "preco": 200.0
+    },
+    {
+      "row": 892,
+      "secao": "fabricacao",
+      "label": "EXAME DE ULTRASSOM",
+      "preco": 1100.0
+    },
+    {
+      "row": 896,
+      "secao": "fabricacao",
+      "label": "TRAÇAR POSIÇÃO BOCAIS",
+      "preco": 520.0
+    },
+    {
+      "row": 900,
+      "secao": "fabricacao",
+      "label": "RECORTAR E BISELAR",
+      "preco": 720.0
+    },
+    {
+      "row": 904,
+      "secao": "fabricacao",
+      "label": "EXAME L.P.",
+      "preco": 150.0
+    },
+    {
+      "row": 908,
+      "secao": "fabricacao",
+      "label": "MONTAR FLANGE NO PESCOÇO",
+      "preco": 360.0
+    },
+    {
+      "row": 912,
+      "secao": "fabricacao",
+      "label": "SOLDAR FLANGE NO PESCOÇO S1",
+      "preco": 540.0
+    },
+    {
+      "row": 916,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0
+    },
+    {
+      "row": 920,
+      "secao": "fabricacao",
+      "label": "EXAME L.P.",
+      "preco": 150.0
+    },
+    {
+      "row": 924,
+      "secao": "fabricacao",
+      "label": "EXAME RAIO X",
+      "preco": 300.0
+    },
+    {
+      "row": 928,
+      "secao": "fabricacao",
+      "label": "TRANSPORTE PARA RAIO X",
+      "preco": 200.0
+    },
+    {
+      "row": 932,
       "secao": "fabricacao",
       "label": "EXAME ULTRASSOM",
       "preco": 1100.0
     },
     {
-      "row": 1064,
+      "row": 936,
       "secao": "fabricacao",
-      "label": "TRAÇAR POSIÇÃO DAS LUVAS",
-      "preco": 360.0
-    },
-    {
-      "row": 1068,
-      "secao": "fabricacao",
-      "label": "RECORTAR E BISELAR",
-      "preco": 540.0
-    },
-    {
-      "row": 1072,
-      "secao": "fabricacao",
-      "label": "EXAME DE L.P.",
-      "preco": 100.0
-    },
-    {
-      "row": 1076,
-      "secao": "fabricacao",
-      "label": "MONTAR AS LUVAS",
-      "preco": 720.0
-    },
-    {
-      "row": 1080,
-      "secao": "fabricacao",
-      "label": "SOLDAR AS LUVAS",
-      "preco": 900.0
-    },
-    {
-      "row": 1084,
-      "secao": "fabricacao",
-      "label": "DAR ACABAMENTO",
+      "label": "CALANDRAR ANÉIS DE REFORÇO",
       "preco": 240.0
     },
     {
-      "row": 1088,
+      "row": 940,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E RECORTAR ANÉIS DE REFORÇO",
+      "preco": 360.0
+    },
+    {
+      "row": 944,
+      "secao": "fabricacao",
+      "label": "USINAR FUROS NPT 1/4\"",
+      "preco": 110.0
+    },
+    {
+      "row": 948,
+      "secao": "fabricacao",
+      "label": "MONTAR ANÉIS DE REFORÇO",
+      "preco": 720.0
+    },
+    {
+      "row": 952,
+      "secao": "fabricacao",
+      "label": "SOLDAR ANÉIS DE REFORÇO",
+      "preco": 720.0
+    },
+    {
+      "row": 956,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0
+    },
+    {
+      "row": 960,
       "secao": "fabricacao",
       "label": "EXAME L.P.",
       "preco": 100.0
     },
     {
-      "row": 1092,
+      "row": 964,
+      "secao": "fabricacao",
+      "label": "EXAME ULTRASSOM",
+      "preco": 1100.0
+    },
+    {
+      "row": 968,
+      "secao": "fabricacao",
+      "label": "TRAÇAR POSIÇÃO DAS LUVAS",
+      "preco": 180.0
+    },
+    {
+      "row": 972,
+      "secao": "fabricacao",
+      "label": "RECORTAR E BISELAR",
+      "preco": 270.0
+    },
+    {
+      "row": 976,
+      "secao": "fabricacao",
+      "label": "EXAME DE L.P.",
+      "preco": 100.0
+    },
+    {
+      "row": 980,
+      "secao": "fabricacao",
+      "label": "MONTAR AS LUVAS",
+      "preco": 360.0
+    },
+    {
+      "row": 984,
+      "secao": "fabricacao",
+      "label": "SOLDAR AS LUVAS",
+      "preco": 450.0
+    },
+    {
+      "row": 988,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0
+    },
+    {
+      "row": 992,
+      "secao": "fabricacao",
+      "label": "EXAME L.P.",
+      "preco": 100.0
+    },
+    {
+      "row": 996,
       "secao": "fabricacao",
       "label": "CHAPA DIVISORA",
       "preco": 180.0
     },
     {
-      "row": 1096,
+      "row": 1000,
       "secao": "fabricacao",
       "label": "MONTAR OS CABEÇOTES NO CASCO + FEIXE",
       "preco": 600.0
     },
     {
-      "row": 1112,
+      "row": 1016,
       "secao": "fabricacao",
       "label": "INSPEÇÃO DIMENSIONAL",
       "preco": 600.0
     },
     {
-      "row": 1120,
+      "row": 1024,
       "secao": "fabricacao",
       "label": "TESTE HIDROSTÁTICO",
       "preco": 600.0
     },
     {
-      "row": 1124,
+      "row": 1028,
       "secao": "fabricacao",
       "label": "TRANSPORTE - PREPARAÇÃO E EMBALAGEM",
       "preco": 200.0
     },
     {
-      "row": 1128,
+      "row": 1032,
       "secao": "fabricacao",
       "label": "PETROBRAS - RPBC",
       "preco": 1600.0
     },
     {
-      "row": 1144,
+      "row": 1048,
       "secao": "finalizacao",
       "label": "PIT",
       "preco": 500.0
     },
     {
-      "row": 1148,
+      "row": 1052,
       "secao": "finalizacao",
       "label": "PS",
       "preco": 500.0
     },
     {
-      "row": 1152,
+      "row": 1056,
       "secao": "finalizacao",
       "label": "DATA BOOK",
       "preco": 500.0
     },
     {
-      "row": 1156,
+      "row": 1060,
       "secao": "finalizacao",
       "label": "INSPEÇÃO TIPO \"Q\"",
       "preco": 2000.0
     },
     {
-      "row": 1164,
+      "row": 1068,
       "secao": "finalizacao",
       "label": "FERRAMENTAS",
       "preco": 500.0
     },
     {
-      "row": 1168,
+      "row": 1072,
       "secao": "finalizacao",
       "label": "CONSUMÍVEIS DE SOLDAGEM",
       "preco": 2730.0
     },
     {
-      "row": 1172,
+      "row": 1076,
       "secao": "finalizacao",
       "label": "EXPANDIDORES",
-      "preco": 177.0
+      "preco": 354.0
     }
   ]
 }

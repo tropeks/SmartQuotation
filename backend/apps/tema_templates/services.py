@@ -1,13 +1,16 @@
-"""Ponte composição TEMA ↔ motor de custeio do permutador completo (pricing_engine.beu_quote).
+"""Ponte composição TEMA ↔ motor de custeio do permutador completo (pricing_engine).
 
-Designações TEMA com custeio paramétrico validado contra gabarito ENGEMATEX.
-Hoje: BEU (bonnet + casco 1 passe + feixe em U), Δ -0,3% vs R$ 128.160.
-Casco/cabeçote de outras letras reaproveitam os mesmos blocos à medida que forem validados.
+Designações TEMA com custeio paramétrico validado contra gabarito ENGEMATEX:
+  BEU (bonnet + casco 1 passe + feixe em U)        — Δ 0,0% vs R$ 128.160
+  BEM (bonnet + casco 1 passe + cabeçote fixo)     — Δ 0,0% vs R$ 119.295
+Derivado dinamicamente dos seeds presentes (pricing_engine/seeds/{d}_materiais.json).
 """
 from __future__ import annotations
 
+from pricing_engine.permutador_quote import designacoes_disponiveis
+
 # designações cujo custeio paramétrico já foi validado contra gabarito real
-COSTABLE = {"BEU"}
+COSTABLE = set(designacoes_disponiveis())
 
 
 def tenant_cost_chain():
@@ -39,7 +42,8 @@ def tenant_cost_chain():
 def estimate_complete(designacao: str):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
     Retorna dict do motor (custo por seção + preço) ou None se a designação não é custeável."""
-    if (designacao or "").upper() not in COSTABLE:
+    d = (designacao or "").upper()
+    if d not in COSTABLE:
         return None
-    from pricing_engine.beu_quote import quote_beu
-    return quote_beu(cost_chain=tenant_cost_chain())
+    from pricing_engine.permutador_quote import quote_completo
+    return quote_completo(d, cost_chain=tenant_cost_chain())
