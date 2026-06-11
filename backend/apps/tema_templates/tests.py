@@ -150,6 +150,23 @@ class ComposeViewTests(TestCase):
         r = self._post(n_tubos=500, diametro_casco_mm=400)
         self.assertContains(r, "inviável")
 
+    def test_a1_alerta_espessura_critico(self):
+        """A1 (Wellington): pressão alta + casco fino → alerta crítico ASME UG-27."""
+        r = self._post(pressao_projeto_bar=50, temperatura_projeto_c=150, esp_casco_mm=9.5)
+        self.assertContains(r, "CRÍTICO")
+
+    def test_a1_espessura_ok_sem_alerta(self):
+        """A1: pressão baixa → espessura suficiente, sem alerta."""
+        r = self._post(pressao_projeto_bar=10, temperatura_projeto_c=150, esp_casco_mm=9.5)
+        self.assertNotContains(r, "CRÍTICO")
+
+    def test_a1_ug27_modulo(self):
+        """A1: módulo ASME — S interpola, E por escopo de RT, t_min UG-27."""
+        from pricing_engine.asme import tensao_admissivel, eficiencia_junta, t_min_ug27
+        self.assertAlmostEqual(tensao_admissivel("SA-516 GR 70", 250), 138, places=1)
+        self.assertEqual(eficiencia_junta("Total"), 1.0)
+        self.assertGreater(t_min_ug27(5.0, 764, 138, 0.85), 9.5)  # 50 bar → > 9,5mm
+
     def test_solda_escala_com_espessura(self):
         """#2: dobrar a espessura do casco multiplica as horas de solda (≈ espessura²)."""
         from apps.tema_templates.services import estimate_complete, _physical_params

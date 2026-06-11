@@ -189,6 +189,22 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
                           corrosivo=corrosivo)
 
 
+def espessura_avisos(cleaned):
+    """Alerta crítico de espessura do casco (A1, ASME VIII UG-27). Vazio = ok / sem pressão."""
+    from pricing_engine.asme import checar_espessura_casco
+    try:
+        return checar_espessura_casco(
+            cleaned.get("classe_casco", "CS"),
+            float(cleaned.get("pressao_projeto_bar") or 0),
+            float(cleaned.get("temperatura_projeto_c") or 40),
+            cleaned.get("rt_escopo", "Parcial"),
+            float(cleaned.get("diametro_casco_mm") or 0),
+            float(cleaned.get("esp_casco_mm") or 0),
+            float(cleaned.get("corrosao_mm") if cleaned.get("corrosao_mm") is not None else 3.0))
+    except Exception:
+        return []
+
+
 def layout_avisos(designacao, cleaned):
     """Avisos de arranjo (feixe vs casco) — achado #4. Vazio = ok."""
     from pricing_engine.permutador_layout import check_layout
