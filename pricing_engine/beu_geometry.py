@@ -16,11 +16,11 @@ import math
 
 RHO = 7.85e-6  # kgf/mm³ (aço-carbono) — default quando a densidade do material não é dada
 
-# fator de perda (bruto/líquido) por família, p/ o fallback do recálculo geométrico (#agy):
-# peça circular cortada de chapa retangular tem perda mínima de (4−π)/4 ≈ 21,5% + margem de
-# corte → espelho/chicana/tampo perdem MUITO mais que tubo/chapa. Defaults editáveis.
+# fator de perda (bruto/líquido) por família — valores do Wellington (B): espelho e chicana
+# (disco circular furado, recortado de chapa) perdem ~40%; tampo 20%; tubo/chapa 10%.
+# (Componentes com dado de gabarito usam a perda real auto-calibrada; isto é o típico/fallback.)
 PERDA_POR_FAMILIA = {
-    "disco": 1.25, "espelho": 1.25, "perfurado": 1.25, "tampo_2_1": 1.20, "anel": 1.15,
+    "espelho": 1.40, "perfurado": 1.40, "disco": 1.40, "tampo_2_1": 1.20, "anel": 1.15,
     "chapa_retangular": 1.10, "tubo": 1.10, "pipe": 1.10,
 }
 PERDA_PADRAO = 1.10

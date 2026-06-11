@@ -118,8 +118,9 @@ class ComposeViewTests(TestCase):
         data = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
                 "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
                 "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
-                "esp_casco_mm": 9.5, "n_passes_tubos": 2, "classe_feixe": "CS",
-                "classe_casco": "CS", "fluido_corrosivo": "Tubos", "fator_correcao_mo": 1.0}
+                "esp_casco_mm": 9.5, "n_passes_tubos": 2, "rt_escopo": "Parcial",
+                "classe_feixe": "CS", "classe_casco": "CS", "fluido_corrosivo": "Tubos",
+                "fator_correcao_mo": 1.0}
         data.update(over)
         return self.client.post("/tema/permutador/", data)
 
@@ -192,10 +193,29 @@ class ComposeViewTests(TestCase):
         ni = estimate_complete("BEU", dens_por_lado={"casco": 8.80 / 7.85})
         self.assertGreater(ni["custo_material"], cs["custo_material"] + 1000)
 
-    def test_scrap_disco_maior_que_tubo(self):
-        """#agy: chapa circular (espelho) tem perda maior que tubo."""
+    def test_scrap_espelho_40_pct(self):
+        """B (Wellington): perda de espelho/chicana = 40%; tampo 20%; tubo 10%."""
         from pricing_engine.beu_geometry import perda_familia
-        self.assertGreater(perda_familia("disco"), perda_familia("tubo"))
+        self.assertAlmostEqual(perda_familia("espelho"), 1.40, places=2)
+        self.assertAlmostEqual(perda_familia("perfurado"), 1.40, places=2)
+        self.assertAlmostEqual(perda_familia("tampo_2_1"), 1.20, places=2)
+        self.assertAlmostEqual(perda_familia("tubo"), 1.10, places=2)
+
+    def test_icms_formula_real_por_dentro(self):
+        """B (Wellington): ICMS por dentro real = 1/(1−alíquota), sem o fudge 0,97."""
+        from pricing_engine.permutador_quote import gross_up_icms
+        self.assertAlmostEqual(gross_up_icms(9.0), 1.0 / (1.0 - 0.09), places=6)
+
+    def test_rt_escopo_escala_ensaios(self):
+        """B (Wellington): RT total > parcial > isento (multiplica os ensaios de solda)."""
+        from apps.tema_templates.services import estimate_complete, _physical_params
+        ref = estimate_complete("BEU")
+        base = {"comprimento_tubo_mm": 13000, "diametro_casco_mm": 764, "esp_casco_mm": 9.5,
+                "n_tubos": 68, "n_chicanas": 18, "n_passes_tubos": 2}
+        total = estimate_complete("BEU", params=_physical_params("BEU", {**base, "rt_escopo": "Total"}))
+        isento = estimate_complete("BEU", params=_physical_params("BEU", {**base, "rt_escopo": "Isento"}))
+        self.assertGreater(total["custo_servicos"], ref["custo_servicos"])
+        self.assertLess(isento["custo_servicos"], ref["custo_servicos"])
 
     def test_espelho_geometrizavel_responde_a_dims(self):
         """Polimento agy §4: o espelho agora recomputa pela geometria no dims_override."""
