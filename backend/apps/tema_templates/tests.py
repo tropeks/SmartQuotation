@@ -160,6 +160,18 @@ class ComposeViewTests(TestCase):
         r = self._post(pressao_projeto_bar=10, temperatura_projeto_c=150, esp_casco_mm=9.5)
         self.assertNotContains(r, "CRÍTICO")
 
+    def test_a1_duplex_provisorio(self):
+        """A1: duplex tem S (provisório, web) → verifica espessura mas sinaliza 'PROVISÓRIO'."""
+        from pricing_engine.asme import checar_espessura_casco
+        avisos = checar_espessura_casco("DUPLEX", 30, 150, "Parcial", 764, 9.5, 3.0)
+        self.assertTrue(any("PROVISÓRIO" in a for a in avisos))
+
+    def test_a1_niquel_sem_s_nao_verifica(self):
+        """A1: níquel ainda sem S (aguarda Wellington) → não verifica, avisa honesto."""
+        from pricing_engine.asme import checar_espessura_casco
+        avisos = checar_espessura_casco("NIQUEL", 30, 150, "Parcial", 764, 9.5, 3.0)
+        self.assertTrue(any("NÃO verificada" in a for a in avisos))
+
     def test_a1_ug27_modulo(self):
         """A1: módulo ASME — S interpola, E por escopo de RT, t_min UG-27."""
         from pricing_engine.asme import tensao_admissivel, eficiencia_junta, t_min_ug27
