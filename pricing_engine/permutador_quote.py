@@ -140,14 +140,21 @@ def _lado_da_op(o, corrosivo="Tubos"):
     lbl = (o.get("label") or "").upper()
     if any(k in lbl for k in _FEIXE_LABEL_KW):
         return "feixe"
-    if corrosivo in ("Tubos", "Ambos") and ("CABEÇOTE" in lbl or "CABECOTE" in lbl):
+    # bloco de fabricação do CABEÇOTE (faixa de linha do seed) → segue o lado dos tubos quando
+    # o fluido corrosivo é dos tubos. Captura TODAS as ops do cabeçote (#agy review11 — label
+    # 'CABEÇOTE' pegava só ~2 ops; ~90% da MO do cabeçote ficava no lado errado).
+    if corrosivo in ("Tubos", "Ambos") and o.get("bloco") == "cabecote":
         return "feixe"
     return _PARAM_LADO.get(_param_da_op(o))
 
 
-def _lado_do_material(secao, corrosivo="Tubos"):
-    """Lado de um material pela seção do seed. A2: cabeçote (e espelhos, já no lado feixe)
-    seguem a metalurgia dos TUBOS quando o fluido corrosivo é dos tubos."""
+def _lado_do_material(secao, corrosivo="Tubos", familia=None):
+    """Lado de um material pela seção do seed. A2: cabeçote e espelho seguem a metalurgia do
+    lado em contato com o fluido CORROSIVO (Wellington/agy review11)."""
+    # o espelho (tubesheet) toca os DOIS fluidos → segue o lado corrosivo (não fica em CS se
+    # só o casco for corrosivo). #agy review11 Sev2.3.
+    if familia == "espelho":
+        return "casco" if corrosivo == "Casco" else "feixe"
     s = secao or ""
     if s.startswith("feixe"):
         return "feixe"
@@ -215,7 +222,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
     custo_material = 0.0
     flange_peso_total = flange_peso_ref = 0.0   # p/ escalar as horas de solda do bocal
     for m in mats:
-        lado_mat = _lado_do_material(m["secao"], corrosivo)
+        lado_mat = _lado_do_material(m["secao"], corrosivo, m.get("familia"))
         pf = float(preco_lado.get(lado_mat, 1.0))    # fator de preço/kg por liga do lado (#agy 1.C)
         if m.get("familia") == "catalogo" or not m.get("peso_bruto"):
             custo = m["preco"] * pf                  # item de catálogo (preço fixo) × liga

@@ -58,6 +58,16 @@ def _driver(hdr, cell, i):
     return None, "fixo", None
 
 
+# faixa de linhas do bloco de FABRICAÇÃO DO CABEÇOTE (layout Rev.0) — p/ a metalurgia do
+# cabeçote seguir o lado dos tubos quando o fluido corrosivo é dos tubos (A2 Wellington/agy).
+CABECOTE_OPS = {"BEU": (908, 1096), "BEM": (812, 1000)}
+
+
+def _bloco(designacao, row):
+    a, b = CABECOTE_OPS.get(designacao.upper(), (0, 0))
+    return "cabecote" if a <= (row or 0) <= b else "outro"
+
+
 def secao_de(texto):
     if not isinstance(texto, str):
         return None
@@ -216,7 +226,7 @@ def extrair(designacao):
             code_seen[base] = code_seen.get(base, 0) + 1
             drv, grupo, drv_ref = _driver(hdr, cell, i)
             o = {"code": f"{(secao or 'OP')[:3].upper()}-{base}-{code_seen[base]}",
-                 "row": i, "secao": secao, "label": label,
+                 "row": i, "secao": secao, "label": label, "bloco": _bloco(designacao, i),
                  "tipo": "mao_obra" if is_labor else "servico",
                  "preco_gabarito": preco, "ajuste": round(float(ajuste), 2),
                  "driver": drv, "grupo": grupo, "driver_ref": drv_ref}
