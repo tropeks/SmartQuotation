@@ -41,7 +41,9 @@ def tensao_admissivel(spec: str, temp_c: float) -> float | None:
     temps = sorted(tab)
     if temp_c <= temps[0]:
         return tab[temps[0]]
-    if temp_c >= temps[-1]:
+    if temp_c > temps[-1]:
+        return None   # acima da tabela: S NÃO é platô (despenca) — extrapolar seria INSEGURO
+    if temp_c == temps[-1]:
         return tab[temps[-1]]
     for i in range(len(temps) - 1):           # interpolação entre as duas linhas vizinhas
         t0, t1 = temps[i], temps[i + 1]
@@ -67,31 +69,40 @@ def t_min_ug27(pressao_mpa: float, d_interno_mm: float, s_mpa: float, e: float) 
 
 
 def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
-                           rt_escopo: str, d_casco_mm: float, esp_casco_mm: float) -> list[str]:
-    """Avisos de espessura do casco (UG-27). Vazio = ok. NÃO bloqueia — alerta crítico."""
+                           rt_escopo: str, d_casco_mm: float, esp_casco_mm: float,
+                           corrosao_mm: float = 3.0) -> list[str]:
+    """Avisos de espessura do casco (UG-27). Vazio = ok. NÃO bloqueia — alerta crítico.
+    corrosao_mm: sobrespessura de corrosão (CA) — t_requerida = t_UG27 + CA (#agy review13)."""
     avisos = []
     if not (pressao_bar and d_casco_mm and esp_casco_mm):
         return avisos
     spec = CLASSE_SPEC.get((classe_casco or "CS").upper())
     if not spec:
         avisos.append(f"Tensão admissível (S) indisponível p/ a liga do casco "
-                      f"({classe_casco}) — espessura mínima não verificada.")
+                      f"({classe_casco}) — espessura mínima NÃO verificada (validar manual).")
         return avisos
-    # aviso de temperatura de projeto (fluência)
     lim = TEMP_LIMITE.get((classe_casco or "CS").upper(), 370)
     if temp_c and temp_c > lim:
         avisos.append(f"Temperatura de projeto {temp_c:g}°C acima do limite {lim}°C p/ "
                       f"{classe_casco} — exige análise de engenharia sênior (fluência).")
     s = tensao_admissivel(spec, temp_c or 40)
+    if s is None:
+        avisos.append(f"Tensão admissível (S) indisponível p/ {spec} a {temp_c:g}°C "
+                      f"(acima da tabela) — espessura mínima NÃO verificada.")
+        return avisos
     e = eficiencia_junta(rt_escopo)
     p_mpa = pressao_bar * 0.1                  # 1 bar = 0,1 MPa
-    t_min = t_min_ug27(p_mpa, d_casco_mm, s, e)
-    if t_min is None:
+    # condição corroída: raio interno + CA (a corrosão consome metal por dentro)
+    t_ug27 = t_min_ug27(p_mpa, d_casco_mm + 2 * corrosao_mm, s, e)
+    if t_ug27 is None:
         avisos.append(f"Pressão {pressao_bar:g} bar alta demais p/ {spec} a {temp_c:g}°C "
                       f"(S·E ≤ 0,6·P) — exige material/espessura especial.")
-    elif esp_casco_mm < t_min:
+        return avisos
+    t_req = t_ug27 + corrosao_mm               # espessura nominal = calculada + sobremetal
+    if esp_casco_mm < t_req:
         avisos.append(f"⛔ CRÍTICO: espessura do casco {esp_casco_mm:g}mm é MENOR que o "
-                      f"mínimo ASME VIII UG-27 = {t_min:.1f}mm (P={pressao_bar:g}bar, "
+                      f"mínimo ASME VIII UG-27 = {t_req:.1f}mm "
+                      f"(= {t_ug27:.1f} + {corrosao_mm:g} de corrosão; P={pressao_bar:g}bar, "
                       f"{spec}, S={s:.0f}MPa, E={e:g}, T={temp_c:g}°C). Equipamento reprova "
                       f"no teste hidrostático. Aumente a espessura.")
     return avisos

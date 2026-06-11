@@ -199,7 +199,8 @@ def espessura_avisos(cleaned):
             float(cleaned.get("temperatura_projeto_c") or 40),
             cleaned.get("rt_escopo", "Parcial"),
             float(cleaned.get("diametro_casco_mm") or 0),
-            float(cleaned.get("esp_casco_mm") or 0))
+            float(cleaned.get("esp_casco_mm") or 0),
+            float(cleaned.get("corrosao_mm") if cleaned.get("corrosao_mm") is not None else 3.0))
     except Exception:
         return []
 

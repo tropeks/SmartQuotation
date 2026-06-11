@@ -38,6 +38,8 @@ class PermutadorDataSheetForm(forms.Form):
                                            required=False)
     temperatura_projeto_c = forms.FloatField(label="Temperatura de projeto (°C)", required=False,
                                              initial=40)
+    corrosao_mm = forms.FloatField(label="Sobrespessura de corrosão (mm)", required=False,
+                                   initial=3.0, min_value=0)
     # metalurgia por lado (liga escala MO; densidade escala peso) — suporta bimetálico
     classe_feixe = forms.ChoiceField(
         label="Classe metalúrgica — feixe", choices=LIGA_CHOICES, initial="CS")
