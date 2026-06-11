@@ -59,12 +59,16 @@ _DRIVER_PARAM = {
     "Nº Soldas": "solda_circ", "Nº Cilindros": "comprimento", "COMPR. (m)": "solda_long",
     "Nº RASGOS": "rasgos",             # rasgos de partição ∝ (nº passes − 1) (agy §5)
     "Nº Div.": "rasgos",               # chapa divisora de passe escala igual (= nº passes − 1)
+    # montagem/solda/usinagem de bocais e flanges ∝ peso total dos flanges (Ø×rating×schedule
+    # × quantidade) — corrige as horas de solda do bocal, antes congeladas (#A3/agy review9 #1).
+    "Nº Bocais": "bocais", "Nº Flanges": "bocais", "Nº Luvas": "bocais",
 }
 # parcela de SETUP fixo por parâmetro (#1): horas = horas_ref × (setup + (1-setup)×razão).
 # Defaults de engenharia (editáveis): furação/calandragem têm setup alto; ensaios baixo.
 _SETUP_FRAC = {
     "tubos": 0.20, "chicanas": 0.20, "furacao_chicana": 0.20,
     "rasgos": 0.0,   # divisórias são features DISCRETAS: 0 passes-extra → 0 custo (sem setup)
+    "bocais": 0.15,
     "comprimento": 0.15, "diametro": 0.15,
     "solda": 0.10, "solda_long": 0.10, "solda_circ": 0.10,
     "massa": 0.10, "area": 0.10, "volume": 0.10,
@@ -113,6 +117,7 @@ _PARAM_LADO = {
     "tubos": "feixe", "chicanas": "feixe", "furacao_chicana": "feixe", "rasgos": "feixe",
     "comprimento": "casco", "diametro": "casco", "solda_long": "casco",
     "solda_circ": "casco", "solda": "casco", "massa": "casco", "area": "casco", "volume": "casco",
+    "bocais": "casco",   # bocais soldam no casco/cabeçote (A2 ajusta p/ fluido corrosivo)
 }
 
 
@@ -194,6 +199,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
 
     secoes = {}
     custo_material = 0.0
+    flange_peso_total = flange_peso_ref = 0.0   # p/ escalar as horas de solda do bocal
     for m in mats:
         lado_mat = _lado_do_material(m["secao"])
         pf = float(preco_lado.get(lado_mat, 1.0))    # fator de preço/kg por liga do lado (#agy 1.C)
@@ -208,6 +214,9 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                 pt = peso_flange_dims({**m.get("dims", {}), **(dims_override or {}).get(m["label"], {})})
                 if pt:
                     peso_bruto = pt
+                pr = peso_flange_dims(m.get("dims", {}))   # peso de referência (sem override)
+                flange_peso_total += pt or m["peso_bruto"]
+                flange_peso_ref += pr or m["peso_bruto"]
             if dims_override and m["label"] in dims_override:
                 seed_dims = m.get("dims", {})
                 dims = {**seed_dims, **dims_override[m["label"]]}
@@ -234,10 +243,16 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         custo_material += custo
         secoes[m["secao"]] = secoes.get(m["secao"], 0.0) + custo
 
+    # razão de bocais = peso total de flange (projeto/referência) → escala as horas de
+    # solda/montagem/usinagem dos bocais. 1,0 no caso de referência → mantém 0,0%.
+    params_eff = dict(params or {})
+    if flange_peso_ref and "bocais" not in params_eff:
+        params_eff["bocais"] = flange_peso_total / flange_peso_ref
+
     custo_mo = custo_servico = 0.0
     custo_por_param = {}
     for o in ops:
-        eff = _escala_op(o, params)                    # setup + (1-setup)×razão (1,0 no ref)
+        eff = _escala_op(o, params_eff)                # setup + (1-setup)×razão (1,0 no ref)
         pnome = _param_da_op(o) or "fixo"
         # fator de liga metalúrgica POR LADO (#3 + bimetálico): MO e serviços de solda do lado
         lado = _lado_da_op(o)

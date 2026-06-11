@@ -198,6 +198,13 @@ class ComposeViewTests(TestCase):
         maior = estimate_complete("BEU", dims_override={"FLANGE": {"ND": '12"'}})
         self.assertGreater(maior["custo_material"], base["custo_material"] + 1000)
 
+    def test_flange_maior_sobe_horas_de_solda(self):
+        """A3 (Wellington): flange maior → mais horas de solda/montagem do bocal (não só material)."""
+        from apps.tema_templates.services import estimate_complete
+        base = estimate_complete("BEU")
+        maior = estimate_complete("BEU", dims_override={"FLANGE": {"ND": '12"'}})
+        self.assertGreater(maior["custo_mao_obra"], base["custo_mao_obra"] + 1000)
+
     def test_chicana_geometrizavel(self):
         """Refino: a chicana (perfurado) agora recomputa o peso pela geometria (dims_override)."""
         from apps.tema_templates.services import estimate_complete
