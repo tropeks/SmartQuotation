@@ -21,10 +21,13 @@ TENSAO_ADMISSIVEL_MPA = {
     "SA-240 316L": {40: 115, 65: 110, 100: 101, 150: 91.7, 200: 83.4, 250: 77.2, 300: 72.4},
     "SA-213 304L": {40: 115, 65: 108, 100: 98.6, 150: 89.6, 200: 81.4, 250: 75.8, 300: 71.0},
     "SA-249 316L": {40: 97.7, 65: 93.5, 100: 85.8, 150: 77.9, 200: 70.8, 250: 65.6, 300: 61.5},
-    # PROVISÓRIO (pesquisa web — Rolled Alloys / ASME II-D Sec VIII Div 1, Tab 1B; NÃO
-    # confirmado pelo Wellington). Duplex 2205 S31803 (base 25,7 ksi):
+    # PROVISÓRIO (pesquisa web — Rolled Alloys + busca Perplexity, ASME II-D Table 1A ferroso;
+    # NÃO confirmado pelo Wellington). Duplex 2205 S31803 (base 25,7 ksi) — DEFAULT da classe
+    # DUPLEX por ser o mais conservador (S menor → exige mais espessura) até o MTR confirmar UNS:
     "SA-240 S31803": {38: 177.2, 93: 177.2, 149: 171.0, 204: 164.8, 260: 160.7, 316: 159.3},
-    # Inconel 625 (N06625) chapa SB-443:
+    # Duplex 2205 S32205 (base 30,0 ksi; ~+4 ksi sobre S31803) — usar só se o MTR confirmar a UNS:
+    "SA-240 S32205": {38: 206.9, 93: 206.9, 149: 199.3, 204: 192.4, 260: 187.5, 316: 185.5},
+    # Inconel 625 (N06625) chapa SB-443 — Table 1B; confere c/ busca Perplexity independente:
     "SB-443 N06625": {38: 236.5, 93: 236.5, 149: 236.5, 204: 231.7, 260: 226.8, 316: 223.4},
     # Monel 400 (N04400) chapa SB-127 — ASME II-D Tab 1B linha 42 (ed. 2019/21/23; platô 14,7 ksi
     # de 204 a 316°C; pesquisa Perplexity). Liga Ni-Cu, DISTINTA do Inconel — confirmar c/ eng.:
@@ -32,7 +35,7 @@ TENSAO_ADMISSIVEL_MPA = {
 }
 
 # specs cuja tensão admissível é PROVISÓRIA (web, pendente de confirmação da engenharia).
-S_PROVISORIO = {"SA-240 S31803", "SB-443 N06625", "SB-127 N04400"}
+S_PROVISORIO = {"SA-240 S31803", "SA-240 S32205", "SB-443 N06625", "SB-127 N04400"}
 
 # classe metalúrgica do app → especificação representativa para lookup de S (chapa de casco).
 CLASSE_SPEC = {"CS": "SA-516 GR 70", "INOX": "SA-240 304",
