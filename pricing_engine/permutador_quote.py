@@ -32,15 +32,12 @@ def _rho(material):
 
 
 def gross_up_icms(impostos_pct: float) -> float:
-    """Gross-up de imposto sobre o preço de venda.
+    """Gross-up de ICMS 'por dentro' (Wellington): Preço = Custo / (1 − alíquota).
 
-    LIMITAÇÃO/ACHADO #4: o ICMS brasileiro é 'por dentro' (fórmula legal 1/(1−alíquota)).
-    O fator 0,97 aqui é uma CALIBRAÇÃO empírica que aproxima a razão venda_com/venda_sem do
-    gabarito ENGEMATEX (que embute outros efeitos — PIS/COFINS, base reduzida). NÃO é uma
-    fórmula fiscal pura; deve ser substituído por um motor fiscal real (regime + alíquotas
-    por tributo) quando formos modelar imposto a sério.
+    Fórmula fiscal real — calibrar 'na mão' (o antigo fator 0,97) mascarava a margem.
+    Ex.: alíquota 9% → divisor 0,91. Para múltiplos tributos, somar as alíquotas efetivas.
     """
-    return 1.0 / (1.0 - impostos_pct / 100.0 * 0.97)
+    return 1.0 / (1.0 - impostos_pct / 100.0)
 
 # família geométrica → forma de matéria-prima (chave da TenantCostChain.material_price)
 _FAMILIA_FORMA = {

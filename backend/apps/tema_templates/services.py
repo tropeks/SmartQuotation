@@ -112,6 +112,11 @@ def reference_inputs(designacao: str):
     }
 
 
+# escopo de radiografia → multiplicador dos ensaios de solda (param 'solda'). Referência do
+# gabarito = Parcial (10%) → 1,0. Total (100%) ~3× a metragem; Isento mantém só UT/LP. #B agy.
+RT_FATOR = {"Total": 3.0, "Parcial": 1.0, "Isento": 0.3}
+
+
 def _physical_params(designacao, cleaned):
     """Razões físicas proj/ref que escalam horas de fabricação e serviços. 1,0 no referência.
 
@@ -147,9 +152,10 @@ def _physical_params(designacao, cleaned):
         # soldas DE DEPOSIÇÃO escalam com comprimento/diâmetro E espessura² (volume de chanfro)
         "solda_long": comprimento * esp2,
         "solda_circ": diametro * esp2,
-        # NDT (raio-X/ultrassom) é cobrado por metro de junta → linear, NÃO t² (correção #2 agy:
-        # t² superestimaria o RT em chapas grossas em até 16×). Espessura entra só linear.
-        "solda": (0.5 * comprimento + 0.5 * diametro) * (esp_casco_ratio),
+        # NDT (raio-X/ultrassom) ∝ metro de junta × espessura (linear) × escopo de RT escolhido
+        # (Total/Parcial/Isento) — #2 agy + #B Wellington.
+        "solda": (0.5 * comprimento + 0.5 * diametro) * esp_casco_ratio
+        * RT_FATOR.get(cleaned.get("rt_escopo", "Parcial"), 1.0),
         "area": diametro * comprimento,            # superfície de pintura πDL
         "volume": diametro * diametro * comprimento,
     }

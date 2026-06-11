@@ -1,7 +1,7 @@
 # SmartQuotation — Status do Projeto
 
 > Documento vivo. Última revisão: ciclo de design mecânico (colaboração com @WellToMcAt).
-> Métricas atuais: **18 PRs mergeados · 95 testes Django · gates feixe −2,9% / permutador BEU+BEM 0,0%.**
+> Métricas atuais: **19 PRs mergeados · 97 testes Django · gates feixe −2,9% / permutador BEU+BEM 0,0%.**
 
 ---
 
@@ -42,9 +42,9 @@ Ordem de prioridade definida por ele: **A3 → A2 → A1**.
 ### Calibrações (confirmadas pelo Wellington)
 | Item | Decisão | Status |
 |---|---|:--:|
-| Scrap espelho/chicana | **40%** (tampo 20%, tubo/chapa 10%) | 🔄 a aplicar |
-| Radiografia | dropdown de escopo (100%/10%/Isento) multiplica metros de solda | 🔄 a aplicar |
-| ICMS | fórmula real por dentro: Preço = Custo/(1 − alíquota) | 🔄 a aplicar |
+| Scrap espelho/chicana | **40%** (tampo 20%, tubo/chapa 10%) | ✅ aplicado |
+| Radiografia | dropdown de escopo (100%/10%/Isento) multiplica metros de solda | ✅ aplicado |
+| ICMS | fórmula real por dentro: Preço = Custo/(1 − alíquota) | ✅ aplicado |
 | Fatores de liga (MO e preço) | defaults OK p/ MVP; futuro = integração ERP | ✅ default |
 
 ---
@@ -70,7 +70,7 @@ Cada PR passa por um **revisor adversarial cruzado** (Google Antigravity / Gemin
 ```bash
 python -m tests.validate_feixe_completo          # gate do feixe (±10%)
 python -m tests.validate_permutador_completo     # gate BEU+BEM (±10% + geometria)
-cd backend && python manage.py test apps         # 95 testes (django-tenants)
+cd backend && python manage.py test apps         # 97 testes (django-tenants)
 ```
 
 Arquitetura, decisões e seeds: ver `CLAUDE.md` e `pricing_engine/`.
