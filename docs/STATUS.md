@@ -1,7 +1,7 @@
 # SmartQuotation — Status do Projeto
 
 > Documento vivo. Última revisão: ciclo de design mecânico (colaboração com @WellToMcAt).
-> Métricas atuais: **19 PRs mergeados · 97 testes Django · gates feixe −2,9% / permutador BEU+BEM 0,0%.**
+> Métricas atuais: **20 PRs mergeados · 100 testes Django · gates feixe −2,9% / permutador BEU+BEM 0,0%.**
 
 ---
 
@@ -37,7 +37,7 @@ Ordem de prioridade definida por ele: **A3 → A2 → A1**.
 |---|---|:--:|
 | **A3 — Flanges** | Peso real do flange WN por Ø × rating × schedule (tabela ASME); horas de solda do bocal escalam com o flange | ✅ **concluído** (PR #15, #16) |
 | **A2 — Fluido corrosivo** | Campo Tubos/Casco/Ambos; se Tubos, metalurgia dos tubos espelha p/ cabeçote + espelhos | ✅ **concluído** |
-| **A1 — Espessura ASME** | UG-27 calcula espessura mínima do casco em background + **alerta crítico** se entrada < norma (espelho UHX fica manual) | ⏳ **aguardando tabelas de tensão admissível (S) do Wellington** |
+| **A1 — Espessura ASME** | UG-27 calcula espessura mínima do casco + **alerta crítico** se entrada < norma; S interpolada da tabela do Wellington, E pelo escopo de RT (espelho UHX manual) | ✅ **concluído** |
 
 ### Calibrações (confirmadas pelo Wellington)
 | Item | Decisão | Status |
@@ -61,7 +61,7 @@ Cada PR passa por um **revisor adversarial cruzado** (Google Antigravity / Gemin
 
 1. Os fatores de **setup, liga, preço por liga e scrap** são *defaults de engenharia* — editáveis, não medidos (serão refinados com dados reais da ENGEMATEX / ERP).
 2. A escala é **calibrada a 1 job real** por designação (sem 2º gabarito para validar a linearidade fora do ponto de referência).
-3. **Pressão → espessura** (A1) e **tabela de flanges** (A3) dependem das tabelas de norma do Wellington para sair do provisório.
+3. Modelo fiscal completo (IPI por fora, repasse de imposto ao preço) e duplex/níquel na tabela S são próximos itens.
 
 ---
 
@@ -70,7 +70,7 @@ Cada PR passa por um **revisor adversarial cruzado** (Google Antigravity / Gemin
 ```bash
 python -m tests.validate_feixe_completo          # gate do feixe (±10%)
 python -m tests.validate_permutador_completo     # gate BEU+BEM (±10% + geometria)
-cd backend && python manage.py test apps         # 97 testes (django-tenants)
+cd backend && python manage.py test apps         # 100 testes (django-tenants)
 ```
 
 Arquitetura, decisões e seeds: ver `CLAUDE.md` e `pricing_engine/`.

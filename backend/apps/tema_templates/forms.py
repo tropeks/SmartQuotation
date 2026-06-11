@@ -33,6 +33,11 @@ class PermutadorDataSheetForm(forms.Form):
     comprimento_casco_mm = forms.FloatField(label="Comprimento da virola/casco (mm)", min_value=1)
     diametro_casco_mm = forms.FloatField(label="Diâmetro do casco (mm)", min_value=1)
     esp_casco_mm = forms.FloatField(label="Espessura da virola (mm)", min_value=0.1)
+    # condições de projeto (A1): pressão+temperatura → espessura mínima ASME VIII UG-27 + alerta
+    pressao_projeto_bar = forms.FloatField(label="Pressão de projeto (bar)", min_value=0,
+                                           required=False)
+    temperatura_projeto_c = forms.FloatField(label="Temperatura de projeto (°C)", required=False,
+                                             initial=40)
     # metalurgia por lado (liga escala MO; densidade escala peso) — suporta bimetálico
     classe_feixe = forms.ChoiceField(
         label="Classe metalúrgica — feixe", choices=LIGA_CHOICES, initial="CS")
