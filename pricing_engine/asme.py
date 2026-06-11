@@ -21,17 +21,19 @@ TENSAO_ADMISSIVEL_MPA = {
     "SA-240 316L": {40: 115, 65: 110, 100: 101, 150: 91.7, 200: 83.4, 250: 77.2, 300: 72.4},
     "SA-213 304L": {40: 115, 65: 108, 100: 98.6, 150: 89.6, 200: 81.4, 250: 75.8, 300: 71.0},
     "SA-249 316L": {40: 97.7, 65: 93.5, 100: 85.8, 150: 77.9, 200: 70.8, 250: 65.6, 300: 61.5},
-    # PROVISÓRIO (pesquisa web ASME II-D, NÃO confirmado pelo Wellington) — duplex 2205:
-    "SA-240 S32205": {38: 206.8, 93: 177.2, 149: 171.0, 204: 164.8, 260: 160.7, 316: 159.3},
+    # PROVISÓRIO (pesquisa web — Rolled Alloys / ASME II-D Sec VIII Div 1, Tab 1B; NÃO
+    # confirmado pelo Wellington). Duplex 2205 S31803 (base 25,7 ksi):
+    "SA-240 S31803": {38: 177.2, 93: 177.2, 149: 171.0, 204: 164.8, 260: 160.7, 316: 159.3},
+    # Inconel 625 (N06625) chapa SB-443:
+    "SB-443 N06625": {38: 236.5, 93: 236.5, 149: 236.5, 204: 231.7, 260: 226.8, 316: 223.4},
 }
 
 # specs cuja tensão admissível é PROVISÓRIA (web, pendente de confirmação da engenharia).
-S_PROVISORIO = {"SA-240 S32205"}
+S_PROVISORIO = {"SA-240 S31803", "SB-443 N06625"}
 
 # classe metalúrgica do app → especificação representativa para lookup de S (chapa de casco).
-# NÍQUEL ainda sem S (aguardando tabela do Wellington) → não verifica espessura.
 CLASSE_SPEC = {"CS": "SA-516 GR 70", "INOX": "SA-240 304",
-               "DUPLEX": "SA-240 S32205", "NIQUEL": None}
+               "DUPLEX": "SA-240 S31803", "NIQUEL": "SB-443 N06625"}
 
 # eficiência de junta E por escopo de radiografia (Wellington, ASME UW-12).
 E_POR_RT = {"Total": 1.00, "Parcial": 0.85, "Isento": 0.70}
