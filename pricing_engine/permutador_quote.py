@@ -59,9 +59,13 @@ _DRIVER_PARAM = {
     "Nº Soldas": "solda_circ", "Nº Cilindros": "comprimento", "COMPR. (m)": "solda_long",
     "Nº RASGOS": "rasgos",             # rasgos de partição ∝ (nº passes − 1) (agy §5)
     "Nº Div.": "rasgos",               # chapa divisora de passe escala igual (= nº passes − 1)
-    # montagem/solda/usinagem de bocais e flanges ∝ peso total dos flanges (Ø×rating×schedule
-    # × quantidade) — corrige as horas de solda do bocal, antes congeladas (#A3/agy review9 #1).
-    "Nº Bocais": "bocais", "Nº Flanges": "bocais", "Nº Luvas": "bocais",
+    # solda/montagem dos BOCAIS de processo ∝ peso total de flange (Ø×rating×schedule×qtd) —
+    # corrige as horas de solda do bocal, antes congeladas (#A3). SÓ 'Nº Bocais' aqui:
+    "Nº Bocais": "bocais",
+    # 'Nº Flanges' é dos FLANGES PRINCIPAIS do corpo (usinar/furar) → escala com o Ø do vaso,
+    # NÃO com o bocal (correção do agy review10 #1.2). 'Nº Luvas' (couplings de instrumento)
+    # não tem flange e não escala com peso de flange → fica fixo.
+    "Nº Flanges": "diametro",
 }
 # parcela de SETUP fixo por parâmetro (#1): horas = horas_ref × (setup + (1-setup)×razão).
 # Defaults de engenharia (editáveis): furação/calandragem têm setup alto; ensaios baixo.
