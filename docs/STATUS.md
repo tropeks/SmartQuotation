@@ -1,7 +1,7 @@
 # SmartQuotation — Status do Projeto
 
 > Documento vivo. Última revisão: ciclo de design mecânico (colaboração com @WellToMcAt).
-> Métricas atuais: **16 PRs mergeados · 93 testes Django · gates feixe −2,9% / permutador BEU+BEM 0,0%.**
+> Métricas atuais: **18 PRs mergeados · 95 testes Django · gates feixe −2,9% / permutador BEU+BEM 0,0%.**
 
 ---
 
@@ -36,7 +36,7 @@ Ordem de prioridade definida por ele: **A3 → A2 → A1**.
 | Item | Descrição | Status |
 |---|---|:--:|
 | **A3 — Flanges** | Peso real do flange WN por Ø × rating × schedule (tabela ASME); horas de solda do bocal escalam com o flange | ✅ **concluído** (PR #15, #16) |
-| **A2 — Fluido corrosivo** | Campo Tubos/Casco/Ambos; se Tubos, metalurgia dos tubos espelha p/ cabeçote + espelhos | 🔄 **em andamento** |
+| **A2 — Fluido corrosivo** | Campo Tubos/Casco/Ambos; se Tubos, metalurgia dos tubos espelha p/ cabeçote + espelhos | ✅ **concluído** |
 | **A1 — Espessura ASME** | UG-27 calcula espessura mínima do casco em background + **alerta crítico** se entrada < norma (espelho UHX fica manual) | ⏳ **aguardando tabelas de tensão admissível (S) do Wellington** |
 
 ### Calibrações (confirmadas pelo Wellington)
@@ -70,7 +70,7 @@ Cada PR passa por um **revisor adversarial cruzado** (Google Antigravity / Gemin
 ```bash
 python -m tests.validate_feixe_completo          # gate do feixe (±10%)
 python -m tests.validate_permutador_completo     # gate BEU+BEM (±10% + geometria)
-cd backend && python manage.py test apps         # 93 testes (django-tenants)
+cd backend && python manage.py test apps         # 95 testes (django-tenants)
 ```
 
 Arquitetura, decisões e seeds: ver `CLAUDE.md` e `pricing_engine/`.

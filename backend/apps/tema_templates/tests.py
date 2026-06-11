@@ -119,7 +119,7 @@ class ComposeViewTests(TestCase):
                 "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
                 "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
                 "esp_casco_mm": 9.5, "n_passes_tubos": 2, "classe_feixe": "CS",
-                "classe_casco": "CS", "fator_correcao_mo": 1.0}
+                "classe_casco": "CS", "fluido_corrosivo": "Tubos", "fator_correcao_mo": 1.0}
         data.update(over)
         return self.client.post("/tema/permutador/", data)
 
@@ -165,6 +165,25 @@ class ComposeViewTests(TestCase):
         inox = estimate_complete("BEU", liga_por_lado={"feixe": 1.4, "casco": 1.0})
         self.assertGreater(inox["custo_mao_obra"], cs["custo_mao_obra"])
         self.assertAlmostEqual(inox["custo_material"], cs["custo_material"], places=2)
+
+    def test_fluido_corrosivo_tubos_espelha_metalurgia_no_cabecote(self):
+        """A2 (Wellington): corrosivo=Tubos → cabeçote herda a liga do feixe (custa mais)."""
+        from apps.tema_templates.services import estimate_complete
+        inox = {"feixe": 1.4, "casco": 1.0}
+        dens = {"feixe": 1.0107, "casco": 1.0}
+        preco = {"feixe": 4.5, "casco": 1.0}
+        tubos = estimate_complete("BEU", liga_por_lado=inox, dens_por_lado=dens,
+                                  preco_por_lado=preco, corrosivo="Tubos")
+        casco = estimate_complete("BEU", liga_por_lado=inox, dens_por_lado=dens,
+                                  preco_por_lado=preco, corrosivo="Casco")
+        self.assertGreater(tubos["custo_total"], casco["custo_total"] + 5000)
+
+    def test_corrosivo_default_nao_altera_referencia(self):
+        """Default (CS em ambos os lados) → corrosivo não muda nada (gate 0,0%)."""
+        from apps.tema_templates.services import estimate_complete
+        a = estimate_complete("BEU", corrosivo="Tubos")
+        b = estimate_complete("BEU", corrosivo="Casco")
+        self.assertAlmostEqual(a["custo_total"], b["custo_total"], places=2)
 
     def test_densidade_niquel_sobe_peso_do_lado(self):
         """Densidade por liga: níquel no casco aumenta o peso (custo) do material do casco."""
