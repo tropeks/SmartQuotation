@@ -21,10 +21,17 @@ TENSAO_ADMISSIVEL_MPA = {
     "SA-240 316L": {40: 115, 65: 110, 100: 101, 150: 91.7, 200: 83.4, 250: 77.2, 300: 72.4},
     "SA-213 304L": {40: 115, 65: 108, 100: 98.6, 150: 89.6, 200: 81.4, 250: 75.8, 300: 71.0},
     "SA-249 316L": {40: 97.7, 65: 93.5, 100: 85.8, 150: 77.9, 200: 70.8, 250: 65.6, 300: 61.5},
+    # PROVISÓRIO (pesquisa web ASME II-D, NÃO confirmado pelo Wellington) — duplex 2205:
+    "SA-240 S32205": {38: 206.8, 93: 177.2, 149: 171.0, 204: 164.8, 260: 160.7, 316: 159.3},
 }
 
+# specs cuja tensão admissível é PROVISÓRIA (web, pendente de confirmação da engenharia).
+S_PROVISORIO = {"SA-240 S32205"}
+
 # classe metalúrgica do app → especificação representativa para lookup de S (chapa de casco).
-CLASSE_SPEC = {"CS": "SA-516 GR 70", "INOX": "SA-240 304", "DUPLEX": None, "NIQUEL": None}
+# NÍQUEL ainda sem S (aguardando tabela do Wellington) → não verifica espessura.
+CLASSE_SPEC = {"CS": "SA-516 GR 70", "INOX": "SA-240 304",
+               "DUPLEX": "SA-240 S32205", "NIQUEL": None}
 
 # eficiência de junta E por escopo de radiografia (Wellington, ASME UW-12).
 E_POR_RT = {"Total": 1.00, "Parcial": 0.85, "Isento": 0.70}
@@ -98,11 +105,15 @@ def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
         avisos.append(f"Pressão {pressao_bar:g} bar alta demais p/ {spec} a {temp_c:g}°C "
                       f"(S·E ≤ 0,6·P) — exige material/espessura especial.")
         return avisos
+    prov = " [S PROVISÓRIO — confirmar c/ engenharia]" if spec in S_PROVISORIO else ""
     t_req = t_ug27 + corrosao_mm               # espessura nominal = calculada + sobremetal
     if esp_casco_mm < t_req:
         avisos.append(f"⛔ CRÍTICO: espessura do casco {esp_casco_mm:g}mm é MENOR que o "
                       f"mínimo ASME VIII UG-27 = {t_req:.1f}mm "
                       f"(= {t_ug27:.1f} + {corrosao_mm:g} de corrosão; P={pressao_bar:g}bar, "
                       f"{spec}, S={s:.0f}MPa, E={e:g}, T={temp_c:g}°C). Equipamento reprova "
-                      f"no teste hidrostático. Aumente a espessura.")
+                      f"no teste hidrostático. Aumente a espessura.{prov}")
+    elif spec in S_PROVISORIO:
+        avisos.append(f"ℹ️ Espessura ok p/ {spec}, mas a tensão admissível (S={s:.0f}MPa) é "
+                      f"PROVISÓRIA (pesquisa, não confirmada) — validar com a engenharia.")
     return avisos
