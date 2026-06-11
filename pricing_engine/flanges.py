@@ -32,7 +32,8 @@ def _norm_classe(rating):
 
 
 def _norm_sched(sched):
-    return str(sched).strip().upper().replace(".0", "")
+    s = str(sched).strip().upper().replace(".0", "")
+    return s.replace("SCH.", "").replace("SCH", "").strip()   # aceita 'SCH 80', 'SCH. 80'
 
 
 def peso_flange(rating, nps, sched=None) -> float | None:
@@ -45,7 +46,8 @@ def peso_flange(rating, nps, sched=None) -> float | None:
     for fallback in ("STD", "40", "XS", "80"):     # schedules usuais como fallback
         if fallback in tab:
             return tab[fallback]
-    return next(iter(tab.values()), None)
+    # último recurso: o MAIOR peso disponível (conservador — nunca subestimar a peça) — #agy
+    return max(tab.values()) if tab else None
 
 
 def peso_flange_dims(dims) -> float | None:
