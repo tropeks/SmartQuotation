@@ -166,11 +166,12 @@ class ComposeViewTests(TestCase):
         avisos = checar_espessura_casco("DUPLEX", 30, 150, "Parcial", 764, 9.5, 3.0)
         self.assertTrue(any("PROVISÓRIO" in a for a in avisos))
 
-    def test_a1_niquel_sem_s_nao_verifica(self):
-        """A1: níquel ainda sem S (aguarda Wellington) → não verifica, avisa honesto."""
-        from pricing_engine.asme import checar_espessura_casco
+    def test_a1_niquel_provisorio(self):
+        """A1: níquel (Inconel 625, S provisório da web) verifica com flag 'PROVISÓRIO'."""
+        from pricing_engine.asme import tensao_admissivel, checar_espessura_casco
+        self.assertGreater(tensao_admissivel("SB-443 N06625", 150), 200)  # ~236 MPa
         avisos = checar_espessura_casco("NIQUEL", 30, 150, "Parcial", 764, 9.5, 3.0)
-        self.assertTrue(any("NÃO verificada" in a for a in avisos))
+        self.assertTrue(any("PROVISÓRIA" in a or "PROVISÓRIO" in a for a in avisos))
 
     def test_a1_ug27_modulo(self):
         """A1: módulo ASME — S interpola, E por escopo de RT, t_min UG-27 (máx circ/long)."""
