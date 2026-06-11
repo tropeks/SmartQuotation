@@ -158,7 +158,7 @@ def _physical_params(designacao, cleaned):
 def estimate_complete(designacao: str, dims_override: dict | None = None,
                       fator_correcao_mo: float | None = None, params: dict | None = None,
                       liga_por_lado: dict | None = None, dens_por_lado: dict | None = None,
-                      preco_por_lado: dict | None = None):
+                      preco_por_lado: dict | None = None, corrosivo: str = "Tubos"):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
 
     dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
@@ -177,7 +177,8 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
         chain.fator_correcao_mo = float(fator_correcao_mo)
     return quote_completo(d, cost_chain=chain, dims_override=dims_override or None,
                           params=params or None, liga_por_lado=liga_por_lado or None,
-                          dens_por_lado=dens_por_lado or None, preco_por_lado=preco_por_lado or None)
+                          dens_por_lado=dens_por_lado or None, preco_por_lado=preco_por_lado or None,
+                          corrosivo=corrosivo)
 
 
 def layout_avisos(designacao, cleaned):

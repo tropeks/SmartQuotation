@@ -133,17 +133,34 @@ _FEIXE_LABEL_KW = ("TIRANTE", "SELAGEM", "DESLIZAMENTO", "CURVAR", "CURVAS DOS T
                    "ALARGAR", "GROOVES", "INTRODUZIR OS TUBOS", "MONTAR ESTRUTURA DO FEIXE")
 
 
-def _lado_da_op(o):
-    """Lado (feixe|casco) de uma operação — define qual liga aplicar. None = sem liga."""
+def _lado_da_op(o, corrosivo="Tubos"):
+    """Lado (feixe|casco) de uma operação — define qual liga aplicar. None = sem liga.
+    A2 (Wellington): se o fluido corrosivo é dos Tubos, o CABEÇOTE (molhado pelo fluido dos
+    tubos) herda a metalurgia do feixe — soldar o cabeçote em inox custa mais MO."""
     lbl = (o.get("label") or "").upper()
     if any(k in lbl for k in _FEIXE_LABEL_KW):
+        return "feixe"
+    # bloco de fabricação do CABEÇOTE (faixa de linha do seed) → segue o lado dos tubos quando
+    # o fluido corrosivo é dos tubos. Captura TODAS as ops do cabeçote (#agy review11 — label
+    # 'CABEÇOTE' pegava só ~2 ops; ~90% da MO do cabeçote ficava no lado errado).
+    if corrosivo in ("Tubos", "Ambos") and o.get("bloco") == "cabecote":
         return "feixe"
     return _PARAM_LADO.get(_param_da_op(o))
 
 
-def _lado_do_material(secao):
-    """Lado de um material pela seção do seed (feixe_material→feixe; casco/cabecote→casco)."""
-    return "feixe" if (secao or "").startswith("feixe") else "casco"
+def _lado_do_material(secao, corrosivo="Tubos", familia=None):
+    """Lado de um material pela seção do seed. A2: cabeçote e espelho seguem a metalurgia do
+    lado em contato com o fluido CORROSIVO (Wellington/agy review11)."""
+    # o espelho (tubesheet) toca os DOIS fluidos → segue o lado corrosivo (não fica em CS se
+    # só o casco for corrosivo). #agy review11 Sev2.3.
+    if familia == "espelho":
+        return "casco" if corrosivo == "Casco" else "feixe"
+    s = secao or ""
+    if s.startswith("feixe"):
+        return "feixe"
+    if s.startswith("cabecote") and corrosivo in ("Tubos", "Ambos"):
+        return "feixe"
+    return "casco"
 
 
 def _load(nome):
@@ -168,7 +185,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                    fator_preco: float = 1.25, impostos_pct: float = 9.0,
                    dims_override: dict | None = None, params: dict | None = None,
                    liga_por_lado: dict | None = None, dens_por_lado: dict | None = None,
-                   preco_por_lado: dict | None = None) -> dict:
+                   preco_por_lado: dict | None = None, corrosivo: str = "Tubos") -> dict:
     """params: {parâmetro: razão proj/ref} p/ escalar as HORAS de fabricação E serviços por
     DRIVER físico (tubos, chicanas, comprimento, diametro, solda, massa, area, volume), com
     parcela de setup fixo. Razão 1,0 = caso de referência → reconcilia 0,0%. Operações
@@ -205,7 +222,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
     custo_material = 0.0
     flange_peso_total = flange_peso_ref = 0.0   # p/ escalar as horas de solda do bocal
     for m in mats:
-        lado_mat = _lado_do_material(m["secao"])
+        lado_mat = _lado_do_material(m["secao"], corrosivo, m.get("familia"))
         pf = float(preco_lado.get(lado_mat, 1.0))    # fator de preço/kg por liga do lado (#agy 1.C)
         if m.get("familia") == "catalogo" or not m.get("peso_bruto"):
             custo = m["preco"] * pf                  # item de catálogo (preço fixo) × liga
@@ -259,7 +276,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         eff = _escala_op(o, params_eff)                # setup + (1-setup)×razão (1,0 no ref)
         pnome = _param_da_op(o) or "fixo"
         # fator de liga metalúrgica POR LADO (#3 + bimetálico): MO e serviços de solda do lado
-        lado = _lado_da_op(o)
+        lado = _lado_da_op(o, corrosivo)
         liga = float(liga_lado.get(lado, 1.0)) if lado else 1.0
         if o["tipo"] == "mao_obra":
             ajuste = o.get("ajuste", 0.0)

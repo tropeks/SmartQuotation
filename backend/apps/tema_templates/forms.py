@@ -34,6 +34,10 @@ class PermutadorDataSheetForm(forms.Form):
         label="Classe metalúrgica — feixe", choices=LIGA_CHOICES, initial="CS")
     classe_casco = forms.ChoiceField(
         label="Classe metalúrgica — casco", choices=LIGA_CHOICES, initial="CS")
+    # fluido corrosivo (A2): se Tubos, cabeçote+espelhos herdam a metalurgia do feixe
+    fluido_corrosivo = forms.ChoiceField(
+        label="Fluido corrosivo", initial="Tubos",
+        choices=[("Tubos", "Tubos"), ("Casco", "Casco"), ("Ambos", "Ambos")])
     # mão de obra
     fator_correcao_mo = forms.FloatField(
         label="Fator de correção de MO", min_value=0.1, initial=1.0)

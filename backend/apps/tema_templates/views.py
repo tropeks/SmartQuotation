@@ -50,7 +50,8 @@ def data_sheet(request):
             liga, dens, preco = _metalurgia(form.cleaned_data)
             custo = estimate_complete(desig, dims_override=override, fator_correcao_mo=fc,
                                       params=params, liga_por_lado=liga, dens_por_lado=dens,
-                                      preco_por_lado=preco)
+                                      preco_por_lado=preco,
+                                      corrosivo=form.cleaned_data.get("fluido_corrosivo", "Tubos"))
     else:
         desig = request.GET.get("designacao") or (sorted(COSTABLE)[0] if COSTABLE else "")
         ref = reference_inputs(desig)
