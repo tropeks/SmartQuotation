@@ -173,11 +173,18 @@ class ComposeViewTests(TestCase):
         self.assertTrue(any("NÃO verificada" in a for a in avisos))
 
     def test_a1_ug27_modulo(self):
-        """A1: módulo ASME — S interpola, E por escopo de RT, t_min UG-27."""
+        """A1: módulo ASME — S interpola, E por escopo de RT, t_min UG-27 (máx circ/long)."""
         from pricing_engine.asme import tensao_admissivel, eficiencia_junta, t_min_ug27
         self.assertAlmostEqual(tensao_admissivel("SA-516 GR 70", 250), 138, places=1)
         self.assertEqual(eficiencia_junta("Total"), 1.0)
         self.assertGreater(t_min_ug27(5.0, 764, 138, 0.85), 9.5)  # 50 bar → > 9,5mm
+
+    def test_a1_ug32_tampo(self):
+        """A1 (Rom): tampo 2:1 fino dispara alerta UG-32 mesmo com casco ok."""
+        from pricing_engine.asme import t_min_ug32_tampo, checar_espessura_casco
+        self.assertGreater(t_min_ug32_tampo(5.0, 764, 138, 0.85), 0)
+        avisos = checar_espessura_casco("CS", 20, 150, "Parcial", 764, 12, 3.0, esp_tampo_mm=5)
+        self.assertTrue(any("tampo" in a.lower() for a in avisos))
 
     def test_solda_escala_com_espessura(self):
         """#2: dobrar a espessura do casco multiplica as horas de solda (≈ espessura²)."""
