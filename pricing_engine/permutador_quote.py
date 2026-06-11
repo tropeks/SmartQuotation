@@ -201,6 +201,13 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
             custo = m["preco"] * pf                  # item de catálogo (preço fixo) × liga
         else:
             peso_bruto = m["peso_bruto"]
+            # flange WN: peso REAL da tabela (Ø×rating×schedule), não o chute — #A3 Wellington.
+            # Alimenta o peso final e as horas de solda. Custo segue peso × preço/kgf (forjado).
+            if m["familia"] == "flange_wn":
+                from .flanges import peso_flange_dims
+                pt = peso_flange_dims({**m.get("dims", {}), **(dims_override or {}).get(m["label"], {})})
+                if pt:
+                    peso_bruto = pt
             if dims_override and m["label"] in dims_override:
                 seed_dims = m.get("dims", {})
                 dims = {**seed_dims, **dims_override[m["label"]]}

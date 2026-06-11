@@ -185,6 +185,19 @@ class ComposeViewTests(TestCase):
         maior = estimate_complete("BEU", dims_override={"ESPELHO FIXO": {"OD": 700}})
         self.assertGreater(maior["custo_material"], base["custo_material"])
 
+    def test_flange_peso_da_tabela(self):
+        """A3 Wellington: flange WN puxa peso real da tabela (Ø×rating×schedule)."""
+        from pricing_engine.flanges import peso_flange
+        self.assertAlmostEqual(peso_flange("600#", '8"', 80), 56.0, delta=0.5)
+        self.assertAlmostEqual(peso_flange("600#", '10"', 40), 86.8, delta=0.5)
+
+    def test_flange_maior_sobe_custo(self):
+        """A3: trocar o flange por um maior (Ø) aumenta o material — não é mais chute."""
+        from apps.tema_templates.services import estimate_complete
+        base = estimate_complete("BEU")
+        maior = estimate_complete("BEU", dims_override={"FLANGE": {"ND": '12"'}})
+        self.assertGreater(maior["custo_material"], base["custo_material"] + 1000)
+
     def test_chicana_geometrizavel(self):
         """Refino: a chicana (perfurado) agora recomputa o peso pela geometria (dims_override)."""
         from apps.tema_templates.services import estimate_complete
