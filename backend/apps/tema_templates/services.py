@@ -152,9 +152,11 @@ def _physical_params(designacao, cleaned):
         # soldas DE DEPOSIÇÃO escalam com comprimento/diâmetro E espessura² (volume de chanfro)
         "solda_long": comprimento * esp2,
         "solda_circ": diametro * esp2,
-        # NDT (raio-X/ultrassom) ∝ metro de junta × espessura (linear) × escopo de RT escolhido
-        # (Total/Parcial/Isento) — #2 agy + #B Wellington.
-        "solda": (0.5 * comprimento + 0.5 * diametro) * esp_casco_ratio
+        # ultrassom/LP/consumíveis ∝ metro de junta × espessura (linear) — NÃO escalam com o
+        # escopo de RT (#agy review12 #1).
+        "solda": (0.5 * comprimento + 0.5 * diametro) * esp_casco_ratio,
+        # SÓ o raio-X escala com o escopo de RT escolhido (Total/Parcial/Isento) — #B Wellington.
+        "rt": (0.5 * comprimento + 0.5 * diametro) * esp_casco_ratio
         * RT_FATOR.get(cleaned.get("rt_escopo", "Parcial"), 1.0),
         "area": diametro * comprimento,            # superfície de pintura πDL
         "volume": diametro * diametro * comprimento,

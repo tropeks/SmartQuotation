@@ -71,7 +71,7 @@ _SETUP_FRAC = {
     "rasgos": 0.0,   # divisórias são features DISCRETAS: 0 passes-extra → 0 custo (sem setup)
     "bocais": 0.15,
     "comprimento": 0.15, "diametro": 0.15,
-    "solda": 0.10, "solda_long": 0.10, "solda_circ": 0.10,
+    "solda": 0.10, "solda_long": 0.10, "solda_circ": 0.10, "rt": 0.10,
     "massa": 0.10, "area": 0.10, "volume": 0.10,
 }
 # operações ADMINISTRATIVAS / de configuração — não escalam (param None → fator 1,0)
@@ -85,9 +85,11 @@ def _param_da_op(o):
     if any(k in lbl for k in _ADMIN_KW):
         return None
     # serviços/ensaios por palavra-chave (#3)
-    if "RAIO X" in lbl or "ULTRASSOM" in lbl or "EXAME" in lbl or "L.P" in lbl or "L. P" in lbl:
-        return "solda"
-    if "CONSUM" in lbl:
+    # SÓ o raio-X escala com o escopo de RT (param 'rt'); ultrassom/LP/consumíveis escalam
+    # com metros de solda mas NÃO com o escopo de RT (param 'solda') — #agy review12 #1.
+    if "RAIO X" in lbl or "RAIO-X" in lbl:
+        return "rt"
+    if "ULTRASSOM" in lbl or "EXAME" in lbl or "L.P" in lbl or "L. P" in lbl or "CONSUM" in lbl:
         return "solda"
     if "TÉRMICO" in lbl or "CALANDRAR" in lbl:
         return "massa"
@@ -117,7 +119,8 @@ def _escala_op(o, params):
 _PARAM_LADO = {
     "tubos": "feixe", "chicanas": "feixe", "furacao_chicana": "feixe", "rasgos": "feixe",
     "comprimento": "casco", "diametro": "casco", "solda_long": "casco",
-    "solda_circ": "casco", "solda": "casco", "massa": "casco", "area": "casco", "volume": "casco",
+    "solda_circ": "casco", "solda": "casco", "rt": "casco", "massa": "casco",
+    "area": "casco", "volume": "casco",
     "bocais": "casco",   # bocais soldam no casco/cabeçote (A2 ajusta p/ fluido corrosivo)
 }
 
@@ -243,10 +246,14 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                 liq_seed = peso_liquido_geom(m["familia"], seed_dims, rho=rho)
                 if liq_new is not None:
                     qtd = float(seed_dims.get("QUANTIDADE", 1) or 1)
-                    if liq_seed:
+                    if m["familia"] in ("espelho", "perfurado", "disco"):
+                        # peça circular cortada de chapa: usa a perda da FAMÍLIA (40% do
+                        # Wellington), não a do gabarito — o bruto do gabarito embute folga de
+                        # forjado, não o scrap de corte. #agy review12 #2.
+                        perda_eff = perda_familia(m["familia"])
+                    elif liq_seed:
                         # perda AUTO-CALIBRADA = bruto_seed / geometria_seed: reproduz o bruto do
-                        # seed na referência e escala sem DUPLA CONTAGEM de furação (espelho) —
-                        # #agy review7 1.B. (a razão bruto/líq do seed embute o refugo dos furos.)
+                        # seed na referência e escala sem dupla contagem — #agy review7 1.B.
                         perda_eff = m["peso_bruto"] / (liq_seed * qtd)
                     else:
                         perda_eff = ((m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq")
