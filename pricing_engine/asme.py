@@ -26,10 +26,13 @@ TENSAO_ADMISSIVEL_MPA = {
     "SA-240 S31803": {38: 177.2, 93: 177.2, 149: 171.0, 204: 164.8, 260: 160.7, 316: 159.3},
     # Inconel 625 (N06625) chapa SB-443:
     "SB-443 N06625": {38: 236.5, 93: 236.5, 149: 236.5, 204: 231.7, 260: 226.8, 316: 223.4},
+    # Monel 400 (N04400) chapa SB-127 — ASME II-D Tab 1B linha 42 (ed. 2019/21/23; platô 14,7 ksi
+    # de 204 a 316°C; pesquisa Perplexity). Liga Ni-Cu, DISTINTA do Inconel — confirmar c/ eng.:
+    "SB-127 N04400": {38: 128.9, 93: 113.1, 149: 104.8, 204: 101.4, 260: 101.4, 316: 101.4},
 }
 
 # specs cuja tensão admissível é PROVISÓRIA (web, pendente de confirmação da engenharia).
-S_PROVISORIO = {"SA-240 S31803", "SB-443 N06625"}
+S_PROVISORIO = {"SA-240 S31803", "SB-443 N06625", "SB-127 N04400"}
 
 # classe metalúrgica do app → especificação representativa para lookup de S (chapa de casco).
 CLASSE_SPEC = {"CS": "SA-516 GR 70", "INOX": "SA-240 304",
