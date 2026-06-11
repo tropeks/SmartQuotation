@@ -65,24 +65,42 @@ def eficiencia_junta(rt_escopo: str) -> float:
 
 
 def t_min_ug27(pressao_mpa: float, d_interno_mm: float, s_mpa: float, e: float) -> float | None:
-    """Espessura mínima do casco cilíndrico sob pressão interna (ASME VIII Div.1 UG-27):
-        t = P·R / (S·E − 0,6·P)   [R = raio interno]. Devolve None se o denominador ≤ 0
-        (pressão alta demais p/ o material → exige análise especial)."""
+    """Espessura mínima do casco cilíndrico sob pressão interna (ASME VIII Div.1 UG-27).
+    Retorna a MAIOR entre a tensão circunferencial e a longitudinal (a norma exige checar
+    ambas — Rom/agy). Circunferencial governa no caso usual; a longitudinal entra com E
+    baixo de junta circunferencial."""
     r = d_interno_mm / 2.0
-    den = s_mpa * e - 0.6 * pressao_mpa
+    # circunferencial UG-27(c)(1): t = P·R / (S·E − 0,6·P)
+    den_c = s_mpa * e - 0.6 * pressao_mpa
+    if den_c <= 0:
+        return None
+    t_circ = pressao_mpa * r / den_c
+    # longitudinal UG-27(c)(2): t = P·R / (2·S·E + 0,4·P)
+    t_long = pressao_mpa * r / (2.0 * s_mpa * e + 0.4 * pressao_mpa)
+    return max(t_circ, t_long)
+
+
+def t_min_ug32_tampo(pressao_mpa: float, d_interno_mm: float, s_mpa: float, e: float,
+                     tipo: str = "elipsoidal") -> float | None:
+    """Espessura mínima de tampo sob pressão interna (ASME VIII Div.1 UG-32). Fórmulas (Rom):
+    elipsoidal 2:1  t = P·D/(2·S·E − 0,2·P) ; hemisférico  t = P·L/(2·S·E − 0,2·P), L=R."""
+    den = 2.0 * s_mpa * e - 0.2 * pressao_mpa
     if den <= 0:
         return None
-    return pressao_mpa * r / den
+    d_ou_l = d_interno_mm if tipo != "hemisferico" else d_interno_mm / 2.0
+    return pressao_mpa * d_ou_l / den
 
 
 def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
                            rt_escopo: str, d_casco_mm: float, esp_casco_mm: float,
-                           corrosao_mm: float = 3.0) -> list[str]:
+                           corrosao_mm: float = 3.0, esp_tampo_mm: float = None) -> list[str]:
     """Avisos de espessura do casco (UG-27). Vazio = ok. NÃO bloqueia — alerta crítico.
     corrosao_mm: sobrespessura de corrosão (CA) — t_requerida = t_UG27 + CA (#agy review13)."""
     avisos = []
     if not (pressao_bar and d_casco_mm and esp_casco_mm):
         return avisos
+    if not esp_tampo_mm:
+        esp_tampo_mm = esp_casco_mm        # padrão ENGEMATEX: tampo na espessura do casco
     spec = CLASSE_SPEC.get((classe_casco or "CS").upper())
     if not spec:
         avisos.append(f"Tensão admissível (S) indisponível p/ a liga do casco "
@@ -116,4 +134,13 @@ def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
     elif spec in S_PROVISORIO:
         avisos.append(f"ℹ️ Espessura ok p/ {spec}, mas a tensão admissível (S={s:.0f}MPa) é "
                       f"PROVISÓRIA (pesquisa, não confirmada) — validar com a engenharia.")
+    # tampo 2:1 (UG-32): a espessura do tampo (≈ do casco no padrão ENGEMATEX) deve cobrir
+    # o mínimo do tampo E não ser menor que a do casco (Rom). Para 2:1 o tampo pede menos
+    # que o casco, então só alerta em casos atípicos (ex.: tampo informado mais fino).
+    t_tampo = t_min_ug32_tampo(p_mpa, d_casco_mm + 2 * corrosao_mm, s, e, "elipsoidal")
+    if t_tampo is not None:
+        t_tampo_req = t_tampo + corrosao_mm
+        if esp_tampo_mm and esp_tampo_mm < t_tampo_req:
+            avisos.append(f"⛔ CRÍTICO: espessura do tampo 2:1 {esp_tampo_mm:g}mm < mínimo "
+                          f"ASME VIII UG-32 = {t_tampo_req:.1f}mm. Aumente a espessura do tampo.{prov}")
     return avisos
