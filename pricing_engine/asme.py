@@ -21,21 +21,39 @@ TENSAO_ADMISSIVEL_MPA = {
     "SA-240 316L": {40: 115, 65: 110, 100: 101, 150: 91.7, 200: 83.4, 250: 77.2, 300: 72.4},
     "SA-213 304L": {40: 115, 65: 108, 100: 98.6, 150: 89.6, 200: 81.4, 250: 75.8, 300: 71.0},
     "SA-249 316L": {40: 97.7, 65: 93.5, 100: 85.8, 150: 77.9, 200: 70.8, 250: 65.6, 300: 61.5},
-    # PROVISÓRIO (pesquisa web — Rolled Alloys + busca Perplexity, ASME II-D Table 1A ferroso;
-    # NÃO confirmado pelo Wellington). Duplex 2205 S31803 (base 25,7 ksi) — DEFAULT da classe
-    # DUPLEX por ser o mais conservador (S menor → exige mais espessura) até o MTR confirmar UNS:
-    "SA-240 S31803": {38: 177.2, 93: 177.2, 149: 171.0, 204: 164.8, 260: 160.7, 316: 159.3},
-    # Duplex 2205 S32205 (base 30,0 ksi; ~+4 ksi sobre S31803) — usar só se o MTR confirmar a UNS:
-    "SA-240 S32205": {38: 206.9, 93: 206.9, 149: 199.3, 204: 192.4, 260: 187.5, 316: 185.5},
-    # Inconel 625 (N06625) chapa SB-443 — Table 1B; confere c/ busca Perplexity independente:
-    "SB-443 N06625": {38: 236.5, 93: 236.5, 149: 236.5, 204: 231.7, 260: 226.8, 316: 223.4},
-    # Monel 400 (N04400) chapa SB-127 — ASME II-D Tab 1B linha 42 (ed. 2019/21/23; platô 14,7 ksi
-    # de 204 a 316°C; pesquisa Perplexity). Liga Ni-Cu, DISTINTA do Inconel — confirmar c/ eng.:
-    "SB-127 N04400": {38: 128.9, 93: 113.1, 149: 104.8, 204: 101.4, 260: 101.4, 316: 101.4},
+    # === Ligas especiais: extraídas da ASME BPVC II-D MÉTRICA 2025 (edição LICENCIADA fornecida
+    # pelo Wellington). Valores oficiais por temperatura métrica nativa; procedência (norma/
+    # edição/tabela/linha) em S_PROCEDENCIA p/ rastreabilidade de certificação ASME. ===
+    # Duplex 2205 S31803 (SA-240, Tab 1A L12) — DEFAULT da classe DUPLEX (S menor = conservador):
+    "SA-240 S31803": {40: 177, 65: 177, 100: 177, 150: 171, 200: 165, 250: 161, 300: 160},
+    # Duplex 2205 S32205 (SA-240, Tab 1A L21) — usar só se o MTR confirmar a UNS (S maior):
+    "SA-240 S32205": {40: 187, 65: 187, 100: 187, 150: 180, 200: 174, 250: 170, 300: 168},
+    # Inconel 625 (SB-443 N06625, Tab 1B L22) GRADE 1 recozido — chapa p/ vaso em temps usuais
+    # (Grade 2 sol. ann. = 184 MPa, p/ alta temp). Liga Ni-Cr-Mo:
+    "SB-443 N06625": {40: 217, 65: 217, 100: 217, 150: 217, 200: 217, 250: 217, 300: 205},
+    # Monel 400 (SB-127 N04400, Tab 1B L10, recozido). Liga Ni-Cu, DISTINTA do Inconel:
+    "SB-127 N04400": {40: 129, 65: 121, 100: 112, 150: 105, 200: 101, 250: 101, 300: 101},
 }
 
-# specs cuja tensão admissível é PROVISÓRIA (web, pendente de confirmação da engenharia).
-S_PROVISORIO = {"SA-240 S31803", "SA-240 S32205", "SB-443 N06625", "SB-127 N04400"}
+# procedência normativa de cada valor de S — rastreabilidade exigida p/ certificação ASME
+# (norma + edição + tabela + linha). Specs sem entrada = pendentes de rebase à edição licenciada
+# (CS/inox vieram da tabela do Wellington, edição a confirmar na Fase B do rebase 2025).
+S_PROCEDENCIA = {
+    "SA-240 S31803": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "12"},
+    "SA-240 S32205": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "21"},
+    "SB-443 N06625": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1B", "linha": "22"},
+    "SB-127 N04400": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1B", "linha": "10"},
+}
+
+
+def procedencia(spec: str) -> str | None:
+    """Citação curta da fonte normativa do S (p/ memória de cálculo / certificação). None se
+    a procedência ainda não foi registrada para a spec."""
+    p = S_PROCEDENCIA.get((spec or "").strip().upper())
+    if not p:
+        return None
+    ln = f" L{p['linha']}" if p.get("linha") else ""
+    return f"{p['norma']} {p['edicao']}, Tab {p['tabela']}{ln}"
 
 # classe metalúrgica do app → especificação representativa para lookup de S (chapa de casco).
 CLASSE_SPEC = {"CS": "SA-516 GR 70", "INOX": "SA-240 304",
@@ -131,17 +149,15 @@ def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
         avisos.append(f"Pressão {pressao_bar:g} bar alta demais p/ {spec} a {temp_c:g}°C "
                       f"(S·E ≤ 0,6·P) — exige material/espessura especial.")
         return avisos
-    prov = " [S PROVISÓRIO — confirmar c/ engenharia]" if spec in S_PROVISORIO else ""
+    proc = procedencia(spec)
+    fonte = f" [fonte S: {proc}]" if proc else ""
     t_req = t_ug27 + corrosao_mm               # espessura nominal = calculada + sobremetal
     if esp_casco_mm < t_req:
         avisos.append(f"⛔ CRÍTICO: espessura do casco {esp_casco_mm:g}mm é MENOR que o "
                       f"mínimo ASME VIII UG-27 = {t_req:.1f}mm "
                       f"(= {t_ug27:.1f} + {corrosao_mm:g} de corrosão; P={pressao_bar:g}bar, "
                       f"{spec}, S={s:.0f}MPa, E={e:g}, T={temp_c:g}°C). Equipamento reprova "
-                      f"no teste hidrostático. Aumente a espessura.{prov}")
-    elif spec in S_PROVISORIO:
-        avisos.append(f"ℹ️ Espessura ok p/ {spec}, mas a tensão admissível (S={s:.0f}MPa) é "
-                      f"PROVISÓRIA (pesquisa, não confirmada) — validar com a engenharia.")
+                      f"no teste hidrostático. Aumente a espessura.{fonte}")
     # tampo 2:1 (UG-32): a espessura do tampo (≈ do casco no padrão ENGEMATEX) deve cobrir
     # o mínimo do tampo E não ser menor que a do casco (Rom). Para 2:1 o tampo pede menos
     # que o casco, então só alerta em casos atípicos (ex.: tampo informado mais fino).
@@ -150,5 +166,5 @@ def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
         t_tampo_req = t_tampo + corrosao_mm
         if esp_tampo_mm and esp_tampo_mm < t_tampo_req:
             avisos.append(f"⛔ CRÍTICO: espessura do tampo 2:1 {esp_tampo_mm:g}mm < mínimo "
-                          f"ASME VIII UG-32 = {t_tampo_req:.1f}mm. Aumente a espessura do tampo.{prov}")
+                          f"ASME VIII UG-32 = {t_tampo_req:.1f}mm. Aumente a espessura do tampo.{fonte}")
     return avisos
