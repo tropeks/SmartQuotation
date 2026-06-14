@@ -112,9 +112,10 @@ def reference_inputs(designacao: str):
     }
 
 
-# escopo de radiografia → multiplicador dos ensaios de solda (param 'solda'). Referência do
-# gabarito = Parcial (10%) → 1,0. Total (100%) ~3× a metragem; Isento mantém só UT/LP. #B agy.
-RT_FATOR = {"Total": 3.0, "Parcial": 1.0, "Isento": 0.3}
+# escopo de radiografia → multiplicador do raio-X (param 'rt'). Referência do gabarito = Total
+# (100%, confirmado Wellington 2026-06-13) → baseline 1,0. Parcial (10%) ~1/3 (setup domina, não
+# é linear); Isento mantém só UT/LP. Relações preservadas da calibração anterior (÷3). #B agy.
+RT_FATOR = {"Total": 1.0, "Parcial": 0.33, "Isento": 0.1}
 
 
 def _physical_params(designacao, cleaned):
@@ -157,7 +158,7 @@ def _physical_params(designacao, cleaned):
         "solda": (0.5 * comprimento + 0.5 * diametro) * esp_casco_ratio,
         # SÓ o raio-X escala com o escopo de RT escolhido (Total/Parcial/Isento) — #B Wellington.
         "rt": (0.5 * comprimento + 0.5 * diametro) * esp_casco_ratio
-        * RT_FATOR.get(cleaned.get("rt_escopo", "Parcial"), 1.0),
+        * RT_FATOR.get(cleaned.get("rt_escopo", "Total"), 1.0),
         "area": diametro * comprimento,            # superfície de pintura πDL
         "volume": diametro * diametro * comprimento,
     }
@@ -197,7 +198,7 @@ def espessura_avisos(cleaned):
             cleaned.get("classe_casco", "CS"),
             float(cleaned.get("pressao_projeto_bar") or 0),
             float(cleaned.get("temperatura_projeto_c") or 40),
-            cleaned.get("rt_escopo", "Parcial"),
+            cleaned.get("rt_escopo", "Total"),
             float(cleaned.get("diametro_casco_mm") or 0),
             float(cleaned.get("esp_casco_mm") or 0),
             float(cleaned.get("corrosao_mm") if cleaned.get("corrosao_mm") is not None else 3.0))
