@@ -244,15 +244,20 @@ class ComposeViewTests(TestCase):
         self.assertAlmostEqual(gross_up_icms(9.0), 1.0 / (1.0 - 0.09), places=6)
 
     def test_rt_escopo_escala_ensaios(self):
-        """B (Wellington): RT total > parcial > isento (multiplica os ensaios de solda)."""
+        """B (Wellington): RT total > parcial > isento. O gabarito é Total (100%) = baseline,
+        então Total ≈ referência e os escopos menores custam menos (raio-X param 'rt')."""
         from apps.tema_templates.services import estimate_complete, _physical_params
         ref = estimate_complete("BEU")
         base = {"comprimento_tubo_mm": 13000, "diametro_casco_mm": 764, "esp_casco_mm": 9.5,
                 "n_tubos": 68, "n_chicanas": 18, "n_passes_tubos": 2}
         total = estimate_complete("BEU", params=_physical_params("BEU", {**base, "rt_escopo": "Total"}))
+        parcial = estimate_complete("BEU", params=_physical_params("BEU", {**base, "rt_escopo": "Parcial"}))
         isento = estimate_complete("BEU", params=_physical_params("BEU", {**base, "rt_escopo": "Isento"}))
-        self.assertGreater(total["custo_servicos"], ref["custo_servicos"])
-        self.assertLess(isento["custo_servicos"], ref["custo_servicos"])
+        self.assertGreater(total["custo_servicos"], parcial["custo_servicos"])
+        self.assertGreater(parcial["custo_servicos"], isento["custo_servicos"])
+        # Total é o baseline do gabarito → custo de serviços ≈ referência (≤1% de diferença)
+        self.assertAlmostEqual(total["custo_servicos"], ref["custo_servicos"],
+                               delta=ref["custo_servicos"] * 0.01)
 
     def test_espelho_geometrizavel_responde_a_dims(self):
         """Polimento agy §4: o espelho agora recomputa pela geometria no dims_override."""

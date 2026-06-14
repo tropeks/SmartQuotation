@@ -25,9 +25,9 @@ class PermutadorDataSheetForm(forms.Form):
     n_chicanas = forms.IntegerField(label="Nº de chicanas", min_value=1)
     # nº de passes dos tubos (escala os rasgos de partição do espelho/cabeçote)
     n_passes_tubos = forms.IntegerField(label="Nº de passes (tubos)", min_value=1, initial=2)
-    # escopo de radiografia (B Wellington): multiplica os ensaios de solda; ref = Parcial 10%
+    # escopo de radiografia (B Wellington): multiplica o raio-X; ref do gabarito = Total 100%
     rt_escopo = forms.ChoiceField(
-        label="Escopo de radiografia", initial="Parcial",
+        label="Escopo de radiografia", initial="Total",
         choices=[("Total", "Total (100%)"), ("Parcial", "Parcial (10%)"), ("Isento", "Isento")])
     # casco (paramétrico — recomputa peso das virolas + escala horas de solda/calandragem)
     comprimento_casco_mm = forms.FloatField(label="Comprimento da virola/casco (mm)", min_value=1)
