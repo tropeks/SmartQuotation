@@ -160,18 +160,20 @@ class ComposeViewTests(TestCase):
         r = self._post(pressao_projeto_bar=10, temperatura_projeto_c=150, esp_casco_mm=9.5)
         self.assertNotContains(r, "CRÍTICO")
 
-    def test_a1_duplex_provisorio(self):
-        """A1: duplex tem S (provisório, web) → verifica espessura mas sinaliza 'PROVISÓRIO'."""
+    def test_a1_duplex_procedencia(self):
+        """A1: duplex tem S (ASME II-D 2025 licenciada) → verifica espessura e cita a procedência
+        (rastreabilidade exigida p/ certificação ASME)."""
         from pricing_engine.asme import checar_espessura_casco
         avisos = checar_espessura_casco("DUPLEX", 30, 150, "Parcial", 764, 9.5, 3.0)
-        self.assertTrue(any("PROVISÓRIO" in a for a in avisos))
+        self.assertTrue(any("CRÍTICO" in a for a in avisos))
+        self.assertTrue(any("2025" in a for a in avisos))  # fonte normativa citada no aviso
 
-    def test_a1_niquel_provisorio(self):
-        """A1: níquel (Inconel 625, S provisório da web) verifica com flag 'PROVISÓRIO'."""
+    def test_a1_niquel_procedencia(self):
+        """A1: níquel (Inconel 625 Grade 1, ASME II-D 2025 = 217 MPa) verifica e cita a fonte."""
         from pricing_engine.asme import tensao_admissivel, checar_espessura_casco
-        self.assertGreater(tensao_admissivel("SB-443 N06625", 150), 200)  # ~236 MPa
-        avisos = checar_espessura_casco("NIQUEL", 30, 150, "Parcial", 764, 9.5, 3.0)
-        self.assertTrue(any("PROVISÓRIA" in a or "PROVISÓRIO" in a for a in avisos))
+        self.assertAlmostEqual(tensao_admissivel("SB-443 N06625", 150), 217, places=0)
+        avisos = checar_espessura_casco("NIQUEL", 60, 150, "Parcial", 764, 9.5, 3.0)
+        self.assertTrue(any("2025" in a for a in avisos))
 
     def test_a1_ug27_modulo(self):
         """A1: módulo ASME — S interpola, E por escopo de RT, t_min UG-27 (máx circ/long)."""
