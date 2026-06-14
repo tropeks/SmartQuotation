@@ -9,13 +9,17 @@ informada for menor que a exigida pela norma, emite ALERTA CRÍTICO. Espelho (UH
 """
 from __future__ import annotations
 
-# tensão admissível S (MPa) por especificação × temperatura (°C). CS: platô até 343°C.
+# tensão admissível S (MPa) por especificação × temperatura (°C). CS: platô até ~250°C, cai
+# depois (não é platô até 343 — ASME II-D 2025). Specs em CLASSE_SPEC (ativos) rebaseados 2025.
 TENSAO_ADMISSIVEL_MPA = {
-    "SA-516 GR 70": {40: 138, 343: 138},
+    # CS SA-516 GR 70 (Tab 1A L43, 2025): platô 138 até 250°C, cai a 136@300/128@350/123@375.
+    "SA-516 GR 70": {40: 138, 200: 138, 250: 138, 300: 136, 325: 132, 350: 128, 375: 123},
     "SA-516 GR 60": {40: 118, 343: 118},
     "SA-106 GR B": {40: 118, 343: 118},
     "SA-105":      {40: 138, 343: 138},
-    "SA-240 304":  {40: 138, 65: 129, 100: 115, 150: 103, 200: 94.5, 250: 88.3, 300: 83.4},
+    # INOX SA-240 304 (Tab 1A L3, 2025) — valores conservadores (a L4 alternativa é maior, mas
+    # só permitida onde deformação ligeiramente maior é aceitável; usamos a conservadora):
+    "SA-240 304":  {40: 138, 65: 126, 100: 113, 150: 103, 200: 95.7, 250: 89.9, 300: 85.9},
     "SA-240 304L": {40: 115, 65: 108, 100: 98.6, 150: 89.6, 200: 81.4, 250: 75.8, 300: 71.0},
     "SA-240 316":  {40: 138, 65: 134, 100: 122, 150: 110, 200: 100, 250: 92.4, 300: 86.2},
     "SA-240 316L": {40: 115, 65: 110, 100: 101, 150: 91.7, 200: 83.4, 250: 77.2, 300: 72.4},
@@ -36,9 +40,12 @@ TENSAO_ADMISSIVEL_MPA = {
 }
 
 # procedência normativa de cada valor de S — rastreabilidade exigida p/ certificação ASME
-# (norma + edição + tabela + linha). Specs sem entrada = pendentes de rebase à edição licenciada
-# (CS/inox vieram da tabela do Wellington, edição a confirmar na Fase B do rebase 2025).
+# (norma + edição + tabela + linha). TODOS os 4 specs ativos (CLASSE_SPEC: CS=SA-516 GR70,
+# INOX=SA-240 304, DUPLEX=S31803, NÍQUEL=N06625) rastreáveis à edição LICENCIADA 2025.
+# Specs sem entrada = dados de referência (formas não-chapa), não selecionáveis pelas classes.
 S_PROCEDENCIA = {
+    "SA-516 GR 70": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "43"},
+    "SA-240 304":   {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "3"},
     "SA-240 S31803": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "12"},
     "SA-240 S32205": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "21"},
     "SB-443 N06625": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1B", "linha": "22"},
