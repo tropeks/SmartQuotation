@@ -104,3 +104,52 @@ class ProposalViewTests(TenantTestCase):
         resp = self.client.get(f"/cotacoes/{self.q.pk}/proposta/nova/")
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/login/", resp.url)
+
+
+class ProposalMemorialTests(TenantTestCase):
+    """Memorial ASME embutido na proposta (anexo de certificação no PDF)."""
+
+    def _permutador_q(self):
+        from apps.quotations.services import create_permutador_quotation
+        from pricing_engine.permutador_quote import quote_completo
+        cust = Customer.objects.create(company_name="ACME")
+        cleaned = {"classe_casco": "CS", "pressao_projeto_bar": 50, "temperatura_projeto_c": 150,
+                   "rt_escopo": "Total", "diametro_casco_mm": 764, "esp_casco_mm": 9.5,
+                   "corrosao_mm": 3, "comprimento_casco_mm": 1631}
+        return create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
+
+    def test_proposal_memorial_para_permutador(self):
+        from apps.proposals.services import proposal_memorial
+        memo = proposal_memorial(self._permutador_q())
+        blob = " ".join(e["item"] for e in memo)
+        self.assertIn("UG-27", blob)
+        self.assertTrue(any("2025" in (e.get("fonte") or "") for e in memo))
+
+    def test_proposal_memorial_feixe_vazio(self):
+        from apps.proposals.services import proposal_memorial
+        from apps.quotations.services import create_feixe_quotation
+        cust = Customer.objects.create(company_name="X Ltda")
+        q = create_feixe_quotation(cust, "Feixe")
+        self.assertEqual(proposal_memorial(q), [])
+
+    def test_proposal_pdf_html_inclui_memorial(self):
+        from apps.proposals.services import create_proposal, _pdf_context
+        from django.template.loader import render_to_string
+        prop = create_proposal(self._permutador_q())
+        html = render_to_string("proposals/proposal_pdf.html", _pdf_context(prop))
+        self.assertIn("Memória de cálculo", html)
+        self.assertIn("UG-27", html)
+        self.assertIn("2025", html)            # procedência normativa no anexo
+
+    def test_proposal_docx_inclui_memorial(self):
+        from apps.proposals.services import create_proposal, generate_docx
+        import docx
+        prop = create_proposal(self._permutador_q())
+        path = generate_docx(prop)
+        d = docx.Document(path)
+        full = "\n".join(p.text for p in d.paragraphs)
+        for t in d.tables:
+            for row in t.rows:
+                full += "\n" + " ".join(c.text for c in row.cells)
+        self.assertIn("Memória de cálculo", full)
+        self.assertIn("UG-27", full)
