@@ -40,6 +40,9 @@ class PermutadorDataSheetForm(forms.Form):
                                              initial=40)
     corrosao_mm = forms.FloatField(label="Sobrespessura de corrosão (mm)", required=False,
                                    initial=3.0, min_value=0)
+    # densidade do fluido p/ coluna estática (ASME VIII UG-21); default água. Altura ≈ Ø do casco.
+    densidade_fluido_kg_m3 = forms.FloatField(label="Densidade do fluido (kg/m³)", required=False,
+                                              initial=1000, min_value=0)
     # metalurgia por lado (liga escala MO; densidade escala peso) — suporta bimetálico
     classe_feixe = forms.ChoiceField(
         label="Classe metalúrgica — feixe", choices=LIGA_CHOICES, initial="CS")

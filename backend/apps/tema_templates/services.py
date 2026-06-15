@@ -241,6 +241,21 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
                           corrosivo=corrosivo)
 
 
+def pressao_total_projeto(cleaned):
+    """Pressão de projeto total (ASME VIII UG-21) = pressão informada + coluna estática do fluido.
+    Altura da coluna ≈ diâmetro do casco (trocador horizontal); densidade default = água (1000)."""
+    from pricing_engine.pressao_estatica import pressao_total_bar
+    try:
+        p = float(cleaned.get("pressao_projeto_bar") or 0)
+        if not p:
+            return p
+        dens = float(cleaned.get("densidade_fluido_kg_m3") or 1000)   # default água
+        altura_m = float(cleaned.get("diametro_casco_mm") or 0) / 1000.0
+        return pressao_total_bar(p, dens, altura_m)
+    except (TypeError, ValueError):
+        return float(cleaned.get("pressao_projeto_bar") or 0)
+
+
 def espessura_avisos(cleaned):
     """Alerta crítico de espessura do casco (A1, ASME VIII UG-27). Vazio = ok / sem pressão."""
     from pricing_engine.asme import checar_espessura_casco
@@ -248,7 +263,7 @@ def espessura_avisos(cleaned):
     try:
         return checar_espessura_casco(
             casco,
-            float(cleaned.get("pressao_projeto_bar") or 0),
+            pressao_total_projeto(cleaned),        # UG-21: projeto + coluna estática
             float(cleaned.get("temperatura_projeto_c") or 40),
             cleaned.get("rt_escopo", "Total"),
             float(cleaned.get("diametro_casco_mm") or 0),
@@ -299,7 +314,7 @@ def flange_corpo_avisos(designacao, cleaned):
     from pricing_engine.flange_corpo import t_min_flange_corpo
     from pricing_engine.asme import interp_s, tensao_admissivel, CLASSE_SPEC
     try:
-        p = float(cleaned.get("pressao_projeto_bar") or 0)
+        p = pressao_total_projeto(cleaned)         # UG-21: projeto + coluna estática
         if not p:
             return []
         geo = _flange_corpo_seed(designacao)
