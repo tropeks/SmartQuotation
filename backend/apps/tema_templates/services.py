@@ -35,18 +35,65 @@ LIGA_CHOICES = [("CS", "Aço Carbono"), ("INOX", "Aço Inox (300/400)"),
                 ("INCONEL", "Inconel 625 (Ni-Cr-Mo)"), ("MONEL", "Monel 400 (Ni-Cu)")]
 
 
+# ---- Cadastro de ligas (tenant) com FALLBACK nas constantes hardcoded acima ----
+# O cadastro (apps.materials.LigaMetalurgica) permite a ENGEMATEX criar/editar ligas sem deploy
+# (#2 Wellington). Se a liga não estiver cadastrada (ou sem banco), usa as constantes.
+
+def _liga_db(codigo):
+    """LigaMetalurgica ativa do tenant por código (None se não cadastrada / fora de request)."""
+    try:
+        from apps.materials.models import LigaMetalurgica
+        return LigaMetalurgica.objects.filter(codigo=(codigo or "").upper(), is_active=True).first()
+    except Exception:
+        return None
+
+
+def _fator_liga(codigo):
+    """(liga_fator, densidade_kg_mm3, preco_fator) — do cadastro do tenant, fallback nas constantes."""
+    cu = (codigo or "CS").upper()
+    obj = _liga_db(cu)
+    if obj:
+        dens = float(obj.densidade_kg_mm3) or CLASSE_DENSIDADE.get(cu, CLASSE_DENSIDADE["CS"])
+        return float(obj.liga_fator), dens, float(obj.preco_fator)
+    return (LIGA_FATOR.get(cu, 1.0), CLASSE_DENSIDADE.get(cu, CLASSE_DENSIDADE["CS"]),
+            PRECO_FATOR.get(cu, 1.0))
+
+
+def liga_para_asme(codigo):
+    """dict p/ asme.checar_espessura_casco do cadastro do tenant (None → fallback hardcoded)."""
+    obj = _liga_db(codigo)
+    if not obj:
+        return None
+    return {"spec": obj.spec, "s_curva": obj.s_curva_num(),
+            "temp_limite": obj.temp_limite_c, "procedencia": obj.procedencia()}
+
+
+def liga_choices():
+    """Choices do dropdown de classe — do cadastro do tenant (ativas), fallback nas constantes."""
+    try:
+        from apps.materials.models import LigaMetalurgica
+        qs = list(LigaMetalurgica.objects.filter(is_active=True).order_by("ordem", "codigo"))
+        if qs:
+            return [(o.codigo, o.nome) for o in qs]
+    except Exception:
+        pass
+    return LIGA_CHOICES
+
+
 def _metalurgia(cleaned):
     """(liga_por_lado, dens_por_lado, preco_por_lado) das classes feixe/casco. CS → 1,0.
-    liga escala MO; dens escala peso; preço escala R$/kg da matéria-prima (#agy 1.C)."""
+    liga escala MO; dens escala peso; preço escala R$/kg da matéria-prima (#agy 1.C).
+    Fatores do cadastro de ligas do tenant (fallback nas constantes)."""
     cf = cleaned.get("classe_feixe", "CS")
     cc = cleaned.get("classe_casco", "CS")
     # base = densidade do aço-carbono: os pesos do seed BEU/BEM foram extraídos em CS, então a
     # razão classe/CS é correta. (Se um dia houver seed nativo em liga, derivar a base do seed.)
     base = CLASSE_DENSIDADE["CS"]
-    liga = {"feixe": LIGA_FATOR.get(cf, 1.0), "casco": LIGA_FATOR.get(cc, 1.0)}
-    dens = {"feixe": CLASSE_DENSIDADE.get(cf, base) / base,
-            "casco": CLASSE_DENSIDADE.get(cc, base) / base}
-    preco = {"feixe": PRECO_FATOR.get(cf, 1.0), "casco": PRECO_FATOR.get(cc, 1.0)}
+    lf_f, df_f, pf_f = _fator_liga(cf)
+    lf_c, df_c, pf_c = _fator_liga(cc)
+    liga = {"feixe": lf_f, "casco": lf_c}
+    dens = {"feixe": df_f / base, "casco": df_c / base}
+    preco = {"feixe": pf_f, "casco": pf_c}
     return liga, dens, preco
 
 
@@ -197,15 +244,17 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
 def espessura_avisos(cleaned):
     """Alerta crítico de espessura do casco (A1, ASME VIII UG-27). Vazio = ok / sem pressão."""
     from pricing_engine.asme import checar_espessura_casco
+    casco = cleaned.get("classe_casco", "CS")
     try:
         return checar_espessura_casco(
-            cleaned.get("classe_casco", "CS"),
+            casco,
             float(cleaned.get("pressao_projeto_bar") or 0),
             float(cleaned.get("temperatura_projeto_c") or 40),
             cleaned.get("rt_escopo", "Total"),
             float(cleaned.get("diametro_casco_mm") or 0),
             float(cleaned.get("esp_casco_mm") or 0),
-            float(cleaned.get("corrosao_mm") if cleaned.get("corrosao_mm") is not None else 3.0))
+            float(cleaned.get("corrosao_mm") if cleaned.get("corrosao_mm") is not None else 3.0),
+            liga=liga_para_asme(casco))        # cadastro do tenant (None → fallback hardcoded)
     except Exception:
         return []
 

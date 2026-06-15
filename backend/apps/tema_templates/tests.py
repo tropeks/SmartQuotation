@@ -397,3 +397,55 @@ class PermutadorEngineTests(TestCase):
         self.assertAlmostEqual(alto["custo_mao_obra"], base["custo_mao_obra"] * 1.20, places=0)
         self.assertAlmostEqual(alto["custo_material"], base["custo_material"], places=2)
         self.assertAlmostEqual(alto["custo_servicos"], base["custo_servicos"], places=2)
+
+
+class LigaCadastroTests(TestCase):
+    """#2 fase 2 (Wellington): cadastro de ligas editável por tenant, com FALLBACK nas constantes."""
+
+    def test_seed_ligas_cria_5_classes_com_procedencia(self):
+        call_command("seed_ligas")
+        from apps.materials.models import LigaMetalurgica
+        self.assertEqual(LigaMetalurgica.objects.count(), 5)
+        inc = LigaMetalurgica.objects.get(codigo="INCONEL")
+        self.assertEqual(inc.spec, "SB-443 N06625")
+        self.assertIn("2025", inc.procedencia())
+        self.assertAlmostEqual(inc.s_curva_num()[40.0], 217, places=0)
+
+    def test_liga_custom_entra_no_dropdown_e_no_calculo(self):
+        """Liga nova cadastrada (sem deploy) aparece no dropdown e é usada no cálculo de S."""
+        from apps.materials.models import LigaMetalurgica
+        from apps.tema_templates.services import liga_choices, liga_para_asme, _fator_liga
+        LigaMetalurgica.objects.create(
+            codigo="HAST", nome="Hastelloy C-276", familia="Ni-Mo-Cr", spec="SB-575 N10276",
+            s_curva={"40": 200, "300": 180}, liga_fator="2.5", densidade_kg_mm3="0.0000089",
+            preco_fator="15.0", temp_limite_c=500, norma="ASME BPVC II-D (M)", edicao="2025",
+            tabela="1B", linha="99", ordem=60)
+        self.assertIn(("HAST", "Hastelloy C-276"), liga_choices())
+        d = liga_para_asme("HAST")
+        self.assertEqual(d["spec"], "SB-575 N10276")
+        self.assertIn("2025", d["procedencia"])
+        self.assertAlmostEqual(d["s_curva"][40.0], 200, places=0)
+        lf, dens, pf = _fator_liga("HAST")
+        self.assertEqual(lf, 2.5)
+        self.assertEqual(pf, 15.0)
+
+    def test_espessura_usa_s_curva_do_cadastro(self):
+        """A checagem de espessura usa a curva S da liga cadastrada (cita a procedência)."""
+        from apps.materials.models import LigaMetalurgica
+        from apps.tema_templates.services import espessura_avisos
+        LigaMetalurgica.objects.create(
+            codigo="FRACA", nome="Liga Teste Fraca", spec="XX-000",
+            s_curva={"40": 80, "300": 70}, liga_fator="1", densidade_kg_mm3="0.00000785",
+            preco_fator="1", temp_limite_c=300, norma="ASME BPVC II-D (M)", edicao="2025",
+            tabela="9", linha="1")
+        avisos = espessura_avisos({"classe_casco": "FRACA", "pressao_projeto_bar": 30,
+                                   "temperatura_projeto_c": 150, "rt_escopo": "Total",
+                                   "diametro_casco_mm": 764, "esp_casco_mm": 9.5})
+        self.assertTrue(any("CRÍTICO" in a for a in avisos))      # S baixa → casco fino reprova
+        self.assertTrue(any("2025" in a for a in avisos))         # procedência da liga cadastrada
+
+    def test_fallback_sem_cadastro_usa_constantes(self):
+        """Sem ligas cadastradas, os fatores caem nas constantes hardcoded (gate intacto)."""
+        from apps.tema_templates.services import _fator_liga, LIGA_FATOR
+        lf, dens, pf = _fator_liga("INOX")
+        self.assertEqual(lf, LIGA_FATOR["INOX"])
