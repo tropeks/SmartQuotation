@@ -123,3 +123,50 @@ class DataSheetViewTests(TenantTestCase):
         resp = self.client.get("/cotacoes/nova/feixe/")
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/login/", resp.url)
+
+
+class PermutadorQuotationTests(TenantTestCase):
+    """Ciclo cotação→proposta: persistir a cotação do permutador a partir do motor."""
+
+    def test_persiste_totais_do_permutador(self):
+        from apps.quotations.services import create_permutador_quotation
+        from pricing_engine.permutador_quote import quote_completo
+        cust = Customer.objects.create(company_name="ACME Ltda")
+        resultado = quote_completo("BEU")
+        q = create_permutador_quotation(cust, "BEU", {"designacao": "BEU", "n_tubos": 68},
+                                        resultado)
+        self.assertEqual(q.scope, "complete")
+        self.assertEqual(q.inputs.get("designacao"), "BEU")
+        self.assertAlmostEqual(float(q.preco_com_impostos),
+                               round(resultado["preco_com_impostos"], 2), places=2)
+        self.assertAlmostEqual(float(q.custo_material),
+                               round(resultado["custo_material"], 2), places=2)
+        # custo_mo da Quotation = mão de obra + serviços do permutador
+        self.assertAlmostEqual(
+            float(q.custo_mo),
+            round(resultado["custo_mao_obra"] + resultado["custo_servicos"], 2), places=2)
+
+    def test_cria_itens_por_secao(self):
+        from apps.quotations.services import create_permutador_quotation
+        from pricing_engine.permutador_quote import quote_completo
+        cust = Customer.objects.create(company_name="ACME")
+        resultado = quote_completo("BEU")
+        q = create_permutador_quotation(cust, "BEU", {}, resultado)
+        itens = q.itens.all()
+        self.assertEqual(itens.count(), len(resultado["por_secao"]))
+        soma = sum(float(i.custo_material) + float(i.custo_mo) for i in itens)
+        self.assertAlmostEqual(soma, sum(resultado["por_secao"].values()), places=1)
+
+    def test_loop_fecha_gera_proposta(self):
+        """Prova o ciclo: cotação do permutador → proposta com o preço correto."""
+        from apps.quotations.services import create_permutador_quotation
+        from apps.proposals.services import create_proposal, build_context
+        from pricing_engine.permutador_quote import quote_completo
+        cust = Customer.objects.create(company_name="ACME")
+        resultado = quote_completo("BEU")
+        q = create_permutador_quotation(cust, "BEU", {"n_tubos": 68}, resultado)
+        prop = create_proposal(q)
+        self.assertEqual(prop.quotation_id, q.id)
+        ctx = build_context(q)
+        self.assertEqual(ctx["preco_com_impostos"], q.preco_com_impostos)
+        self.assertEqual(ctx["cliente"], "ACME")

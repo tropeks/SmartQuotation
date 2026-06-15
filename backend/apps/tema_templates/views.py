@@ -39,7 +39,7 @@ def compose(request):
 def data_sheet(request):
     """Data sheet do permutador completo: dimensões reais → recálculo geométrico do custo.
     Prova a parametria (#1/#9): mudar comprimento/nº de tubos move o custo de material."""
-    custo = ref = None
+    custo = ref = cotacao = None
     avisos = []
     if request.method == "POST":
         form = PermutadorDataSheetForm(request.POST)
@@ -56,12 +56,24 @@ def data_sheet(request):
                                       params=params, liga_por_lado=liga, dens_por_lado=dens,
                                       preco_por_lado=preco,
                                       corrosivo=form.cleaned_data.get("fluido_corrosivo", "Tubos"))
+            # ciclo cotação→proposta: "salvar" persiste a Quotation e gera a Proposta
+            cliente = (request.POST.get("cliente") or "").strip()
+            if custo and request.POST.get("salvar") and cliente:
+                from apps.quotations.models import Customer
+                from apps.quotations.services import create_permutador_quotation
+                from apps.proposals.services import create_proposal
+                cust, _ = Customer.objects.get_or_create(company_name=cliente)
+                cotacao = create_permutador_quotation(
+                    cust, desig, form.cleaned_data, custo,
+                    created_by=request.user if request.user.is_authenticated else None)
+                create_proposal(cotacao)
     else:
         desig = request.GET.get("designacao") or (sorted(COSTABLE)[0] if COSTABLE else "")
         ref = reference_inputs(desig)
         form = PermutadorDataSheetForm(initial=ref)
     return render(request, "tema_templates/data_sheet.html",
-                  {"form": form, "custo": custo, "avisos": avisos, "costable": sorted(COSTABLE)})
+                  {"form": form, "custo": custo, "avisos": avisos, "cotacao": cotacao,
+                   "costable": sorted(COSTABLE)})
 
 
 @login_required

@@ -134,6 +134,17 @@ class ComposeViewTests(TestCase):
         r = self._post()
         self.assertContains(r, "exposições")
 
+    def test_data_sheet_salvar_persiste_cotacao_e_proposta(self):
+        """Ciclo cotação→proposta: 'salvar' persiste a Quotation e gera a Proposta."""
+        from apps.quotations.models import Quotation
+        from apps.proposals.models import Proposal
+        r = self._post(salvar="1", cliente="ACME Ltda")
+        self.assertContains(r, "COT-")                                    # nº da cotação na resposta
+        self.assertEqual(Quotation.objects.filter(scope="complete").count(), 1)
+        q = Quotation.objects.get(scope="complete")
+        self.assertEqual(q.customer.company_name, "ACME Ltda")
+        self.assertEqual(Proposal.objects.filter(quotation=q).count(), 1)
+
     def test_data_sheet_mais_tubos_sobe_mao_de_obra(self):
         """Parametria plena: mais tubos → mais horas de fabricação (não só material)."""
         from apps.tema_templates.services import estimate_complete, _physical_params
