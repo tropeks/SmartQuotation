@@ -78,24 +78,29 @@ TEMP_LIMITE = {"CS": 370, "INOX": 425, "DUPLEX": 425,
                "INCONEL": 540, "MONEL": 480, "NIQUEL": 540}
 
 
-def tensao_admissivel(spec: str, temp_c: float) -> float | None:
-    """S (MPa) do material na temperatura, interpolando linearmente entre as linhas da tabela."""
-    tab = TENSAO_ADMISSIVEL_MPA.get((spec or "").strip().upper())
-    if not tab:
+def interp_s(curva: dict, temp_c: float) -> float | None:
+    """S (MPa) interpolado linearmente numa curva {temp_c: S}. Acima da maior temperatura da
+    curva → None (S despenca; extrapolar seria INSEGURO). Curva vazia → None."""
+    if not curva:
         return None
-    temps = sorted(tab)
+    temps = sorted(curva)
     if temp_c <= temps[0]:
-        return tab[temps[0]]
+        return curva[temps[0]]
     if temp_c > temps[-1]:
-        return None   # acima da tabela: S NÃO é platô (despenca) — extrapolar seria INSEGURO
+        return None
     if temp_c == temps[-1]:
-        return tab[temps[-1]]
+        return curva[temps[-1]]
     for i in range(len(temps) - 1):           # interpolação entre as duas linhas vizinhas
         t0, t1 = temps[i], temps[i + 1]
         if t0 <= temp_c <= t1:
-            s0, s1 = tab[t0], tab[t1]
+            s0, s1 = curva[t0], curva[t1]
             return s0 - (s0 - s1) * (temp_c - t0) / (t1 - t0)
     return None
+
+
+def tensao_admissivel(spec: str, temp_c: float) -> float | None:
+    """S (MPa) do material na temperatura (tabela hardcoded — fallback do cadastro de ligas)."""
+    return interp_s(TENSAO_ADMISSIVEL_MPA.get((spec or "").strip().upper()), temp_c)
 
 
 def eficiencia_junta(rt_escopo: str) -> float:
@@ -131,24 +136,35 @@ def t_min_ug32_tampo(pressao_mpa: float, d_interno_mm: float, s_mpa: float, e: f
 
 def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
                            rt_escopo: str, d_casco_mm: float, esp_casco_mm: float,
-                           corrosao_mm: float = 3.0, esp_tampo_mm: float = None) -> list[str]:
+                           corrosao_mm: float = 3.0, esp_tampo_mm: float = None,
+                           liga: dict = None) -> list[str]:
     """Avisos de espessura do casco (UG-27). Vazio = ok. NÃO bloqueia — alerta crítico.
-    corrosao_mm: sobrespessura de corrosão (CA) — t_requerida = t_UG27 + CA (#agy review13)."""
+    corrosao_mm: sobrespessura de corrosão (CA) — t_requerida = t_UG27 + CA (#agy review13).
+    liga: dict opcional do CADASTRO de ligas do tenant {spec, s_curva(°C→MPa float), temp_limite,
+    procedencia}. Se omitido, usa os dicts hardcoded por classe (fallback)."""
     avisos = []
     if not (pressao_bar and d_casco_mm and esp_casco_mm):
         return avisos
     if not esp_tampo_mm:
         esp_tampo_mm = esp_casco_mm        # padrão ENGEMATEX: tampo na espessura do casco
-    spec = CLASSE_SPEC.get((classe_casco or "CS").upper())
-    if not spec:
-        avisos.append(f"Tensão admissível (S) indisponível p/ a liga do casco "
-                      f"({classe_casco}) — espessura mínima NÃO verificada (validar manual).")
-        return avisos
-    lim = TEMP_LIMITE.get((classe_casco or "CS").upper(), 370)
+    # resolve a liga: do cadastro do tenant (liga injetada) OU dos dicts hardcoded (fallback)
+    if liga:
+        spec = liga.get("spec") or (classe_casco or "CS")
+        lim = liga.get("temp_limite") or 370
+        proc = liga.get("procedencia")
+        s = interp_s(liga.get("s_curva") or {}, temp_c or 40)
+    else:
+        spec = CLASSE_SPEC.get((classe_casco or "CS").upper())
+        if not spec:
+            avisos.append(f"Tensão admissível (S) indisponível p/ a liga do casco "
+                          f"({classe_casco}) — espessura mínima NÃO verificada (validar manual).")
+            return avisos
+        lim = TEMP_LIMITE.get((classe_casco or "CS").upper(), 370)
+        proc = procedencia(spec)
+        s = tensao_admissivel(spec, temp_c or 40)
     if temp_c and temp_c > lim:
         avisos.append(f"Temperatura de projeto {temp_c:g}°C acima do limite {lim}°C p/ "
                       f"{classe_casco} — exige análise de engenharia sênior (fluência).")
-    s = tensao_admissivel(spec, temp_c or 40)
     if s is None:
         avisos.append(f"Tensão admissível (S) indisponível p/ {spec} a {temp_c:g}°C "
                       f"(acima da tabela) — espessura mínima NÃO verificada.")
@@ -161,7 +177,6 @@ def checar_espessura_casco(classe_casco: str, pressao_bar: float, temp_c: float,
         avisos.append(f"Pressão {pressao_bar:g} bar alta demais p/ {spec} a {temp_c:g}°C "
                       f"(S·E ≤ 0,6·P) — exige material/espessura especial.")
         return avisos
-    proc = procedencia(spec)
     fonte = f" [fonte S: {proc}]" if proc else ""
     t_req = t_ug27 + corrosao_mm               # espessura nominal = calculada + sobremetal
     if esp_casco_mm < t_req:

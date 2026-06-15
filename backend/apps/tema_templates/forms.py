@@ -6,7 +6,7 @@ labels de material do seed via to_dims_override().
 """
 from django import forms
 
-from apps.tema_templates.services import COSTABLE, LIGA_CHOICES
+from apps.tema_templates.services import COSTABLE, LIGA_CHOICES, liga_choices
 
 # label do material no seed → dimensões que o form sobrescreve
 LABEL_TUBOS = "TUBOS DE TROCA TÉRMICA"
@@ -57,6 +57,10 @@ class PermutadorDataSheetForm(forms.Form):
         super().__init__(*args, **kwargs)
         # choices como callable não é aceito direto em todas as versões — resolve aqui
         self.fields["designacao"].choices = [(d, d) for d in sorted(COSTABLE)]
+        # classes metalúrgicas do cadastro de ligas do tenant (fallback nas constantes)
+        ligas = liga_choices()
+        self.fields["classe_feixe"].choices = ligas
+        self.fields["classe_casco"].choices = ligas
 
     def to_dims_override(self):
         """Devolve (dims_override, fator_correcao_mo) a partir dos campos preenchidos."""
