@@ -287,6 +287,23 @@ def layout_avisos(designacao, cleaned):
         return []
 
 
+def rt_exposicoes_info(cleaned):
+    """Estimativa do nº de exposições de RT do equipamento (ASME Seção V Art.2) — INFORMATIVO,
+    cruza com o custo de RT calibrado. Vazio se faltam dimensões do casco."""
+    from pricing_engine.rt_exposicoes import exposicoes_equipamento, FILME_UTIL_MM
+    try:
+        L = float(cleaned.get("comprimento_casco_mm") or 0)
+        D = float(cleaned.get("diametro_casco_mm") or 0)
+        if not (L and D):
+            return []
+        r = exposicoes_equipamento(L, D)
+        return [f"ℹ️ RT estimado: ~{r['total']} exposições ({r['longitudinal']} longitudinal "
+                f"+ {r['circunferencial']} circunferencial). [estimativa Seção V Art.2 — filme "
+                f"útil {FILME_UTIL_MM:g}mm; confirmar com a engenharia]"]
+    except (TypeError, ValueError):
+        return []
+
+
 def _flange_corpo_seed(designacao):
     """(bore, od, esp_ref) do flange de corpo 'FLANGE PRINCIPAL' do seed da designação. None se
     não houver."""

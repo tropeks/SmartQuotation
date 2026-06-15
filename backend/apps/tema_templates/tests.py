@@ -129,6 +129,11 @@ class ComposeViewTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Custo total")
 
+    def test_data_sheet_mostra_rt_exposicoes(self):
+        """End-to-end: o data sheet exibe a estimativa de exposições de RT (Seção V Art.2)."""
+        r = self._post()
+        self.assertContains(r, "exposições")
+
     def test_data_sheet_mais_tubos_sobe_mao_de_obra(self):
         """Parametria plena: mais tubos → mais horas de fabricação (não só material)."""
         from apps.tema_templates.services import estimate_complete, _physical_params
@@ -543,3 +548,31 @@ class PressaoEstaticaTests(TestCase):
         com = flange_corpo_avisos("BEU", {**base, "densidade_fluido_kg_m3": 13600})
         self.assertFalse(any("Apêndice 2" in a for a in sem))
         self.assertTrue(any("Apêndice 2" in a for a in com))
+
+
+class RTExposicoesTests(TestCase):
+    """RT por nº de exposições (ASME Seção V Art.2): custo de RT escala com chapas de filme."""
+
+    def test_n_exposicoes_junta(self):
+        from pricing_engine.rt_exposicoes import n_exposicoes
+        self.assertEqual(n_exposicoes(1000, filme_util_mm=315), 4)   # ceil(1000/315)
+        self.assertEqual(n_exposicoes(50, filme_util_mm=315), 1)     # junta curta = 1 chapa
+        self.assertEqual(n_exposicoes(0), 0)                          # sem junta = 0
+
+    def test_exposicoes_equipamento(self):
+        from pricing_engine.rt_exposicoes import exposicoes_equipamento
+        r = exposicoes_equipamento(comprimento_casco_mm=1631, diametro_casco_mm=764,
+                                   n_seams_circ=2)
+        self.assertEqual(r["longitudinal"], 6)        # ceil(1631/315)
+        self.assertEqual(r["circunferencial"], 16)    # 2 × ceil(π·764/315)
+        self.assertEqual(r["total"], 22)
+
+    def test_rt_exposicoes_info(self):
+        from apps.tema_templates.services import rt_exposicoes_info
+        avisos = rt_exposicoes_info({"comprimento_casco_mm": 1631, "diametro_casco_mm": 764})
+        self.assertTrue(any("exposições" in a for a in avisos))
+        self.assertTrue(any("22" in a for a in avisos))      # total estimado
+
+    def test_rt_exposicoes_info_vazio_sem_dims(self):
+        from apps.tema_templates.services import rt_exposicoes_info
+        self.assertEqual(rt_exposicoes_info({}), [])
