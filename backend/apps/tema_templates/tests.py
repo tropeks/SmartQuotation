@@ -170,6 +170,17 @@ class ComposeViewTests(TestCase):
         r = self._post(pressao_projeto_bar=10, temperatura_projeto_c=150)
         self.assertNotContains(r, "Apêndice 2")
 
+    def test_data_sheet_densidade_fluido_reprova_espessura(self):
+        """UG-21 end-to-end: a densidade do fluido informada no data sheet entra na checagem —
+        fluido pesado (coluna estática) reprova uma espessura que passaria com fluido leve."""
+        leve = self._post(diametro_casco_mm=2000, esp_casco_mm=18, pressao_projeto_bar=20,
+                          temperatura_projeto_c=40, rt_escopo="Total", densidade_fluido_kg_m3=1)
+        pesado = self._post(diametro_casco_mm=2000, esp_casco_mm=18, pressao_projeto_bar=20,
+                            temperatura_projeto_c=40, rt_escopo="Total",
+                            densidade_fluido_kg_m3=13600)
+        self.assertNotContains(leve, "CRÍTICO")
+        self.assertContains(pesado, "CRÍTICO")
+
     def test_a1_duplex_procedencia(self):
         """A1: duplex tem S (ASME II-D 2025 licenciada) → verifica espessura e cita a procedência
         (rastreabilidade exigida p/ certificação ASME)."""
@@ -478,3 +489,57 @@ class FlangeCorpoTests(TestCase):
         forte = t_min_flange_corpo(30, 914, 1076, 138)     # CS
         fraca = t_min_flange_corpo(30, 914, 1076, 95.7)    # inox 304 @200°C
         self.assertGreater(fraca, forte)
+
+
+class PressaoEstaticaTests(TestCase):
+    """ASME VIII UG-21: pressão de projeto inclui a coluna estática do fluido (ρ·g·h)."""
+
+    def test_coluna_agua_1m(self):
+        """1 m de coluna de água (ρ=1000) ≈ 0,0981 bar."""
+        from pricing_engine.pressao_estatica import pressao_estatica_bar
+        self.assertAlmostEqual(pressao_estatica_bar(1000, 1.0), 0.0981, places=3)
+
+    def test_pressao_total_soma_estatica(self):
+        """Pressão total = projeto + coluna estática (UG-21). 10 bar + 2m de água ≈ 10,196 bar."""
+        from pricing_engine.pressao_estatica import pressao_total_bar
+        self.assertAlmostEqual(pressao_total_bar(10.0, 1000, 2.0), 10.196, places=2)
+
+    def test_sem_coluna_nao_altera(self):
+        """Altura ou densidade zero → pressão total = projeto (sem efeito)."""
+        from pricing_engine.pressao_estatica import pressao_total_bar
+        self.assertEqual(pressao_total_bar(10.0, 0, 2.0), 10.0)
+        self.assertEqual(pressao_total_bar(10.0, 1000, 0), 10.0)
+
+    def test_pressao_total_projeto_inclui_coluna(self):
+        """Serviço: pressão total = projeto + coluna (h = D do casco, horizontal)."""
+        from apps.tema_templates.services import pressao_total_projeto
+        cleaned = {"pressao_projeto_bar": 10, "densidade_fluido_kg_m3": 1000,
+                   "diametro_casco_mm": 2000}
+        self.assertAlmostEqual(pressao_total_projeto(cleaned), 10.196, places=2)
+
+    def test_pressao_total_default_agua(self):
+        """Sem densidade informada → assume água (1000), ainda soma a coluna."""
+        from apps.tema_templates.services import pressao_total_projeto
+        self.assertGreater(
+            pressao_total_projeto({"pressao_projeto_bar": 10, "diametro_casco_mm": 1000}), 10.0)
+
+    def test_espessura_considera_coluna_estatica(self):
+        """UG-21: fluido denso empurra a pressão e reprova espessura que passaria só no projeto."""
+        from apps.tema_templates.services import espessura_avisos
+        base = {"classe_casco": "CS", "pressao_projeto_bar": 20, "temperatura_projeto_c": 40,
+                "rt_escopo": "Total", "diametro_casco_mm": 2000, "esp_casco_mm": 18,
+                "corrosao_mm": 3}
+        sem = espessura_avisos({**base, "densidade_fluido_kg_m3": 1})       # ~sem coluna
+        com = espessura_avisos({**base, "densidade_fluido_kg_m3": 13600})   # mercúrio
+        self.assertFalse(any("CRÍTICO" in a for a in sem))
+        self.assertTrue(any("CRÍTICO" in a for a in com))
+
+    def test_flange_corpo_considera_coluna_estatica(self):
+        """UG-21 no flange de corpo: coluna estática soma à pressão e dispara o alerta Apêndice 2."""
+        from apps.tema_templates.services import flange_corpo_avisos
+        base = {"classe_casco": "CS", "pressao_projeto_bar": 26, "temperatura_projeto_c": 40,
+                "diametro_casco_mm": 2000}
+        sem = flange_corpo_avisos("BEU", {**base, "densidade_fluido_kg_m3": 1})
+        com = flange_corpo_avisos("BEU", {**base, "densidade_fluido_kg_m3": 13600})
+        self.assertFalse(any("Apêndice 2" in a for a in sem))
+        self.assertTrue(any("Apêndice 2" in a for a in com))
