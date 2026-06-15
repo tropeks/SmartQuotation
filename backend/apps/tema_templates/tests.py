@@ -134,6 +134,13 @@ class ComposeViewTests(TestCase):
         r = self._post()
         self.assertContains(r, "exposições")
 
+    def test_data_sheet_mostra_memorial_asme(self):
+        """End-to-end: o data sheet exibe a memória de cálculo ASME com a procedência."""
+        r = self._post(pressao_projeto_bar=50, temperatura_projeto_c=150)
+        self.assertContains(r, "Memória de cálculo")
+        self.assertContains(r, "UG-27")
+        self.assertContains(r, "2025")           # procedência normativa citada
+
     def test_data_sheet_salvar_persiste_cotacao_e_proposta(self):
         """Ciclo cotação→proposta: 'salvar' persiste a Quotation e gera a Proposta."""
         from apps.quotations.models import Quotation
@@ -177,14 +184,15 @@ class ComposeViewTests(TestCase):
         self.assertNotContains(r, "CRÍTICO")
 
     def test_flange_corpo_apendice2_alerta_alta_pressao(self):
-        """Apêndice 2: pressão alta exige flange de corpo mais espesso que a referência → alerta."""
+        """Apêndice 2: pressão alta exige flange de corpo mais espesso que a referência → alerta.
+        (Checa o texto do ALERTA, pois o memorial cita 'Apêndice 2' sempre.)"""
         r = self._post(pressao_projeto_bar=40, temperatura_projeto_c=150)
-        self.assertContains(r, "Apêndice 2")
+        self.assertContains(r, "Reforce o flange")
 
     def test_flange_corpo_sem_alerta_baixa_pressao(self):
-        """Apêndice 2: pressão baixa → flange de referência cobre, sem alerta de flange."""
+        """Apêndice 2: pressão baixa → flange de referência cobre, sem ALERTA de reforço."""
         r = self._post(pressao_projeto_bar=10, temperatura_projeto_c=150)
-        self.assertNotContains(r, "Apêndice 2")
+        self.assertNotContains(r, "Reforce o flange")
 
     def test_data_sheet_densidade_fluido_reprova_espessura(self):
         """UG-21 end-to-end: a densidade do fluido informada no data sheet entra na checagem —
@@ -587,3 +595,32 @@ class RTExposicoesTests(TestCase):
     def test_rt_exposicoes_info_vazio_sem_dims(self):
         from apps.tema_templates.services import rt_exposicoes_info
         self.assertEqual(rt_exposicoes_info({}), [])
+
+
+class MemorialASMETests(TestCase):
+    """Memória de cálculo ASME: documenta as verificações + procedência (certificação)."""
+
+    def test_memorial_inclui_s_com_procedencia_e_ug27(self):
+        from apps.tema_templates.services import memorial_asme
+        m = memorial_asme("BEU", {"classe_casco": "CS", "pressao_projeto_bar": 50,
+                                  "temperatura_projeto_c": 150, "rt_escopo": "Total",
+                                  "diametro_casco_mm": 764, "esp_casco_mm": 9.5, "corrosao_mm": 3})
+        blob = " ".join(str(e) for e in m)
+        self.assertIn("UG-27", blob)
+        self.assertIn("2025", blob)          # procedência do S citada (rastreabilidade)
+        self.assertIn("138", blob)           # S do CS (SA-516 GR70) @150°C = 138 MPa
+
+    def test_memorial_vazio_sem_pressao(self):
+        from apps.tema_templates.services import memorial_asme
+        self.assertEqual(memorial_asme("BEU", {}), [])
+
+    def test_memorial_inclui_ug32_apendice2_e_rt(self):
+        from apps.tema_templates.services import memorial_asme
+        m = memorial_asme("BEU", {"classe_casco": "CS", "pressao_projeto_bar": 50,
+                                  "temperatura_projeto_c": 150, "rt_escopo": "Total",
+                                  "diametro_casco_mm": 764, "esp_casco_mm": 9.5, "corrosao_mm": 3,
+                                  "comprimento_casco_mm": 1631})
+        blob = " ".join(e["item"] for e in m)
+        self.assertIn("UG-32", blob)         # tampo 2:1
+        self.assertIn("Apêndice 2", blob)    # flange de corpo
+        self.assertIn("Radiografia", blob)   # RT por exposições (Seção V)

@@ -304,6 +304,73 @@ def rt_exposicoes_info(cleaned):
         return []
 
 
+def memorial_asme(designacao, cleaned):
+    """Memória de cálculo ASME estruturada (anexo de certificação): lista de verificações, cada
+    uma com valores e PROCEDÊNCIA normativa. Vazio se não há pressão de projeto."""
+    from pricing_engine.asme import (interp_s, tensao_admissivel, CLASSE_SPEC, procedencia,
+                                      eficiencia_junta, t_min_ug27)
+    try:
+        p = pressao_total_projeto(cleaned)
+        if not p:
+            return []
+        casco = cleaned.get("classe_casco", "CS")
+        temp = float(cleaned.get("temperatura_projeto_c") or 40)
+        D = float(cleaned.get("diametro_casco_mm") or 0)
+        esp = float(cleaned.get("esp_casco_mm") or 0)
+        CA = float(cleaned.get("corrosao_mm") if cleaned.get("corrosao_mm") is not None else 3.0)
+        e = eficiencia_junta(cleaned.get("rt_escopo", "Total"))
+        liga = liga_para_asme(casco)
+        if liga:
+            spec, s, fonte = liga["spec"], interp_s(liga["s_curva"], temp), liga["procedencia"]
+        else:
+            spec = CLASSE_SPEC.get((casco or "CS").upper())
+            s, fonte = tensao_admissivel(spec, temp), procedencia(spec)
+        memo = [{"item": "Pressão de projeto (UG-21)", "norma": "ASME VIII Div.1 UG-21",
+                 "valor": f"{p:.2f} bar (projeto + coluna estática do fluido)"}]
+        if s:
+            memo.append({"item": "Tensão admissível (S)", "norma": "ASME II-D",
+                         "fonte": fonte or "—", "valor": f"{s:.0f} MPa @ {temp:g}°C — {spec}"})
+            t = t_min_ug27(p * 0.1, D + 2 * CA, s, e)
+            if t is not None:
+                treq = t + CA
+                status = "CRÍTICO" if (esp and esp < treq) else "OK"
+                memo.append({"item": "Espessura mínima do casco (UG-27)",
+                             "norma": "ASME VIII Div.1 UG-27", "fonte": fonte or "—", "status": status,
+                             "valor": f"t_mín={t:.1f}mm; t_req={treq:.1f}mm (c/ corrosão {CA:g}mm); "
+                                      f"E={e:g}; informado {esp:g}mm"})
+            # tampo 2:1 (UG-32)
+            from pricing_engine.asme import t_min_ug32_tampo
+            tt = t_min_ug32_tampo(p * 0.1, D + 2 * CA, s, e, "elipsoidal")
+            if tt is not None:
+                memo.append({"item": "Espessura mínima do tampo 2:1 (UG-32)",
+                             "norma": "ASME VIII Div.1 UG-32", "fonte": fonte or "—",
+                             "valor": f"t_mín={tt:.1f}mm; t_req={tt + CA:.1f}mm (c/ corrosão {CA:g}mm)"})
+        # flange de corpo (Apêndice 2)
+        from pricing_engine.flange_corpo import t_min_flange_corpo
+        geo = _flange_corpo_seed(designacao)
+        if geo and s:
+            bore, od, esp_ref = geo
+            tf = t_min_flange_corpo(p, bore, od, s)
+            if tf is not None:
+                st = "REFORÇAR" if tf > esp_ref else "OK"
+                memo.append({"item": "Flange de corpo (Apêndice 2)",
+                             "norma": "ASME VIII Div.1 Ap. 2", "status": st,
+                             "valor": f"t_mín≈{tf:.0f}mm; referência do gabarito {esp_ref:g}mm "
+                                      f"(estimativa, gaxeta espiralada padrão)"})
+        # radiografia por nº de exposições (Seção V Art.2)
+        from pricing_engine.rt_exposicoes import exposicoes_equipamento
+        L = float(cleaned.get("comprimento_casco_mm") or 0)
+        if L and D:
+            r = exposicoes_equipamento(L, D)
+            memo.append({"item": "Radiografia — exposições (Seção V Art.2)",
+                         "norma": "ASME Seção V Art.2",
+                         "valor": f"~{r['total']} exposições ({r['longitudinal']} long + "
+                                  f"{r['circunferencial']} circ) — estimativa"})
+        return memo
+    except (TypeError, ValueError):
+        return []
+
+
 def _flange_corpo_seed(designacao):
     """(bore, od, esp_ref) do flange de corpo 'FLANGE PRINCIPAL' do seed da designação. None se
     não houver."""
