@@ -49,6 +49,29 @@
 </section>
 {% endif %}
 
+{% if memorial %}
+<section class="g-section" style="margin-top:12px">
+  <div class="g-section-head"><span>Memória de cálculo ASME</span></div>
+  <div class="g-section-body">
+    <table class="g-table" style="width:100%;border-collapse:collapse">
+      <thead><tr><th style="text-align:left">Verificação</th><th style="text-align:left">Resultado</th>
+        <th style="text-align:left">Norma / Fonte</th></tr></thead>
+      <tbody>
+      {% for e in memorial %}
+        <tr style="border-top:1px solid var(--g-line,#ddd)">
+          <td>{{ e.item }}{% if e.status %} <b>[{{ e.status }}]</b>{% endif %}</td>
+          <td class="mono">{{ e.valor }}</td>
+          <td style="font-size:.85rem">{{ e.norma }}{% if e.fonte %}<br><span style="color:#777">{{ e.fonte }}</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p style="font-size:.8rem;color:#777;margin-top:8px">Anexo de apoio à certificação — não substitui o
+      memorial do PE responsável. Itens de estimativa estão marcados.</p>
+  </div>
+</section>
+{% endif %}
+
 {% if custo %}
 <section class="g-section" style="margin-top:12px">
   <div class="g-section-head" style="display:flex;align-items:center;gap:12px">
