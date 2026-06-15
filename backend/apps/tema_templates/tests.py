@@ -206,6 +206,28 @@ class ComposeViewTests(TestCase):
         self.assertGreater(inox["custo_mao_obra"], cs["custo_mao_obra"])
         self.assertAlmostEqual(inox["custo_material"], cs["custo_material"], places=2)
 
+    def test_classes_inconel_monel_distintas(self):
+        """#2 (Wellington): Inconel e Monel são classes separadas, com fatores próprios; o
+        Inconel é mais caro/forte que o Monel; NIQUEL segue como alias (= Inconel)."""
+        from apps.tema_templates.services import LIGA_FATOR, PRECO_FATOR, CLASSE_DENSIDADE
+        from pricing_engine.asme import CLASSE_SPEC, tensao_admissivel
+        # specs distintas + S da edição licenciada 2025
+        self.assertEqual(CLASSE_SPEC["INCONEL"], "SB-443 N06625")
+        self.assertEqual(CLASSE_SPEC["MONEL"], "SB-127 N04400")
+        self.assertEqual(CLASSE_SPEC["NIQUEL"], CLASSE_SPEC["INCONEL"])  # alias de compat
+        self.assertAlmostEqual(tensao_admissivel("SB-443 N06625", 150), 217, places=0)
+        self.assertAlmostEqual(tensao_admissivel("SB-127 N04400", 40), 129, places=0)
+        # Inconel mais caro e mais difícil de usinar/soldar que o Monel
+        self.assertGreater(PRECO_FATOR["INCONEL"], PRECO_FATOR["MONEL"])
+        self.assertGreater(LIGA_FATOR["INCONEL"], LIGA_FATOR["MONEL"])
+        self.assertNotEqual(CLASSE_DENSIDADE["INCONEL"], CLASSE_DENSIDADE["MONEL"])
+
+    def test_form_aceita_inconel_monel(self):
+        """A UI oferece Inconel e Monel como classes selecionáveis no data sheet."""
+        r = self._post(classe_casco="INCONEL", classe_feixe="MONEL")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Custo total")
+
     def test_fluido_corrosivo_tubos_espelha_metalurgia_no_cabecote(self):
         """A2 (Wellington): corrosivo=Tubos → cabeçote herda a liga do feixe (custa mais)."""
         from apps.tema_templates.services import estimate_complete

@@ -15,20 +15,24 @@ COSTABLE = set(designacoes_disponiveis())
 # fator multiplicador de horas de caldeiraria/solda por classe metalúrgica (#3 agy).
 # Aço-carbono = 1,0 (referência). Defaults de engenharia EDITÁVEIS — não medidos.
 # Aplicado POR LADO (feixe/casco) → suporta construção bimetálica (feixe inox + casco CS).
+# INCONEL (Ni-Cr-Mo) e MONEL (Ni-Cu) são classes distintas (#2 Wellington); NIQUEL = alias de
+# compat (= Inconel). Fatores de engenharia EDITÁVEIS — não medidos.
 LIGA_FATOR = {
-    "CS": 1.0, "INOX": 1.4, "DUPLEX": 1.7, "NIQUEL": 2.3,
+    "CS": 1.0, "INOX": 1.4, "DUPLEX": 1.7, "INCONEL": 2.3, "MONEL": 2.0, "NIQUEL": 2.3,
 }
-# densidade por classe (kgf/mm³) p/ ajuste de peso do material (níquel ~12% mais pesado).
+# densidade por classe (kgf/mm³): Inconel 625 ~8,44; Monel 400 ~8,80.
 CLASSE_DENSIDADE = {
-    "CS": 7.85e-6, "INOX": 7.93e-6, "DUPLEX": 7.80e-6, "NIQUEL": 8.80e-6,
+    "CS": 7.85e-6, "INOX": 7.93e-6, "DUPLEX": 7.80e-6,
+    "INCONEL": 8.44e-6, "MONEL": 8.80e-6, "NIQUEL": 8.44e-6,
 }
 # fator de PREÇO/kg da matéria-prima por classe vs aço-carbono (#agy 1.C — material é ~70%
 # do custo de liga nobre). Multiplicadores típicos de mercado, EDITÁVEIS — não cotados.
 PRECO_FATOR = {
-    "CS": 1.0, "INOX": 4.5, "DUPLEX": 6.0, "NIQUEL": 12.0,
+    "CS": 1.0, "INOX": 4.5, "DUPLEX": 6.0, "INCONEL": 13.0, "MONEL": 9.0, "NIQUEL": 13.0,
 }
 LIGA_CHOICES = [("CS", "Aço Carbono"), ("INOX", "Aço Inox (300/400)"),
-                ("DUPLEX", "Duplex / Superduplex"), ("NIQUEL", "Liga de Níquel (Inconel…)")]
+                ("DUPLEX", "Duplex / Superduplex"),
+                ("INCONEL", "Inconel 625 (Ni-Cr-Mo)"), ("MONEL", "Monel 400 (Ni-Cu)")]
 
 
 def _metalurgia(cleaned):

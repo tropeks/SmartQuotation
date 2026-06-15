@@ -63,14 +63,19 @@ def procedencia(spec: str) -> str | None:
     return f"{p['norma']} {p['edicao']}, Tab {p['tabela']}{ln}"
 
 # classe metalúrgica do app → especificação representativa para lookup de S (chapa de casco).
+# INCONEL (Ni-Cr-Mo) e MONEL (Ni-Cu) são classes distintas (#2 Wellington); NIQUEL fica como
+# ALIAS de compatibilidade p/ cotações antigas (= Inconel, a liga de níquel mais comum aqui).
 CLASSE_SPEC = {"CS": "SA-516 GR 70", "INOX": "SA-240 304",
-               "DUPLEX": "SA-240 S31803", "NIQUEL": "SB-443 N06625"}
+               "DUPLEX": "SA-240 S31803",
+               "INCONEL": "SB-443 N06625", "MONEL": "SB-127 N04400",
+               "NIQUEL": "SB-443 N06625"}
 
 # eficiência de junta E por escopo de radiografia (Wellington, ASME UW-12).
 E_POR_RT = {"Total": 1.00, "Parcial": 0.85, "Isento": 0.70}
 
 # temperatura limite de projeto (°C) p/ aviso de fluência/análise sênior.
-TEMP_LIMITE = {"CS": 370, "INOX": 425, "DUPLEX": 425, "NIQUEL": 540}
+TEMP_LIMITE = {"CS": 370, "INOX": 425, "DUPLEX": 425,
+               "INCONEL": 540, "MONEL": 480, "NIQUEL": 540}
 
 
 def tensao_admissivel(spec: str, temp_c: float) -> float | None:
