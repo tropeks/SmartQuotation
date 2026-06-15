@@ -160,6 +160,16 @@ class ComposeViewTests(TestCase):
         r = self._post(pressao_projeto_bar=10, temperatura_projeto_c=150, esp_casco_mm=9.5)
         self.assertNotContains(r, "CRÍTICO")
 
+    def test_flange_corpo_apendice2_alerta_alta_pressao(self):
+        """Apêndice 2: pressão alta exige flange de corpo mais espesso que a referência → alerta."""
+        r = self._post(pressao_projeto_bar=40, temperatura_projeto_c=150)
+        self.assertContains(r, "Apêndice 2")
+
+    def test_flange_corpo_sem_alerta_baixa_pressao(self):
+        """Apêndice 2: pressão baixa → flange de referência cobre, sem alerta de flange."""
+        r = self._post(pressao_projeto_bar=10, temperatura_projeto_c=150)
+        self.assertNotContains(r, "Apêndice 2")
+
     def test_a1_duplex_procedencia(self):
         """A1: duplex tem S (ASME II-D 2025 licenciada) → verifica espessura e cita a procedência
         (rastreabilidade exigida p/ certificação ASME)."""
@@ -449,3 +459,22 @@ class LigaCadastroTests(TestCase):
         from apps.tema_templates.services import _fator_liga, LIGA_FATOR
         lf, dens, pf = _fator_liga("INOX")
         self.assertEqual(lf, LIGA_FATOR["INOX"])
+
+
+class FlangeCorpoTests(TestCase):
+    """Flange de corpo (ASME VIII Apêndice 2) — módulo puro de espessura mínima."""
+
+    def test_t_min_sobe_com_pressao_e_bate_gabarito(self):
+        from pricing_engine.flange_corpo import t_min_flange_corpo, fator_Y
+        self.assertGreater(fator_Y(1076 / 914), 10)        # anel fino → Y alto
+        t10 = t_min_flange_corpo(10, 914, 1076, 138)       # SA-105 S=138
+        t30 = t_min_flange_corpo(30, 914, 1076, 138)
+        self.assertGreater(t30, t10)                       # mais pressão → mais espesso
+        # o flange real do gabarito (104mm) corresponde a ~28 bar: 30 bar dá ~109mm
+        self.assertGreater(t30, 104)
+
+    def test_s_menor_exige_flange_mais_espesso(self):
+        from pricing_engine.flange_corpo import t_min_flange_corpo
+        forte = t_min_flange_corpo(30, 914, 1076, 138)     # CS
+        fraca = t_min_flange_corpo(30, 914, 1076, 95.7)    # inox 304 @200°C
+        self.assertGreater(fraca, forte)

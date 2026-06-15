@@ -270,3 +270,55 @@ def layout_avisos(designacao, cleaned):
                             cabecote=rear)
     except Exception:
         return []
+
+
+def _flange_corpo_seed(designacao):
+    """(bore, od, esp_ref) do flange de corpo 'FLANGE PRINCIPAL' do seed da designação. None se
+    não houver."""
+    import json
+    import os
+    from pricing_engine import permutador_quote as pq
+    path = os.path.join(os.path.dirname(pq.__file__), "seeds",
+                        f"{(designacao or '').lower()}_materiais.json")
+    try:
+        mats = json.load(open(path, encoding="utf-8"))["materiais"]
+    except Exception:
+        return None
+    for m in mats:
+        if "FLANGE PRINCIPAL" in (m.get("label") or "").upper():
+            d = m.get("dims") or {}
+            if d.get("ID") and d.get("OD") and d.get("ESP."):
+                return float(d["ID"]), float(d["OD"]), float(d["ESP."])
+    return None
+
+
+def flange_corpo_avisos(designacao, cleaned):
+    """Alerta do flange de corpo (ASME VIII Apêndice 2): se a espessura mínima exigida pela
+    pressão de projeto exceder a referência do gabarito, avisa que precisa reforçar. Vazio = ok.
+    Usa a tensão admissível S da metalurgia do casco (cadastro do tenant → fallback)."""
+    from pricing_engine.flange_corpo import t_min_flange_corpo
+    from pricing_engine.asme import interp_s, tensao_admissivel, CLASSE_SPEC
+    try:
+        p = float(cleaned.get("pressao_projeto_bar") or 0)
+        if not p:
+            return []
+        geo = _flange_corpo_seed(designacao)
+        if not geo:
+            return []
+        bore, od, esp_ref = geo
+        temp = float(cleaned.get("temperatura_projeto_c") or 40)
+        casco = cleaned.get("classe_casco", "CS")
+        liga = liga_para_asme(casco)
+        s = (interp_s(liga["s_curva"], temp) if liga
+             else tensao_admissivel(CLASSE_SPEC.get((casco or "CS").upper()), temp))
+        if not s:
+            return []
+        t_req = t_min_flange_corpo(p, bore, od, s)
+        if t_req and t_req > esp_ref:
+            return [f"⚠️ Flange de corpo: espessura mínima estimada (ASME VIII Apêndice 2) ="
+                    f" {t_req:.0f}mm > referência do gabarito {esp_ref:g}mm. Reforce o flange de"
+                    f" corpo p/ esta pressão ({p:g}bar). [estimativa — gaxeta espiralada padrão"
+                    f" m=3,0/y=69; confirmar gaxeta e parafusos com a engenharia]"]
+        return []
+    except Exception:
+        return []
