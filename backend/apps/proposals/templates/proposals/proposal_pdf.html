@@ -55,6 +55,24 @@
   <div class="price"><span class="l">Preço de Venda</span>
     <span class="v">R$ {{ q.preco_com_impostos|floatformat:2 }}</span></div>
 
+  {% if memorial %}
+  <h2>Anexo — Memória de cálculo ASME</h2>
+  <table>
+    <thead><tr><th>Verificação</th><th>Resultado</th><th>Norma / Fonte</th></tr></thead>
+    <tbody>
+    {% for e in memorial %}
+      <tr>
+        <td>{{ e.item }}{% if e.status %} [{{ e.status }}]{% endif %}</td>
+        <td>{{ e.valor }}</td>
+        <td>{{ e.norma }}{% if e.fonte %} — {{ e.fonte }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p style="font-size:8pt;color:#666">Anexo de apoio à certificação — não substitui o memorial do
+    engenheiro responsável. Itens de estimativa estão marcados.</p>
+  {% endif %}
+
   <h2>Condições</h2>
   <p>{{ p.terms_text }}</p>
   <p>{{ p.closing_text }}</p>

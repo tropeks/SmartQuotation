@@ -94,14 +94,17 @@ def _chrome_bin() -> str | None:
     return None
 
 
+def _pdf_context(proposal: Proposal) -> dict:
+    """Contexto do template da proposta (inclui a memória de cálculo ASME como anexo)."""
+    q = proposal.quotation
+    return {"p": proposal, "q": q, "itens": q.itens.all(), "data": date.today(),
+            "memorial": proposal_memorial(q)}
+
+
 def generate_pdf(proposal: Proposal) -> str:
     """Renderiza a proposta como HTML (design G) e converte para PDF.
     Usa WeasyPrint se disponível, senão chrome headless --print-to-pdf."""
-    q = proposal.quotation
-    html = render_to_string("proposals/proposal_pdf.html", {
-        "p": proposal, "q": q,
-        "itens": q.itens.all(), "data": date.today(),
-    })
+    html = render_to_string("proposals/proposal_pdf.html", _pdf_context(proposal))
     out = os.path.join(_media_dir(), f"{proposal.number}.pdf")
     try:
         from weasyprint import HTML  # lazy (libs de sistema)
@@ -164,6 +167,22 @@ def generate_docx(proposal: Proposal) -> str:
     pr.bold = True
     pr.font.size = Pt(14)
 
+    memorial = proposal_memorial(q)
+    if memorial:
+        doc.add_heading("ANEXO — Memória de cálculo ASME", level=1)
+        mt = doc.add_table(rows=1, cols=3)
+        mt.style = "Light Grid Accent 1"
+        mh = mt.rows[0].cells
+        for i, h in enumerate(("Verificação", "Resultado", "Norma / Fonte")):
+            mh[i].text = h
+        for e in memorial:
+            row = mt.add_row().cells
+            row[0].text = e["item"] + (f" [{e['status']}]" if e.get("status") else "")
+            row[1].text = e.get("valor", "")
+            row[2].text = e.get("norma", "") + (f" — {e['fonte']}" if e.get("fonte") else "")
+        doc.add_paragraph("Anexo de apoio à certificação — não substitui o memorial do "
+                          "engenheiro responsável. Itens de estimativa estão marcados.")
+
     doc.add_heading("CONDIÇÕES", level=1)
     doc.add_paragraph(proposal.terms_text)
     doc.add_paragraph(proposal.closing_text)
@@ -185,3 +204,13 @@ def generate(proposal: Proposal) -> Proposal:
     proposal.generated_at = timezone.now()
     proposal.save()
     return proposal
+
+
+def proposal_memorial(quotation):
+    """Memória de cálculo ASME da cotação (só p/ equipamento completo/permutador). [] p/ feixe.
+    Anexo de certificação que acompanha a proposta — reusa tema_templates.memorial_asme."""
+    if getattr(quotation, "scope", None) != "complete":
+        return []
+    inp = quotation.inputs or {}
+    from apps.tema_templates.services import memorial_asme
+    return memorial_asme(inp.get("designacao", ""), inp)
