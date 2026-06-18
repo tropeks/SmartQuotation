@@ -642,3 +642,16 @@ class AsmeDataDrivenTests(TestCase):
         self.assertIn("L22", procedencia("SB-443 N06625"))
         for spec in ("SA-516 GR 70", "SA-240 304", "SA-240 S31803", "SB-443 N06625"):
             self.assertIn("2025", procedencia(spec))
+
+    def test_inox_dormentes_pinados_na_linha_conservadora(self):
+        """304L/316L têm 2 linhas no DB (alta vs conservadora). Trava a CONSERVADORA, conferida
+        contra o PDF da ASME II-D 2025 (304L=p151 L1; 316L=p135 L26)."""
+        from pricing_engine.asme import tensao_admissivel as S, procedencia
+        # 304L conservador (não a linha alta 115/115/110)
+        for t, exp in [(40, 115), (100, 97.0), (200, 81.2)]:
+            self.assertAlmostEqual(S("SA-240 304L", t), exp, places=1, msg="304L")
+        # 316L conservador (não a linha alta 115/115/109)
+        for t, exp in [(40, 115), (100, 96.3), (200, 81.2)]:
+            self.assertAlmostEqual(S("SA-240 316L", t), exp, places=1, msg="316L")
+        self.assertIn("L1", procedencia("SA-240 304L"))
+        self.assertIn("L26", procedencia("SA-240 316L"))
