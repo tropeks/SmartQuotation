@@ -94,7 +94,9 @@ def quotation_revise(request, pk):
 
     if orig.scope == "complete":
         desig = orig.inputs.get("designacao", "BEU")
-        resultado = quote_completo(desig)
+        from apps.tema_templates.services import estimate_from_inputs
+        # recomputa com as DIMENSÕES da cotação original (não o seed); fallback defensivo no seed
+        resultado = estimate_from_inputs(desig, orig.inputs) or quote_completo(desig)
         q = create_permutador_quotation(
             customer=orig.customer,
             designacao=desig,

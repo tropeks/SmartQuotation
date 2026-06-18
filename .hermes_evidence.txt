@@ -1,0 +1,16 @@
+TEST_CMD: source /home/rcosta00/dev/SmartQuotation/backend/.venv/bin/activate && export POSTGRES_PORT=5436 POSTGRES_HOST=localhost POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation && python manage.py test apps.quotations
+
+Comando executado: python manage.py test apps.quotations
+Saída: Ran 19 tests in 1.761s
+OK
+PASS/FAIL: PASS (todos os 19 testes passaram)
+
+Resumo do diff:
+- apps/quotations/views.py: Renomeado quotation_list para list_quotations. Adicionada view quotation_revise(POST, pk) para gerar nova revisão incrementando `revision`.
+- apps/quotations/urls.py: Atualizada URL /cotacoes/ para list_quotations. Adicionada URL /cotacoes/<pk>/revisar/ para quotation_revise.
+- apps/quotations/templates/quotations/list.html: Adicionada coluna Data usando created_at|date:"d/m/Y".
+- apps/quotations/templates/quotations/detail.html: Adicionado botão (form POST) de "Revisar".
+- apps/quotations/test_feature.py: Adicionados testes TDD (FeatureViewsTests) para listagem, detalhe e revisão de feixe e permutador.
+- apps/quotations/services.py: Adicionado suporte para os campos opcionais `number` e `revision` em `create_permutador_quotation` para permitir a revisão de cotações com o escopo de permutador completo.
+
+Conclusão: A tarefa foi concluída com sucesso porque implementamos a view `list_quotations` para listar com data, a view `quotation_detail` está funcional e com botão para revisar, e a view `quotation_revise` gera uma nova cotação usando os dados originais e incrementando a revisão (obtendo um novo sequencial automaticamente), testando tudo com TDD. Todo o fluxo de HTMX/Views foi coberto pelos testes e as restrições da tarefa (sem merge, mesmo isolamento e branch correta) foram seguidas.

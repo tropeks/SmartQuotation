@@ -421,3 +421,19 @@ def flange_corpo_avisos(designacao, cleaned):
         return []
     except Exception:
         return []
+
+
+def estimate_from_inputs(designacao, cleaned):
+    """Recomputa custo/preço do permutador a partir de inputs salvos (revisão de cotação),
+    reconstruindo dims_override/params/metalurgia como o data sheet faz. None se inviável."""
+    from apps.tema_templates.forms import PermutadorDataSheetForm
+    form = PermutadorDataSheetForm(cleaned)
+    if not form.is_valid():
+        return None
+    cd = form.cleaned_data
+    override, fc = form.to_dims_override()
+    params = _physical_params(designacao, cd)
+    liga, dens, preco = _metalurgia(cd)
+    return estimate_complete(designacao, dims_override=override, fator_correcao_mo=fc,
+                             params=params, liga_por_lado=liga, dens_por_lado=dens,
+                             preco_por_lado=preco, corrosivo=cd.get("fluido_corrosivo", "Tubos"))
