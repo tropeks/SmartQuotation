@@ -2,7 +2,13 @@
 {% block title %}{{ q.number }} — {{ q.title }}{% endblock %}
 {% block content %}
 <div class="eyebrow">COT · Detalhe</div>
-<div class="q-number">{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></div>
+<div class="q-number" style="display: flex; justify-content: space-between; align-items: center;">
+  <div>{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></div>
+  <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline; margin: 0;">
+    {% csrf_token %}
+    <button type="submit" class="q-btn">Revisar</button>
+  </form>
+</div>
 <p class="mono" style="color:var(--g-gray-1)">{{ q.customer.company_name }} · {{ q.get_scope_display }} · {{ q.get_status_display }}</p>
 
 <div class="stat-row" style="margin-top:12px">
