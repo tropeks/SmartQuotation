@@ -624,3 +624,21 @@ class MemorialASMETests(TestCase):
         self.assertIn("UG-32", blob)         # tampo 2:1
         self.assertIn("Apêndice 2", blob)    # flange de corpo
         self.assertIn("Radiografia", blob)   # RT por exposições (Seção V)
+
+
+class AsmeDataDrivenTests(TestCase):
+    """Guarda anti-drift: a tabela S carregada do JSON ASME 2025 (refactor data-driven) DEVE
+    produzir os valores validados — pega se o DB/mapping trocar um valor de segurança."""
+
+    def test_specs_ativos_batem_valores_validados(self):
+        from pricing_engine.asme import (tensao_admissivel as S, procedencia,
+                                          TENSAO_ADMISSIVEL_MPA)
+        self.assertEqual(len(TENSAO_ADMISSIVEL_MPA), 14)        # nenhum spec perdido
+        for spec, t, exp in [("SA-516 GR 70", 150, 138), ("SA-240 304", 150, 103),
+                             ("SA-240 S31803", 150, 171), ("SA-240 S32205", 150, 180),
+                             ("SB-443 N06625", 150, 217), ("SB-127 N04400", 40, 129)]:
+            self.assertAlmostEqual(S(spec, t), exp, places=0, msg=spec)
+        # Inconel = GRADE 1 (L22, 217), NÃO Grade 2 (L14, ~161) — decisão documentada
+        self.assertIn("L22", procedencia("SB-443 N06625"))
+        for spec in ("SA-516 GR 70", "SA-240 304", "SA-240 S31803", "SB-443 N06625"):
+            self.assertIn("2025", procedencia(spec))

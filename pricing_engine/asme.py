@@ -11,46 +11,57 @@ from __future__ import annotations
 
 # tensão admissível S (MPa) por especificação × temperatura (°C). CS: platô até ~250°C, cai
 # depois (não é platô até 343 — ASME II-D 2025). Specs em CLASSE_SPEC (ativos) rebaseados 2025.
-TENSAO_ADMISSIVEL_MPA = {
-    # CS SA-516 GR 70 (Tab 1A L43, 2025): platô 138 até 250°C, cai a 136@300/128@350/123@375.
-    "SA-516 GR 70": {40: 138, 200: 138, 250: 138, 300: 136, 325: 132, 350: 128, 375: 123},
-    "SA-516 GR 60": {40: 118, 343: 118},
-    "SA-106 GR B": {40: 118, 343: 118},
-    "SA-105":      {40: 138, 343: 138},
-    # INOX SA-240 304 (Tab 1A L3, 2025) — valores conservadores (a L4 alternativa é maior, mas
-    # só permitida onde deformação ligeiramente maior é aceitável; usamos a conservadora):
-    "SA-240 304":  {40: 138, 65: 126, 100: 113, 150: 103, 200: 95.7, 250: 89.9, 300: 85.9},
-    "SA-240 304L": {40: 115, 65: 108, 100: 98.6, 150: 89.6, 200: 81.4, 250: 75.8, 300: 71.0},
-    "SA-240 316":  {40: 138, 65: 134, 100: 122, 150: 110, 200: 100, 250: 92.4, 300: 86.2},
-    "SA-240 316L": {40: 115, 65: 110, 100: 101, 150: 91.7, 200: 83.4, 250: 77.2, 300: 72.4},
-    "SA-213 304L": {40: 115, 65: 108, 100: 98.6, 150: 89.6, 200: 81.4, 250: 75.8, 300: 71.0},
-    "SA-249 316L": {40: 97.7, 65: 93.5, 100: 85.8, 150: 77.9, 200: 70.8, 250: 65.6, 300: 61.5},
-    # === Ligas especiais: extraídas da ASME BPVC II-D MÉTRICA 2025 (edição LICENCIADA fornecida
-    # pelo Wellington). Valores oficiais por temperatura métrica nativa; procedência (norma/
-    # edição/tabela/linha) em S_PROCEDENCIA p/ rastreabilidade de certificação ASME. ===
-    # Duplex 2205 S31803 (SA-240, Tab 1A L12) — DEFAULT da classe DUPLEX (S menor = conservador):
-    "SA-240 S31803": {40: 177, 65: 177, 100: 177, 150: 171, 200: 165, 250: 161, 300: 160},
-    # Duplex 2205 S32205 (SA-240, Tab 1A L21) — usar só se o MTR confirmar a UNS (S maior):
-    "SA-240 S32205": {40: 187, 65: 187, 100: 187, 150: 180, 200: 174, 250: 170, 300: 168},
-    # Inconel 625 (SB-443 N06625, Tab 1B L22) GRADE 1 recozido — chapa p/ vaso em temps usuais
-    # (Grade 2 sol. ann. = 184 MPa, p/ alta temp). Liga Ni-Cr-Mo:
-    "SB-443 N06625": {40: 217, 65: 217, 100: 217, 150: 217, 200: 217, 250: 217, 300: 205},
-    # Monel 400 (SB-127 N04400, Tab 1B L10, recozido). Liga Ni-Cu, DISTINTA do Inconel:
-    "SB-127 N04400": {40: 129, 65: 121, 100: 112, 150: 105, 200: 101, 250: 101, 300: 101},
+import json
+import os
+from pathlib import Path
+
+_DB_PATH = Path(__file__).parent / "seeds" / "asme_materials_2025.json"
+ASME_DB = []
+if _DB_PATH.exists():
+    with open(_DB_PATH, "r", encoding="utf-8") as f:
+        ASME_DB = json.load(f).get("data", [])
+
+TENSAO_ADMISSIVEL_MPA = {}
+S_PROCEDENCIA = {}
+
+_SPEC_MAPPING = {
+    "SA-516 GR 70": {"spec_no": "SA-516", "grade": "70"},
+    "SA-516 GR 60": {"spec_no": "SA-516", "grade": "60"},
+    "SA-106 GR B": {"spec_no": "SA-106", "grade": "B"},
+    "SA-105": {"spec_no": "SA-105", "grade": ""},
+    "SA-240 304": {"spec_no": "SA-240", "grade": "304", "line_no": "3"},
+    # inox dormentes: pinar a linha CONSERVADORA (o DB tem 2 linhas, a alta = deformação
+    # ligeiramente maior aceitável; usamos a conservadora, igual ao SA-240 304 L3).
+    "SA-240 304L": {"spec_no": "SA-240", "grade": "304L", "line_no": "1"},
+    "SA-240 316": {"spec_no": "SA-240", "grade": "316", "line_no": "12"},
+    "SA-240 316L": {"spec_no": "SA-240", "grade": "316L", "line_no": "26"},
+    "SA-213 304L": {"spec_no": "SA-213", "grade": "TP304L"},
+    "SA-249 316L": {"spec_no": "SA-249", "grade": "TP316L", "line_no": "28"},
+    "SA-240 S31803": {"spec_no": "SA-240", "uns_no": "S31803"},
+    "SA-240 S32205": {"spec_no": "SA-240", "uns_no": "S32205"},
+    "SB-443 N06625": {"spec_no": "SB-443", "grade": "1", "line_no": "22"},
+    "SB-127 N04400": {"spec_no": "SB-127", "condition": "Annealed", "line_no": "10"},
 }
 
-# procedência normativa de cada valor de S — rastreabilidade exigida p/ certificação ASME
-# (norma + edição + tabela + linha). TODOS os 4 specs ativos (CLASSE_SPEC: CS=SA-516 GR70,
-# INOX=SA-240 304, DUPLEX=S31803, NÍQUEL=N06625) rastreáveis à edição LICENCIADA 2025.
-# Specs sem entrada = dados de referência (formas não-chapa), não selecionáveis pelas classes.
-S_PROCEDENCIA = {
-    "SA-516 GR 70": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "43"},
-    "SA-240 304":   {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "3"},
-    "SA-240 S31803": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "12"},
-    "SA-240 S32205": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1A", "linha": "21"},
-    "SB-443 N06625": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1B", "linha": "22"},
-    "SB-127 N04400": {"norma": "ASME BPVC II-D (M)", "edicao": "2025", "tabela": "1B", "linha": "10"},
-}
+for mat_name, f_args in _SPEC_MAPPING.items():
+    for r in ASME_DB:
+        if r.get("audit_info", {}).get("extraction_status") != "OK": continue
+        match = True
+        if "spec_no" in f_args and r["spec_no"].replace("–", "-") != f_args["spec_no"]: match = False
+        if "grade" in f_args and r["grade"] != f_args["grade"]: match = False
+        if "uns_no" in f_args and r.get("uns_no") != f_args["uns_no"]: match = False
+        if "line_no" in f_args and str(r["line_no"]) != f_args["line_no"]: match = False
+        if "condition" in f_args and f_args["condition"].lower() not in r.get("condition", "").lower(): match = False
+            
+        if match:
+            TENSAO_ADMISSIVEL_MPA[mat_name] = {float(k): float(v) for k, v in r["allowable_stress_MPa"].items()}
+            S_PROCEDENCIA[mat_name] = {
+                "norma": "ASME BPVC II-D (M)",
+                "edicao": "2025",
+                "tabela": r["table"].replace("Table ", ""),
+                "linha": str(r["line_no"])
+            }
+            break
 
 
 def procedencia(spec: str) -> str | None:
