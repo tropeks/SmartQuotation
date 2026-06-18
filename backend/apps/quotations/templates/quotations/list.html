@@ -7,7 +7,7 @@
 <section class="g-section" style="margin-top:8px">
   <div class="g-section-body" style="padding:0">
     <table class="g-table">
-      <thead><tr><th>Número</th><th>Cliente</th><th>Título</th><th>Status</th><th class="num">Preço de Venda</th></tr></thead>
+      <thead><tr><th>Número</th><th>Cliente</th><th>Título</th><th>Status</th><th>Data</th><th class="num">Preço de Venda</th></tr></thead>
       <tbody>
         {% for q in quotations %}
         <tr onclick="location.href='{% url 'quotations:detail' q.pk %}'" style="cursor:pointer">
@@ -15,10 +15,11 @@
           <td>{{ q.customer.company_name }}</td>
           <td>{{ q.title }}</td>
           <td>{{ q.get_status_display }}</td>
+          <td>{{ q.created_at|date:"d/m/Y" }}</td>
           <td class="num">R$ {{ q.preco_com_impostos|floatformat:2 }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação ainda. Crie a primeira.</td></tr>
+        <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação ainda. Crie a primeira.</td></tr>
         {% endfor %}
       </tbody>
     </table>
