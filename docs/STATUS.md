@@ -1,8 +1,8 @@
 # SmartQuotation — Status do Projeto
 
-> Documento vivo. Última revisão: tier de design mecânico + rebase normativo ASME 2025
-> (colaboração com @WellToMcAt). **34 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
-> 73 testes no app do data sheet · CI verde em todos os PRs.**
+> Documento vivo. Última revisão: 2026-06-19 — pós-sprint Hermes (histórico + API REST + ligas DB).
+> (colaboração com @WellToMcAt). **41 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
+> 150 testes na suíte Django · CI verde em todos os PRs.**
 
 ---
 
@@ -69,6 +69,24 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 
 > Correções que só a edição licenciada revelou: **Inconel −9%** (236,5→217) e **Duplex S32205 −10%**
 > (206,9→187) — as fontes web superestimavam. CS não é platô até 343°C (cai a ~129).
+
+---
+
+## 3b. Camada de produto + normativo — CONCLUÍDA (PRs #35–41)
+
+| Item | Status |
+|---|:--:|
+| Ciclo **cotação → proposta** do permutador (persiste Quotation + gera Proposal) | ✅ (#36) |
+| **Memória de cálculo ASME** embutida no PDF e DOCX da proposta (c/ procedência S) | ✅ (#37–38) |
+| **Tabela S data-driven** — `seeds/asme_materials_2025.json` (3213 regs II-D 2025) + flanges SO/BL | ✅ (#39) |
+| Teste de guarda **anti-drift** 304L/316L (linha conservadora) | ✅ (#40) |
+| **Histórico de cotações** — listar / reabrir / revisar (revision+1, recomputa c/ dims originais) | ✅ (#41) |
+| **API REST (DRF)** — `GET /api/cotacoes/` + `POST /api/permutador/estimate/` (tenant-scoped) | ✅ (#41) |
+| **Catálogo de ligas do DB ASME** — `seed_ligas_from_db` importa 3213 chapas como inativas | ✅ (#41) |
+
+> Sprint #41 (multi-agente Hermes): refutação cross-engine pegou **2 bugs reais** de input cru
+> (revise + API estimate passavam dimensões cruas → motor devolvia custo do gabarito; R$297k de
+> diferença num caso). Fix: `tema_templates.services.estimate_from_inputs(designacao, inputs)`.
 
 ---
 
