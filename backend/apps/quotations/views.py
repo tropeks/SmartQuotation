@@ -3,6 +3,7 @@ Views do data sheet do feixe — session auth + HTMX (recálculo ao vivo).
 Vertical slice: criar feixe -> recompute (preview ao vivo) -> salvar -> detalhe (EAP + preço).
 """
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.quotations.models import Quotation, Customer
@@ -38,7 +39,7 @@ def _preview(inputs: dict):
 
 
 @login_required
-def quotation_list(request):
+def list_quotations(request):
     quotations = Quotation.objects.select_related("customer").all()
     return render(request, "quotations/list.html", {"quotations": quotations})
 
@@ -80,3 +81,47 @@ def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
     itens = (q.itens.prefetch_related("materiais", "operacoes")).all()
     return render(request, "quotations/detail.html", {"q": q, "itens": itens})
+
+
+@login_required
+@require_POST
+def quotation_revise(request, pk):
+    orig = get_object_or_404(Quotation, pk=pk)
+    
+    from apps.quotations.adapter import recompute
+    from apps.quotations.services import create_permutador_quotation
+    from pricing_engine.permutador_quote import quote_completo
+
+    if orig.scope == "complete":
+        desig = orig.inputs.get("designacao", "BEU")
+        from apps.tema_templates.services import estimate_from_inputs
+        # recomputa com as DIMENSÕES da cotação original (não o seed); fallback defensivo no seed
+        resultado = estimate_from_inputs(desig, orig.inputs) or quote_completo(desig)
+        q = create_permutador_quotation(
+            customer=orig.customer,
+            designacao=desig,
+            cleaned=orig.inputs,
+            resultado=resultado,
+            created_by=request.user,
+            title=orig.title,
+            revision=orig.revision + 1
+        )
+        q.status = "draft"
+        q.save()
+    else:
+        from apps.quotations.services import next_number
+        q = Quotation.objects.create(
+            number=next_number(),
+            revision=orig.revision + 1,
+            customer=orig.customer,
+            title=orig.title,
+            scope=orig.scope,
+            status="draft",
+            inputs=orig.inputs,
+            fator_preco=orig.fator_preco,
+            impostos_pct=orig.impostos_pct,
+            created_by=request.user
+        )
+        recompute(q)
+
+    return redirect("quotations:detail", pk=q.pk)

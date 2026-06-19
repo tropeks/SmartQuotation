@@ -49,7 +49,7 @@ def _inputs_serializaveis(cleaned: dict) -> dict:
 
 @transaction.atomic
 def create_permutador_quotation(customer, designacao, cleaned, resultado,
-                                created_by=None, title=None) -> Quotation:
+                                created_by=None, title=None, number=None, revision=0) -> Quotation:
     """Persiste uma cotação de PERMUTADOR COMPLETO a partir do resultado do motor
     (tema_templates.estimate_complete / pricing_engine.quote_completo). Fecha o elo
     motor → Quotation, de onde a proposta é gerada. Cria itens a partir de por_secao."""
@@ -57,7 +57,7 @@ def create_permutador_quotation(customer, designacao, cleaned, resultado,
     desig = (designacao or "").upper()
     custo_mo = float(resultado.get("custo_mao_obra", 0)) + float(resultado.get("custo_servicos", 0))
     q = Quotation.objects.create(
-        number=next_number(), customer=customer, scope="complete",
+        number=number or next_number(), revision=revision, customer=customer, scope="complete",
         title=title or f"Permutador {desig}", created_by=created_by,
         inputs={**_inputs_serializaveis(cleaned), "designacao": desig},
         custo_material=_d(resultado.get("custo_material")),
