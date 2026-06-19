@@ -1,71 +1,43 @@
 # SmartQuotation — Resumo p/ o Wellington (engenharia de domínio)
 
 **De:** Romulo + assistente de dev · **Para:** @WellToMcAt
-**Assunto:** o motor de custeio do permutador completo está pronto até onde dá sem você. Preciso das suas decisões de engenharia pra destravar a próxima camada.
+**Assunto:** o tier de design mecânico está **fechado** — tudo funciona marcado como *provisório*. Preciso da sua **chancela de PE** em 7 itens pra promover os números de "estimativa de engenharia" para "valor de norma".
 
 ---
 
-## 1. O que o motor já faz (validado contra os seus gabaritos)
+## 1. O que ficou pronto desde a última conversa
 
-Construímos o custeio **paramétrico** do trocador casco-tubo completo, a partir das suas 3 planilhas (Feixe, BEU, BEM). Ele reproduz os gabaritos reais a **0,0% de erro**:
+O motor já não é só custeio — ele agora **verifica o projeto** e **documenta a memória de cálculo ASME** na proposta (PDF e DOCX). Entregue e validado:
 
-| Equipamento | Motor | Gabarito |
-|---|---:|---:|
-| Feixe tubular (136 tubos) | — | R$ 35.353 / venda R$ 44.192 (−2,9%) |
-| **BEU** (bonnet + casco + feixe-U) | R$ 128.160 | R$ 128.160 ✓ |
-| **BEM** (espelho fixo, tubos retos) | R$ 119.295 | R$ 119.295 ✓ |
+- **UG-27 / UG-32** — espessura mínima de casco e tampo 2:1 (com corrosão CA); alerta crítico se a espessura informada for menor que a norma.
+- **Apêndice 2** — espessura mínima do flange de corpo (girth flange).
+- **UG-21** — a pressão de projeto passa a incluir a coluna estática do fluido (ρ·g·h).
+- **RT por nº de exposições** — estimativa de chapas de filme (Seção V, Art. 2).
+- **Tabela S data-driven** — 3213 materiais da **ASME II-D MÉTRICA 2025** (sua edição licenciada); cada valor S carrega **norma + edição + tabela + linha** e é citado na memória de cálculo.
+- **Cadastro de ligas editável por tenant** — dá pra adicionar/ativar liga nova sem deploy.
 
-E agora **responde às dimensões** do projeto (não é mais "replay" do gabarito). O orçamentista informa nº de tubos, comprimento, OD/parede, nº de chicanas, diâmetro/espessura do casco, nº de passes, classe metalúrgica — e o custo recalcula:
-
-- **Matéria-prima:** peso recomputado pela geometria de cada peça (tubo, virola, espelho, chicana, tampo, anel, pescoço, flange).
-- **Mão de obra:** horas escalam pelo driver físico de cada operação (furação ∝ nº tubos, soldas ∝ comprimento/diâmetro, etc.), **com parcela de setup fixo**.
-- **Ensaios/serviços:** raio-X e ultrassom ∝ metros de solda; tratamento térmico e consumíveis ∝ massa; teste hidrostático ∝ volume.
-- **Soldas** crescem com a **espessura²** (chapa grossa = mais passes).
-- **Metalurgia bimetálica:** feixe e casco podem ter ligas diferentes (ex.: feixe inox + casco aço-carbono) — afeta horas, densidade e preço/kg.
-- **Aviso de arranjo:** se o feixe não couber no casco informado (regra de pitch TEMA), ele alerta.
-
-> Tudo isso já é cotável hoje na tela "Permutador". O motor é honesto: cada aproximação está marcada na própria interface.
+> Tudo cotável hoje. Cada aproximação está marcada como estimativa na própria tela e no código.
 
 ---
 
-## 2. O que precisa de VOCÊ — decisões que não dá pra "chutar"
+## 2. O que precisa do seu AVAL (você é o PE responsável)
 
-Estas são de **segurança/processo** — só você tem os números certos. Dividi em **(A) bloqueadores** do próximo salto e **(B) calibrações** que melhoram a precisão.
+Os 7 itens abaixo **já estão funcionando** — falta sua chancela técnica pra deixarem de ser provisórios.
 
-### (A) Bloqueadores do próximo tier
-
-**A1 — Pressão de projeto → espessura.**
-Hoje o orçamentista digita a espessura do casco. O ideal é o motor calcular a espessura mínima (casco, tampo, espelho) a partir da **pressão de projeto**.
-- A ENGEMATEX usa qual norma/prática? (ASME VIII Div.1 UG-27? TEMA?)
-- Você tem as **tensões admissíveis (S)** por material × temperatura que usam? Ou prefere manter a espessura como entrada manual (e o motor só valida)?
-
-**A2 — Lado do cabeçote (qual fluido é corrosivo).**
-O cabeçote é molhado pelo fluido **dos tubos**. Se o tubo for inox por corrosão, o cabeçote também é. Hoje tratamos o cabeçote como "lado casco".
-- Existe regra fixa, ou é caso a caso? Vale a pena um campo "fluido corrosivo: tubos / casco / ambos"?
-
-**A3 — Flanges por classe de pressão.**
-Hoje o flange entra com preço de catálogo fixo.
-- Querem que o motor puxe peso/dimensão de tabela (ASME B16.5 / B16.47) por **rating × diâmetro**? Você tem essa tabela na mão (vimos abas "FLANGES WN" e "KGF FL" nas planilhas)?
-
-### (B) Calibrações — confirmar/corrigir os números (não bloqueiam, mas melhoram)
-
-Coloquei **defaults de engenharia** (chutes razoáveis) onde não tínhamos seu dado. **Me corrija os que estiverem fora:**
-
-| Item | Default atual | Confere? |
+| # | Item | O que confirmar |
 |---|---|---|
-| **Fator de liga na MO** (vs aço-carbono) | inox **1,4** · duplex **1,7** · níquel **2,3** | ? |
-| **Fator de preço/kg do material** (vs CS) | inox **4,5×** · duplex **6×** · níquel **12×** | ? |
-| **Parcela de setup fixo** (furação/calandragem têm setup alto) | furação **20%** · solda/ensaio **10%** · calandragem ~30% | ? |
-| **Perda (bruto/líquido)** por família | espelho/chicana **25%** · tampo **20%** · anel **15%** · tubo/chapa **10%** | ? (o agy sugeriu espelho perto de 40%) |
-| **Folga feixe↔casco** por cabeçote | fixo/U **12-15mm** · flutuante (S/T/P/W) **45-75mm** | ? |
-| **Escopo de radiografia** | hoje escala linear com metros de solda | total vs spot (RT1-4) muda muito? |
-| **Nº de passes de referência** (BEU/BEM) | assumi **2** | ? |
-| **Gross-up de ICMS** | calibrado p/ bater seu gabarito (não é fórmula fiscal pura) | qual o regime tributário real? |
+| 1 | **Valores S 2025** | Extraí da sua edição licenciada (BPVC.II.D.M-2025) via parser. Confere a extração e dá o aval de PE pro uso documental? |
+| 2 | **UNS do duplex** | Default = **S31803** (conservador). Pelo MTR, é S31803 ou **S32205**? Muda o S em ~6%. |
+| 3 | **Inconel Grade** | Usei **Grade 1 recozido** (217 MPa). Grade 2 solubilizado (184) é p/ alta temp. OK manter Grade 1? |
+| 4 | **Gaxeta do flange (Ap. 2)** | Default = **espiralada m=3,0 / y=69 MPa**; furação proporcional ao flange. Confirma gaxeta e disposição dos parafusos? |
+| 5 | **Coluna estática (UG-21)** | Altura ≈ **Ø do casco** (trocador horizontal); densidade default = água. OK pros casos de vocês? Vertical/kettle precisaria de altura própria. |
+| 6 | **RT por exposições** | Filme útil = **315 mm** (350 − 10% sobreposição); nº de costuras circunferenciais default = 2. Confirma valores de chão de fábrica? |
+| 7 | **Fatores MO/preço por liga** | Inconel **2,3× / 13×** e Monel **2,0× / 9×** são defaults de engenharia (editáveis no cadastro). Refinar com dado real quando der. |
 
 ---
 
 ## 3. Como responder
 
-Não precisa mexer em nada técnico. Pode só responder no grupo, item por item (ex.: *"A1: usamos ASME, tenho as tensões; B-fator de liga inox é 1,5"*). Cada número seu substitui um default e melhora a precisão; cada decisão de (A) destrava um pedaço novo do motor.
+Não precisa mexer em nada técnico. Responde no grupo, item por item — ex.: *"#2: é S31803 mesmo; #3: Grade 1 OK; #4: gaxeta confere"*. Cada confirmação sua tira um "provisório" do sistema.
 
-**Pergunta-chave pra começar:** dos bloqueadores (A1/A2/A3), qual é o mais importante pro dia a dia da cotação de vocês?
+**Pra começar:** dos 7, o mais urgente pra liberar cotação certificável é o **#1 (aval dos valores S)** — os outros são refinamentos. Se topar fechar só esse hoje, já destrava muita coisa.
