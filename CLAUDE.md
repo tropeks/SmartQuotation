@@ -30,8 +30,8 @@ pricing_engine/        # MOTOR de custeio — Python PURO (zero Django). Não ed
   folga feixe↔casco por cabeçote TEMA (permutador_layout.FOLGA_POR_CABECOTE).
   Metalurgia POR LADO (feixe|casco): liga_por_lado escala MO do lado, dens_por_lado escala
   peso do material do lado (suporta bimetálico: feixe inox + casco CS). Scrap por família
-  (beu_geometry.PERDA_POR_FAMILIA: disco/perfurado 1,25 etc.). DEFERIDO p/ Wellington:
-  pressão→espessura ASME VIII (tensão admissível) e tabela de flanges B16.5.
+  (beu_geometry.PERDA_POR_FAMILIA: disco/perfurado 1,25 etc.). Pressão→espessura ASME VIII
+  (UG-27/32, Ap.2, UG-21) e flanges implementados; defaults VALIDADOS pelo PE (Wellington, 2026-06-19).
 
 backend/               # Django 5.2 + django-tenants (schema-per-tenant) + session auth (sem JWT)
   apps/tenants/        # Tenant/Domain/Plan (public). provision_tenant cria schema isolado.

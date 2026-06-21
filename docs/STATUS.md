@@ -1,6 +1,6 @@
 # SmartQuotation — Status do Projeto
 
-> Documento vivo. Última revisão: 2026-06-19 — pós-sprint Hermes (histórico + API REST + ligas DB).
+> Documento vivo. Última revisão: 2026-06-19 — **aval do PE (Wellington) nos 7 itens normativos**.
 > (colaboração com @WellToMcAt). **41 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
 > 150 testes na suíte Django · CI verde em todos os PRs.**
 
@@ -90,25 +90,25 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 
 ---
 
-## 4. ⚠️ PRECISA DO SEU AVAL, WELLINGTON (você é o PE responsável)
+## 4. ✅ VALIDADO PELO PE — Wellington (@WellToMcAt), 2026-06-19
 
-Tudo abaixo está **funcionando e marcado como estimativa na UI/código** — falta sua chancela técnica.
+Os 7 itens foram **chancelados pelo engenheiro responsável**. Os defaults deixaram de ser provisórios.
 
-| # | Item | O que confirmar |
+| # | Item | Aval do PE (2026-06-19) |
 |---|---|---|
-| 1 | **Valores S 2025** | Extraí da SUA edição licenciada (BPVC.II.D.M-2025) via parser. Confirmar a extração e dar aval de PE p/ uso documental. |
-| 2 | **UNS do duplex** | Default = **S31803** (conservador). Pelo MTR, é S31803 ou S32205? Muda o S em ~6%. |
-| 3 | **Inconel Grade** | Usei **Grade 1 recozido** (217 MPa, temps usuais). Grade 2 solubilizado (184) é p/ alta temp. OK? |
-| 4 | **Flange de corpo (Apêndice 2)** | Gaxeta default = **espiralada m=3,0 / y=69 MPa**; furação proporcional ao flange. Confirmar gaxeta e disposição dos parafusos. |
-| 5 | **Pressão estática (UG-21)** | Altura da coluna ≈ **Ø do casco** (trocador horizontal); densidade default = água. OK p/ os casos de vocês? Vertical/kettle precisaria de altura própria. |
-| 6 | **RT por exposições** | Comprimento útil de filme = **315 mm** (filme 350 − 10% sobreposição); nº de costuras circunferenciais default = 2. Confirmar valores de chão de fábrica. |
-| 7 | **Fatores MO/preço por liga** | Inconel 2,3×/13× e Monel 2,0×/9× são defaults de engenharia (editáveis no cadastro de ligas). Refinar com dados reais quando der. |
+| 1 | **Valores S 2025** | ✅ Avalizado — usar a extração da edição licenciada (BPVC.II.D.M-2025) para uso documental. |
+| 2 | **UNS do duplex** | ✅ **S31803** confirmado (já era o default conservador). |
+| 3 | **Inconel Grade** | ✅ **Grade 1 recozido** (217 MPa) confirmado. |
+| 4 | **Flange de corpo (Apêndice 2)** | ✅ Gaxeta **espiralada m=3,0 / y=69 MPa** confere; furação proporcional ao flange. |
+| 5 | **Pressão estática (UG-21)** | ✅ OK — casos da ENGEMATEX são **horizontais**, coluna ≈ Ø do casco, densidade água. |
+| 6 | **RT por exposições** | ✅ Valores confirmados — filme útil **315 mm**, 2 costuras circunferenciais. |
+| 7 | **Fatores MO/preço por liga** | ✅ Seguir com os **defaults** (Inconel 2,3×/13×, Monel 2,0×/9×); o orçamentista ajusta por caso no momento da cotação. |
 
 ---
 
 ## 5. Limitações honestas (declaradas na UI e no código)
 
-1. Fatores de **setup, liga, preço, scrap** e os defaults acima são *de engenharia* — editáveis, não medidos.
+1. Os defaults da seção 4 estão **validados pelo PE** (2026-06-19); fatores de **setup, preço e scrap** seguem editáveis por caso.
 2. A escala é **calibrada a 1 job real** por designação (sem 2º gabarito p/ validar linearidade).
 3. Verificações ASME são **alertas de apoio**, não substituem o memorial de cálculo do PE.
 
