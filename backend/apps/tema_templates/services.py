@@ -298,8 +298,8 @@ def rt_exposicoes_info(cleaned):
             return []
         r = exposicoes_equipamento(L, D)
         return [f"ℹ️ RT estimado: ~{r['total']} exposições ({r['longitudinal']} longitudinal "
-                f"+ {r['circunferencial']} circunferencial). [estimativa Seção V Art.2 — filme "
-                f"útil {FILME_UTIL_MM:g}mm; confirmar com a engenharia]"]
+                f"+ {r['circunferencial']} circunferencial). [Seção V Art.2 — filme "
+                f"útil {FILME_UTIL_MM:g}mm, validado pelo PE]"]
     except (TypeError, ValueError):
         return []
 
@@ -356,7 +356,7 @@ def memorial_asme(designacao, cleaned):
                 memo.append({"item": "Flange de corpo (Apêndice 2)",
                              "norma": "ASME VIII Div.1 Ap. 2", "status": st,
                              "valor": f"t_mín≈{tf:.0f}mm; referência do gabarito {esp_ref:g}mm "
-                                      f"(estimativa, gaxeta espiralada padrão)"})
+                                      f"(gaxeta espiralada padrão m=3,0/y=69, validada PE)"})
         # radiografia por nº de exposições (Seção V Art.2)
         from pricing_engine.rt_exposicoes import exposicoes_equipamento
         L = float(cleaned.get("comprimento_casco_mm") or 0)
@@ -416,8 +416,8 @@ def flange_corpo_avisos(designacao, cleaned):
         if t_req and t_req > esp_ref:
             return [f"⚠️ Flange de corpo: espessura mínima estimada (ASME VIII Apêndice 2) ="
                     f" {t_req:.0f}mm > referência do gabarito {esp_ref:g}mm. Reforce o flange de"
-                    f" corpo p/ esta pressão ({p:g}bar). [estimativa — gaxeta espiralada padrão"
-                    f" m=3,0/y=69; confirmar gaxeta e parafusos com a engenharia]"]
+                    f" corpo p/ esta pressão ({p:g}bar). [gaxeta espiralada padrão"
+                    f" m=3,0/y=69, validada pelo PE; ajuste por caso se a gaxeta diferir]"]
         return []
     except Exception:
         return []
