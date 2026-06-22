@@ -7,8 +7,10 @@ Formação de preço (parametrizável por tenant — vem da cadeia de custos / w
    custo_total → × fator_preco (markup) → preço_sem_imposto → × (1+impostos%) → preço_com_imposto
 """
 from __future__ import annotations
+import math
 from .feixe_inputs import FeixeInputs
 from .operations_registry import REGISTRY
+from . import process_params as pp
 from .components import componentes_from_inputs, peso_componente, peso_liquido_componente
 from .wbs import Cotacao, Item, MateriaPrima, OperacaoExecutada
 
@@ -30,6 +32,51 @@ _COMP_ITEM = {
     "PLG1-19": "MON-01", "PLG2-20": "MON-01", "OLH1-W1": "ALC-01",
     "OLH2-W2": "ALC-01", "POR-8": "MON-01",
 }
+
+_RATE_OVERRIDE = {
+    "OP-ESP-TRACAR-FUROS": ("TRACAR_FUROS_ESPELHO", 80),
+    "OP-ESP-FURAR": ("FURAR_ESPELHO", 110),
+    "OP-ESP-ESCAREAR": ("ESCAREAR_ESPELHO", 110),
+    "OP-ESP-ALARGAR": ("ALARGAR_ESPELHO", 110),
+    "OP-ESP-GROOVES": ("GROOVES_ESPELHO", 110),
+    "OP-ESP-FUROS-TIR": ("USINAR_FUROS_TIRANTES", 110),
+    "OP-ESP-TRACAR-RASGOS": ("TRACAR_RASGOS", 80),
+    "OP-ESP-ACABAMENTO": ("ACABAMENTO_ESPELHO", 40),
+    "OP-CHI-TRACAR-REC": ("CHICANA_TRACAR_RECORTAR", 90),
+    "OP-CHI-TRACAR-FUROS": ("TRACAR_FUROS_CHICANA", 80),
+    "OP-CHI-FURAR": ("FURAR_CHICANA", 110),
+    "OP-CHI-USINAR": ("CHICANA_USINAR", 150),
+    "OP-CHI-ESCAREAR": ("ESCAREAR_CHICANA", 110),
+    "OP-CHI-RECORTAR-ACAB": ("CHICANA_RECORTAR_ACABAMENTO", 130),
+    "OP-PREP-TIRANTES": ("PREPARAR_TIRANTES", 120),
+    "OP-INTRODUZIR-TUBOS": ("MONTAR_TUBOS", 40),
+    "OP-MON-TUBOS": ("MONTAR_TUBOS", 40),
+    "OP-GABARITAR": ("MONTAR_TUBOS", 40),
+    "OP-SOLDAR-RAIZ": ("SOLDAR_RAIZ", 90),
+    "OP-SOLDAR-ACAB": ("SOLDAR_ACABAMENTO", 90),
+    "OP-CURVAR-U": ("CURVAR_TUBO_U", 160),
+}
+
+
+def _apply_rate_override(op, custo: float, cost_chain) -> float:
+    if cost_chain is None or not custo:
+        return custo
+    if op.code == "OP-MANDRILAR":
+        return custo
+    spec = _RATE_OVERRIDE.get(op.code)
+    if not spec:
+        return custo
+    key, default_rate = spec
+    rate = cost_chain.hh(key, default_rate)
+    return custo * (rate / default_rate)
+
+
+def _mandrilar_custo(inp: FeixeInputs, cost_chain) -> float | None:
+    if cost_chain is None:
+        return None
+    hh = math.ceil(pp.get("MANDRILAR", pp.MANUAL) * inp.num_furos / 60 / 2) * inp.fator_correcao_mo
+    hm = hh * pp.get("MANDRILAR_HM_FATOR", pp.MANUAL)
+    return hh * cost_chain.hh("MANDRILAR", 120) + hm * cost_chain.hm("MANDRILAR", 80)
 
 
 def quote_feixe(inp: FeixeInputs, cost_chain=None,
@@ -75,9 +122,15 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
     for op in REGISTRY:
         try:
             aplic = op.applicable(inp)
-            custo = op.compute(inp) if aplic else 0.0
-        except Exception:
-            aplic, custo = False, 0.0
+            if aplic and op.code == "OP-MANDRILAR":
+                custo = _mandrilar_custo(inp, cost_chain)
+                if custo is None:
+                    custo = op.compute(inp)
+            else:
+                custo = op.compute(inp) if aplic else 0.0
+            custo = _apply_rate_override(op, custo, cost_chain)
+        except Exception as exc:
+            raise RuntimeError(f"Erro calculando operação {op.code} ({op.label})") from exc
         it = itens.get(op.item, itens["MON-01"])
         oe = OperacaoExecutada(op.code, op.label, aplicavel=aplic, custo_fixo=custo)
         if op.group in ("engenharia",):

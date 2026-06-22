@@ -56,8 +56,8 @@ class ProcessParameterLookupTests(TestCase):
             unidade="mm/min", descricao="avanço furadeira radial",
         )
         ProcessParameter.objects.create(
-            operacao="FURAR_ESPELHO", metodo="cnc", valor=None,
-            unidade="mm/min", descricao="PENDENTE",
+            operacao="FURAR_ESPELHO", metodo="cnc", valor=Decimal("97.5600"),
+            unidade="mm/min", descricao="avanço furação CNC",
         )
 
     def test_lookup_por_operacao_e_metodo(self):
@@ -65,9 +65,9 @@ class ProcessParameterLookupTests(TestCase):
         self.assertEqual(pp.valor, Decimal("40.0000"))
         self.assertEqual(pp.unidade, "mm/min")
 
-    def test_valor_nulo_pendente_permitido(self):
+    def test_valor_cnc_confirmado(self):
         pp = ProcessParameter.objects.get(operacao="FURAR_ESPELHO", metodo="cnc")
-        self.assertIsNone(pp.valor)
+        self.assertEqual(pp.valor, Decimal("97.5600"))
 
 
 class ChooseDrillMethodTests(TestCase):

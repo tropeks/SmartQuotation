@@ -100,7 +100,7 @@ def _metalurgia(cleaned):
 def tenant_cost_chain():
     """Monta a TenantCostChain do tenant (preços de material cifrados + fator de MO),
     reaproveitando o mesmo padrão do adapter de cotações. Sem dados → None (usa defaults)."""
-    from pricing_engine.rates import TenantCostChain
+    from pricing_engine.rates import TenantCostChain, op_key
     chain = TenantCostChain()
     try:
         from datetime import date
@@ -116,7 +116,16 @@ def tenant_cost_chain():
     except Exception:
         pass
     try:
-        from apps.engineering_params.models import TenantParamConfig
+        from datetime import date
+        from django.db import models
+        from apps.engineering_params.models import Rate, TenantParamConfig
+        hoje = date.today()
+        for r in (Rate.objects.filter(valid_from__lte=hoje)
+                  .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
+                  .order_by("valid_from")):
+            chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
+            if r.rate_hm is not None:
+                chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
         chain.fator_correcao_mo = float(TenantParamConfig.get_solo().fator_correcao_mo)
     except Exception:
         pass

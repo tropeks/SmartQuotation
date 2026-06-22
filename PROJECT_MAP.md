@@ -40,7 +40,8 @@ tests/validate_feixe.py ──► harness: feixe 136 tubos vs gabarito
 - ✅ Operações-driver: 4/4 exatas (furar 660, mandrilar 720, furar chicana 1650, soldar 630)
 - ✅ Material: 11/17 componentes, subtotal R$ 13.266 (~87% de ~15.319)
 - 🔨 FALTA: ~60 ops restantes + 6 itens menores + impostos/eng/ferramentas p/ fechar total
-- ⏳ PENDENTE DOMÍNIO (Wellington): fração de corte da chicana; comprimento do espaçador BWG; convenção de códigos (item/MP/op); valores CNC
+- ⏳ PENDENTE DOMÍNIO (Wellington): fração de corte da chicana; comprimento do espaçador BWG; convenção de códigos (item/MP/op)
+- ✅ CNC confirmado: furar espelho 97,56 mm/min; furar chicanas 83,34 mm/min; alargar espelho usa fallback conservador 70 mm/min
 
 ## 🧭 DECISÕES TRAVADAS (não re-litigar)
 Approach C (plataforma completa) · clone fundação Vitali (django-tenants) · HTMX+session auth ·
