@@ -29,7 +29,7 @@ class ProcessParameter:
 
 
 # Catálogo inicial extraído das fórmulas da planilha (valores radial/atual ENGEMATEX).
-# CNC entra com valor a definir junto ao Wellington (placeholder None = "pendente").
+# Avanços CNC confirmados com Wellington; alargamento usa fallback conservador radial.
 CATALOG: dict[tuple[str, str], ProcessParameter] = {}
 
 
@@ -50,10 +50,12 @@ _reg("SOLDAR_RAIZ", MANUAL, 40, "juntas/h", "taxa de soldagem passe raiz")
 _reg("SOLDAR_ACABAMENTO", MANUAL, 40, "juntas/h", "taxa de soldagem passe acabamento")
 _reg("CURVAR_TUBO_U", MANUAL, 20, "tubos/h", "curvamento ENGEMATEX")
 _reg("INTRODUZIR_TUBOS", MANUAL, 1.5, "min/tubo", "")
-# CNC placeholders (a definir com Wellington — avanço maior):
-_reg("FURAR_ESPELHO", CNC, None, "mm/min", "PENDENTE: avanço furação CNC")
-_reg("FURAR_CHICANA", CNC, None, "mm/min", "PENDENTE: avanço furação CNC")
-_reg("ALARGAR_ESPELHO", CNC, None, "mm/min", "PENDENTE: avanço alargamento CNC")
+# CNC — avanços validados pelo PE (Wellington, 2026-06-19):
+_reg("FURAR_ESPELHO", CNC, 97.56, "mm/min", "avanço furação espelho CNC (Wellington 2026-06-19)")
+_reg("FURAR_CHICANA", CNC, 83.34, "mm/min", "avanço furação chicanas CNC (Wellington 2026-06-19)")
+# ALARGAR_ESPELHO CNC ainda PENDENTE: usa o avanço radial (70) como fallback conservador — mais
+# lento → mais horas, nunca subestima o custo; trocar pelo valor real quando o Wellington confirmar.
+_reg("ALARGAR_ESPELHO", CNC, 70, "mm/min", "PENDENTE: fallback = avanço radial conservador")
 
 
 def choose_drill_method(num_holes: int, override: str | None = None,

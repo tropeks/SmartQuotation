@@ -9,10 +9,11 @@ Serviços do wizard de cadeia de custos (A1-c).
 from dataclasses import fields
 from datetime import date
 from decimal import Decimal
+from django.db import models
 
 from pricing_engine.feixe_inputs import FeixeInputs, caso_136_tubos
 from pricing_engine.feixe_quote import quote_feixe
-from pricing_engine.rates import TenantCostChain
+from pricing_engine.rates import TenantCostChain, op_key
 
 DEFAULT_FATOR_PRECO = 1.01377
 DEFAULT_IMPOSTOS = 23.303
@@ -39,6 +40,17 @@ def build_chain_from_db(fator_mo: float = 1.0,
                 chain.material_price[(mp.material.sigla.upper(), mp.forma.lower())] = float(mp.preco_brl_kg)
             except (TypeError, ValueError):
                 continue
+    except Exception:
+        pass
+    try:
+        from apps.engineering_params.models import Rate
+        hoje = date.today()
+        for r in (Rate.objects.filter(valid_from__lte=hoje)
+                  .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
+                  .order_by("valid_from")):
+            chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
+            if r.rate_hm is not None:
+                chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
     except Exception:
         pass
     return chain

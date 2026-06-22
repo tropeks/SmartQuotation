@@ -67,12 +67,21 @@ class PermutadorDataSheetForm(forms.Form):
 
     def to_dims_override(self):
         """Devolve (dims_override, fator_correcao_mo) a partir dos campos preenchidos."""
+        from apps.tema_templates.services import reference_inputs
+
         cd = self.cleaned_data
+        ref = reference_inputs(cd["designacao"])
+        ref_d = ref.get("diametro_casco_mm") or cd["diametro_casco_mm"]
+        largura_ratio = float(cd["diametro_casco_mm"]) / float(ref_d)
         override = {
             LABEL_TUBOS: {
                 "QUANTIDADE": cd["n_tubos"], "COMPR.": cd["comprimento_tubo_mm"],
                 "OD": cd["od_tubo_mm"], "ESP.": cd["esp_tubo_mm"],
             },
-            LABEL_VIROLA: {"COMPR.": cd["comprimento_casco_mm"]},
+            LABEL_VIROLA: {
+                "COMPR.": cd["comprimento_casco_mm"],
+                "ESP.": cd["esp_casco_mm"],
+                "_LARGURA_RATIO": largura_ratio,
+            },
         }
         return override, cd["fator_correcao_mo"]

@@ -18,6 +18,7 @@ import json
 import os
 
 from .beu_geometry import peso_liquido_geom, perda_familia, RHO
+from .rates import op_key
 
 _SEEDS = os.path.join(os.path.dirname(__file__), "seeds")
 
@@ -37,6 +38,8 @@ def gross_up_icms(impostos_pct: float) -> float:
     Fórmula fiscal real — calibrar 'na mão' (o antigo fator 0,97) mascarava a margem.
     Ex.: alíquota 9% → divisor 0,91. Para múltiplos tributos, somar as alíquotas efetivas.
     """
+    if impostos_pct < 0 or impostos_pct >= 100:
+        raise ValueError("impostos_pct deve estar no intervalo [0, 100).")
     return 1.0 / (1.0 - impostos_pct / 100.0)
 
 # família geométrica → forma de matéria-prima (chave da TenantCostChain.material_price)
@@ -241,11 +244,14 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
             if dims_override and m["label"] in dims_override:
                 seed_dims = m.get("dims", {})
                 dims = {**seed_dims, **dims_override[m["label"]]}
+                largura_ratio = dims.pop("_LARGURA_RATIO", None)
+                if largura_ratio is not None and dims.get("LARGURA"):
+                    dims["LARGURA"] = float(dims["LARGURA"]) * float(largura_ratio)
                 rho = _rho(m.get("material"))
                 liq_new = peso_liquido_geom(m["familia"], dims, rho=rho)
                 liq_seed = peso_liquido_geom(m["familia"], seed_dims, rho=rho)
                 if liq_new is not None:
-                    qtd = float(seed_dims.get("QUANTIDADE", 1) or 1)
+                    qtd = float(dims.get("QUANTIDADE", seed_dims.get("QUANTIDADE", 1)) or 1)
                     if m["familia"] in ("espelho", "perfurado", "disco"):
                         # peça circular cortada de chapa: usa a perda da FAMÍLIA (40% do
                         # Wellington), não a do gabarito — o bruto do gabarito embute folga de
@@ -284,7 +290,13 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
         liga = float(liga_lado.get(lado, 1.0)) if lado else 1.0
         if o["tipo"] == "mao_obra":
             ajuste = o.get("ajuste", 0.0)
-            base = o["preco_gabarito"] - ajuste        # parcela de MO (R$ a FC=1, ref)
+            base_rate = float(o.get("rate") or 0.0)
+            horas = float(o.get("horas") or 0.0)
+            if cost_chain is not None and base_rate and horas:
+                rate = cost_chain.hh_any((o["code"], o["label"], op_key(o["label"])), base_rate)
+                base = horas * rate
+            else:
+                base = o["preco_gabarito"] - ajuste    # parcela de MO (R$ a FC=1, ref)
             c = base * eff * liga * fc + ajuste
             custo_mo += c
         else:

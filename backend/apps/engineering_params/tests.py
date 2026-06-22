@@ -7,6 +7,7 @@ from decimal import Decimal
 # TenantTestCase cria um schema de tenant de teste e roda dentro dele
 # (tabelas de TENANT_APPS não existem no schema public).
 from django_tenants.test.cases import TenantTestCase as TestCase
+from django.test import SimpleTestCase
 
 from apps.engineering_params.models import ProcessParameter, Rate, TenantParamConfig
 from apps.engineering_params.selectors import choose_drill_method
@@ -56,8 +57,8 @@ class ProcessParameterLookupTests(TestCase):
             unidade="mm/min", descricao="avanço furadeira radial",
         )
         ProcessParameter.objects.create(
-            operacao="FURAR_ESPELHO", metodo="cnc", valor=None,
-            unidade="mm/min", descricao="PENDENTE",
+            operacao="FURAR_ESPELHO", metodo="cnc", valor=Decimal("97.5600"),
+            unidade="mm/min", descricao="avanço furação CNC",
         )
 
     def test_lookup_por_operacao_e_metodo(self):
@@ -65,9 +66,9 @@ class ProcessParameterLookupTests(TestCase):
         self.assertEqual(pp.valor, Decimal("40.0000"))
         self.assertEqual(pp.unidade, "mm/min")
 
-    def test_valor_nulo_pendente_permitido(self):
+    def test_valor_cnc_confirmado(self):
         pp = ProcessParameter.objects.get(operacao="FURAR_ESPELHO", metodo="cnc")
-        self.assertIsNone(pp.valor)
+        self.assertEqual(pp.valor, Decimal("97.5600"))
 
 
 class ChooseDrillMethodTests(TestCase):
@@ -108,3 +109,27 @@ class TenantParamConfigTests(TestCase):
         cfg.save()
         self.assertEqual(TenantParamConfig.objects.count(), 1)
         self.assertEqual(TenantParamConfig.get_solo().drill_method_threshold_holes, 700)
+
+
+class CncDrillFeedGuardTests(SimpleTestCase):
+    """Guarda anti-drift dos avanços CNC de furação (Wellington, 2026-06-19) no motor puro.
+    Trava a causa raiz do crash em espelho grande: nenhum avanço CNC pode voltar a ser None."""
+
+    def test_avancos_cnc_validados_pelo_pe(self):
+        from pricing_engine import process_params as pp
+        self.assertAlmostEqual(pp.get("FURAR_ESPELHO", pp.CNC), 97.56)
+        self.assertAlmostEqual(pp.get("FURAR_CHICANA", pp.CNC), 83.34)
+        # alargar ainda PENDENTE → fallback conservador = avanço radial (70), nunca subestima horas
+        self.assertAlmostEqual(pp.get("ALARGAR_ESPELHO", pp.CNC), 70)
+
+    def test_nenhum_avanco_cnc_de_furacao_e_none(self):
+        """>600 furos seleciona CNC; se algum avanço fosse None, a cotação quebraria."""
+        from pricing_engine import process_params as pp
+        for op in ("FURAR_ESPELHO", "FURAR_CHICANA", "ALARGAR_ESPELHO"):
+            self.assertIsNotNone(pp.get(op, pp.CNC), f"{op} CNC não pode ser None")
+
+    def test_furacao_cnc_nao_e_mais_lenta_que_radial(self):
+        """Sanidade física: o avanço CNC de furação ≥ radial (CNC não pode ser mais lento)."""
+        from pricing_engine import process_params as pp
+        for op in ("FURAR_ESPELHO", "FURAR_CHICANA"):
+            self.assertGreaterEqual(pp.get(op, pp.CNC), pp.get(op, pp.RADIAL))

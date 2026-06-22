@@ -10,6 +10,14 @@ Separação-chave: ProcessParameter gera HORAS (física); Rate converte HORAS �
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
+import re
+import unicodedata
+
+
+def op_key(value: str) -> str:
+    """Canonical operation key for tenant overrides."""
+    text = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^A-Z0-9]+", "_", text.upper()).strip("_")
 
 
 @dataclass
@@ -25,11 +33,24 @@ class TenantCostChain:
     fator_preco: float = 1.0          # markup final
     impostos_pct: float = 0.0         # % sobre preço (ICMS+PIS+COFINS...)
 
+    def __post_init__(self):
+        self.rate_hh = {op_key(k): v for k, v in self.rate_hh.items()}
+        self.rate_hm = {op_key(k): v for k, v in self.rate_hm.items()}
+
     def hh(self, operacao: str, default: float = 0.0) -> float:
-        return self.rate_hh.get(operacao, default)
+        key = op_key(operacao)
+        return self.rate_hh.get(key, default)
 
     def hm(self, operacao: str, default: float = 0.0) -> float:
-        return self.rate_hm.get(operacao, default)
+        key = op_key(operacao)
+        return self.rate_hm.get(key, default)
+
+    def hh_any(self, operacoes: list[str] | tuple[str, ...], default: float) -> float:
+        for op in operacoes:
+            key = op_key(op)
+            if key in self.rate_hh:
+                return self.rate_hh[key]
+        return default
 
     def price_kgf(self, material: str, forma: str) -> float:
         key = (material.strip().upper(), forma.strip().lower())

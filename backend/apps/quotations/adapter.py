@@ -9,11 +9,12 @@ pricing_engine permanece PURO (zero import Django). float -> Decimal na fronteir
 """
 from dataclasses import fields
 from decimal import Decimal
+from django.db import models
 from django.utils import timezone
 
 from pricing_engine.feixe_inputs import FeixeInputs, caso_136_tubos
 from pricing_engine.feixe_quote import quote_feixe
-from pricing_engine.rates import TenantCostChain
+from pricing_engine.rates import TenantCostChain, op_key
 from apps.quotations.models import QuotationItem, ItemMaterial, ItemOperation
 
 _FIELD_NAMES = {f.name for f in fields(FeixeInputs)}
@@ -63,7 +64,14 @@ def build_cost_chain(quotation) -> TenantCostChain:
         pass
     # fator de correção de MO (knob calibrado pelo back-solve)
     try:
-        from apps.engineering_params.models import TenantParamConfig
+        from apps.engineering_params.models import Rate, TenantParamConfig
+        hoje = date.today()
+        for r in (Rate.objects.filter(valid_from__lte=hoje)
+                  .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
+                  .order_by("valid_from")):
+            chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
+            if r.rate_hm is not None:
+                chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
         cfg = TenantParamConfig.get_solo()
         chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
     except Exception:
