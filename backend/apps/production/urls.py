@@ -8,4 +8,5 @@ urlpatterns = [
     path("ofs/<int:pk>/", views.ordem_detail, name="detail"),
     path("ofs/<int:pk>/transicao/", views.transition_ordem, name="transition"),
     path("cotacoes/<int:quotation_pk>/converter-of/", views.convert_quotation, name="convert"),
+    path("ofs/operacao/<int:op_pk>/apontar/", views.appoint, name="appoint"),
 ]

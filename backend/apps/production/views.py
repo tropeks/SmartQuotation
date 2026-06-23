@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.quotations.models import Quotation
-from apps.production.models import OrdemFabricacao
+from apps.production.models import OrdemFabricacao, OFOperation
 from apps.production import services
 
 
@@ -59,3 +59,23 @@ def transition_ordem(request, pk):
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("production:detail", pk=of.pk)
+
+
+@login_required
+@require_POST
+def appoint(request, op_pk):
+    op = get_object_or_404(OFOperation, pk=op_pk)
+    try:
+        services.log_production_entry(
+            op,
+            request.user,
+            request.POST.get("hours_hh") or 0,
+            request.POST.get("hours_hm") or 0,
+            request.POST.get("entry_date") or None,
+            request.POST.get("notes", ""),
+            request=request,
+        )
+        messages.success(request, "Apontamento registrado.")
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    return redirect("production:detail", pk=op.item.ordem_id)

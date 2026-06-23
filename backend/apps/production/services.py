@@ -1,11 +1,14 @@
 """Serviços de Ordem de Fabricação (H2.1)."""
+import math
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 from datetime import date
 
 from apps.production.models import (
-    OrdemFabricacao, OFItem, OFMaterial, OFOperation,
+    OrdemFabricacao, OFItem, OFMaterial, OFOperation, ProductionEntry,
+    ActualRate, ProductionObservation,
     STATUS_ABERTA, STATUS_LIBERADA, STATUS_EM_PRODUCAO,
     STATUS_CONCLUIDA, STATUS_CANCELADA,
 )
@@ -133,6 +136,7 @@ ALLOWED_TRANSITIONS = {
 }
 
 
+@transaction.atomic
 def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> OrdemFabricacao:
     """Transiciona uma OF para um novo status, validando a transição."""
     old_status = of.status
@@ -161,6 +165,9 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     of.save()
 
+    if new_status == STATUS_CONCLUIDA:
+        _close_out_observations(of)
+
     if request is not None:
         log_access(request, "transition", of, {"transition": f"{old_status}->{new_status}"})
 
@@ -181,3 +188,80 @@ def concluir(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
 
 def cancelar(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
     return transition(of, STATUS_CANCELADA, by=by, request=request)
+
+
+def _close_out_observations(of):
+    """No fechamento: grava observação imutável e atualiza ActualRate (R$/h) p/ cada op apontada."""
+    from decimal import Decimal
+    ops = OFOperation.objects.filter(item__ordem=of).prefetch_related("entries")
+    for op in ops:
+        if op.custo <= 0:
+            continue
+        actual_hh = sum((e.hours_hh for e in op.entries.all()), Decimal("0"))
+        if actual_hh <= 0:
+            continue  # leniente: sem apontamento / 0 horas -> sem observação (evita div/0)
+        observed_rate = (Decimal(op.custo) / Decimal(actual_hh)).quantize(Decimal("0.01"))
+        ProductionObservation.objects.create(
+            operacao=op.codigo_op, ordem=of, of_operation=op,
+            estimated_custo=op.custo, actual_hh=actual_hh, observed_rate=observed_rate,
+        )
+        _update_actual_rate(op.codigo_op, observed_rate)
+
+
+def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
+                         entry_date=None, notes="", request=None):
+    """Registra apontamento de tempo numa operação de OF liberada/em produção."""
+    from datetime import date as _date
+    from decimal import Decimal, InvalidOperation
+    status = of_operation.item.ordem.status
+    if status not in (STATUS_LIBERADA, STATUS_EM_PRODUCAO):
+        raise ValidationError(
+            f"Apontamento só é permitido em OF liberada ou em produção (status atual: {status})."
+        )
+    try:
+        hh = Decimal(str(hours_hh)) if hours_hh is not None else Decimal("0")
+        hm = Decimal(str(hours_hm)) if hours_hm is not None else Decimal("0")
+    except (InvalidOperation, ValueError, TypeError):
+        raise ValidationError("Horas inválidas.")
+    if hh < 0 or hm < 0:
+        raise ValidationError("Horas não podem ser negativas.")
+    entry = ProductionEntry.objects.create(
+        of_operation=of_operation,
+        operator=operator,
+        hours_hh=hh,
+        hours_hm=hm,
+        entry_date=entry_date or _date.today(),
+        notes=notes or "",
+    )
+    if request is not None:
+        log_access(request, "appoint", entry, {
+            "of_id": of_operation.item.ordem_id,
+            "of_operation_id": of_operation.pk,
+            "hours_hh": str(hours_hh),
+        })
+    return entry
+
+
+def _update_actual_rate(operacao: str, observed_rate):
+    """Upsert online (Welford) do agregado ActualRate (R$/h) de uma operação. Requer transação."""
+    from decimal import Decimal
+    ActualRate.objects.get_or_create(operacao=operacao)  # atômico: cria a linha se não existir
+    ar = ActualRate.objects.select_for_update().get(operacao=operacao)  # trava p/ o update
+    r = float(observed_rate)
+    n = ar.sample_count + 1
+    mean = float(ar.mean_rate)
+    m2 = float(ar.m2)
+    delta = r - mean
+    mean += delta / n
+    m2 += delta * (r - mean)
+    variance = m2 / n if n >= 1 else 0.0
+    stddev = math.sqrt(variance) if variance > 0 else 0.0
+    cv = (stddev / mean) if (mean > 0 and n >= 2) else 0.0
+    cv = min(max(cv, 0.0), 1.0)
+    confidence = (1 - cv) * min(n / 20.0, 1.0)
+    ar.sample_count = n
+    ar.mean_rate = Decimal(str(round(mean, 6)))
+    ar.m2 = Decimal(str(round(m2, 6)))
+    ar.confidence = Decimal(str(round(confidence, 4)))
+    ar.save()
+    return ar

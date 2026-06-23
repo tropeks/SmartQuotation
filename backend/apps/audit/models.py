@@ -63,6 +63,7 @@ class AccessLog(models.Model):
         ("revoke", "Revoke"),
         ("convert", "Convert"),
         ("transition", "Transition"),
+        ("appoint", "Appoint"),
     ]
 
     user = models.ForeignKey(
