@@ -7,3 +7,5 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+# Obriga a env var — falha ruidosamente se não estiver setada no deploy.
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")

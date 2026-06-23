@@ -32,6 +32,7 @@ SHARED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.admin",
     "django_celery_beat",
+    "axes",                           # brute-force protection (shared: caches por IP)
 ]
 
 # Apps de cada TENANT (isolamento por schema). Adicionados conforme construídos.
@@ -67,6 +68,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "axes.middleware.AxesMiddleware",  # deve vir após AuthenticationMiddleware
     "django.middleware.locale.LocaleMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -109,7 +111,10 @@ LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 10}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 # ─── Celery / Redis ───────────────────────────────────────────────────────────
@@ -131,7 +136,18 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # django-encrypted-model-fields (preços/margens cifrados)
-FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="zHengIv2_t3vYh0Qm6m6Y8oF1n0YH3y7wE7c0pXq3kM=")
+# Chave dev — gerada localmente, NÃO publicada. Produção DEVE sobrescrever via env var.
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="gq5BmjeBGD9Ji49jNTL6hSEj5woUlf515QRfBgcgSVU=")
+
+# ─── django-axes (brute-force protection) ────────────────────────────────────
+AXES_FAILURE_LIMIT = 5            # tentativas antes do lockout
+AXES_COOLOFF_TIME = 1             # horas de lockout
+AXES_LOCKOUT_PARAMETERS = ["ip_address"]
+AXES_RESET_ON_SUCCESS = True      # limpa contador após login bem-sucedido
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",  # deve ser primeiro
+    "django.contrib.auth.backends.ModelBackend",
+]
 
 # ─── DRF + OpenAPI ─────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
