@@ -1,4 +1,6 @@
 """Serviços de Ordem de Fabricação (H2.1)."""
+import math
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -6,6 +8,7 @@ from datetime import date
 
 from apps.production.models import (
     OrdemFabricacao, OFItem, OFMaterial, OFOperation, ProductionEntry,
+    ActualRate,
     STATUS_ABERTA, STATUS_LIBERADA, STATUS_EM_PRODUCAO,
     STATUS_CONCLUIDA, STATUS_CANCELADA,
 )
@@ -209,3 +212,29 @@ def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
             "hours_hh": str(hours_hh),
         })
     return entry
+
+
+def _update_actual_rate(operacao: str, observed_rate):
+    """Upsert online (Welford) do agregado ActualRate (R$/h) de uma operação. Requer transação."""
+    from decimal import Decimal
+    ar = ActualRate.objects.select_for_update().filter(operacao=operacao).first()
+    if ar is None:
+        ar = ActualRate(operacao=operacao)
+    r = float(observed_rate)
+    n = ar.sample_count + 1
+    mean = float(ar.mean_rate)
+    m2 = float(ar.m2)
+    delta = r - mean
+    mean += delta / n
+    m2 += delta * (r - mean)
+    variance = m2 / n if n >= 1 else 0.0
+    stddev = math.sqrt(variance) if variance > 0 else 0.0
+    cv = (stddev / mean) if (mean > 0 and n >= 2) else 0.0
+    cv = min(max(cv, 0.0), 1.0)
+    confidence = (1 - cv) * min(n / 20.0, 1.0)
+    ar.sample_count = n
+    ar.mean_rate = Decimal(str(round(mean, 2)))
+    ar.m2 = Decimal(str(round(m2, 6)))
+    ar.confidence = Decimal(str(round(confidence, 4)))
+    ar.save()
+    return ar

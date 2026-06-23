@@ -248,3 +248,17 @@ class ApontamentoTests(TenantTestCase):
         services.log_production_entry(self.op, self.user, Decimal("1.0"), Decimal("0"), self.today,
                                       request=self._request())
         self.assertTrue(AccessLog.objects.filter(action="appoint").exists())
+
+
+class ActualRateMathTests(TenantTestCase):
+    def test_welford_agrega_amostras(self):
+        from decimal import Decimal
+        from apps.production.models import ActualRate
+        # três R$/h observados: 100, 200, 300 -> mean 200
+        for r in (Decimal("100"), Decimal("200"), Decimal("300")):
+            services._update_actual_rate("FURAR_ESPELHO", r)
+        ar = ActualRate.objects.get(operacao="FURAR_ESPELHO")
+        self.assertEqual(ar.sample_count, 3)
+        self.assertAlmostEqual(float(ar.mean_rate), 200.0, places=2)
+        self.assertGreater(float(ar.confidence), 0.0)
+        self.assertLessEqual(float(ar.confidence), 1.0)
