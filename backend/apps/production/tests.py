@@ -125,6 +125,19 @@ class OrdemFabricacaoTests(TenantTestCase):
         self.assertEqual(of.status, STATUS_CANCELADA)
         self.assertIsNotNone(of.cancelled_at)
 
+    def test_transition_registra_autoria(self):
+        """Cada transição grava o autor (by) no campo *_by correspondente."""
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+        services.liberar(of, by=self.user)
+        of.refresh_from_db()
+        self.assertEqual(of.released_by, self.user)
+        services.iniciar_producao(of, by=self.user)
+        of.refresh_from_db()
+        self.assertEqual(of.started_by, self.user)
+        services.concluir(of, by=self.user)
+        of.refresh_from_db()
+        self.assertEqual(of.completed_by, self.user)
+
     def test_convert_grava_access_log(self):
         of = services.convert_quotation_to_of(
             self.quotation, created_by=self.user, request=self._request()

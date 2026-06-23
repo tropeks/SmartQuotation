@@ -148,12 +148,16 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     if new_status == STATUS_LIBERADA:
         of.released_at = now
+        of.released_by = by
     elif new_status == STATUS_EM_PRODUCAO:
         of.started_at = now
+        of.started_by = by
     elif new_status == STATUS_CONCLUIDA:
         of.completed_at = now
+        of.completed_by = by
     elif new_status == STATUS_CANCELADA:
         of.cancelled_at = now
+        of.cancelled_by = by
 
     of.save()
 

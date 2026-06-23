@@ -39,6 +39,18 @@
   {% endif %}
 </div>
 
+{% if of.released_at or of.started_at or of.completed_at or of.cancelled_at %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Histórico de Status</h3></header>
+  <div class="g-section-body">
+    {% if of.released_at %}<p class="mono">Liberada · {{ of.released_at|date:"d/m/Y H:i" }}{% if of.released_by %} · {{ of.released_by.get_username }}{% endif %}</p>{% endif %}
+    {% if of.started_at %}<p class="mono">Em produção · {{ of.started_at|date:"d/m/Y H:i" }}{% if of.started_by %} · {{ of.started_by.get_username }}{% endif %}</p>{% endif %}
+    {% if of.completed_at %}<p class="mono">Concluída · {{ of.completed_at|date:"d/m/Y H:i" }}{% if of.completed_by %} · {{ of.completed_by.get_username }}{% endif %}</p>{% endif %}
+    {% if of.cancelled_at %}<p class="mono">Cancelada · {{ of.cancelled_at|date:"d/m/Y H:i" }}{% if of.cancelled_by %} · {{ of.cancelled_by.get_username }}{% endif %}</p>{% endif %}
+  </div>
+</section>
+{% endif %}
+
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>Estrutura Analítica (EAP)</h3></header>
   <div class="g-section-body" style="padding:0">
