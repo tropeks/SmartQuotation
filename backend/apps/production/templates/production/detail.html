@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ of.number }} — {{ of.title }}{% endblock %}
+{% block content %}
+<div class="eyebrow">OF · Detalhe</div>
+<div class="q-number">{{ of.number }}</div>
+<p class="mono" style="color:var(--g-gray-1)">{{ of.customer_name }} · {{ of.get_status_display }}</p>
+
+<div class="stat-row" style="margin-top:12px">
+  <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ of.custo_total|floatformat:0 }}</div><div class="delta">mat {{ of.custo_material|floatformat:0 }} + MO {{ of.custo_mo|floatformat:0 }}</div></div>
+  <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ of.peso_bruto_kg|floatformat:0 }}<span class="u">kg</span></div></div>
+  <div class="stat"><div class="lbl">Cotação</div><div class="val mono" style="font-size:14px">{{ of.quotation_number }} Rev.{{ of.quotation_revision }}</div></div>
+  <div class="stat"><div class="lbl">Criada em</div><div class="val mono" style="font-size:14px">{{ of.created_at|date:"d/m/Y H:i" }}</div></div>
+</div>
+
+<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+  {% if of.status == "aberta" %}
+    <form method="post" action="{% url 'production:transition' of.pk %}">{% csrf_token %}
+      <input type="hidden" name="action" value="liberar">
+      <button class="q-btn primary" type="submit">Liberar</button>
+    </form>
+  {% endif %}
+  {% if of.status == "liberada" %}
+    <form method="post" action="{% url 'production:transition' of.pk %}">{% csrf_token %}
+      <input type="hidden" name="action" value="iniciar">
+      <button class="q-btn primary" type="submit">Iniciar Produção</button>
+    </form>
+  {% endif %}
+  {% if of.status == "em_producao" %}
+    <form method="post" action="{% url 'production:transition' of.pk %}">{% csrf_token %}
+      <input type="hidden" name="action" value="concluir">
+      <button class="q-btn primary" type="submit">Concluir</button>
+    </form>
+  {% endif %}
+  {% if of.status != "concluida" and of.status != "cancelada" %}
+    <form method="post" action="{% url 'production:transition' of.pk %}">{% csrf_token %}
+      <input type="hidden" name="action" value="cancelar">
+      <button class="q-btn" type="submit">Cancelar OF</button>
+    </form>
+  {% endif %}
+</div>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Estrutura Analítica (EAP)</h3></header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th>Código</th><th>Item</th><th class="num">Material</th><th class="num">MO</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        {% for it in itens %}
+        <tr>
+          <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
+          <td>{{ it.descricao }}</td>
+          <td class="num">R$ {{ it.custo_material|floatformat:0 }}</td>
+          <td class="num">R$ {{ it.custo_mo|floatformat:0 }}</td>
+          <td class="num">R$ {{ it.custo_total|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

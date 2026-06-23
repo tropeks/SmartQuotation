@@ -63,4 +63,22 @@
     {% endfor %}
   </div>
 </section>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Ordem de Fabricação</h3>
+    {% if not has_active_of %}
+    <form method="post" action="{% url 'production:convert' q.pk %}">{% csrf_token %}
+      <button type="submit" class="q-btn primary">Converter em OF</button>
+    </form>
+    {% endif %}
+  </header>
+  <div class="g-section-body">
+    {% for of in q.ordens_fabricacao.all %}
+      <p><a href="{% url 'production:detail' of.pk %}" class="mono" style="color:var(--g-orange)">{{ of.number }}</a>
+         · {{ of.get_status_display }}</p>
+    {% empty %}
+      <p style="color:var(--g-gray-1)">Nenhuma OF ainda.</p>
+    {% endfor %}
+  </div>
+</section>
 {% endblock %}

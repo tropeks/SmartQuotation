@@ -7,6 +7,7 @@ urlpatterns = [
     path("", include("apps.accounts.urls")),         # login/logout/dashboard
     path("", include("apps.quotations.urls")),       # cotações + data sheet do feixe
     path("", include("apps.proposals.urls")),        # propostas DOCX/PDF
+    path("", include("apps.production.urls")),       # ordens de fabricação
     path("", include("apps.cost_discovery.urls")),   # wizard de cadeia de custos
     path("", include("apps.tema_templates.urls")),   # catálogo TEMA + composição
 ]

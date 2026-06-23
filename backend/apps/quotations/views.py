@@ -80,7 +80,9 @@ def create_quotation(request):
 def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
     itens = (q.itens.prefetch_related("materiais", "operacoes")).all()
-    return render(request, "quotations/detail.html", {"q": q, "itens": itens})
+    has_active_of = q.ordens_fabricacao.exclude(status="cancelada").exists()
+    return render(request, "quotations/detail.html",
+                  {"q": q, "itens": itens, "has_active_of": has_active_of})
 
 
 @login_required
