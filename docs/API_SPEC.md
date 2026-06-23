@@ -1,6 +1,6 @@
 # API_SPEC.md — SmartQuotation
 
-> **Status:** Aprovado | **Versão:** 1.0 | **Referência:** ARCHITECTURE.md, DATA_MODEL.md
+> **Status:** Contrato alvo aprovado; contrato H1 atual documentado no topo | **Versão:** 1.0 | **Referência:** ARCHITECTURE.md, DATA_MODEL.md
 
 ---
 
@@ -12,17 +12,33 @@ https://{tenant_slug}.smartquotation.com.br/api/v1/
 ```
 
 ### Autenticação
-Todos os endpoints (exceto os marcados `Auth: none`) exigem:
+Para o contrato alvo pós-H1/H1.5 documentado nesta seção, todos os endpoints (exceto os marcados `Auth: none`) exigem:
 ```
 Authorization: Bearer {access_token}
 ```
 Token JWT emitido no login com expiração de 15 minutos. Refresh token com expiração de 7 dias via cookie httpOnly.
 
+### Contrato H1 atual
+O H1 real usa autenticação por sessão do Django, com cookie de sessão e proteção CSRF. O contrato JWT/v1 abaixo
+fica como alvo pós-H1/H1.5.
+
+Endereços em uso no H1:
+- `GET /login/` e `POST /login/` para autenticação por sessão
+- `POST /logout/` para encerramento de sessão
+- `GET /api/cotacoes/` para listagem de cotações do H1
+- `POST /api/permutador/estimate/` para recálculo/estimativa de permutador
+
+Regras do H1:
+- `SessionAuthentication` no Django REST Framework
+- cookie `sessionid` + `X-CSRFToken` nas mutações
+- sem JWT, refresh token ou MFA no H1
+
 ### Versionamento
-- Path-based: `/api/v1/`, `/api/v2/` — versões antigas suportadas por 12 meses após deprecação
+- H1 atual: endpoints legados sob `/api/` conforme lista acima.
+- Contrato alvo: path-based `/api/v1/`, `/api/v2/` — versões antigas suportadas por 12 meses após deprecação
 - Deprecação anunciada via header `Sunset: {ISO8601_date}` e `Deprecation: true`
 
-### Rate Limiting
+### Rate Limiting (alvo pós-H1/H1.5)
 Headers de resposta:
 ```
 X-RateLimit-Limit: 100
@@ -31,7 +47,7 @@ X-RateLimit-Reset: 1735689600
 ```
 Rate limit excedido → HTTP 429 com body `{ "error": "RATE_LIMIT_EXCEEDED", "retry_after": 30 }`
 
-### Formato de Erro Padrão
+### Formato de Erro Padrão (alvo pós-H1/H1.5)
 ```json
 {
   "error": "ERROR_CODE",
@@ -43,7 +59,7 @@ Rate limit excedido → HTTP 429 com body `{ "error": "RATE_LIMIT_EXCEEDED", "re
 }
 ```
 
-### Paginação
+### Paginação (alvo pós-H1/H1.5)
 ```
 GET /api/v1/quotations/?page=1&page_size=25&ordering=-created_at
 Response:
@@ -57,7 +73,7 @@ Response:
 
 ---
 
-## 2. Autenticação e Usuários
+## 2. Autenticação e Usuários (alvo pós-H1/H1.5)
 
 ### POST /api/v1/auth/login
 **Auth:** none | **Rate limit:** 5 req/min por IP
@@ -312,6 +328,9 @@ Response 200: { "status": "lost" }
 ```
 Response 200: lista de EquipmentDTO com seus componentes
 ```
+
+> Esta família de rotas é contrato-alvo pós-H1/H1.5. O H1 atual trabalha com EAP persistida
+> por cotação e não expõe o modelo Equipment/Component formal.
 
 ### POST /api/v1/quotations/{quotation_id}/equipment/
 **Auth:** Bearer (orçamentista, engenheiro, admin)

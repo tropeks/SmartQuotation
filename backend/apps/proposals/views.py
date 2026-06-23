@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from apps.quotations.models import Quotation
 from apps.proposals.models import Proposal, ProposalTemplate
 from apps.proposals import services
+from apps.audit.services import log_access
 
 
 @login_required
@@ -30,6 +31,7 @@ def proposal_edit(request, pk):
         p.save()
         if "generate" in request.POST:
             services.generate(p)
+            log_access(request, "generate", p, {"quotation_id": p.quotation_id})
             return redirect("proposals:detail", pk=p.pk)
         return redirect("proposals:edit", pk=p.pk)
     return render(request, "proposals/edit.html", {"p": p, "q": p.quotation})
@@ -43,6 +45,8 @@ def proposal_detail(request, pk):
 
 @login_required
 def proposal_download(request, pk, fmt):
+    if fmt not in {"pdf", "docx"}:
+        raise Http404("Formato inválido.")
     p = get_object_or_404(Proposal, pk=pk)
     rel = p.pdf_path if fmt == "pdf" else p.docx_path
     if not rel:
@@ -50,4 +54,5 @@ def proposal_download(request, pk, fmt):
     path = os.path.join(settings.MEDIA_ROOT, rel)
     if not os.path.exists(path):
         raise Http404("Arquivo não encontrado.")
+    log_access(request, "download", p, {"format": fmt, "path": rel})
     return FileResponse(open(path, "rb"), as_attachment=True, filename=os.path.basename(path))

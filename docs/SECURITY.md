@@ -21,14 +21,14 @@ SmartQuotation é classificado como **software de engenharia regulado**, pois:
 | Asset protegido | Ameaça | Controle |
 |---|---|---|
 | Dados de cotação de concorrentes (preço, margem, cliente) | Acesso indevido entre tenants | Schema-per-tenant + RLS + testes de isolamento no CI |
-| Cálculos normativos (integridade) | Adulteração de resultado após aprovação | CalculationSnapshot append-only + hash SHA-256 + TechnicalApproval imutável |
-| Credenciais de usuário | Credential stuffing, brute force | Argon2 + rate limiting login (5/min) + account lockout + MFA obrigatório para admin |
-| Propostas com preço de venda | Exfiltração de dados comerciais | RBAC (apenas roles autorizados geram/baixam proposta) + AccessLog + download via token temporário |
-| Assinatura técnica (ART/CREA) | Falsificação ou uso indevido | Snapshot hash vinculado à aprovação + trigger append-only + log imutável |
+| Cálculos normativos (integridade) | Adulteração de resultado após aprovação | H1: CalculationSnapshot com hash + TechnicalApproval por serviço; hardening imutável por trigger fica H1.5 |
+| Credenciais de usuário | Credential stuffing, brute force | Argon2 + rate limiting login (5/min) + account lockout + sessão H1 com CSRF |
+| Propostas com preço de venda | Exfiltração de dados comerciais | H1: login + AccessLog em geração/download; RBAC fino e token temporário ficam no pacote seguinte |
+| Assinatura técnica (ART/CREA) | Falsificação ou uso indevido | H1: snapshot hash vinculado à aprovação + AccessLog; trigger/log imutável ficam H1.5 |
 | Dados pessoais (LGPD) | Exposição de PII, requisição de exclusão | Campos PII mapeados + base legal documentada + processo de exclusão |
 | Infraestrutura (VPS) | Acesso não autorizado ao servidor | SSH key-only + fail2ban + firewall UFW + Docker não expõe portas desnecessárias |
 | Supply chain | Dependência comprometida (ex: pip package) | pip-audit no CI + Dependabot + hash de imagens Docker |
-| Sessões | Session hijacking | Cookie httpOnly + Secure + SameSite=Lax + expiração 15min (access) / 7d (refresh) |
+| Sessões | Session hijacking | Cookie httpOnly + Secure + SameSite=Lax + expiração de sessão H1; JWT/MFA ficam pós-H1 |
 | API endpoints | Injection (SQL, SSTI, path traversal) | ORM parametrizado (Django nunca string-format SQL) + Pydantic valida inputs + Bandit no CI |
 | Arquivos de upload | Malware, SSRF via arquivo | Validação de MIME type + extensão + tamanho + armazenamento fora do webroot |
 
@@ -41,23 +41,21 @@ SmartQuotation é classificado como **software de engenharia regulado**, pois:
 | Controle | Implementação |
 |---|---|
 | Hash de senha | Argon2id (custo: time=2, memory=65536, parallelism=2) via Django `argon2-cffi` |
-| MFA | TOTP (RFC 6238) via `django-otp` + `qrcode` para QR de setup |
-| MFA obrigatório | Roles `admin` e `gestor_comercial` — forçado no middleware de request |
+| Sessão H1 | `SessionAuthentication` do Django + cookie `sessionid` + CSRF nas mutações |
 | Rate limit login | 5 tentativas / minuto por IP + 10 tentativas / hora por email |
 | Account lockout | Após 10 falhas em 1h → conta bloqueada por 30 minutos; admin pode desbloquear |
-| Tokens JWT | Access: RS256, 15min; Refresh: httpOnly cookie, SameSite=Strict, 7 dias |
-| Rotação de refresh | Refresh token é invalidado e um novo é emitido a cada uso (rotation) |
-| Logout | Refresh token adicionado a blocklist Redis com TTL = remaining expiry |
+| MFA | Pós-H1/H1.5: TOTP (RFC 6238) via `django-otp` + `qrcode` |
+| Tokens JWT | Pós-H1/H1.5: access/refresh com cookie httpOnly |
+| Rotação de refresh | Pós-H1/H1.5: refresh token é invalidado e um novo é emitido a cada uso |
+| Logout | H1: encerra a sessão; pós-H1/H1.5: blocklist de refresh token |
 
 ### 3.2 Autorização
 
 ```
-Modelo: RBAC com 5 roles fixas (ver ARCHITECTURE.md §6)
-Implementação: Django Groups + django-guardian para permissões por objeto quando necessário
-Princípio: least privilege — nenhum role tem mais permissão do que o necessário
-Elevação de privilégio: apenas admin pode promover usuário a role superior
-API: todas as views DRF decoradas com permission_class explícita (sem default permissivo)
-Auditoria: toda mudança de role gera entrada no django-simple-history de UserProfile
+Modelo alvo: RBAC com 5 roles fixas (ver ARCHITECTURE.md §6)
+H1 atual: UserProfile + Groups auxiliares existem, mas as views principais ainda usam majoritariamente login_required.
+Próxima fatia H1 auditável: aplicar require_role/DRF permissions em cotação, proposta, aprovação e endpoints.
+Pós-H1/H1.5: permissões por objeto, revisão semestral de acessos e history detalhado de mudanças de role.
 ```
 
 ### 3.3 Proteção de Dados em Trânsito
@@ -148,28 +146,28 @@ Pinning: requirements.txt com versões exatas; `pip-compile` para atualizar
 
 ### 4.1 O que é registrado
 
-| Entidade | django-simple-history | AccessLog |
+| Entidade | H1 atual | Alvo H1.5/H2 |
 |---|---|---|
-| Quotation | ✅ (todo campo) | ✅ (view, export, print) |
-| Equipment / Component | ✅ | — |
-| CalculationSnapshot | append-only (sem history — imutável por design) | ✅ (view) |
-| TechnicalApproval | append-only | ✅ (create, revoke) |
-| Material / Price | ✅ | — |
-| Rate | ✅ | — |
-| UserProfile | ✅ | ✅ (role change) |
-| Proposal (download) | — | ✅ (download) |
+| Quotation / EAP | snapshot por cotação + testes | django-simple-history + AccessLog de view/export |
+| Equipment / Component | fora do H1 | django-simple-history |
+| Snapshot por cotação | criado por serviço, com hash | trigger append-only no banco |
+| TechnicalApproval | serviço interno + AccessLog approve/revoke quando há request | trigger append-only e endpoint público |
+| Material / Price | modelos versionados por vigência | django-simple-history |
+| Rate | modelos versionados por vigência | django-simple-history |
+| UserProfile | constraint CREA para engenheiro | history + AccessLog role change |
+| Proposal | AccessLog em generate/download | token temporário e RBAC fino |
 
 ### 4.2 Integridade do log
 
-- `AccessLog` usa `BIGSERIAL` incremental — gaps no sequence indicam possível adulteração
-- Trigger PostgreSQL rejeita `UPDATE` e `DELETE` em `AccessLog` enquanto registro tiver menos de 15 anos
-- Hash acumulado opcional (H2): cada linha guarda `SHA256(previous_hash || row_data)` — cadeia verificável
+- H1 atual: `AccessLog` é append-only por convenção de serviço e coberto por testes de geração/download/aprovação/revogação.
+- H1.5: trigger PostgreSQL rejeitando `UPDATE` e `DELETE` em `AccessLog`.
+- H2: hash acumulado opcional (`SHA256(previous_hash || row_data)`) para cadeia verificável.
 
 ### 4.3 Retenção
 
 | Tipo de dado | Retenção | Base |
 |---|---|---|
-| Cotações e cálculos | 15 anos | NR-13 (vasos de pressão) |
+| Cotações, EAP e cálculos | 15 anos | NR-13 (vasos de pressão) |
 | Propostas (DOCX/PDF) | 15 anos | NR-13 |
 | AccessLog | 5 anos | ISO 27001 A.12.4 / LGPD |
 | Histórico de usuários | 5 anos após desativação da conta | LGPD |
@@ -217,11 +215,11 @@ Processo documentado:
 | Controle ISO 27001:2022 | Status MVP | Plano H2 |
 |---|---|---|
 | A.5.1 Políticas de segurança | Documentado neste arquivo | Política formal aprovada |
-| A.8.2 Gestão de acesso privilegiado | RBAC + MFA para admin | PAM básico |
-| A.8.3 Restrição de acesso | RBAC implementado | Revisão semestral de acessos |
-| A.8.5 Autenticação segura | Argon2 + MFA + rate limit | SSO/SAML |
+| A.8.2 Gestão de acesso privilegiado | H1 parcial: UserProfile/Groups; RBAC fino pendente | PAM básico |
+| A.8.3 Restrição de acesso | H1 parcial: login obrigatório + perfis; RBAC fino pendente | Revisão semestral de acessos |
+| A.8.5 Autenticação segura | Argon2 + sessão H1 + rate limit | SSO/SAML |
 | A.8.12 Prevenção de vazamento | RBAC + download controlado | DLP básico |
-| A.8.15 Log de auditoria | AccessLog + django-simple-history | SIEM básico (H3) |
+| A.8.15 Log de auditoria | H1: AccessLog para ações sensíveis iniciais; simple-history pendente | SIEM básico (H3) |
 | A.8.24 Criptografia | TLS 1.3 + cifragem em repouso + bcrypt | Vault para secrets |
 | A.8.31 Separação de ambientes | dev/staging/prod isolados | Formalmente documentado |
 | A.5.30 Continuidade de TI | Backup off-site diário | RTO/RPO formalmente testado |
@@ -237,7 +235,7 @@ Antes de cada deploy em produção, o CI verifica:
 [ ] bandit: 0 issues severity HIGH
 [ ] trivy: imagem Docker sem CVEs críticos
 [ ] pytest: 100% dos testes de isolamento multi-tenant passando
-[ ] pytest: 100% dos testes de regressão PVElite passando
+[ ] pytest: regressões de cálculo e snapshots passando
 [ ] migrations: nenhuma migration destrutiva sem período de deprecação
 [ ] secrets: nenhum secret em código (detect-secrets pre-commit hook)
 [ ] TLS: certificado válido e configurado (testado via staging)

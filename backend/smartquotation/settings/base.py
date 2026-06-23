@@ -40,6 +40,7 @@ TENANT_APPS = [
     "drf_spectacular",
     "django_filters",
     "apps.accounts",
+    "apps.audit",
     "apps.materials",
     "apps.engineering_params",
     "apps.quotations",

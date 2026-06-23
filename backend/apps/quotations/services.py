@@ -1,15 +1,165 @@
-"""Serviços de cotação: numeração sequencial por tenant e criação."""
-from datetime import date
+"""Serviços de cotação: numeração sequencial por tenant, criação e snapshots."""
+from datetime import date, datetime
 from decimal import Decimal
+import hashlib
+import json
 from django.db import transaction
 from django.utils import timezone
-from apps.quotations.models import Quotation
+from apps.quotations.models import CalculationSnapshot, Quotation
 from apps.quotations.adapter import default_inputs, recompute
 
 
 def _d(x) -> Decimal:
     """float/str → Decimal com 2 casas (campos monetários da Quotation)."""
     return Decimal(str(round(float(x or 0), 2)))
+
+
+ENGINE_VERSION = "calc-snapshot-v1"
+
+
+def _normalize_snapshot_value(value):
+    if isinstance(value, dict):
+        return {str(k): _normalize_snapshot_value(value[k]) for k in sorted(value)}
+    if isinstance(value, (list, tuple)):
+        return [_normalize_snapshot_value(v) for v in value]
+    if isinstance(value, set):
+        return [_normalize_snapshot_value(v) for v in sorted(value, key=repr)]
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if hasattr(value, "isoformat") and not isinstance(value, str):
+        try:
+            return value.isoformat()
+        except Exception:
+            pass
+    return value
+
+
+def _canonical_json(value) -> str:
+    return json.dumps(_normalize_snapshot_value(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _quotation_memorial(quotation) -> list:
+    if getattr(quotation, "scope", None) != "complete":
+        return []
+    inp = quotation.inputs or {}
+    from apps.tema_templates.services import memorial_asme
+    return memorial_asme(inp.get("designacao", ""), inp)
+
+
+def _snapshot_standard_refs(memorial: list) -> list:
+    refs = []
+    seen = set()
+    for entry in memorial or []:
+        if not isinstance(entry, dict):
+            continue
+        ref = {
+            k: entry.get(k)
+            for k in ("item", "norma", "fonte")
+            if entry.get(k)
+        }
+        key = tuple(ref.get(k) for k in ("item", "norma", "fonte"))
+        if not any(ref.values()) or key in seen:
+            continue
+        seen.add(key)
+        refs.append(ref)
+    return refs
+
+
+def _requires_memorial(quotation) -> bool:
+    inputs = quotation.inputs or {}
+    return quotation.scope == "complete" and bool(inputs.get("pressao_projeto_bar"))
+
+
+def build_snapshot_payload(quotation, memorial=None) -> dict:
+    memorial = _quotation_memorial(quotation) if memorial is None else memorial
+    if _requires_memorial(quotation) and not memorial:
+        raise RuntimeError("CalculationSnapshot de permutador pressurizado exige memorial ASME.")
+    items = []
+    for item in quotation.itens.prefetch_related("materiais", "operacoes").all():
+        items.append({
+            "codigo_item": item.codigo_item,
+            "descricao": item.descricao,
+            "custo_material": str(item.custo_material),
+            "custo_mo": str(item.custo_mo),
+            "sort_order": item.sort_order,
+            "materiais": [
+                {
+                    "codigo_mp": mp.codigo_mp,
+                    "descricao": mp.descricao,
+                    "material": mp.material,
+                    "forma": mp.forma,
+                    "peso_bruto_kg": str(mp.peso_bruto_kg),
+                    "peso_liquido_kg": str(mp.peso_liquido_kg),
+                    "preco_kgf": str(mp.preco_kgf),
+                    "custo": str(mp.custo),
+                }
+                for mp in item.materiais.order_by("codigo_mp", "id")
+            ],
+            "operacoes": [
+                {
+                    "codigo_op": op.codigo_op,
+                    "descricao": op.descricao,
+                    "metodo": op.metodo,
+                    "custo": str(op.custo),
+                    "aplicavel": op.aplicavel,
+                }
+                for op in item.operacoes.order_by("codigo_op", "id")
+            ],
+        })
+    totals = {
+        "custo_material": str(quotation.custo_material),
+        "custo_mo": str(quotation.custo_mo),
+        "custo_total": str(quotation.custo_total),
+        "preco_sem_impostos": str(quotation.preco_sem_impostos),
+        "preco_com_impostos": str(quotation.preco_com_impostos),
+        "peso_bruto_kg": str(quotation.peso_bruto_kg),
+        "peso_liquido_kg": str(quotation.peso_liquido_kg),
+    }
+    outputs = {
+        "scope": quotation.scope,
+        "number": quotation.number,
+        "revision": quotation.revision,
+        "totals": totals,
+        "items": items,
+    }
+    if memorial:
+        outputs["memorial"] = memorial
+    inputs = {
+        "quotation": {
+            "number": quotation.number,
+            "revision": quotation.revision,
+            "scope": quotation.scope,
+            "title": quotation.title,
+        },
+        "inputs": _normalize_snapshot_value(quotation.inputs or {}),
+        "pricing": {
+            "fator_preco": str(quotation.fator_preco),
+            "impostos_pct": str(quotation.impostos_pct),
+        },
+    }
+    standard_refs = _snapshot_standard_refs(memorial)
+    payload = {
+        "engine_version": ENGINE_VERSION,
+        "inputs": inputs,
+        "outputs": outputs,
+        "standard_refs": standard_refs,
+    }
+    payload["snapshot_hash"] = hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+    return payload
+
+
+def create_calculation_snapshot(quotation, memorial=None) -> CalculationSnapshot:
+    payload = build_snapshot_payload(quotation, memorial=memorial)
+    return CalculationSnapshot.objects.create(
+        quotation=quotation,
+        snapshot_hash=payload["snapshot_hash"],
+        inputs=payload["inputs"],
+        outputs=payload["outputs"],
+        engine_version=payload["engine_version"],
+        standard_refs=payload["standard_refs"],
+    )
 
 
 def next_number() -> str:
@@ -31,6 +181,7 @@ def create_feixe_quotation(customer, title, created_by=None, inputs=None) -> Quo
         inputs=inputs or default_inputs(),
     )
     recompute(q)
+    create_calculation_snapshot(q)
     return q
 
 
@@ -78,4 +229,5 @@ def create_permutador_quotation(customer, designacao, cleaned, resultado,
             custo_mo=Decimal("0") if is_material else _d(valor),
             sort_order=i,
         )
+    create_calculation_snapshot(q)
     return q

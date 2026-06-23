@@ -1,8 +1,8 @@
 # SmartQuotation — Status do Projeto
 
-> Documento vivo. Última revisão: 2026-06-19 — **aval do PE (Wellington) nos 7 itens normativos**.
+> Documento vivo. Última revisão: 2026-06-22 — H1 técnico estabilizado; H1 auditável ainda pendente.
 > (colaboração com @WellToMcAt). **41 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
-> 150 testes na suíte Django · CI verde em todos os PRs.**
+> 168 testes Django + 9 testes puros · CI verde em todos os PRs.**
 
 ---
 
@@ -10,6 +10,10 @@
 
 Motor de custeio **paramétrico** para permutadores de calor casco-tubo (caldeiraria média/pesada),
 design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimensões/materiais do projeto.
+
+- **H1 técnico:** feixe tubular + BEU/BEM operando com EAP persistida por cotação.
+- **H1 auditável:** aprovação técnica, rastreabilidade e contrato regulatório mínimo ainda em fechamento.
+- **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
 | Equipamento | Motor | Gabarito | Erro |
 |---|---:|---:|:--:|
@@ -111,6 +115,7 @@ Os 7 itens foram **chancelados pelo engenheiro responsável**. Os defaults deixa
 1. Os defaults da seção 4 estão **validados pelo PE** (2026-06-19); fatores de **setup, preço e scrap** seguem editáveis por caso.
 2. A escala é **calibrada a 1 job real** por designação (sem 2º gabarito p/ validar linearidade).
 3. Verificações ASME são **alertas de apoio**, não substituem o memorial de cálculo do PE.
+4. O pacote de audit trail regulatório do H1 ainda está em fechamento; a documentação não vende isso como concluído.
 
 ---
 
