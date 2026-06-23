@@ -62,7 +62,7 @@
           <td class="mono">{{ op.codigo_op }} · {{ op.descricao }}</td>
           <td class="num mono">{{ op.custo|floatformat:2 }}</td>
           <td class="num mono">{{ op.actual_hh|floatformat:2 }}</td>
-          <td class="num mono">{% if op.actual_hh %}{{ op.custo|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="num mono">—</td>
           {% if of.status == "liberada" or of.status == "em_producao" %}
           <td>
             <form method="post" action="{% url 'production:appoint' op.pk %}" style="display:flex;gap:4px">{% csrf_token %}
@@ -78,6 +78,29 @@
     </table>
   </div>
 </section>
+
+{% if of.status == "concluida" %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>R$/h Observado (fechamento)</h3></header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th>Operação</th><th class="num">Custo est. (R$)</th><th class="num">Horas reais</th><th class="num">R$/h obs.</th></tr></thead>
+      <tbody>
+        {% for obs in of.observations.all %}
+        <tr>
+          <td class="mono">{{ obs.operacao }}</td>
+          <td class="num mono">{{ obs.estimated_custo|floatformat:2 }}</td>
+          <td class="num mono">{{ obs.actual_hh|floatformat:2 }}</td>
+          <td class="num mono">{{ obs.observed_rate|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="color:var(--g-gray-1)">Nenhuma operação apontada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>Estrutura Analítica (EAP)</h3></header>

@@ -197,8 +197,8 @@ def _close_out_observations(of):
     for op in ops:
         if op.custo <= 0:
             continue
-        actual_hh = op.actual_hh
-        if not actual_hh or actual_hh <= 0:
+        actual_hh = sum((e.hours_hh for e in op.entries.all()), Decimal("0"))
+        if actual_hh <= 0:
             continue  # leniente: sem apontamento / 0 horas -> sem observação (evita div/0)
         observed_rate = (Decimal(op.custo) / Decimal(actual_hh)).quantize(Decimal("0.01"))
         ProductionObservation.objects.create(
@@ -212,18 +212,24 @@ def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
                          entry_date=None, notes="", request=None):
     """Registra apontamento de tempo numa operação de OF liberada/em produção."""
     from datetime import date as _date
+    from decimal import Decimal, InvalidOperation
     status = of_operation.item.ordem.status
     if status not in (STATUS_LIBERADA, STATUS_EM_PRODUCAO):
         raise ValidationError(
             f"Apontamento só é permitido em OF liberada ou em produção (status atual: {status})."
         )
-    if hours_hh is not None and float(hours_hh) < 0:
+    try:
+        hh = Decimal(str(hours_hh)) if hours_hh is not None else Decimal("0")
+        hm = Decimal(str(hours_hm)) if hours_hm is not None else Decimal("0")
+    except (InvalidOperation, ValueError, TypeError):
+        raise ValidationError("Horas inválidas.")
+    if hh < 0 or hm < 0:
         raise ValidationError("Horas não podem ser negativas.")
     entry = ProductionEntry.objects.create(
         of_operation=of_operation,
         operator=operator,
-        hours_hh=hours_hh,
-        hours_hm=hours_hm or 0,
+        hours_hh=hh,
+        hours_hm=hm,
         entry_date=entry_date or _date.today(),
         notes=notes or "",
     )
@@ -239,9 +245,8 @@ def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
 def _update_actual_rate(operacao: str, observed_rate):
     """Upsert online (Welford) do agregado ActualRate (R$/h) de uma operação. Requer transação."""
     from decimal import Decimal
-    ar = ActualRate.objects.select_for_update().filter(operacao=operacao).first()
-    if ar is None:
-        ar = ActualRate(operacao=operacao)
+    ActualRate.objects.get_or_create(operacao=operacao)  # atômico: cria a linha se não existir
+    ar = ActualRate.objects.select_for_update().get(operacao=operacao)  # trava p/ o update
     r = float(observed_rate)
     n = ar.sample_count + 1
     mean = float(ar.mean_rate)
@@ -255,7 +260,7 @@ def _update_actual_rate(operacao: str, observed_rate):
     cv = min(max(cv, 0.0), 1.0)
     confidence = (1 - cv) * min(n / 20.0, 1.0)
     ar.sample_count = n
-    ar.mean_rate = Decimal(str(round(mean, 2)))
+    ar.mean_rate = Decimal(str(round(mean, 6)))
     ar.m2 = Decimal(str(round(m2, 6)))
     ar.confidence = Decimal(str(round(confidence, 4)))
     ar.save()

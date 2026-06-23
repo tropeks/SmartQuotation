@@ -338,3 +338,122 @@ class ActualRateMathTests(TenantTestCase):
         self.assertAlmostEqual(float(ar.mean_rate), 200.0, places=2)
         self.assertGreater(float(ar.confidence), 0.0)
         self.assertLessEqual(float(ar.confidence), 1.0)
+
+    def test_confidence_valor_exato(self):
+        """Welford com 3 amostras (100,200,300): mean≈200, confidence≈0.0888."""
+        from decimal import Decimal
+        from apps.production.models import ActualRate
+        for v in (100, 200, 300):
+            services._update_actual_rate("OP-X", Decimal(v))
+        ar = ActualRate.objects.get(operacao="OP-X")
+        # stddev=81.6497, mean=200, cv≈0.40825, n=3
+        # confidence=(1-0.40825)*(3/20)=0.08876
+        self.assertAlmostEqual(float(ar.mean_rate), 200.0, places=3)
+        self.assertAlmostEqual(float(ar.confidence), 0.0888, places=3)
+
+
+class FechamentoExtrasTests(TenantTestCase):
+    """Casos adicionais de fechamento cobrindo os achados da revisão."""
+
+    def setUp(self):
+        from datetime import date
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="op_fx")
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_fx"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-8", crea_state="SP")
+        self.today = date.today()
+
+    def _of_em_producao(self, titulo):
+        q = create_feixe_quotation(self.customer, titulo)
+        approve_quotation(q, self.engineer)
+        of = services.convert_quotation_to_of(q, created_by=self.user)
+        services.liberar(of, by=self.user)
+        services.iniciar_producao(of, by=self.user)
+        return of
+
+    def test_fechamento_ignora_custo_zero(self):
+        """Op com custo=0 não gera ProductionObservation mesmo com apontamento."""
+        from decimal import Decimal
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe CZ")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0).first()
+        services.log_production_entry(op, self.user, Decimal("5"), Decimal("0"), self.today)
+        # Zero out cost before closing
+        op.custo = 0
+        op.save()
+        services.concluir(of, by=self.user)
+        self.assertFalse(
+            ProductionObservation.objects.filter(ordem=of, operacao=op.codigo_op).exists()
+        )
+
+    def test_duas_ofs_incrementam_n(self):
+        """Dois fechamentos de OFs com a mesma operação geram sample_count=2 no ActualRate."""
+        from decimal import Decimal
+        from apps.production.models import ActualRate
+        of1 = self._of_em_producao("Feixe N1")
+        of2 = self._of_em_producao("Feixe N2")
+        # Pick the same codigo_op from both OFs
+        op1 = OFOperation.objects.filter(item__ordem=of1, custo__gt=0).first()
+        target_codigo = op1.codigo_op
+        op2 = OFOperation.objects.filter(item__ordem=of2, codigo_op=target_codigo, custo__gt=0).first()
+        self.assertIsNotNone(op2, f"Operação {target_codigo} não encontrada na segunda OF")
+        services.log_production_entry(op1, self.user, Decimal("8"), Decimal("0"), self.today)
+        services.concluir(of1, by=self.user)
+        services.log_production_entry(op2, self.user, Decimal("8"), Decimal("0"), self.today)
+        services.concluir(of2, by=self.user)
+        ar = ActualRate.objects.get(operacao=target_codigo)
+        self.assertEqual(ar.sample_count, 2)
+
+    def test_reconcluir_nao_duplica(self):
+        """Tentar concluir OF já concluída levanta ValidationError; count de observações não muda."""
+        from decimal import Decimal
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe RC")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0).first()
+        services.log_production_entry(op, self.user, Decimal("10"), Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        count_before = ProductionObservation.objects.filter(ordem=of).count()
+        self.assertGreater(count_before, 0)
+        with self.assertRaises(ValidationError):
+            services.concluir(of, by=self.user)
+        self.assertEqual(ProductionObservation.objects.filter(ordem=of).count(), count_before)
+
+
+class ApontamentoValidacaoViewTests(TenantTestCase):
+    """Testes de validação de input na view de apontamento."""
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="opval", password="x")
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_val"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-6", crea_state="SP")
+        self.q = create_feixe_quotation(self.customer, "Feixe Val")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+        services.liberar(self.of, by=self.user)
+        self.op = OFOperation.objects.filter(item__ordem=self.of).first()
+
+    def test_appoint_view_horas_invalidas(self):
+        """POST com hours_hh='abc' retorna 302 sem criar ProductionEntry."""
+        from apps.production.models import ProductionEntry
+        self.client.force_login(self.user)
+        resp = self.client.post(
+            f"/ofs/operacao/{self.op.pk}/apontar/",
+            {"hours_hh": "abc", "hours_hm": "0", "entry_date": "2026-06-23"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+    def test_appoint_view_horas_negativas(self):
+        """POST com hours_hh='-1' retorna 302 sem criar ProductionEntry."""
+        from apps.production.models import ProductionEntry
+        self.client.force_login(self.user)
+        resp = self.client.post(
+            f"/ofs/operacao/{self.op.pk}/apontar/",
+            {"hours_hh": "-1", "hours_hm": "0", "entry_date": "2026-06-23"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
