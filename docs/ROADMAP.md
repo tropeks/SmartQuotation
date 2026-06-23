@@ -7,10 +7,19 @@
 ## Visão Geral dos Horizontes
 
 ```
-H1 ─── Motor de Cotação (MVP)          0 – 6 meses    ← estamos aqui
+H1 técnico ─ Motor de Cotação           0 – 6 meses    ← estamos aqui
+H1 auditável ─ Aprovação + trilha       0 – 3 meses     ← pendente
 H2 ─── Gestão da Produção              6 – 18 meses
 H3 ─── ERP Especializado Caldeiraria   18m+
 ```
+
+### Leitura atual do escopo
+
+| Faixa | Status real |
+|---|---|
+| H1 técnico | feixe tubular + BEU/BEM, sessão auth, EAP persistida e proposta |
+| H1 auditável | CREA obrigatório, ART opcional, snapshot por cotação e trilha mínima |
+| H1.5/H2 | Equipment/Component formal, JWT/MFA, PVElite completo e integrações ERP |
 
 ---
 
@@ -18,10 +27,9 @@ H3 ─── ERP Especializado Caldeiraria   18m+
 
 ### Critério de Conclusão do MVP
 
-> O MVP está completo quando um usuário consegue: criar uma cotação de vaso de pressão
-> com dimensionamento ASME VIII automatizado, validado contra PVElite, com formação de preço
-> completa, assinatura técnica do engenheiro e geração de proposta em PDF — tudo rastreado
-> em audit trail imutável, em ambiente multi-tenant isolado, rodando em VPS brasileiro.
+> O H1 técnico fica completo quando um usuário consegue criar, revisar e precificar cotações
+> de feixe tubular e BEU/BEM com sessão auth e EAP persistida por cotação. O pacote auditável
+> completo, a validação ampla contra PVElite e o contrato JWT/MFA ficam fora do H1.
 
 ---
 
@@ -33,7 +41,7 @@ H3 ─── ERP Especializado Caldeiraria   18m+
 |---|---|---|
 | S-001 | Setup Django + PostgreSQL + django-tenants | 8 |
 | S-002 | Health check, logging estruturado, Sentry | 3 |
-| S-003 | Login / logout / refresh token (JWT + Argon2) | 5 |
+| S-003 | Login / logout por sessão + CSRF | 5 |
 | — | Docker Compose dev + staging provisionado | — |
 | — | GitHub Actions: lint + test + bandit + pip-audit | — |
 | — | Domínio + wildcard TLS via Caddy no staging | — |
@@ -42,19 +50,19 @@ H3 ─── ERP Especializado Caldeiraria   18m+
 **Definition of Done do Sprint:**
 - [ ] `https://acme.staging.smartquotation.com.br/health/` retorna 200
 - [ ] Tenant A não vê dados do Tenant B (teste automatizado passando no CI)
-- [ ] Login funciona com JWT; rate limiting ativo
+- [ ] Login funciona com sessão; rate limiting ativo
 - [ ] Pipeline CI/CD verde: lint → test → scan → deploy staging automático
 
 ---
 
 ### Sprint 1 — Auth completa + Cadastros Base (semanas 3–4)
 
-**Meta:** Time pode fazer login com MFA e todos os cadastros mestre estão disponíveis.
+**Meta:** H1 auditável começa a fechar: aprovação técnica mínima, CREA obrigatório e cadastros mestre estão disponíveis.
 
 | Story | Descrição | SP |
 |---|---|---|
-| S-004 | MFA via TOTP | 5 |
-| S-005 | RBAC: 5 perfis, permissões, middleware de tenant | 8 |
+| S-004 | Aprovação técnica com CREA obrigatório | 5 |
+| S-005 | RBAC mínimo + auditoria de cotação | 8 |
 | S-006 | Catálogo de materiais + preços + allowable stress | 8 |
 | S-007 | Operações, máquinas, Rate 3-camadas + seeds | 8 |
 | S-008 | Cadastro de clientes (CNPJ, contato) | 3 |
@@ -63,7 +71,7 @@ H3 ─── ERP Especializado Caldeiraria   18m+
 **Total:** 37 SP
 **Definition of Done do Sprint:**
 - [ ] Engenheiro sem CREA não consegue ser promovido ao role engenheiro
-- [ ] Admin com MFA consegue fazer login e gerenciar usuários
+- [ ] Aprovação técnica exige CREA; ART segue opcional
 - [ ] Seeds de materiais ASME carregados; allowable stress por temperatura consultável
 - [ ] Rate `industry_standard` populado; resolução de hierarquia testada
 - [ ] Módulo `engineering/` importável sem Django; decorator `@calculation` funcionando

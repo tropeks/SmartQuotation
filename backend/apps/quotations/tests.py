@@ -5,7 +5,7 @@ Teste-chave: uma cotação persistida reproduz o gabarito ENGEMATEX (caso 136 tu
 from decimal import Decimal
 from django_tenants.test.cases import TenantTestCase
 
-from apps.quotations.models import Quotation, Customer, QuotationItem, ItemMaterial, ItemOperation
+from apps.quotations.models import CalculationSnapshot, Quotation, Customer, QuotationItem, ItemMaterial, ItemOperation
 from apps.quotations.adapter import recompute, default_inputs, to_feixe_inputs
 from apps.quotations.services import create_feixe_quotation, next_number
 
@@ -59,6 +59,66 @@ class FeixeQuotationTests(TenantTestCase):
         self.assertTrue(q1.number.startswith("COT-"))
         self.assertNotEqual(q1.number, q2.number)
         self.assertEqual(int(q2.number.split("-")[-1]), int(q1.number.split("-")[-1]) + 1)
+
+    def test_calculation_snapshot_criada_para_feixe(self):
+        q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
+        snaps = CalculationSnapshot.objects.filter(quotation=q)
+        self.assertEqual(snaps.count(), 1)
+        snap = snaps.get()
+        self.assertEqual(snap.engine_version, "calc-snapshot-v1")
+        self.assertEqual(snap.inputs["quotation"]["number"], q.number)
+        self.assertIn("totals", snap.outputs)
+        self.assertEqual(snap.outputs["totals"]["custo_total"], str(q.custo_total))
+
+    def test_hash_muda_quando_inputs_mudam(self):
+        q1 = create_feixe_quotation(self.customer, "Feixe 136 tubos")
+        inp = default_inputs(); inp["n_tubos"] = 200
+        q2 = create_feixe_quotation(self.customer, "Feixe 200 tubos", inputs=inp)
+        h1 = q1.snapshots.first().snapshot_hash
+        h2 = q2.snapshots.first().snapshot_hash
+        self.assertNotEqual(h1, h2)
+
+
+    def test_snapshot_hash_deterministico_independe_ordem_relacionados(self):
+        from apps.quotations.services import build_snapshot_payload
+        q = create_feixe_quotation(self.customer, "Feixe hash")
+        h1 = q.snapshots.first().snapshot_hash
+        h2 = build_snapshot_payload(q)["snapshot_hash"]
+        self.assertEqual(h1, h2)
+
+    def test_snapshot_permutador_com_memorial_e_standard_refs(self):
+        from apps.quotations.services import create_permutador_quotation
+        from pricing_engine.permutador_quote import quote_completo
+        cust = Customer.objects.create(company_name="ACME Memo")
+        cleaned = {"designacao": "BEU", "classe_casco": "CS", "pressao_projeto_bar": 50,
+                   "temperatura_projeto_c": 150, "rt_escopo": "Total", "diametro_casco_mm": 764,
+                   "esp_casco_mm": 9.5, "corrosao_mm": 3, "comprimento_casco_mm": 1631}
+        q = create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
+        snap = q.snapshots.first()
+        self.assertIn("memorial", snap.outputs)
+        self.assertTrue(snap.standard_refs)
+        self.assertTrue(any("ASME" in ref.get("norma", "") for ref in snap.standard_refs))
+
+
+    def test_snapshot_permutador_pressurizado_exige_memorial(self):
+        from unittest.mock import patch
+        from apps.quotations.services import create_permutador_quotation
+        from pricing_engine.permutador_quote import quote_completo
+        cust = Customer.objects.create(company_name="ACME Empty Memo")
+        cleaned = {"designacao": "BEU", "pressao_projeto_bar": 50}
+        with patch("apps.tema_templates.services.memorial_asme", return_value=[]):
+            with self.assertRaises(RuntimeError):
+                create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
+
+    def test_snapshot_permutador_propaga_falha_do_memorial(self):
+        from unittest.mock import patch
+        from apps.quotations.services import create_permutador_quotation
+        from pricing_engine.permutador_quote import quote_completo
+        cust = Customer.objects.create(company_name="ACME Fail")
+        cleaned = {"designacao": "BEU", "pressao_projeto_bar": 50}
+        with patch("apps.tema_templates.services.memorial_asme", side_effect=RuntimeError("boom")):
+            with self.assertRaises(RuntimeError):
+                create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
 
     def test_to_feixe_inputs_merge_defaults(self):
         q = Quotation(inputs={"n_tubos": 99}, customer=self.customer)
@@ -145,6 +205,7 @@ class PermutadorQuotationTests(TenantTestCase):
         self.assertAlmostEqual(
             float(q.custo_mo),
             round(resultado["custo_mao_obra"] + resultado["custo_servicos"], 2), places=2)
+        self.assertEqual(q.snapshots.count(), 1)
 
     def test_cria_itens_por_secao(self):
         from apps.quotations.services import create_permutador_quotation
@@ -156,6 +217,7 @@ class PermutadorQuotationTests(TenantTestCase):
         self.assertEqual(itens.count(), len(resultado["por_secao"]))
         soma = sum(float(i.custo_material) + float(i.custo_mo) for i in itens)
         self.assertAlmostEqual(soma, sum(resultado["por_secao"].values()), places=1)
+        self.assertEqual(q.snapshots.count(), 1)
 
     def test_loop_fecha_gera_proposta(self):
         """Prova o ciclo: cotação do permutador → proposta com o preço correto."""

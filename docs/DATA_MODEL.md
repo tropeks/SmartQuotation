@@ -11,16 +11,17 @@
 - **Schema `tenant_{slug}`:** todas as entidades de negócio isoladas por cliente
 
 ### Soft Delete
-Todas as entidades de negócio usam `deleted_at TIMESTAMP NULL` — nunca se apagam fisicamente.
-Purga física programada após período de retenção (15 anos para cotações/cálculos, NR-13).
+Contrato alvo H1.5/H2: entidades de negócio usam `deleted_at TIMESTAMP NULL` e purga física
+programada após retenção regulatória. H1 atual ainda usa exclusão padrão em parte dos modelos.
 
 ### Audit Trail
-`django-simple-history` gera tabela `_historical` espelhada para cada entidade de domínio,
-com colunas adicionais: `history_user_id`, `history_date`, `history_type` (C/U/D), `history_change_reason`.
+H1 atual: `CalculationSnapshot`, `TechnicalApproval` e `AccessLog` cobrem a trilha mínima inicial.
+Contrato alvo H1.5/H2: `django-simple-history` em entidades de domínio e hardening append-only no banco.
 
 ### Versionamento de Cálculo
-Cada cotação grava um `CalculationSnapshot` (JSONB) com os inputs, a versão da função e o output.
-Garante reprodução histórica mesmo após bugfix ou atualização de norma.
+No H1, cada cotação grava um snapshot persistido da EAP e do roll-up da cotação inteira, com
+inputs, versão da função e output. Isso garante reprodução histórica mesmo após bugfix ou
+atualização de norma. O modelo Equipment/Component formal fica para H1.5/H2.
 
 ---
 
@@ -114,7 +115,7 @@ Entity: TechnicalApproval
   - approved_at: TIMESTAMP DEFAULT NOW()
   - revoked_at: TIMESTAMP NULL
   - revoked_by_id: FK → UserProfile NULL
-  -- append-only: nunca UPDATE, apenas INSERT e revogação lógica
+  -- H1: revogação lógica por serviço; trigger append-only fica para H1.5
   INDEX: quotation_id, approved_by_id, approved_at
 ```
 
@@ -179,225 +180,109 @@ Entity: MaterialPrice
 
 ---
 
-### 3.4 Equipamentos — Modelo Polimórfico
+### 3.4 Cotações, EAP e Snapshot (H1 real)
 
-```
-Entity: Equipment
-  -- Entidade abstrata: representa qualquer equipamento cotável
-  - id: UUID (PK)
-  - quotation_id: FK → Quotation NOT NULL
-  - equipment_type: ENUM('pressure_vessel','heat_exchanger','atmospheric_tank','piping','structure') NOT NULL
-  - tag: VARCHAR(100) NULL                    -- tag do equipamento (ex: V-101)
-  - description: TEXT NULL
-  - design_standard: VARCHAR(50) NOT NULL     -- ASME VIII Div.1, TEMA, API 650, etc.
-  - fluid_service: VARCHAR(255) NULL          -- serviço (ex: "Vapor saturado 10 bar")
-  - corrosion_allowance_mm: DECIMAL(6,2) DEFAULT 3.00  -- sobremetal padrão
-  - surface_finish: VARCHAR(100) NULL         -- jateamento Sa2.5, pintura, eletropolimento
-  - heat_treatment: ENUM('none','stress_relief','pwht','annealing','normalizing') DEFAULT 'none'
-  - ndt_requirements: JSONB DEFAULT '{}'      -- RX %, US, LP, PM, etc.
-  - weight_kg_estimated: DECIMAL(10,2) NULL   -- calculado automaticamente
-  - weight_kg_final: DECIMAL(10,2) NULL       -- após detalhamento ou pesagem
-  - sort_order: SMALLINT DEFAULT 0
-  - created_at: TIMESTAMP DEFAULT NOW()
-  - updated_at: TIMESTAMP
-  - deleted_at: TIMESTAMP NULL
-  → has_one: PressureVessel (se equipment_type = 'pressure_vessel')
-  → has_one: HeatExchanger (se equipment_type = 'heat_exchanger')
-  → has_many: EquipmentComponent
-  → has_many: CalculationSnapshot
-  INDEX: quotation_id, equipment_type
-
-Entity: PressureVessel
-  -- Detalhes específicos de vaso de pressão (ASME VIII)
-  - equipment_id: UUID (PK, FK → Equipment)
-  - orientation: ENUM('vertical','horizontal') NOT NULL
-  - vessel_class: ENUM('I','II') DEFAULT 'I'       -- Classe NR-13
-  - design_pressure_bar: DECIMAL(8,2) NOT NULL
-  - design_temp_c: DECIMAL(6,1) NOT NULL
-  - operating_pressure_bar: DECIMAL(8,2) NULL
-  - operating_temp_c: DECIMAL(6,1) NULL
-  - test_pressure_bar: DECIMAL(8,2) NULL            -- calculado: 1.3 * MAWP
-  - volume_liters: DECIMAL(12,3) NULL               -- calculado
-  - shell_material_id: FK → Material NOT NULL
-  - shell_length_mm: DECIMAL(10,2) NOT NULL
-  - shell_od_mm: DECIMAL(10,2) NOT NULL
-  - shell_thickness_calc_mm: DECIMAL(8,3) NULL      -- calculado
-  - shell_thickness_adopted_mm: DECIMAL(8,3) NULL   -- adotado (≥ calculado)
-  - joint_efficiency: DECIMAL(4,3) DEFAULT 1.000    -- E value ASME
-  - number_of_heads: SMALLINT DEFAULT 2
-  - head_type: ENUM('toriespherical','elliptical','hemispherical','conical','flat') DEFAULT 'elliptical'
-  - head_material_id: FK → Material NULL
-  - head_thickness_calc_mm: DECIMAL(8,3) NULL
-  - head_thickness_adopted_mm: DECIMAL(8,3) NULL
-  - supports_type: ENUM('saddle','skirt','legs','lugs') DEFAULT 'saddle'
-
-Entity: HeatExchanger
-  -- Detalhes específicos de trocador de calor (TEMA)
-  - equipment_id: UUID (PK, FK → Equipment)
-  - tema_type: ENUM('E','F','G','H','J','X','K') NOT NULL
-  - tema_class: ENUM('R','C','B') DEFAULT 'B'
-  - shell_side_fluid: VARCHAR(255) NULL
-  - tube_side_fluid: VARCHAR(255) NULL
-  - shell_design_pressure_bar: DECIMAL(8,2) NOT NULL
-  - shell_design_temp_c: DECIMAL(6,1) NOT NULL
-  - tube_design_pressure_bar: DECIMAL(8,2) NOT NULL
-  - tube_design_temp_c: DECIMAL(6,1) NOT NULL
-  - shell_material_id: FK → Material NOT NULL
-  - shell_od_mm: DECIMAL(10,2) NOT NULL
-  - shell_length_mm: DECIMAL(10,2) NOT NULL
-  - tube_material_id: FK → Material NOT NULL
-  - tube_od_mm: DECIMAL(8,2) NOT NULL
-  - tube_thickness_mm: DECIMAL(6,2) NOT NULL
-  - tube_length_mm: DECIMAL(10,2) NOT NULL
-  - number_of_tubes: INTEGER NULL                   -- calculado ou informado
-  - tube_pitch_mm: DECIMAL(8,2) NULL
-  - tube_layout: ENUM('triangular_30','triangular_60','square_45','square_90') DEFAULT 'triangular_30'
-  - number_of_passes_tube: SMALLINT DEFAULT 1
-  - number_of_passes_shell: SMALLINT DEFAULT 1
-  - tubesheet_material_id: FK → Material NULL
-  - baffle_type: ENUM('single_segmental','double_segmental','disc_and_doughnut','none') DEFAULT 'single_segmental'
-  - number_of_baffles: SMALLINT NULL
-  - heat_transfer_area_m2: DECIMAL(10,3) NULL       -- calculado
-  - heat_duty_kw: DECIMAL(10,2) NULL
-```
-
----
-
-### 3.5 Componentes do Equipamento
-
-```
-Entity: EquipmentComponent
-  -- Cada parte física do equipamento (casco, tampo, bocal, flange, etc.)
-  - id: UUID (PK)
-  - equipment_id: FK → Equipment NOT NULL
-  - component_type: ENUM(
-      'shell','head','nozzle','flange','tubesheet','tube_bundle',
-      'baffle','saddle','skirt','leg','lug','manway','nameplate',
-      'other'
-    ) NOT NULL
-  - tag: VARCHAR(50) NULL                     -- ex: N1, N2, TL, etc.
-  - description: VARCHAR(255) NOT NULL
-  - quantity: SMALLINT DEFAULT 1
-  - material_id: FK → Material NOT NULL
-  - calculation_mode: ENUM('calculated','imported') DEFAULT 'calculated'
-  -- Campos geométricos principais (nem todos se aplicam a todos os tipos)
-  - outer_diameter_mm: DECIMAL(10,2) NULL
-  - inner_diameter_mm: DECIMAL(10,2) NULL
-  - length_mm: DECIMAL(10,2) NULL
-  - thickness_mm: DECIMAL(8,3) NULL           -- adotado
-  - thickness_calc_mm: DECIMAL(8,3) NULL      -- calculado pelo sistema
-  -- Propriedades calculadas
-  - weight_kg: DECIMAL(10,3) NULL             -- calculado
-  - area_m2: DECIMAL(10,4) NULL               -- área de solda / revestimento
-  -- Modo importado
-  - imported_by_id: FK → UserProfile NULL
-  - imported_document_path: VARCHAR(500) NULL -- laudo/cálculo do cliente/terceiro
-  - imported_document_hash: CHAR(64) NULL     -- SHA-256 do arquivo
-  - imported_at: TIMESTAMP NULL
-  - import_source: VARCHAR(255) NULL          -- "Cliente", "PVElite calculado por X", etc.
-  -- Metadados
-  - sort_order: SMALLINT DEFAULT 0
-  - notes: TEXT NULL
-  - created_at: TIMESTAMP DEFAULT NOW()
-  - updated_at: TIMESTAMP
-  INDEX: equipment_id, component_type
-```
-
----
-
-### 3.6 Snapshots de Cálculo
-
-```
-Entity: CalculationSnapshot
-  -- Registro imutável de cada execução do motor de cálculo
-  - id: UUID (PK)
-  - component_id: FK → EquipmentComponent NOT NULL
-  - function_name: VARCHAR(200) NOT NULL      -- ex: 'engineering.asme.viii_div1.shell.calc_thickness'
-  - function_version: VARCHAR(20) NOT NULL    -- ex: '1.0.0'
-  - standard_reference: VARCHAR(200) NOT NULL -- ex: 'ASME BPVC Sec. VIII Div.1 UG-27 (2021)'
-  - inputs: JSONB NOT NULL                    -- todos os inputs da função
-  - outputs: JSONB NOT NULL                   -- todos os outputs da função
-  - inputs_hash: CHAR(64) NOT NULL            -- SHA-256(inputs) para detecção de mudança
-  - pvélite_validated: BOOLEAN DEFAULT FALSE
-  - pvélite_delta_pct: DECIMAL(6,3) NULL      -- diferença % em relação ao PVElite
-  - pvélite_validated_at: TIMESTAMP NULL
-  - pvélite_validated_by_id: FK → UserProfile NULL
-  - created_by_id: FK → UserProfile NOT NULL
-  - created_at: TIMESTAMP DEFAULT NOW()
-  -- NUNCA UPDATE — append-only. Nova execução = novo registro.
-  INDEX: component_id, created_at DESC, function_name
-```
-
----
-
-### 3.7 Cotações
+O H1 atual não usa ainda o modelo polimórfico `Equipment/Component`. A espinha persistida é
+`Quotation -> QuotationItem -> ItemMaterial/ItemOperation`, que funciona como snapshot de EAP da
+cotação. O modelo formal de equipamento fica para H1.5/H2.
 
 ```
 Entity: Customer
-  - id: UUID (PK)
+  - id: BIGSERIAL (PK)
   - company_name: VARCHAR(255) NOT NULL
   - cnpj: VARCHAR(18) NULL
-  - cpf: VARCHAR(14) NULL
   - contact_name: VARCHAR(255) NULL
   - email: VARCHAR(255) NULL
-  - phone: VARCHAR(20) NULL
-  - address: TEXT NULL
   - city: VARCHAR(100) NULL
   - state: CHAR(2) NULL
-  - notes: TEXT NULL
-  - is_active: BOOLEAN DEFAULT TRUE
   - created_at: TIMESTAMP DEFAULT NOW()
-  - updated_at: TIMESTAMP
-  INDEX: company_name, cnpj
-
-Entity: Quotation
-  - id: UUID (PK)
-  - number: VARCHAR(50) UNIQUE NOT NULL       -- ex: COT-2025-001 (gerado por tenant)
-  - revision: SMALLINT DEFAULT 0             -- A, B, C → 0, 1, 2
-  - parent_quotation_id: FK → Quotation NULL -- NULL para rev 0; revisões apontam para a original
-  - customer_id: FK → Customer NOT NULL
-  - status: ENUM(
-      'draft','in_review','pending_approval','approved',
-      'sent_to_customer','won','lost','cancelled','converted_to_order'
-    ) DEFAULT 'draft'
-  - title: VARCHAR(500) NOT NULL
-  - description: TEXT NULL
-  - valid_until: DATE NULL
-  - currency: CHAR(3) DEFAULT 'BRL'
-  - incoterm: VARCHAR(20) NULL               -- EXW, FOB, CIF
-  - delivery_weeks: SMALLINT NULL
-  - payment_terms: TEXT NULL
-  -- Totais (calculados e gravados para histórico)
-  - total_material_cost_brl: DECIMAL(14,2) NULL
-  - total_labor_cost_brl: DECIMAL(14,2) NULL
-  - total_overhead_brl: DECIMAL(14,2) NULL
-  - total_cost_brl: DECIMAL(14,2) NULL
-  - margin_pct: DECIMAL(5,2) NULL
-  - tax_pct: DECIMAL(5,2) NULL
-  - total_price_brl: DECIMAL(14,2) NULL
-  -- Metadados
-  - created_by_id: FK → UserProfile NOT NULL
-  - assigned_engineer_id: FK → UserProfile NULL
-  - approved_by_id: FK → UserProfile NULL
-  - approved_at: TIMESTAMP NULL
-  - sent_at: TIMESTAMP NULL
-  - won_at: TIMESTAMP NULL
-  - lost_at: TIMESTAMP NULL
-  - lost_reason: TEXT NULL
-  - notes: TEXT NULL
-  - created_at: TIMESTAMP DEFAULT NOW()
-  - updated_at: TIMESTAMP
-  - deleted_at: TIMESTAMP NULL
-  INDEX: number, customer_id, status, created_at DESC
-  → has_many: Equipment
-  → has_many: CostBreakdown
-  → has_many: Proposal
-  → has_many: TechnicalApproval
 ```
 
----
+```
+Entity: Quotation
+  - id: BIGSERIAL (PK)
+  - number: VARCHAR(50) UNIQUE NOT NULL       -- COT-{ANO}-{SEQ}
+  - revision: SMALLINT DEFAULT 0
+  - customer_id: FK -> Customer NOT NULL
+  - title: VARCHAR(500) NOT NULL
+  - scope: ENUM(tube_bundle,complete) DEFAULT tube_bundle
+  - status: ENUM(draft,in_review,approved,sent,won,lost) DEFAULT draft
+  - inputs: JSONB NOT NULL                    -- FeixeInputs ou dados do TEMA
+  - fator_preco: DECIMAL(8,5) NOT NULL
+  - impostos_pct: DECIMAL(6,3) NOT NULL
+  - custo_material: DECIMAL(14,2) NOT NULL
+  - custo_mo: DECIMAL(14,2) NOT NULL
+  - custo_total: DECIMAL(14,2) NOT NULL
+  - preco_sem_impostos: DECIMAL(14,2) NOT NULL
+  - preco_com_impostos: DECIMAL(14,2) NOT NULL
+  - peso_bruto_kg: DECIMAL(12,2) NOT NULL
+  - peso_liquido_kg: DECIMAL(12,2) NOT NULL
+  - created_by_id: FK -> auth.User NULL
+  - created_at: TIMESTAMP DEFAULT NOW()
+  - updated_at: TIMESTAMP
+  - computed_at: TIMESTAMP NULL
+  -> has_many: QuotationItem
+  -> has_many: CalculationSnapshot
+```
 
-### 3.8 Formação de Custo e Preço
+```
+Entity: QuotationItem
+  - id: BIGSERIAL (PK)
+  - quotation_id: FK -> Quotation NOT NULL
+  - codigo_item: VARCHAR(30) NOT NULL
+  - descricao: VARCHAR(255) NOT NULL
+  - custo_material: DECIMAL(14,2) NOT NULL
+  - custo_mo: DECIMAL(14,2) NOT NULL
+  - sort_order: SMALLINT DEFAULT 0
+  -> has_many: ItemMaterial
+  -> has_many: ItemOperation
+```
+
+```
+Entity: ItemMaterial
+  - id: BIGSERIAL (PK)
+  - item_id: FK -> QuotationItem NOT NULL
+  - codigo_mp: VARCHAR(30) NOT NULL
+  - descricao: VARCHAR(255) NOT NULL
+  - material: VARCHAR(50) NOT NULL
+  - forma: VARCHAR(20) NOT NULL
+  - peso_bruto_kg: DECIMAL(12,3) NOT NULL
+  - peso_liquido_kg: DECIMAL(12,3) NOT NULL
+  - preco_kgf: DECIMAL(10,4) NOT NULL
+  - custo: DECIMAL(14,2) NOT NULL
+```
+
+```
+Entity: ItemOperation
+  - id: BIGSERIAL (PK)
+  - item_id: FK -> QuotationItem NOT NULL
+  - codigo_op: VARCHAR(40) NOT NULL
+  - descricao: VARCHAR(255) NOT NULL
+  - metodo: VARCHAR(20) NULL
+  - custo: DECIMAL(14,2) NOT NULL
+  - aplicavel: BOOLEAN DEFAULT TRUE
+```
+
+```
+Entity: CalculationSnapshot
+  - id: BIGSERIAL (PK)
+  - quotation_id: FK -> Quotation NOT NULL
+  - snapshot_hash: CHAR(64) NOT NULL
+  - inputs: JSONB NOT NULL                    -- metadados da cotação + inputs + preço
+  - outputs: JSONB NOT NULL                   -- totais, EAP e memorial quando aplicável
+  - engine_version: VARCHAR(50) NOT NULL
+  - standard_refs: JSONB DEFAULT []           -- normas/fontes extraídas do memorial
+  - created_at: TIMESTAMP DEFAULT NOW()
+  -- H1: append-only por serviço; hardening por trigger fica para H1.5.
+```
+
+### 3.5 Equipamentos — Modelo Polimórfico (H1.5/H2)
+
+O desenho `Equipment`, `PressureVessel`, `HeatExchanger` e `EquipmentComponent` continua sendo a
+direção de evolução para vasos, PVElite amplo, múltiplos equipamentos por cotação e BOM/roteiro
+formal. Ele não é pré-condição para o H1 auditável de feixe + BEU/BEM.
+
+### 3.6 Formação de Custo e Preço
 
 ```
 Entity: Operation
@@ -481,7 +366,7 @@ Entity: PriceFormation
 
 ---
 
-### 3.9 BOM e Roteiro de Fabricação
+### 3.7 BOM e Roteiro de Fabricação
 
 ```
 Entity: BillOfMaterials
@@ -545,7 +430,7 @@ Entity: RouteOperation
 
 ---
 
-### 3.10 Propostas Comerciais
+### 3.8 Propostas Comerciais
 
 ```
 Entity: ProposalTemplate
@@ -579,7 +464,7 @@ Entity: Proposal
 
 ---
 
-### 3.11 Auditoria e Acesso
+### 3.9 Auditoria e Acesso
 
 ```
 Entity: AccessLog
@@ -605,7 +490,7 @@ Entity: AccessLog
 
 1. **Sprint 0:** Schema `public` (Tenant, Domain, Plan) + Schema shared de `accounts` + skeleton de `materials`
 2. **Sprint 1:** `equipment`, `quotations` (estrutura base)
-3. **Sprint 2:** `engineering` snapshots + `bom` + `routing` (estrutura — dados em H2)
+3. **Sprint 2:** snapshot de cotação + `bom` + `routing` (estrutura — dados em H2)
 4. **Sprint 3:** `pricing`, `proposals`
 5. **Sprint 4:** `audit` completo + `technicalapproval`
 
@@ -628,8 +513,8 @@ ALTER TABLE userprofile ADD CONSTRAINT chk_engineer_crea
 ALTER TABLE equipmentcomponent ADD CONSTRAINT chk_imported_has_doc
   CHECK (calculation_mode != 'imported' OR imported_document_hash IS NOT NULL);
 
--- Auditoria: AccessLog não pode ser deletado antes de 15 anos
--- Implementado via trigger que rejeita DELETE antes de NOW() - interval '15 years'
+-- Auditoria H1.5: AccessLog não pode ser deletado antes de 15 anos
+-- Alvo: trigger que rejeita DELETE antes de NOW() - interval '15 years'
 
 -- Rate: hierarquia coerente
 ALTER TABLE rate ADD CONSTRAINT chk_actual_has_samples

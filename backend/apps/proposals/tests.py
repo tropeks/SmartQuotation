@@ -11,6 +11,7 @@ from apps.quotations.models import Customer
 from apps.quotations.services import create_feixe_quotation
 from apps.proposals.models import Proposal, ProposalTemplate
 from apps.proposals import services
+from apps.audit.models import AccessLog
 
 
 def _chrome_ou_weasy() -> bool:
@@ -98,6 +99,36 @@ class ProposalViewTests(TenantTestCase):
         self.assertEqual(resp.status_code, 302)
         p.refresh_from_db()
         self.assertEqual(p.intro_text, "Intro customizada")
+
+
+    def test_generate_view_registra_access_log(self):
+        p = services.create_proposal(self.q)
+        resp = self.client.post(f"/propostas/{p.pk}/editar/", {
+            "intro_text": "Intro", "scope_text": "Escopo",
+            "terms_text": "Condições", "closing_text": "Fecho", "generate": "1"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(AccessLog.objects.filter(action="generate", resource_id=str(p.pk)).exists())
+
+    def test_download_registra_access_log(self):
+        p = services.create_proposal(self.q)
+        p.docx_path = "proposals/test-download.docx"
+        from django.conf import settings
+        import os
+        os.makedirs(os.path.join(settings.MEDIA_ROOT, "proposals"), exist_ok=True)
+        with open(os.path.join(settings.MEDIA_ROOT, p.docx_path), "wb") as fp:
+            fp.write(b"docx")
+        p.save()
+
+        resp = self.client.get(f"/propostas/{p.pk}/download/docx/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(AccessLog.objects.filter(action="download", resource_id=str(p.pk)).exists())
+
+
+    def test_download_formato_invalido_retorna_404(self):
+        p = services.create_proposal(self.q)
+        resp = self.client.get(f"/propostas/{p.pk}/download/xlsx/")
+        self.assertEqual(resp.status_code, 404)
 
     def test_login_required(self):
         self.client.logout()

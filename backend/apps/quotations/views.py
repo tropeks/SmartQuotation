@@ -123,5 +123,7 @@ def quotation_revise(request, pk):
             created_by=request.user
         )
         recompute(q)
+        from apps.quotations.services import create_calculation_snapshot
+        create_calculation_snapshot(q)
 
     return redirect("quotations:detail", pk=q.pk)

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django_tenants.test.cases import TenantTestCase
 
-from apps.quotations.models import Quotation, Customer
+from apps.quotations.models import CalculationSnapshot, Quotation, Customer
 from apps.quotations.services import create_feixe_quotation
 
 class FeatureViewsTests(TenantTestCase):
@@ -39,7 +39,7 @@ class FeatureViewsTests(TenantTestCase):
         old_rev = q.revision
         resp = self.client.post(f"/cotacoes/{old_pk}/revisar/")
         self.assertEqual(resp.status_code, 302)
-        
+
         q2 = Quotation.objects.get(pk=resp.url.split("/")[-2])
         self.assertNotEqual(q2.number, old_num)
         self.assertEqual(q2.revision, old_rev + 1)
@@ -47,22 +47,26 @@ class FeatureViewsTests(TenantTestCase):
         self.assertEqual(q2.scope, "tube_bundle")
         self.assertEqual(q2.status, "draft")
         self.assertEqual(q2.title, "Feixe A")
+        self.assertEqual(CalculationSnapshot.objects.filter(quotation=q).count(), 1)
+        self.assertEqual(CalculationSnapshot.objects.filter(quotation=q2).count(), 1)
 
     def test_quotation_revise_permutador(self):
         from apps.quotations.services import create_permutador_quotation
         from pricing_engine.permutador_quote import quote_completo
         resultado = quote_completo("BEU")
         q = create_permutador_quotation(self.customer, "BEU", {"designacao": "BEU", "n_tubos": 68}, resultado, title="BEU Test")
-        
+
         resp = self.client.post(f"/cotacoes/{q.pk}/revisar/")
         self.assertEqual(resp.status_code, 302)
-        
+
         q2 = Quotation.objects.get(pk=resp.url.split("/")[-2])
         self.assertNotEqual(q2.number, q.number)
         self.assertEqual(q2.revision, q.revision + 1)
         self.assertEqual(q2.customer, self.customer)
         self.assertEqual(q2.scope, "complete")
         self.assertEqual(q2.status, "draft")
+        self.assertEqual(CalculationSnapshot.objects.filter(quotation=q).count(), 1)
+        self.assertEqual(CalculationSnapshot.objects.filter(quotation=q2).count(), 1)
 
     def test_revise_permutador_reproduz_custo_original(self):
         """REGRESSÃO: revisar deve recomputar com as DIMENSÕES da cotação original, não o seed."""

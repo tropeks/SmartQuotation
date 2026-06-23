@@ -73,6 +73,19 @@ class Quotation(models.Model):
         return self.peso_bruto_kg - self.peso_liquido_kg
 
 
+class CalculationSnapshot(models.Model):
+    quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name="snapshots")
+    snapshot_hash = models.CharField(max_length=64, db_index=True)
+    inputs = models.JSONField(default=dict, blank=True)
+    outputs = models.JSONField(default=dict, blank=True)
+    engine_version = models.CharField(max_length=50)
+    standard_refs = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
 class QuotationItem(models.Model):
     """Nível 1 — componente/grupo da EAP (tubos, espelhos, chicanas, montagem...)."""
     quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name="itens")
