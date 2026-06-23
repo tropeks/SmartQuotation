@@ -10,6 +10,7 @@ Tudo versionado por valid_from (vigência). Ver pricing_engine/{rates.py,process
 """
 from datetime import date
 
+from django.contrib.auth import get_user_model
 from django.db import models
 
 
@@ -123,3 +124,30 @@ class TenantParamConfig(models.Model):
 
     def __str__(self):
         return f"TenantParamConfig(mo={self.fator_correcao_mo}, threshold={self.drill_method_threshold_holes})"
+
+
+class RateSuggestion(models.Model):
+    STATUS = [('pending','Pendente'),('accepted','Aplicada'),('dismissed','Descartada')]
+    operacao = models.CharField(max_length=100, db_index=True)
+    actual_mean_rate = models.DecimalField(max_digits=14, decimal_places=6)
+    current_rate_hh = models.DecimalField(max_digits=10, decimal_places=2)
+    delta_pct = models.DecimalField(max_digits=7, decimal_places=2)
+    n_samples = models.PositiveIntegerField()
+    confidence = models.DecimalField(max_digits=5, decimal_places=4)
+    status = models.CharField(max_length=20, choices=STATUS, default='pending', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(get_user_model(), null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['operacao'],
+                condition=models.Q(status='pending'),
+                name='uniq_suggestion_pending_por_operacao'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.operacao} Δ{self.delta_pct}% N={self.n_samples} [{self.status}]'
