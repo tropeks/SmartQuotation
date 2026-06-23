@@ -1,9 +1,9 @@
 """
 Testes TDD H2.3 — Learning Engine (service + views).
 
-Cobre os 15 cenários do motor de aprendizado de rates:
+Cobre os 24 cenários do motor de aprendizado de rates:
 - LearningEngineServiceTests: generate_suggestions / apply_suggestion / dismiss_suggestion
-- LearningEngineSuggestionViewTests: lista + aplicar + descartar (HTTP)
+- LearningEngineSuggestionViewTests: lista + aplicar + descartar + RBAC (HTTP)
 
 Usa TenantTestCase: as tabelas de TENANT_APPS só existem no schema do tenant de teste.
 Self-contained: cria Rate vigente e ActualRate no setUp / por teste.
@@ -154,6 +154,26 @@ class LearningEngineServiceTests(TenantTestCase):
         with self.assertRaises(ObjectDoesNotExist):
             apply_suggestion(s.pk, self.user)
 
+    def test_confianca_borda_0_70_gera(self):
+        """confidence=0.70 exato (==CONF_MINIMA) deve gerar — borda inclusiva."""
+        ActualRate.objects.create(
+            operacao="TEST_OP", sample_count=25,
+            mean_rate=Decimal("115.00"), confidence=Decimal("0.70"),
+        )
+        criadas = generate_suggestions()
+        self.assertEqual(len(criadas), 1)
+        self.assertEqual(RateSuggestion.objects.filter(status="pending").count(), 1)
+
+    def test_rate_hh_zero_nao_gera(self):
+        """Rate com rate_hh=0 é pulado (evita divisão por zero)."""
+        self.rate.rate_hh = Decimal("0.00")
+        self.rate.save()
+        ActualRate.objects.create(
+            operacao="TEST_OP", sample_count=25,
+            mean_rate=Decimal("115.00"), confidence=Decimal("0.80"),
+        )
+        self.assertEqual(generate_suggestions(), [])
+
     # ---- dismiss_suggestion ----
 
     def test_dismiss_marca_dismissed(self):
@@ -169,6 +189,37 @@ class LearningEngineServiceTests(TenantTestCase):
         self.assertIsNotNone(s.resolved_at)
         # não cria Rate
         self.assertEqual(Rate.objects.filter(operacao="TEST_OP").count(), 1)
+
+    # ---- apply: convenções e edge cases ----
+
+    def test_apply_rate_hm_zero(self):
+        """Rate criado por apply tem rate_hm=0.00, não NULL."""
+        s = RateSuggestion.objects.create(
+            operacao="TEST_OP", actual_mean_rate=Decimal("115.00"),
+            current_rate_hh=Decimal("100.00"), delta_pct=Decimal("15.00"),
+            n_samples=25, confidence=Decimal("0.80"),
+        )
+        apply_suggestion(s.pk, self.user)
+        novo = Rate.objects.vigente("TEST_OP")
+        self.assertEqual(novo.rate_hm, Decimal("0.00"))
+
+    def test_apply_mesmo_dia_idempotente(self):
+        """Dois applies no mesmo dia → update_or_create, não IntegrityError."""
+        s1 = RateSuggestion.objects.create(
+            operacao="TEST_OP", actual_mean_rate=Decimal("115.00"),
+            current_rate_hh=Decimal("100.00"), delta_pct=Decimal("15.00"),
+            n_samples=25, confidence=Decimal("0.80"),
+        )
+        apply_suggestion(s1.pk, self.user)
+        # Cria segunda sugestão e aplica no mesmo dia
+        s2 = RateSuggestion.objects.create(
+            operacao="TEST_OP", actual_mean_rate=Decimal("120.00"),
+            current_rate_hh=Decimal("115.00"), delta_pct=Decimal("4.35"),
+            n_samples=30, confidence=Decimal("0.85"),
+        )
+        apply_suggestion(s2.pk, self.user)  # não deve levantar IntegrityError
+        novo = Rate.objects.vigente("TEST_OP")
+        self.assertEqual(novo.rate_hh, Decimal("120.00"))
 
 
 class LearningEngineSuggestionViewTests(TenantTestCase):
@@ -230,3 +281,36 @@ class LearningEngineSuggestionViewTests(TenantTestCase):
         self.assertEqual(resp.status_code, 403)
         s.refresh_from_db()
         self.assertEqual(s.status, "pending")
+
+    def test_apply_sem_profile_403(self):
+        """Usuário autenticado sem UserProfile (role=None) recebe 403."""
+        sem_profile = User.objects.create_user(username="semProfile", password="segredo123")
+        self.assertTrue(self.client.login(username="semProfile", password="segredo123"))
+        s = self._make_suggestion()
+        resp = self.client.post(f"/engenharia/sugestoes/{s.pk}/aplicar/")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_apply_get_405(self):
+        """GET no endpoint apply → 405 Method Not Allowed."""
+        self.assertTrue(self.client.login(username="engenheiro", password="segredo123"))
+        s = self._make_suggestion()
+        resp = self.client.get(f"/engenharia/sugestoes/{s.pk}/aplicar/")
+        self.assertEqual(resp.status_code, 405)
+
+    def test_refresh_orcamentista_nao_gera(self):
+        """POST refresh por orçamentista não deve criar sugestões."""
+        from apps.production.models import ActualRate
+        ActualRate.objects.create(
+            operacao="TEST_OP", sample_count=25,
+            mean_rate=Decimal("115.00"), confidence=Decimal("0.80"),
+        )
+        self.assertTrue(self.client.login(username="orcamentista", password="segredo123"))
+        resp = self.client.post("/engenharia/sugestoes/", {"refresh": "1"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(RateSuggestion.objects.count(), 0)
+
+    def test_lista_orcamentista_pode_ver(self):
+        """Orçamentista tem acesso de leitura à lista — GET 200."""
+        self.assertTrue(self.client.login(username="orcamentista", password="segredo123"))
+        resp = self.client.get("/engenharia/sugestoes/")
+        self.assertEqual(resp.status_code, 200)

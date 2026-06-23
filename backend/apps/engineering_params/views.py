@@ -4,18 +4,21 @@ from django.shortcuts import render, redirect, get_object_or_404
 from apps.engineering_params.models import RateSuggestion
 from apps.engineering_params import services
 from apps.accounts.models import UserProfile
-from apps.accounts.rbac import require_role
+from apps.accounts.rbac import require_role, user_role as get_user_role
 
-_PODE_ALTERAR_RATE = require_role(
+_ROLES_ALTERAM_RATE = {
     UserProfile.ROLE_ENGENHEIRO,
     UserProfile.ROLE_GESTOR_COMERCIAL,
     UserProfile.ROLE_ADMIN,
-)
+}
+
+_PODE_ALTERAR_RATE = require_role(*_ROLES_ALTERAM_RATE)
 
 @login_required
 def suggestions_list(request):
     if request.method == 'POST' and 'refresh' in request.POST:
-        services.generate_suggestions()
+        if get_user_role(request.user) in _ROLES_ALTERAM_RATE:
+            services.generate_suggestions()
     pending = RateSuggestion.objects.filter(status='pending').order_by('-created_at')
     accepted = RateSuggestion.objects.filter(status='accepted').order_by('-resolved_at')[:10]
     dismissed = RateSuggestion.objects.filter(status='dismissed').order_by('-resolved_at')[:5]
