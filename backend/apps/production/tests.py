@@ -250,6 +250,57 @@ class ApontamentoTests(TenantTestCase):
         self.assertTrue(AccessLog.objects.filter(action="appoint").exists())
 
 
+class FechamentoTests(TenantTestCase):
+    def setUp(self):
+        from datetime import date
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="op")
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_fech"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-7", crea_state="SP")
+        self.today = date.today()
+
+    def _of_em_producao(self, titulo):
+        q = create_feixe_quotation(self.customer, titulo)
+        approve_quotation(q, self.engineer)
+        of = services.convert_quotation_to_of(q, created_by=self.user)
+        services.liberar(of, by=self.user)
+        services.iniciar_producao(of, by=self.user)
+        return of
+
+    def test_fechamento_grava_observacao_so_com_apontamento(self):
+        from decimal import Decimal
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe C")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0).first()
+        services.log_production_entry(op, self.user, Decimal("10"), Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        obs = ProductionObservation.objects.filter(ordem=of)
+        self.assertEqual(obs.count(), 1)  # só a operação apontada (leniente)
+        self.assertEqual(obs.first().operacao, op.codigo_op)
+
+    def test_fechamento_calcula_observed_rate(self):
+        from decimal import Decimal
+        from apps.production.models import ActualRate, ProductionObservation
+        of = self._of_em_producao("Feixe D")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0).first()
+        services.log_production_entry(op, self.user, Decimal("10"), Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        obs = ProductionObservation.objects.get(ordem=of, operacao=op.codigo_op)
+        expected = (op.custo / Decimal("10")).quantize(Decimal("0.01"))
+        self.assertEqual(obs.observed_rate, expected)
+        ar = ActualRate.objects.get(operacao=op.codigo_op)
+        self.assertEqual(ar.sample_count, 1)
+        self.assertAlmostEqual(float(ar.mean_rate), float(expected), places=2)
+
+    def test_fechamento_ignora_actual_hh_zero(self):
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe E")
+        # nenhuma operação apontada -> nenhuma observação, sem div/0
+        services.concluir(of, by=self.user)
+        self.assertEqual(ProductionObservation.objects.filter(ordem=of).count(), 0)
+
+
 class ActualRateMathTests(TenantTestCase):
     def test_welford_agrega_amostras(self):
         from decimal import Decimal

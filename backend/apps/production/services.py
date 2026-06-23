@@ -8,7 +8,7 @@ from datetime import date
 
 from apps.production.models import (
     OrdemFabricacao, OFItem, OFMaterial, OFOperation, ProductionEntry,
-    ActualRate,
+    ActualRate, ProductionObservation,
     STATUS_ABERTA, STATUS_LIBERADA, STATUS_EM_PRODUCAO,
     STATUS_CONCLUIDA, STATUS_CANCELADA,
 )
@@ -136,6 +136,7 @@ ALLOWED_TRANSITIONS = {
 }
 
 
+@transaction.atomic
 def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> OrdemFabricacao:
     """Transiciona uma OF para um novo status, validando a transição."""
     old_status = of.status
@@ -164,6 +165,9 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     of.save()
 
+    if new_status == STATUS_CONCLUIDA:
+        _close_out_observations(of)
+
     if request is not None:
         log_access(request, "transition", of, {"transition": f"{old_status}->{new_status}"})
 
@@ -184,6 +188,24 @@ def concluir(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
 
 def cancelar(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
     return transition(of, STATUS_CANCELADA, by=by, request=request)
+
+
+def _close_out_observations(of):
+    """No fechamento: grava observação imutável e atualiza ActualRate (R$/h) p/ cada op apontada."""
+    from decimal import Decimal
+    ops = OFOperation.objects.filter(item__ordem=of).prefetch_related("entries")
+    for op in ops:
+        if op.custo <= 0:
+            continue
+        actual_hh = op.actual_hh
+        if not actual_hh or actual_hh <= 0:
+            continue  # leniente: sem apontamento / 0 horas -> sem observação (evita div/0)
+        observed_rate = (Decimal(op.custo) / Decimal(actual_hh)).quantize(Decimal("0.01"))
+        ProductionObservation.objects.create(
+            operacao=op.codigo_op, ordem=of, of_operation=op,
+            estimated_custo=op.custo, actual_hh=actual_hh, observed_rate=observed_rate,
+        )
+        _update_actual_rate(op.codigo_op, observed_rate)
 
 
 def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
