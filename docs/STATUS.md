@@ -1,9 +1,9 @@
 # SmartQuotation — Status do Projeto
 
 > Documento vivo. Última revisão: 2026-06-23 — H1 técnico estabilizado; H1 auditável fechado (#46);
-> H2.1 (cotação → Ordem de Fabricação) entregue (#47). (colaboração com @WellToMcAt).
+> H2.1 (cotação → OF) e H2.2 (apontamento de produção) entregues. (colaboração com @WellToMcAt).
 > **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
-> 183 testes Django + 9 testes puros · CI verde em todos os PRs.**
+> 198 testes Django + 9 testes puros · CI verde em todos os PRs.**
 
 ---
 
@@ -14,7 +14,8 @@ design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimens�
 
 - **H1 técnico:** feixe tubular + BEU/BEM operando com EAP persistida por cotação.
 - **H1 auditável:** aprovação técnica CREA, `CalculationSnapshot` com hash e trilha mínima (#46) ✅.
-- **H2 (Gestão da Produção):** iniciado — H2.1 converte cotação aprovada em Ordem de Fabricação (#47).
+- **H2 (Gestão da Produção):** H2.1 converte cotação aprovada em Ordem de Fabricação (#47); H2.2 registra
+  apontamento de horas por operação e, no fechamento, calcula R$/h observado → `ActualRate` (para H2.3).
 - **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
 | Equipamento | Motor | Gabarito | Erro |
@@ -96,7 +97,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 
 ---
 
-## 3c. H1 auditável + início do H2 — CONCLUÍDA (PRs #46–47)
+## 3c. H1 auditável + H2 (produção) — CONCLUÍDA (PRs #46–47, H2.2 em PR)
 
 | Item | Status |
 |---|:--:|
@@ -104,10 +105,13 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **`CalculationSnapshot`** — hash SHA-256 sobre inputs/outputs/memorial; criado em feixe, permutador e revise; recusa permutador pressurizado sem memorial ASME | ✅ (#46) |
 | **`AccessLog`** append-only — view/download/generate/approve/revoke (+ convert/transition no H2) | ✅ (#46–47) |
 | **H2.1 — Cotação → Ordem de Fabricação** — `apps/production`: deep-copy de BOM+roteiro, snapshot_hash pinado, exige aprovação técnica ativa, workflow de status com autoria por transição | ✅ (#47) |
+| **H2.2 — Apontamento de produção** — `ProductionEntry` (horas por operação, somadas); no fechamento da OF grava `ProductionObservation` e agrega `ActualRate` em **R$/h observado = custo ÷ horas reais** (Welford online), pronto p/ o H2.3 | ✅ (PR) |
 
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
-> Próximo: **H2.2 — apontamento de produção** (tempo real por operação alimenta `ActualRate`).
+> H2.1/H2.2 desenhados por Opus, codados por Sonnet (TDD), revisados por Opus. H2.2 fez pivot durante a
+> review: o motor expõe custo (não horas) por operação → baseline = custo, aprendizado em R$/h observado.
+> Próximo: **H2.3 — motor de aprendizado** (lê `ActualRate`; sugere ajuste de `TenantRate` quando N≥20 e confiança>70%).
 
 ---
 

@@ -190,7 +190,7 @@ Sprint 5:   28 SP restantes → entrega 28 SP →   0 SP ✅
 | Milestone | Prazo estimado | Entrega |
 |---|---|---|
 | **H2.1** — Conversão cotação → OF ✅ **(entregue, #47)** | mês 7 | Ordem de Fabricação herdando BOM e roteiro da cotação; zero retrabalho de digitação. Exige aprovação técnica ativa; deep-copy com snapshot_hash pinado; workflow de status com autoria por transição |
-| **H2.2** — Apontamento de produção | mês 9 | Operador registra tempo real por operação; fechamento de OF atualiza `ActualRate` |
+| **H2.2** — Apontamento de produção ✅ **(entregue, PR)** | mês 9 | Operador registra horas por operação; no fechamento da OF calcula R$/h observado (= custo ÷ horas reais) → `ActualRate` (Welford). Baseline = custo (o motor não expõe horas estimadas) |
 | **H2.3** — Motor de aprendizado de índices | mês 10 | Sistema sugere atualização do `TenantRate` quando `ActualRate` tem N ≥ 20 amostras e confidence > 70% |
 | **H2.4** — ITP básico | mês 11 | Plano de inspeção gerado a partir do roteiro; aceite por item com responsável e data |
 | **H2.5** — Conector TOTVS Protheus | mês 13 | Sincronização bidirecional: OF, BOM, materiais, fornecedores |
