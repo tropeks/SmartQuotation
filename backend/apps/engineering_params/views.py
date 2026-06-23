@@ -3,6 +3,14 @@ from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 from apps.engineering_params.models import RateSuggestion
 from apps.engineering_params import services
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import require_role
+
+_PODE_ALTERAR_RATE = require_role(
+    UserProfile.ROLE_ENGENHEIRO,
+    UserProfile.ROLE_GESTOR_COMERCIAL,
+    UserProfile.ROLE_ADMIN,
+)
 
 @login_required
 def suggestions_list(request):
@@ -15,14 +23,14 @@ def suggestions_list(request):
         'pending': pending, 'accepted': accepted, 'dismissed': dismissed
     })
 
-@login_required
+@_PODE_ALTERAR_RATE
 @require_POST
 def suggestion_apply(request, pk):
     s = get_object_or_404(RateSuggestion, pk=pk, status='pending')
     services.apply_suggestion(s.pk, request.user)
     return redirect('engineering_params:suggestions')
 
-@login_required
+@_PODE_ALTERAR_RATE
 @require_POST
 def suggestion_dismiss(request, pk):
     s = get_object_or_404(RateSuggestion, pk=pk, status='pending')

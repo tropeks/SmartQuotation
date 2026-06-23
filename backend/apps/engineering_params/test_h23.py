@@ -16,6 +16,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
+from apps.accounts.models import UserProfile
 from apps.engineering_params.models import Rate, RateSuggestion
 from apps.engineering_params.services import (
     apply_suggestion,
@@ -173,9 +174,12 @@ class LearningEngineServiceTests(TenantTestCase):
 class LearningEngineSuggestionViewTests(TenantTestCase):
     def setUp(self):
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
-        self.user = User.objects.create_user(username="view_user")
-        self.user.set_password("segredo123")
-        self.user.save()
+        # Engenheiro: pode aplicar/descartar sugestões
+        self.eng = User.objects.create_user(username="engenheiro", password="segredo123")
+        UserProfile.objects.create(user=self.eng, role=UserProfile.ROLE_ENGENHEIRO, crea_number="CREA-123")
+        # Orçamentista: só pode visualizar
+        self.orc = User.objects.create_user(username="orcamentista", password="segredo123")
+        UserProfile.objects.create(user=self.orc, role=UserProfile.ROLE_ORCAMENTISTA)
         self.rate = Rate.objects.create(
             operacao="TEST_OP", rate_hh=Decimal("100.00"),
             rate_hm=Decimal("0.00"), valid_from=date(2025, 1, 1),
@@ -189,7 +193,7 @@ class LearningEngineSuggestionViewTests(TenantTestCase):
         )
 
     def test_lista_get_200(self):
-        self.assertTrue(self.client.login(username="view_user", password="segredo123"))
+        self.assertTrue(self.client.login(username="engenheiro", password="segredo123"))
         resp = self.client.get("/engenharia/sugestoes/")
         self.assertEqual(resp.status_code, 200)
 
@@ -199,7 +203,7 @@ class LearningEngineSuggestionViewTests(TenantTestCase):
         self.assertIn("/login/", resp["Location"])
 
     def test_apply_post_cria_rate_e_redireciona(self):
-        self.assertTrue(self.client.login(username="view_user", password="segredo123"))
+        self.assertTrue(self.client.login(username="engenheiro", password="segredo123"))
         s = self._make_suggestion()
         resp = self.client.post(f"/engenharia/sugestoes/{s.pk}/aplicar/")
         self.assertEqual(resp.status_code, 302)
@@ -210,10 +214,19 @@ class LearningEngineSuggestionViewTests(TenantTestCase):
         self.assertEqual(novo.rate_hh, Decimal("115.00"))
 
     def test_dismiss_post_redireciona(self):
-        self.assertTrue(self.client.login(username="view_user", password="segredo123"))
+        self.assertTrue(self.client.login(username="engenheiro", password="segredo123"))
         s = self._make_suggestion()
         resp = self.client.post(f"/engenharia/sugestoes/{s.pk}/descartar/")
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp["Location"], "/engenharia/sugestoes/")
         s.refresh_from_db()
         self.assertEqual(s.status, "dismissed")
+
+    def test_apply_orcamentista_403(self):
+        """Orçamentista não pode modificar rates — recebe 403."""
+        self.assertTrue(self.client.login(username="orcamentista", password="segredo123"))
+        s = self._make_suggestion()
+        resp = self.client.post(f"/engenharia/sugestoes/{s.pk}/aplicar/")
+        self.assertEqual(resp.status_code, 403)
+        s.refresh_from_db()
+        self.assertEqual(s.status, "pending")
