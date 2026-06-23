@@ -52,6 +52,34 @@
 {% endif %}
 
 <section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Roteiro & Apontamento</h3></header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th>Operação</th><th class="num">Custo est. (R$)</th><th class="num">Horas reais</th><th class="num">R$/h obs.</th>{% if of.status == "liberada" or of.status == "em_producao" %}<th>Apontar</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for it in itens %}{% for op in it.operacoes.all %}
+        <tr>
+          <td class="mono">{{ op.codigo_op }} · {{ op.descricao }}</td>
+          <td class="num mono">{{ op.custo|floatformat:2 }}</td>
+          <td class="num mono">{{ op.actual_hh|floatformat:2 }}</td>
+          <td class="num mono">{% if op.actual_hh %}{{ op.custo|floatformat:2 }}{% else %}—{% endif %}</td>
+          {% if of.status == "liberada" or of.status == "em_producao" %}
+          <td>
+            <form method="post" action="{% url 'production:appoint' op.pk %}" style="display:flex;gap:4px">{% csrf_token %}
+              <input type="number" step="0.25" min="0" name="hours_hh" placeholder="HH" required style="width:64px">
+              <input type="date" name="entry_date" value="{{ of.created_at|date:'Y-m-d' }}">
+              <button class="q-btn" type="submit">+</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>Estrutura Analítica (EAP)</h3></header>
   <div class="g-section-body" style="padding:0">
     <table class="g-table">

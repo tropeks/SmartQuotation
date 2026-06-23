@@ -301,6 +301,31 @@ class FechamentoTests(TenantTestCase):
         self.assertEqual(ProductionObservation.objects.filter(ordem=of).count(), 0)
 
 
+class ApontamentoViewTests(TenantTestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="opv", password="x")
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_v"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-5", crea_state="SP")
+        self.q = create_feixe_quotation(self.customer, "Feixe")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+        services.liberar(self.of, by=self.user)
+        self.op = OFOperation.objects.filter(item__ordem=self.of).first()
+
+    def test_appoint_view_cria_entry(self):
+        from apps.production.models import ProductionEntry
+        self.client.force_login(self.user)
+        resp = self.client.post(
+            f"/ofs/operacao/{self.op.pk}/apontar/",
+            {"hours_hh": "2.5", "hours_hm": "0", "entry_date": "2026-06-23", "notes": "turno A"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+
 class ActualRateMathTests(TenantTestCase):
     def test_welford_agrega_amostras(self):
         from decimal import Decimal
