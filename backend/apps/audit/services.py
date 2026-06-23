@@ -7,7 +7,7 @@ from apps.audit.models import AccessLog, TechnicalApproval
 
 
 def latest_snapshot_for(quotation):
-    return quotation.snapshots.order_by("-created_at").first()
+    return quotation.snapshots.order_by("-created_at", "-id").first()
 
 
 @transaction.atomic

@@ -17,6 +17,7 @@
     {% if user.is_authenticated %}
       <span class="tenant">{{ request.tenant.name|default:"—" }}</span>
       <a class="q-btn" href="{% url 'quotations:list' %}">Cotações</a>
+      <a class="q-btn" href="{% url 'production:list' %}">OFs</a>
       <a class="q-btn" href="{% url 'cost_discovery:home' %}">Custos</a>
       <a class="q-btn" href="{% url 'tema_templates:catalog' %}">TEMA</a>
       <a class="q-btn" href="{% url 'tema_templates:data_sheet' %}">Permutador</a>

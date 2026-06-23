@@ -1,8 +1,9 @@
 # SmartQuotation — Status do Projeto
 
-> Documento vivo. Última revisão: 2026-06-22 — H1 técnico estabilizado; H1 auditável ainda pendente.
-> (colaboração com @WellToMcAt). **41 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
-> 168 testes Django + 9 testes puros · CI verde em todos os PRs.**
+> Documento vivo. Última revisão: 2026-06-23 — H1 técnico estabilizado; H1 auditável fechado (#46);
+> H2.1 (cotação → Ordem de Fabricação) entregue (#47). (colaboração com @WellToMcAt).
+> **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
+> 183 testes Django + 9 testes puros · CI verde em todos os PRs.**
 
 ---
 
@@ -12,7 +13,8 @@ Motor de custeio **paramétrico** para permutadores de calor casco-tubo (caldeir
 design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimensões/materiais do projeto.
 
 - **H1 técnico:** feixe tubular + BEU/BEM operando com EAP persistida por cotação.
-- **H1 auditável:** aprovação técnica, rastreabilidade e contrato regulatório mínimo ainda em fechamento.
+- **H1 auditável:** aprovação técnica CREA, `CalculationSnapshot` com hash e trilha mínima (#46) ✅.
+- **H2 (Gestão da Produção):** iniciado — H2.1 converte cotação aprovada em Ordem de Fabricação (#47).
 - **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
 | Equipamento | Motor | Gabarito | Erro |
@@ -91,6 +93,21 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 > Sprint #41 (multi-agente Hermes): refutação cross-engine pegou **2 bugs reais** de input cru
 > (revise + API estimate passavam dimensões cruas → motor devolvia custo do gabarito; R$297k de
 > diferença num caso). Fix: `tema_templates.services.estimate_from_inputs(designacao, inputs)`.
+
+---
+
+## 3c. H1 auditável + início do H2 — CONCLUÍDA (PRs #46–47)
+
+| Item | Status |
+|---|:--:|
+| **Aprovação técnica** — `TechnicalApproval` (CREA obrigatório do engenheiro, ART opcional, revogação lógica) vinculada ao hash do snapshot | ✅ (#46) |
+| **`CalculationSnapshot`** — hash SHA-256 sobre inputs/outputs/memorial; criado em feixe, permutador e revise; recusa permutador pressurizado sem memorial ASME | ✅ (#46) |
+| **`AccessLog`** append-only — view/download/generate/approve/revoke (+ convert/transition no H2) | ✅ (#46–47) |
+| **H2.1 — Cotação → Ordem de Fabricação** — `apps/production`: deep-copy de BOM+roteiro, snapshot_hash pinado, exige aprovação técnica ativa, workflow de status com autoria por transição | ✅ (#47) |
+
+> H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
+> com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
+> Próximo: **H2.2 — apontamento de produção** (tempo real por operação alimenta `ActualRate`).
 
 ---
 

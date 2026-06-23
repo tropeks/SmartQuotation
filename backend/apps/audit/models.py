@@ -61,6 +61,8 @@ class AccessLog(models.Model):
         ("generate", "Generate"),
         ("approve", "Approve"),
         ("revoke", "Revoke"),
+        ("convert", "Convert"),
+        ("transition", "Transition"),
     ]
 
     user = models.ForeignKey(
