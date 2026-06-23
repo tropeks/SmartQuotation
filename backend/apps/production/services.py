@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import date
 
 from apps.production.models import (
-    OrdemFabricacao, OFItem, OFMaterial, OFOperation,
+    OrdemFabricacao, OFItem, OFMaterial, OFOperation, ProductionEntry,
     STATUS_ABERTA, STATUS_LIBERADA, STATUS_EM_PRODUCAO,
     STATUS_CONCLUIDA, STATUS_CANCELADA,
 )
@@ -181,3 +181,31 @@ def concluir(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
 
 def cancelar(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
     return transition(of, STATUS_CANCELADA, by=by, request=request)
+
+
+def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
+                         entry_date=None, notes="", request=None):
+    """Registra apontamento de tempo numa operação de OF liberada/em produção."""
+    from datetime import date as _date
+    status = of_operation.item.ordem.status
+    if status not in (STATUS_LIBERADA, STATUS_EM_PRODUCAO):
+        raise ValidationError(
+            f"Apontamento só é permitido em OF liberada ou em produção (status atual: {status})."
+        )
+    if hours_hh is not None and float(hours_hh) < 0:
+        raise ValidationError("Horas não podem ser negativas.")
+    entry = ProductionEntry.objects.create(
+        of_operation=of_operation,
+        operator=operator,
+        hours_hh=hours_hh,
+        hours_hm=hours_hm or 0,
+        entry_date=entry_date or _date.today(),
+        notes=notes or "",
+    )
+    if request is not None:
+        log_access(request, "appoint", entry, {
+            "of_id": of_operation.item.ordem_id,
+            "of_operation_id": of_operation.pk,
+            "hours_hh": str(hours_hh),
+        })
+    return entry

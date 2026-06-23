@@ -116,3 +116,29 @@ class OFOperation(models.Model):
     custo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     aplicavel = models.BooleanField(default=True)
     sequence = models.PositiveSmallIntegerField(default=0)
+
+    @property
+    def actual_hh(self):
+        from django.db.models import Sum
+        return self.entries.aggregate(s=Sum("hours_hh"))["s"] or 0
+
+    @property
+    def actual_hm(self):
+        from django.db.models import Sum
+        return self.entries.aggregate(s=Sum("hours_hm"))["s"] or 0
+
+
+class ProductionEntry(models.Model):
+    of_operation = models.ForeignKey("OFOperation", on_delete=models.CASCADE, related_name="entries")
+    operator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="production_entries")
+    hours_hh = models.DecimalField(max_digits=8, decimal_places=2)
+    hours_hm = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    entry_date = models.DateField()
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-entry_date", "-created_at"]
+        indexes = [models.Index(fields=["of_operation", "entry_date"])]

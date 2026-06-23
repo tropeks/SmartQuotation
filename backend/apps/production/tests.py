@@ -203,3 +203,48 @@ class OrdemFabricacaoTests(TenantTestCase):
         self.assertEqual(of.preco_com_impostos, self.quotation.preco_com_impostos)
         self.assertEqual(of.peso_bruto_kg, self.quotation.peso_bruto_kg)
         self.assertEqual(of.peso_liquido_kg, self.quotation.peso_liquido_kg)
+
+
+class ApontamentoTests(TenantTestCase):
+    def setUp(self):
+        from datetime import date
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.quotation = create_feixe_quotation(self.customer, "Feixe")
+        self.user = User.objects.create_user(username="op1")
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_ap"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-9", crea_state="SP")
+        approve_quotation(self.quotation, self.engineer)
+        self.of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+        services.liberar(self.of, by=self.user)
+        self.op = OFOperation.objects.filter(item__ordem=self.of).first()
+        self.today = date.today()
+
+    def _request(self):
+        request = RequestFactory().post("/ofs/", REMOTE_ADDR="127.0.0.1")
+        request.user = self.user
+        return request
+
+    def test_log_entry_cria_e_soma(self):
+        from decimal import Decimal
+        services.log_production_entry(self.op, self.user, Decimal("3.0"), Decimal("0"), self.today)
+        services.log_production_entry(self.op, self.user, Decimal("2.5"), Decimal("0"), self.today)
+        self.op.refresh_from_db()
+        self.assertEqual(self.op.entries.count(), 2)
+        self.assertEqual(self.op.actual_hh, Decimal("5.5"))
+
+    def test_log_entry_bloqueado_em_of_aberta(self):
+        from decimal import Decimal
+        q2 = create_feixe_quotation(self.customer, "Feixe B")
+        approve_quotation(q2, self.engineer)
+        of_aberta = services.convert_quotation_to_of(q2, created_by=self.user)  # status 'aberta'
+        op_aberta = OFOperation.objects.filter(item__ordem=of_aberta).first()
+        with self.assertRaises(ValidationError):
+            services.log_production_entry(op_aberta, self.user, Decimal("1.0"), Decimal("0"), self.today)
+
+    def test_log_entry_grava_access_log(self):
+        from decimal import Decimal
+        from apps.audit.models import AccessLog
+        services.log_production_entry(self.op, self.user, Decimal("1.0"), Decimal("0"), self.today,
+                                      request=self._request())
+        self.assertTrue(AccessLog.objects.filter(action="appoint").exists())
