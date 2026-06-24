@@ -1,9 +1,10 @@
 # SmartQuotation — Status do Projeto
 
-> Documento vivo. Última revisão: 2026-06-23 — H1 técnico estabilizado; H1 auditável fechado (#46);
-> H2.1 (cotação → OF) e H2.2 (apontamento de produção) entregues. (colaboração com @WellToMcAt).
+> Documento vivo. Última revisão: 2026-06-24 — H1 técnico estabilizado; H1 auditável fechado (#46);
+> H2.1 (cotação → OF), H2.2 (apontamento de produção) e H2.3 (motor de aprendizado) entregues.
+> (colaboração com @WellToMcAt).
 > **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
-> 198 testes Django + 9 testes puros · CI verde em todos os PRs.**
+> 198 testes Django + 9 testes puros · H2.3 com 44 testes locais · CI verde em todos os PRs.**
 
 ---
 
@@ -15,7 +16,8 @@ design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimens�
 - **H1 técnico:** feixe tubular + BEU/BEM operando com EAP persistida por cotação.
 - **H1 auditável:** aprovação técnica CREA, `CalculationSnapshot` com hash e trilha mínima (#46) ✅.
 - **H2 (Gestão da Produção):** H2.1 converte cotação aprovada em Ordem de Fabricação (#47); H2.2 registra
-  apontamento de horas por operação e, no fechamento, calcula R$/h observado → `ActualRate` (para H2.3).
+  apontamento de horas por operação e, no fechamento, calcula R$/h observado → `ActualRate`; H2.3 lê
+  esses agregados e sugere atualização de `Rate` quando há amostragem e confiança suficientes.
 - **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
 | Equipamento | Motor | Gabarito | Erro |
@@ -97,7 +99,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 
 ---
 
-## 3c. H1 auditável + H2 (produção) — CONCLUÍDA (PRs #46–47, H2.2 em PR)
+## 3c. H1 auditável + H2 (produção) — CONCLUÍDA até H2.3 (PRs #46–47 + H2.2/H2.3)
 
 | Item | Status |
 |---|:--:|
@@ -105,13 +107,16 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **`CalculationSnapshot`** — hash SHA-256 sobre inputs/outputs/memorial; criado em feixe, permutador e revise; recusa permutador pressurizado sem memorial ASME | ✅ (#46) |
 | **`AccessLog`** append-only — view/download/generate/approve/revoke (+ convert/transition no H2) | ✅ (#46–47) |
 | **H2.1 — Cotação → Ordem de Fabricação** — `apps/production`: deep-copy de BOM+roteiro, snapshot_hash pinado, exige aprovação técnica ativa, workflow de status com autoria por transição | ✅ (#47) |
-| **H2.2 — Apontamento de produção** — `ProductionEntry` (horas por operação, somadas); no fechamento da OF grava `ProductionObservation` e agrega `ActualRate` em **R$/h observado = custo ÷ horas reais** (Welford online), pronto p/ o H2.3 | ✅ (PR) |
+| **H2.2 — Apontamento de produção** — `ProductionEntry` (horas por operação, somadas); no fechamento da OF grava `ProductionObservation` e agrega `ActualRate` em **R$/h observado = custo ÷ horas reais** (Welford online), usado pelo H2.3 | ✅ (PR) |
+| **H2.3 — Motor de aprendizado de índices** — `RateSuggestion` gerada a partir de `ActualRate` elegível (`N ≥ 20`, confiança `≥ 70%`, delta material), com aplicar/descartar via serviço e UI protegida por RBAC | ✅ (`aa3127c`) |
 
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
 > H2.1/H2.2 desenhados por Opus, codados por Sonnet (TDD), revisados por Opus. H2.2 fez pivot durante a
 > review: o motor expõe custo (não horas) por operação → baseline = custo, aprendizado em R$/h observado.
-> Próximo: **H2.3 — motor de aprendizado** (lê `ActualRate`; sugere ajuste de `TenantRate` quando N≥20 e confiança>70%).
+> H2.3 foi codado com TDD e auditado em `aa3127c` (7 achados corrigidos): geração idempotente, bordas
+> de confiança, proteção contra `Rate` inválido/zero, aplicação transacional e RBAC nas views.
+> Próximo: **H2.4 — ITP básico** (plano de inspeção a partir do roteiro; aceite por item com responsável/data).
 
 ---
 
@@ -136,7 +141,7 @@ Os 7 itens foram **chancelados pelo engenheiro responsável**. Os defaults deixa
 1. Os defaults da seção 4 estão **validados pelo PE** (2026-06-19); fatores de **setup, preço e scrap** seguem editáveis por caso.
 2. A escala é **calibrada a 1 job real** por designação (sem 2º gabarito p/ validar linearidade).
 3. Verificações ASME são **alertas de apoio**, não substituem o memorial de cálculo do PE.
-4. O pacote de audit trail regulatório do H1 ainda está em fechamento; a documentação não vende isso como concluído.
+4. O H2.3 é um assistente de calibração: ele sugere novos índices, mas a aplicação continua exigindo ação humana autorizada.
 
 ---
 

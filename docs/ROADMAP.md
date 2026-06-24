@@ -7,9 +7,9 @@
 ## Visão Geral dos Horizontes
 
 ```
-H1 técnico ─ Motor de Cotação           0 – 6 meses    ← estamos aqui
-H1 auditável ─ Aprovação + trilha       0 – 3 meses     ← pendente
-H2 ─── Gestão da Produção              6 – 18 meses
+H1 técnico ─ Motor de Cotação           0 – 6 meses     ✅ fechado
+H1 auditável ─ Aprovação + trilha       0 – 3 meses     ✅ fechado
+H2 ─── Gestão da Produção              6 – 18 meses     ← estamos aqui (H2.4)
 H3 ─── ERP Especializado Caldeiraria   18m+
 ```
 
@@ -17,9 +17,10 @@ H3 ─── ERP Especializado Caldeiraria   18m+
 
 | Faixa | Status real |
 |---|---|
-| H1 técnico | feixe tubular + BEU/BEM, sessão auth, EAP persistida e proposta |
+| H1 técnico | feixe tubular + BEU/BEM, sessão auth, EAP persistida, proposta, histórico e API |
 | H1 auditável | CREA obrigatório, ART opcional, snapshot por cotação e trilha mínima |
-| H1.5/H2 | Equipment/Component formal, JWT/MFA, PVElite completo e integrações ERP |
+| H2 | OF, apontamento e motor de aprendizado entregues; próximo foco é ITP básico |
+| H1.5/H2+ | Equipment/Component formal, JWT/MFA, PVElite completo e integrações ERP |
 
 ---
 
@@ -191,7 +192,7 @@ Sprint 5:   28 SP restantes → entrega 28 SP →   0 SP ✅
 |---|---|---|
 | **H2.1** — Conversão cotação → OF ✅ **(entregue, #47)** | mês 7 | Ordem de Fabricação herdando BOM e roteiro da cotação; zero retrabalho de digitação. Exige aprovação técnica ativa; deep-copy com snapshot_hash pinado; workflow de status com autoria por transição |
 | **H2.2** — Apontamento de produção ✅ **(entregue, PR)** | mês 9 | Operador registra horas por operação; no fechamento da OF calcula R$/h observado (= custo ÷ horas reais) → `ActualRate` (Welford). Baseline = custo (o motor não expõe horas estimadas) |
-| **H2.3** — Motor de aprendizado de índices | mês 10 | Sistema sugere atualização do `TenantRate` quando `ActualRate` tem N ≥ 20 amostras e confidence > 70% |
+| **H2.3** — Motor de aprendizado de índices ✅ **(entregue, `aa3127c`)** | mês 10 | Sistema sugere atualização do `TenantRate` quando `ActualRate` tem N ≥ 20 amostras e confidence ≥ 70%; aplicação/descarta via UI com RBAC |
 | **H2.4** — ITP básico | mês 11 | Plano de inspeção gerado a partir do roteiro; aceite por item com responsável e data |
 | **H2.5** — Conector TOTVS Protheus | mês 13 | Sincronização bidirecional: OF, BOM, materiais, fornecedores |
 | **H2.6** — Conector Omie / Bling | mês 14 | Emissão de NF-e via Omie a partir da OF concluída |
