@@ -169,3 +169,91 @@ class ActualRate(models.Model):
 
     def __str__(self):
         return f"{self.operacao} N={self.sample_count} R$/h={self.mean_rate} conf={self.confidence}"
+
+
+class InspectionPlan(models.Model):
+    STATUS_OPEN = "open"
+    STATUS_COMPLETED = "completed"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Aberto"),
+        (STATUS_COMPLETED, "Concluído"),
+    ]
+
+    ordem = models.OneToOneField(
+        "OrdemFabricacao", on_delete=models.CASCADE, related_name="inspection_plan")
+    source_snapshot_hash = models.CharField(max_length=64, db_index=True)
+    source_operations_count = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="inspection_plans_generated")
+    generated_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-generated_at"]
+
+    def __str__(self):
+        return f"ITP {self.ordem.number}"
+
+    @property
+    def accepted_count(self):
+        return self.items.filter(status=InspectionItem.STATUS_ACCEPTED).count()
+
+
+class InspectionItem(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pendente"),
+        (STATUS_ACCEPTED, "Aceito"),
+    ]
+
+    plan = models.ForeignKey("InspectionPlan", on_delete=models.CASCADE, related_name="items")
+    of_operation = models.ForeignKey(
+        "OFOperation", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="inspection_items")
+    sequence = models.PositiveSmallIntegerField(default=0)
+    codigo_item = models.CharField(max_length=30)
+    item_descricao = models.CharField(max_length=255)
+    codigo_op = models.CharField(max_length=40)
+    descricao = models.CharField(max_length=255)
+    metodo = models.CharField(max_length=20, blank=True)
+    inspection_type = models.CharField(max_length=30, default="processo")
+    criterio = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="inspection_items_accepted")
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sequence", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["plan", "of_operation"],
+                condition=models.Q(of_operation__isnull=False),
+                name="uniq_itp_item_per_operation",
+            ),
+            models.CheckConstraint(
+                name="ck_itp_item_acceptance_consistent",
+                condition=(
+                    models.Q(status="pending", accepted_by__isnull=True, accepted_at__isnull=True)
+                    | models.Q(status="accepted", accepted_by__isnull=False, accepted_at__isnull=False)
+                ),
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["plan", "status", "sequence"]),
+            models.Index(fields=["of_operation"]),
+        ]
+
+    def __str__(self):
+        return f"{self.plan.ordem.number} · {self.codigo_op}"
+
+    @property
+    def is_accepted(self):
+        return self.status == self.STATUS_ACCEPTED

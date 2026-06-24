@@ -64,6 +64,8 @@ class AccessLog(models.Model):
         ("convert", "Convert"),
         ("transition", "Transition"),
         ("appoint", "Appoint"),
+        ("itp_generate", "ITP Generate"),
+        ("itp_accept", "ITP Accept"),
     ]
 
     user = models.ForeignKey(

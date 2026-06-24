@@ -79,6 +79,59 @@
   </div>
 </section>
 
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Plano de Inspeção e Testes (ITP)</h3></header>
+  <div class="g-section-body" style="padding:0">
+    {% if inspection_plan %}
+    <div style="padding:12px;display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <div class="mono">
+        {{ inspection_plan.get_status_display }} · {{ inspection_plan.accepted_count }}/{{ inspection_plan.items.count }} aceitos · snapshot {{ inspection_plan.source_snapshot_hash|slice:":8" }}
+      </div>
+    </div>
+    <table class="g-table">
+      <thead><tr><th class="num">Seq</th><th>Operação</th><th>Tipo</th><th>Critério</th><th>Status</th><th>Responsável</th><th>Data</th><th>Aceite</th></tr></thead>
+      <tbody>
+        {% for item in inspection_items %}
+        <tr>
+          <td class="num mono">{{ item.sequence }}</td>
+          <td class="mono">{{ item.codigo_op }} · {{ item.descricao }}</td>
+          <td>{{ item.inspection_type }}</td>
+          <td>{{ item.criterio }}</td>
+          <td>{{ item.get_status_display }}</td>
+          <td>{% if item.accepted_by %}{{ item.accepted_by.get_username }}{% else %}—{% endif %}</td>
+          <td class="mono">{% if item.accepted_at %}{{ item.accepted_at|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td>
+          <td>
+            {% if item.status == "pending" and can_manage_itp %}
+            <form method="post" action="{% url 'production:accept_itp_item' item.pk %}" style="display:flex;gap:4px">{% csrf_token %}
+              <input type="text" name="notes" placeholder="Notas" style="width:160px">
+              <button class="q-btn" type="submit">Aceitar</button>
+            </form>
+            {% elif item.status == "pending" %}
+            <span class="mono">Pendente</span>
+            {% else %}
+            <span class="mono">OK</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="color:var(--g-gray-1)">Nenhum item de inspeção gerado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="padding:12px">
+      {% if can_manage_itp %}
+      <form method="post" action="{% url 'production:generate_itp' of.pk %}">{% csrf_token %}
+        <button class="q-btn primary" type="submit">Gerar ITP</button>
+      </form>
+      {% else %}
+      <span class="mono" style="color:var(--g-gray-1)">ITP ainda não gerado.</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
 {% if of.status == "concluida" %}
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>R$/h Observado (fechamento)</h3></header>
