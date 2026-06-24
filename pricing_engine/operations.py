@@ -13,16 +13,20 @@ import math
 from . import process_params as pp
 
 
-def furar_espelho_horas(num_furos: int, esp_espelho_mm: float, metodo: str | None = None) -> float:
+def furar_espelho_horas(num_furos: int, esp_espelho_mm: float, metodo: str | None = None,
+                        material: str | None = None) -> float:
     """ESPELHOS - FURAR: ceil(esp/avanço/60 × furos). Avanço = ProcessParameter (radial/CNC)."""
     metodo = pp.choose_drill_method(num_furos, override=metodo)
-    avanco = pp.get("FURAR_ESPELHO", metodo)        # mm/min
+    avanco = pp.get("FURAR_ESPELHO", metodo, material)        # mm/min
     return math.ceil(esp_espelho_mm / avanco / 60 * num_furos)
 
 
-def alargar_espelho_horas(num_furos: int, esp_espelho_mm: float, metodo: str | None = None) -> float:
+def alargar_espelho_horas(num_furos: int, esp_espelho_mm: float, metodo: str | None = None,
+                          material: str | None = None) -> float:
     metodo = pp.choose_drill_method(num_furos, override=metodo)
-    avanco = pp.get("ALARGAR_ESPELHO", metodo)
+    if metodo == pp.CNC:
+        return 0
+    avanco = pp.get("ALARGAR_ESPELHO", metodo, material)
     return math.ceil(esp_espelho_mm / avanco / 60 * num_furos)
 
 
@@ -36,10 +40,11 @@ def grooves_espelho_horas(num_furos: int) -> float:
     return math.ceil(t * num_furos / 60)
 
 
-def furar_chicana_horas(esp_pacote_mm: float, num_tubos: int, metodo: str | None = None) -> float:
+def furar_chicana_horas(esp_pacote_mm: float, num_tubos: int, metodo: str | None = None,
+                        material: str | None = None) -> float:
     """CHICANAS - FURAR: ceil(esp_pacote/avanço/60 × nº_tubos)."""
     metodo = pp.choose_drill_method(num_tubos, override=metodo)
-    avanco = pp.get("FURAR_CHICANA", metodo)
+    avanco = pp.get("FURAR_CHICANA", metodo, material)
     return math.ceil(esp_pacote_mm / avanco / 60 * num_tubos)
 
 

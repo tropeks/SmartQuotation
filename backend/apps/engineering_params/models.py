@@ -2,7 +2,7 @@
 Parâmetros de engenharia (TENANT schema) — editáveis pelo tenant, alimentam o motor de custeio.
 
 Separação-chave (insight @WellToMcAt):
-- ProcessParameter (FÍSICA): gera HORAS — avanços/taxas/tempos por (operação × método/máquina).
+- ProcessParameter (FÍSICA): gera HORAS — avanços/taxas/tempos por (operação × método/máquina × material).
 - Rate (CUSTO): converte HORAS → R$ — rate_hh (homem-hora) e rate_hm (hora-máquina) por operação.
 - TenantParamConfig: knobs globais do tenant (fator_correcao_mo, limiar radial/CNC).
 
@@ -11,6 +11,7 @@ Tudo versionado por valid_from (vigência). Ver pricing_engine/{rates.py,process
 from datetime import date
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -60,8 +61,41 @@ class Rate(models.Model):
         return f"{self.operacao} @ {self.valid_from} (HH={self.rate_hh})"
 
 
+class ProcessParameterManager(models.Manager):
+    def vigente(self, operacao, metodo, material=None, on_date=None):
+        """Retorna o ProcessParameter vigente por operação+metodo+material.
+
+        Regra de precedência:
+        1. material específico vigente
+        2. fallback com material NULL vigente
+
+        Se `material` vier vazio/None, mantém o comportamento atual e procura apenas
+        o fallback NULL.
+        """
+        on_date = on_date or date.today()
+        material = material or None
+        base = (
+            self.get_queryset()
+            .filter(operacao=operacao, metodo=metodo, valid_from__lte=on_date)
+            .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=on_date))
+        )
+        if material is not None:
+            specific = (
+                base.filter(material=material)
+                .order_by("-valid_from")
+                .first()
+            )
+            if specific is not None:
+                return specific
+        return (
+            base.filter(material__isnull=True)
+            .order_by("-valid_from")
+            .first()
+        )
+
+
 class ProcessParameter(models.Model):
-    """Parâmetro físico (avanço/taxa/tempo) por (operação × método). valor nulo = pendente (CNC)."""
+    """Parâmetro físico (avanço/taxa/tempo) por (operação × método × material)."""
 
     METODO = [("radial", "Radial"), ("cnc", "CNC"), ("manual", "Manual")]
     UNIDADE = [
@@ -75,6 +109,7 @@ class ProcessParameter(models.Model):
 
     operacao = models.CharField(max_length=100, db_index=True)          # ex: FURAR_ESPELHO
     metodo = models.CharField(max_length=20, choices=METODO)            # radial | cnc | manual
+    material = models.CharField(max_length=100, null=True, blank=True, db_index=True)
     valor = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)  # None = pendente
     unidade = models.CharField(max_length=20, choices=UNIDADE)
     descricao = models.CharField(max_length=255, blank=True)
@@ -82,19 +117,41 @@ class ProcessParameter(models.Model):
     valid_until = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    objects = ProcessParameterManager()
+
     class Meta:
-        ordering = ["operacao", "metodo", "-valid_from"]
-        indexes = [models.Index(fields=["operacao", "metodo", "valid_from"])]
+        ordering = ["operacao", "metodo", "material", "-valid_from"]
+        indexes = [models.Index(fields=["operacao", "metodo", "material", "valid_from"])]
         constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(operacao="ALARGAR_ESPELHO", metodo="cnc"),
+                name="ck_processparam_sem_alargar_espelho_cnc",
+            ),
             models.UniqueConstraint(
                 fields=["operacao", "metodo", "valid_from"],
-                name="uniq_processparam_op_metodo_valid_from",
+                condition=models.Q(material__isnull=True),
+                name="uniq_processparam_op_metodo_valid_from_null_material",
+            ),
+            models.UniqueConstraint(
+                fields=["operacao", "metodo", "material", "valid_from"],
+                condition=models.Q(material__isnull=False),
+                name="uniq_processparam_op_metodo_material_valid_from",
             )
         ]
 
     def __str__(self):
         v = "PENDENTE" if self.valor is None else f"{self.valor} {self.unidade}"
-        return f"{self.operacao} [{self.metodo}] = {v}"
+        material = f" / {self.material}" if self.material else ""
+        return f"{self.operacao} [{self.metodo}{material}] = {v}"
+
+    def save(self, *args, **kwargs):
+        self.material = self.material or None
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.operacao == "ALARGAR_ESPELHO" and self.metodo == "cnc":
+            raise ValidationError("ALARGAR_ESPELHO não existe como etapa em CNC.")
 
 
 class TenantParamConfig(models.Model):

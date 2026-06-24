@@ -77,13 +77,17 @@ class Command(BaseCommand):
             rate_criados += created
             rate_atualizados += not created
 
-        # --- ProcessParameter: a partir do CATALOG (valor None = pendente, ex CNC) ---
+        # --- ProcessParameter: a partir do CATALOG (material atual = NULL/fallback) ---
         pp_criados = pp_atualizados = 0
-        for (operacao, metodo), pp in process_params.CATALOG.items():
+        ProcessParameter.objects.filter(operacao="ALARGAR_ESPELHO", metodo="cnc").delete()
+        for (operacao, metodo, material), pp in process_params.CATALOG.items():
+            if operacao == "ALARGAR_ESPELHO" and metodo == "cnc":
+                continue
             valor = None if pp.valor is None else Decimal(str(pp.valor))
             _obj, created = ProcessParameter.objects.update_or_create(
                 operacao=operacao,
                 metodo=metodo,
+                material=material,
                 valid_from=ProcessParameter._meta.get_field("valid_from").default(),
                 defaults=dict(
                     valor=valor,
