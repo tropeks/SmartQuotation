@@ -20,28 +20,37 @@
 | `~/.gstack/projects/.../rcosta00-main-design-*.md` | design doc aprovado (Approach C) |
 | `~/.gstack/projects/.../rcosta00-main-eng-review-plan-*.md` | plano de arquitetura M1 |
 
-## 🔧 GRAFO DE MÓDULOS (pricing_engine/ — Python puro, 706 linhas)
+## 🔧 GRAFO DE MÓDULOS (pricing_engine/ — Python puro)
 ```
 dimensions.py ──┐                         (OD/BWG → mm, geometria → peso)
 materials.py ───┤                         (catálogo 423, densidade + fallback)
 process_params.py ┤                       (avanços/taxas editáveis; regra radial≤600<CNC)
 rates.py ───────┤                         (TenantCostChain: HH/HM, R$/kgf×forma, fatores)
                 ▼
-components.py ──► (CompSpec → peso por geometria; 11/17 ok, 2 PENDENTES)
-operations.py ──► (fórmulas de horas; drivers validados 4/4)
+components.py ──► (CompSpec → peso por geometria; feixe + BEU/BEM)
+operations.py ──► (64 operações no registry; gates de regressão)
                 ▼
 wbs.py ─────────► Cotacao→Item→{MateriaPrima,Operacao,Ensaio}  (EAP + roll-up + render)
                 ▼
-tests/validate_feixe.py ──► harness: feixe 136 tubos vs gabarito
+tests/validate_feixe_completo.py ───────► feixe 136 tubos: gate ±10%
+tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 ```
 
 ## 📊 ESTADO DO MOTOR (validação contra caso real Petrobras RPBC)
 - Gabarito: custo R$ 35.353 · venda c/imposto R$ 44.192 (gate 10%/5min)
-- ✅ Operações-driver: 4/4 exatas (furar 660, mandrilar 720, furar chicana 1650, soldar 630)
-- ✅ Material: 11/17 componentes, subtotal R$ 13.266 (~87% de ~15.319)
-- 🔨 FALTA: ~60 ops restantes + 6 itens menores + impostos/eng/ferramentas p/ fechar total
-- ⏳ PENDENTE DOMÍNIO (Wellington): fração de corte da chicana; comprimento do espaçador BWG; convenção de códigos (item/MP/op)
+- ✅ Feixe tubular: custo calculado R$ 34.344,93 vs gabarito R$ 35.353,00 (delta -2,9%)
+- ✅ Operações: 64 no registry, 0 erros no gate atual
+- ✅ Permutador completo: BEU R$ 128.162,69 vs R$ 128.160,00; BEM R$ 119.297,24 vs R$ 119.295,00 (delta 0,00%)
+- ✅ Geometria BEU/BEM: 18 itens grandes, 0 divergências >15%
 - ✅ CNC confirmado: furar espelho 97,56 mm/min; furar chicanas 83,34 mm/min; alargar espelho usa fallback conservador 70 mm/min
+
+## 🏭 ESTADO DO PRODUTO DJANGO
+- ✅ H1 técnico: cotação feixe + BEU/BEM, EAP persistida, proposta PDF/DOCX, histórico e API DRF.
+- ✅ H1 auditável: aprovação técnica CREA, `CalculationSnapshot` com hash e `AccessLog`.
+- ✅ H2.1: cotação aprovada → Ordem de Fabricação com BOM/roteiro em deep-copy.
+- ✅ H2.2: apontamento de produção e fechamento gerando `ActualRate` por operação.
+- ✅ H2.3: `RateSuggestion` a partir de `ActualRate` elegível; aplicar/descartar com RBAC.
+- ✅ Testes locais: gates do motor OK; `apps.engineering_params` 44 testes OK; log completo registra 198 testes Django OK.
 
 ## 🧭 DECISÕES TRAVADAS (não re-litigar)
 Approach C (plataforma completa) · clone fundação Vitali (django-tenants) · HTMX+session auth ·
@@ -52,5 +61,5 @@ Rate dia-1 só camada tenant · ProcessParameter separado de Rate · EAP/WBS com
 gstack em todas etapas · autonomia (perguntas só essenciais) · /cso a cada milestone · Boil the Ocean.
 
 ## ▶️ PRÓXIMO PASSO
-Completar as ~60 operações restantes (mesmo padrão dos 4 validados, dados em feixe_operacoes_formulas.json)
-+ itens menores + impostos → fechar R$ 35.353 → rodar /cso → milestone do pricing_engine.
+H2.4 — ITP básico: gerar plano de inspeção a partir do roteiro/OF, registrar aceite por item com responsável/data
+e ligar os eventos relevantes ao `AccessLog`.
