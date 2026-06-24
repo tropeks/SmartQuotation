@@ -29,6 +29,8 @@ class TenantCostChain:
     rate_hm: dict[str, float] = field(default_factory=dict)
     # R$/kgf por (material_sigla, forma). forma: chapa|tubo|barra|forjado|fundido
     material_price: dict[tuple[str, str], float] = field(default_factory=dict)
+    # Parâmetros físicos por (operação, método, material). material None = fallback.
+    process_params: dict[tuple[str, str, str | None], float] = field(default_factory=dict)
     fator_correcao_mo: float = 1.0
     fator_preco: float = 1.0          # markup final
     impostos_pct: float = 0.0         # % sobre preço (ICMS+PIS+COFINS...)

@@ -62,13 +62,14 @@ _op("OP-ESP-TRACAR-FUROS", "ESP-01", "Espelhos - Traçar Furos",
     lambda i: faixa(NF(i), [(400,2),(800,4),(1200,5),(2400,6),(3600,8)], 12) * FC(i) * 80,
     group="espelhos")
 _op("OP-ESP-FURAR", "ESP-01", "Espelhos - Furar",
-    lambda i: (lambda h: h*110 + AJ_OD(i,h,110))(ceil(i.espelho_esp_bruta_mm/pp.get("FURAR_ESPELHO",_drill_method(i))/60*NF(i))*FC(i)),
+    lambda i: (lambda h: h*110 + AJ_OD(i,h,110))(ceil(i.espelho_esp_bruta_mm/pp.get("FURAR_ESPELHO",_drill_method(i),i.espelho_material)/60*NF(i))*FC(i)),
     group="espelhos")
 _op("OP-ESP-ESCAREAR", "ESP-01", "Espelhos - Escarear",
     lambda i: ceil(pp.get("ESCAREAR_ESPELHO",pp.RADIAL)*NF(i)/60)*FC(i) * 110,
     group="espelhos")
 _op("OP-ESP-ALARGAR", "ESP-01", "Espelhos - Alargar",
-    lambda i: (lambda h: h*110 + AJ_OD(i,h,110))(ceil(i.espelho_esp_bruta_mm/pp.get("ALARGAR_ESPELHO",_drill_method(i))/60*NF(i))*FC(i)),
+    lambda i: (lambda h: h*110 + AJ_OD(i,h,110))(ceil(i.espelho_esp_bruta_mm/pp.get("ALARGAR_ESPELHO",_drill_method(i),i.espelho_material)/60*NF(i))*FC(i)),
+    applicable=lambda i: _drill_method(i) != pp.CNC,
     group="espelhos")
 _op("OP-ESP-GROOVES", "ESP-01", "Espelhos - Grooves",
     lambda i: ceil(pp.get("GROOVES_ESPELHO",pp.RADIAL)*NF(i)/60)*FC(i) * 110,
@@ -98,7 +99,7 @@ _op("OP-CHI-TRACAR-FUROS", "CHI-01", "Chicanas - Traçar Furos",
 _op("OP-CHI-FORMAR-PACOTE", "CHI-01", "Chicanas - Formar Pacote",
     lambda i: (1 if _nchic(i)<5 else (2 if i.esp_pacote_chicanas_mm<500 else 4))*FC(i) * 120, group="chicanas")
 _op("OP-CHI-FURAR", "CHI-01", "Chicanas - Furar",
-    lambda i: (lambda h: h*110 + AJ_OD(i,h,110))(ceil(i.esp_pacote_chicanas_mm/pp.get("FURAR_CHICANA",_drill_method(i))/60*i.n_tubos)*FC(i)),
+    lambda i: (lambda h: h*110 + AJ_OD(i,h,110))(ceil(i.esp_pacote_chicanas_mm/pp.get("FURAR_CHICANA",_drill_method(i),i.chicana_material)/60*i.n_tubos)*FC(i)),
     group="chicanas")
 _op("OP-CHI-PREP-USINAR", "CHI-01", "Chicanas - Preparação p/ Usinar",
     lambda i: (1 if _nchic(i)<5 else (2 if i.esp_pacote_chicanas_mm<500 else (3 if i.esp_pacote_chicanas_mm<1000 else 4)))*FC(i) * 120, group="chicanas")

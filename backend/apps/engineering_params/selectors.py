@@ -4,7 +4,7 @@ Selectors — lógica de leitura derivada dos parâmetros de engenharia.
 choose_drill_method replica pricing_engine.process_params.choose_drill_method, mas lê o
 limiar do TenantParamConfig do schema atual (editável por tenant).
 """
-from apps.engineering_params.models import TenantParamConfig
+from apps.engineering_params.models import ProcessParameter, TenantParamConfig
 
 RADIAL = "radial"
 CNC = "cnc"
@@ -26,3 +26,13 @@ def choose_drill_method(num_holes, override=None, threshold=600):
 def threshold_do_tenant():
     """Limiar radial→CNC corrente do tenant (TenantParamConfig)."""
     return TenantParamConfig.get_solo().drill_method_threshold_holes
+
+
+def get_process_parameter(operacao, metodo, material=None, on_date=None):
+    """Atalho para ProcessParameter.objects.vigente com fallback por material."""
+    return ProcessParameter.objects.vigente(
+        operacao=operacao,
+        metodo=metodo,
+        material=material,
+        on_date=on_date,
+    )

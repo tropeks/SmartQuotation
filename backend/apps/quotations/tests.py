@@ -46,6 +46,21 @@ class FeixeQuotationTests(TenantTestCase):
         q2 = create_feixe_quotation(self.customer, "200 tubos", inputs=inp)
         self.assertGreater(q2.preco_com_impostos, q1.preco_com_impostos)
 
+    def test_process_parameter_material_do_tenant_altera_custo_da_furacao(self):
+        from apps.engineering_params.models import ProcessParameter
+
+        ProcessParameter.objects.create(
+            operacao="FURAR_ESPELHO",
+            metodo="radial",
+            material="SA-516 GR 70",
+            valor=Decimal("1.0000"),
+            unidade="mm/min",
+            descricao="mock lento para validar lookup por material",
+        )
+        q = create_feixe_quotation(self.customer, "Feixe com parametro por material")
+        op = ItemOperation.objects.get(item__quotation=q, codigo_op="OP-ESP-FURAR")
+        self.assertGreater(op.custo, Decimal("10000"))
+
     def test_recompute_idempotente_nao_duplica_eap(self):
         q = create_feixe_quotation(self.customer, "Feixe")
         n1 = QuotationItem.objects.filter(quotation=q).count()

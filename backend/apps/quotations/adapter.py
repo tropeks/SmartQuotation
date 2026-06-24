@@ -64,7 +64,7 @@ def build_cost_chain(quotation) -> TenantCostChain:
         pass
     # fator de correção de MO (knob calibrado pelo back-solve)
     try:
-        from apps.engineering_params.models import Rate, TenantParamConfig
+        from apps.engineering_params.models import ProcessParameter, Rate, TenantParamConfig
         hoje = date.today()
         for r in (Rate.objects.filter(valid_from__lte=hoje)
                   .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
@@ -72,6 +72,14 @@ def build_cost_chain(quotation) -> TenantCostChain:
             chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
             if r.rate_hm is not None:
                 chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
+        for pp_obj in (ProcessParameter.objects.filter(valid_from__lte=hoje, valor__isnull=False)
+                       .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
+                       .order_by("valid_from")):
+            if pp_obj.operacao == "ALARGAR_ESPELHO" and pp_obj.metodo == "cnc":
+                continue
+            chain.process_params[
+                (pp_obj.operacao, pp_obj.metodo, pp_obj.material or None)
+            ] = float(pp_obj.valor)
         cfg = TenantParamConfig.get_solo()
         chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
     except Exception:

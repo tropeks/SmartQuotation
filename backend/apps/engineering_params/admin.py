@@ -13,10 +13,10 @@ class RateAdmin(admin.ModelAdmin):
 
 @admin.register(ProcessParameter)
 class ProcessParameterAdmin(admin.ModelAdmin):
-    list_display = ("operacao", "metodo", "valor", "unidade", "valid_from", "valid_until")
-    list_filter = ("metodo", "unidade", "operacao", "valid_from")
-    search_fields = ("operacao", "descricao")
-    ordering = ("operacao", "metodo", "-valid_from")
+    list_display = ("operacao", "metodo", "material", "valor", "unidade", "valid_from", "valid_until")
+    list_filter = ("metodo", "unidade", "material", "operacao", "valid_from")
+    search_fields = ("operacao", "material", "descricao")
+    ordering = ("operacao", "metodo", "material", "-valid_from")
 
 
 @admin.register(TenantParamConfig)

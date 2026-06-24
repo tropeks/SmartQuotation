@@ -7,6 +7,7 @@ Formação de preço (parametrizável por tenant — vem da cadeia de custos / w
    custo_total → × fator_preco (markup) → preço_sem_imposto → × (1+impostos%) → preço_com_imposto
 """
 from __future__ import annotations
+from contextlib import nullcontext
 import math
 from .feixe_inputs import FeixeInputs
 from .operations_registry import REGISTRY
@@ -118,25 +119,30 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
         mp.peso_liquido = peso_liquido_componente(c)   # informativo (refugo = bruto - líquido)
         itens[item_code].materias_primas.append(mp)
 
-    # --- operações (custo computado das fórmulas) ---
-    for op in REGISTRY:
-        try:
-            aplic = op.applicable(inp)
-            if aplic and op.code == "OP-MANDRILAR":
-                custo = _mandrilar_custo(inp, cost_chain)
-                if custo is None:
-                    custo = op.compute(inp)
+    override_ctx = (
+        pp.override(getattr(cost_chain, "process_params", None))
+        if cost_chain is not None else nullcontext()
+    )
+    with override_ctx:
+        # --- operações (custo computado das fórmulas) ---
+        for op in REGISTRY:
+            try:
+                aplic = op.applicable(inp)
+                if aplic and op.code == "OP-MANDRILAR":
+                    custo = _mandrilar_custo(inp, cost_chain)
+                    if custo is None:
+                        custo = op.compute(inp)
+                else:
+                    custo = op.compute(inp) if aplic else 0.0
+                custo = _apply_rate_override(op, custo, cost_chain)
+            except Exception as exc:
+                raise RuntimeError(f"Erro calculando operação {op.code} ({op.label})") from exc
+            it = itens.get(op.item, itens["MON-01"])
+            oe = OperacaoExecutada(op.code, op.label, aplicavel=aplic, custo_fixo=custo)
+            if op.group in ("engenharia",):
+                it.ensaios.append(oe)
             else:
-                custo = op.compute(inp) if aplic else 0.0
-            custo = _apply_rate_override(op, custo, cost_chain)
-        except Exception as exc:
-            raise RuntimeError(f"Erro calculando operação {op.code} ({op.label})") from exc
-        it = itens.get(op.item, itens["MON-01"])
-        oe = OperacaoExecutada(op.code, op.label, aplicavel=aplic, custo_fixo=custo)
-        if op.group in ("engenharia",):
-            it.ensaios.append(oe)
-        else:
-            it.operacoes.append(oe)
+                it.operacoes.append(oe)
 
     # engenharia e ferramentas entram como custos separados na Cotacao
     custo_eng = sum(o.custo for o in itens["ENG-01"].operacoes + itens["ENG-01"].ensaios)

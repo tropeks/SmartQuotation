@@ -9,7 +9,9 @@ Regra de método (RESOLVIDO Q3): furação de espelhos/chicanas escolhe a máqui
 O orçamentista pode dar override manual.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 
 RADIAL = "radial"
 CNC = "cnc"
@@ -26,15 +28,20 @@ class ProcessParameter:
     valor: float         # ex: 40 (mm/min) ou 0.5 (min/furo)
     unidade: str         # "mm/min", "min/furo", "juntas/h", "tubos/h", "fator"
     descricao: str = ""
+    material: str | None = None
 
 
 # Catálogo inicial extraído das fórmulas da planilha (valores radial/atual ENGEMATEX).
-# Avanços CNC confirmados com Wellington; alargamento usa fallback conservador radial.
-CATALOG: dict[tuple[str, str], ProcessParameter] = {}
+# Avanços CNC confirmados com Wellington. Em CNC não há etapa de alargamento; essa regra
+# fica nas fórmulas de operação, não como ProcessParameter fake.
+CATALOG: dict[tuple[str, str, str | None], ProcessParameter] = {}
+_OVERRIDES: ContextVar[dict[tuple[str, str, str | None], float] | None] = ContextVar(
+    "process_param_overrides", default=None
+)
 
 
-def _reg(op, metodo, valor, unidade, descr=""):
-    CATALOG[(op, metodo)] = ProcessParameter(op, metodo, valor, unidade, descr)
+def _reg(op, metodo, valor, unidade, descr="", material=None):
+    CATALOG[(op, metodo, material)] = ProcessParameter(op, metodo, valor, unidade, descr, material)
 
 
 # --- avanços / taxas de usinagem (radial = baseline da planilha) ---
@@ -53,9 +60,6 @@ _reg("INTRODUZIR_TUBOS", MANUAL, 1.5, "min/tubo", "")
 # CNC — avanços validados pelo PE (Wellington, 2026-06-19):
 _reg("FURAR_ESPELHO", CNC, 97.56, "mm/min", "avanço furação espelho CNC (Wellington 2026-06-19)")
 _reg("FURAR_CHICANA", CNC, 83.34, "mm/min", "avanço furação chicanas CNC (Wellington 2026-06-19)")
-# ALARGAR_ESPELHO CNC ainda PENDENTE: usa o avanço radial (70) como fallback conservador — mais
-# lento → mais horas, nunca subestima o custo; trocar pelo valor real quando o Wellington confirmar.
-_reg("ALARGAR_ESPELHO", CNC, 70, "mm/min", "PENDENTE: fallback = avanço radial conservador")
 
 
 def choose_drill_method(num_holes: int, override: str | None = None,
@@ -66,11 +70,33 @@ def choose_drill_method(num_holes: int, override: str | None = None,
     return RADIAL if num_holes <= threshold else CNC
 
 
-def get(operacao: str, metodo: str) -> float:
-    pp = CATALOG.get((operacao, metodo))
+@contextmanager
+def override(catalog: dict[tuple[str, str, str | None], float] | None):
+    """Aplica overrides temporários vindos do tenant sem acoplar o motor ao Django."""
+    token = _OVERRIDES.set(catalog or None)
+    try:
+        yield
+    finally:
+        _OVERRIDES.reset(token)
+
+
+def get(operacao: str, metodo: str, material: str | None = None) -> float:
+    material = material or None
+    overrides = _OVERRIDES.get()
+    if overrides:
+        if material is not None and (operacao, metodo, material) in overrides:
+            return overrides[(operacao, metodo, material)]
+        if (operacao, metodo, None) in overrides:
+            return overrides[(operacao, metodo, None)]
+
+    pp = None
+    if material is not None:
+        pp = CATALOG.get((operacao, metodo, material))
     if pp is None:
-        raise KeyError(f"ProcessParameter ausente: ({operacao}, {metodo})")
+        pp = CATALOG.get((operacao, metodo, None))
+    if pp is None:
+        raise KeyError(f"ProcessParameter ausente: ({operacao}, {metodo}, {material})")
     if pp.valor is None:
         raise NotImplementedError(
-            f"ProcessParameter ({operacao},{metodo}) PENDENTE — definir valor com Wellington")
+            f"ProcessParameter ({operacao},{metodo},{material}) sem valor numérico")
     return pp.valor
