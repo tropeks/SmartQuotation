@@ -5,9 +5,14 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import require_role, user_role
 from apps.quotations.models import Quotation
-from apps.production.models import OrdemFabricacao, OFOperation
+from apps.production.models import InspectionItem, OrdemFabricacao, OFOperation
 from apps.production import services
+
+
+_ITP_ROLES = (UserProfile.ROLE_ENGENHEIRO, UserProfile.ROLE_ADMIN)
 
 
 @login_required
@@ -23,7 +28,21 @@ def ordem_detail(request, pk):
         pk=pk,
     )
     itens = of.itens.prefetch_related("materiais", "operacoes").all()
-    return render(request, "production/detail.html", {"of": of, "itens": itens})
+    inspection_plan = getattr(of, "inspection_plan", None) if hasattr(of, "inspection_plan") else None
+    inspection_items = None
+    if inspection_plan is not None:
+        inspection_items = (
+            inspection_plan.items
+            .select_related("of_operation", "accepted_by")
+            .all()
+        )
+    return render(request, "production/detail.html", {
+        "of": of,
+        "itens": itens,
+        "inspection_plan": inspection_plan,
+        "inspection_items": inspection_items,
+        "can_manage_itp": user_role(request.user) in _ITP_ROLES,
+    })
 
 
 @login_required
@@ -79,3 +98,32 @@ def appoint(request, op_pk):
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("production:detail", pk=op.item.ordem_id)
+
+
+@require_role(*_ITP_ROLES)
+@require_POST
+def generate_itp(request, pk):
+    of = get_object_or_404(OrdemFabricacao, pk=pk)
+    try:
+        services.generate_inspection_plan(of, generated_by=request.user, request=request)
+        messages.success(request, "ITP gerado.")
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    return redirect("production:detail", pk=of.pk)
+
+
+@require_role(*_ITP_ROLES)
+@require_POST
+def accept_itp_item(request, item_pk):
+    item = get_object_or_404(InspectionItem.objects.select_related("plan__ordem"), pk=item_pk)
+    try:
+        services.accept_inspection_item(
+            item,
+            accepted_by=request.user,
+            notes=request.POST.get("notes", ""),
+            request=request,
+        )
+        messages.success(request, "Item do ITP aceito.")
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    return redirect("production:detail", pk=item.plan.ordem_id)

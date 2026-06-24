@@ -1,6 +1,7 @@
 """Testes de Ordem de Fabricação (H2.1) — TenantTestCase."""
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import RequestFactory
 from django_tenants.test.cases import TenantTestCase
 
@@ -9,6 +10,7 @@ from apps.audit.models import AccessLog
 from apps.audit.services import approve_quotation, revoke_approval
 from apps.production.models import (
     OrdemFabricacao, OFItem, OFMaterial, OFOperation,
+    InspectionItem, InspectionPlan,
     STATUS_ABERTA, STATUS_LIBERADA, STATUS_EM_PRODUCAO,
     STATUS_CONCLUIDA, STATUS_CANCELADA,
 )
@@ -324,6 +326,168 @@ class ApontamentoViewTests(TenantTestCase):
         )
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+
+class ITPServiceTests(TenantTestCase):
+    def setUp(self):
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="insp")
+        UserProfile.objects.create(
+            user=self.user, full_name="Inspetor", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-56", crea_state="SP")
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_itp"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-55", crea_state="SP")
+        self.q = create_feixe_quotation(self.customer, "Feixe ITP")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+
+    def _request(self):
+        request = RequestFactory().post("/ofs/", REMOTE_ADDR="127.0.0.1")
+        request.user = self.user
+        return request
+
+    def test_generate_itp_cria_plano_a_partir_do_roteiro(self):
+        plan = services.generate_inspection_plan(self.of, generated_by=self.user)
+        applicable_ops = OFOperation.objects.filter(item__ordem=self.of, aplicavel=True).count()
+        self.assertIsInstance(plan, InspectionPlan)
+        self.assertEqual(plan.ordem, self.of)
+        self.assertEqual(plan.source_snapshot_hash, self.of.snapshot_hash)
+        self.assertEqual(plan.source_operations_count, applicable_ops)
+        self.assertEqual(plan.items.count(), applicable_ops)
+        first = plan.items.order_by("sequence").first()
+        first_op = OFOperation.objects.filter(item__ordem=self.of, aplicavel=True).order_by(
+            "item__sort_order", "sequence", "id").first()
+        self.assertEqual(first.of_operation, first_op)
+        self.assertEqual(first.codigo_op, first_op.codigo_op)
+        self.assertEqual(first.codigo_item, first_op.item.codigo_item)
+        self.assertEqual(first.metodo, first_op.metodo)
+        self.assertEqual(first.status, InspectionItem.STATUS_PENDING)
+
+    def test_generate_itp_idempotente_nao_duplica_itens(self):
+        plan1 = services.generate_inspection_plan(self.of, generated_by=self.user)
+        count1 = plan1.items.count()
+        plan2 = services.generate_inspection_plan(self.of, generated_by=self.user)
+        self.assertEqual(plan1.pk, plan2.pk)
+        self.assertEqual(plan2.items.count(), count1)
+
+    def test_generate_itp_bloqueia_sem_operacoes_aplicaveis(self):
+        OFOperation.objects.filter(item__ordem=self.of).update(aplicavel=False)
+        with self.assertRaises(ValidationError):
+            services.generate_inspection_plan(self.of, generated_by=self.user)
+
+    def test_accept_inspection_item_registra_responsavel_data_e_notas(self):
+        plan = services.generate_inspection_plan(self.of, generated_by=self.user)
+        item = plan.items.first()
+        accepted = services.accept_inspection_item(
+            item, accepted_by=self.user, notes="OK dimensional")
+        accepted.refresh_from_db()
+        self.assertEqual(accepted.status, InspectionItem.STATUS_ACCEPTED)
+        self.assertEqual(accepted.accepted_by, self.user)
+        self.assertIsNotNone(accepted.accepted_at)
+        self.assertEqual(accepted.notes, "OK dimensional")
+
+    def test_accept_inspection_item_bloqueia_reaceite(self):
+        plan = services.generate_inspection_plan(self.of, generated_by=self.user)
+        item = plan.items.first()
+        services.accept_inspection_item(item, accepted_by=self.user)
+        with self.assertRaises(ValidationError):
+            services.accept_inspection_item(item, accepted_by=self.user)
+
+    def test_itp_services_gravam_access_log(self):
+        plan = services.generate_inspection_plan(
+            self.of, generated_by=self.user, request=self._request())
+        item = plan.items.first()
+        services.accept_inspection_item(item, accepted_by=self.user, request=self._request())
+        self.assertTrue(AccessLog.objects.filter(action="itp_generate", resource_type="InspectionPlan").exists())
+        self.assertTrue(AccessLog.objects.filter(action="itp_accept", resource_type="InspectionItem").exists())
+
+    def test_accept_todos_itens_conclui_plano(self):
+        plan = services.generate_inspection_plan(self.of, generated_by=self.user)
+        for item in plan.items.all():
+            services.accept_inspection_item(item, accepted_by=self.user)
+        plan.refresh_from_db()
+        self.assertEqual(plan.status, InspectionPlan.STATUS_COMPLETED)
+        self.assertIsNotNone(plan.completed_at)
+
+    def test_classificacao_nao_trata_cortar_como_ndt(self):
+        from types import SimpleNamespace
+        cortar = SimpleNamespace(codigo_op="OP-CORTAR", descricao="CORTAR CHAPA")
+        recortar = SimpleNamespace(codigo_op="OP-RECORTAR", descricao="RECORTAR CHICANA")
+        rt = SimpleNamespace(codigo_op="OP-RT", descricao="RT SOLDA")
+        self.assertEqual(services._inspection_type_for(cortar), "dimensional")
+        self.assertEqual(services._inspection_type_for(recortar), "dimensional")
+        self.assertEqual(services._inspection_type_for(rt), "ndt")
+
+    def test_constraint_bloqueia_aceito_sem_responsavel_data(self):
+        plan = services.generate_inspection_plan(self.of, generated_by=self.user)
+        op = OFOperation.objects.filter(item__ordem=self.of, aplicavel=True).first()
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                InspectionItem.objects.create(
+                    plan=plan,
+                    of_operation=None,
+                    sequence=999,
+                    codigo_item=op.item.codigo_item,
+                    item_descricao=op.item.descricao,
+                    codigo_op="OP-INVALIDO",
+                    descricao="Invalido",
+                    criterio="Teste",
+                    status=InspectionItem.STATUS_ACCEPTED,
+                )
+
+
+class ITPViewTests(TenantTestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="inspv", password="x")
+        UserProfile.objects.create(
+            user=self.user, full_name="Insp View", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-57", crea_state="SP")
+        self.orc_user = User.objects.create_user(username="orcv", password="x")
+        UserProfile.objects.create(
+            user=self.orc_user, full_name="Orc View", role=UserProfile.ROLE_ORCAMENTISTA)
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_itpv"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-56", crea_state="SP")
+        self.q = create_feixe_quotation(self.customer, "Feixe ITP View")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+
+    def test_generate_itp_view_cria_plano(self):
+        self.client.force_login(self.user)
+        resp = self.client.post(f"/ofs/{self.of.pk}/itp/gerar/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(InspectionPlan.objects.filter(ordem=self.of).exists())
+
+    def test_accept_itp_item_view_aceita_item(self):
+        plan = services.generate_inspection_plan(self.of, generated_by=self.user)
+        item = plan.items.first()
+        self.client.force_login(self.user)
+        resp = self.client.post(
+            f"/ofs/itp/{item.pk}/aceitar/",
+            {"notes": "Conferido no recebimento"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        item.refresh_from_db()
+        self.assertEqual(item.status, InspectionItem.STATUS_ACCEPTED)
+        self.assertEqual(item.accepted_by, self.user)
+
+    def test_generate_itp_view_bloqueia_role_sem_permissao(self):
+        self.client.force_login(self.orc_user)
+        resp = self.client.post(f"/ofs/{self.of.pk}/itp/gerar/")
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(InspectionPlan.objects.filter(ordem=self.of).exists())
+
+    def test_accept_itp_item_view_bloqueia_role_sem_permissao(self):
+        plan = services.generate_inspection_plan(self.of, generated_by=self.user)
+        item = plan.items.first()
+        self.client.force_login(self.orc_user)
+        resp = self.client.post(f"/ofs/itp/{item.pk}/aceitar/", {"notes": "tentativa"})
+        self.assertEqual(resp.status_code, 403)
+        item.refresh_from_db()
+        self.assertEqual(item.status, InspectionItem.STATUS_PENDING)
 
 
 class ActualRateMathTests(TenantTestCase):

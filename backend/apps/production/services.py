@@ -1,5 +1,6 @@
 """Serviços de Ordem de Fabricação (H2.1)."""
 import math
+import re
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -8,7 +9,7 @@ from datetime import date
 
 from apps.production.models import (
     OrdemFabricacao, OFItem, OFMaterial, OFOperation, ProductionEntry,
-    ActualRate, ProductionObservation,
+    ActualRate, ProductionObservation, InspectionPlan, InspectionItem,
     STATUS_ABERTA, STATUS_LIBERADA, STATUS_EM_PRODUCAO,
     STATUS_CONCLUIDA, STATUS_CANCELADA,
 )
@@ -265,3 +266,102 @@ def _update_actual_rate(operacao: str, observed_rate):
     ar.confidence = Decimal(str(round(confidence, 4)))
     ar.save()
     return ar
+
+
+def _inspection_type_for(op: OFOperation) -> str:
+    text = f"{op.codigo_op} {op.descricao}".upper()
+    tokens = set(re.findall(r"[A-Z0-9]+", text))
+    if "HIDRO" in text or "TESTE" in text:
+        return "hidrostatico"
+    if tokens & {"LP", "RT", "RX", "UT", "PM"} or "EXAME" in tokens:
+        return "ndt"
+    if "INSPEC" in text:
+        return "visual"
+    if any(token in text for token in ("FURAR", "USINAR", "CORTAR", "RECORTAR", "RASGO", "ALARGAR")):
+        return "dimensional"
+    if any(token in text for token in ("PLANO", "PIT", "PS", "DOC")):
+        return "documental"
+    return "processo"
+
+
+@transaction.atomic
+def generate_inspection_plan(of: OrdemFabricacao, generated_by=None, request=None) -> InspectionPlan:
+    """Gera ITP básico a partir do roteiro congelado da OF, sem duplicar em chamadas repetidas."""
+    of = OrdemFabricacao.objects.select_for_update().get(pk=of.pk)
+    if of.status == STATUS_CANCELADA:
+        raise ValidationError("Não é possível gerar ITP para OF cancelada.")
+
+    existing = getattr(of, "inspection_plan", None)
+    if existing is not None:
+        return existing
+
+    ops = list(
+        OFOperation.objects.filter(item__ordem=of, aplicavel=True)
+        .select_related("item")
+        .order_by("item__sort_order", "sequence", "id")
+    )
+    if not ops:
+        raise ValidationError("Não há operações aplicáveis para gerar ITP.")
+    plan = InspectionPlan.objects.create(
+        ordem=of,
+        source_snapshot_hash=of.snapshot_hash,
+        source_operations_count=len(ops),
+        generated_by=generated_by,
+    )
+    for seq, op in enumerate(ops, start=1):
+        InspectionItem.objects.create(
+            plan=plan,
+            of_operation=op,
+            sequence=seq,
+            codigo_item=op.item.codigo_item,
+            item_descricao=op.item.descricao,
+            codigo_op=op.codigo_op,
+            descricao=op.descricao,
+            metodo=op.metodo,
+            inspection_type=_inspection_type_for(op),
+            criterio="Conforme roteiro, desenho aprovado e requisitos do pedido.",
+        )
+
+    if request is not None:
+        log_access(request, "itp_generate", plan, {
+            "of_id": of.pk,
+            "of_number": of.number,
+            "items": len(ops),
+            "snapshot_hash": of.snapshot_hash,
+        })
+    return plan
+
+
+@transaction.atomic
+def accept_inspection_item(item: InspectionItem, accepted_by, notes="", request=None) -> InspectionItem:
+    """Registra aceite de um item do ITP com responsável e data."""
+    item = (
+        InspectionItem.objects.select_for_update()
+        .select_related("plan__ordem")
+        .get(pk=item.pk)
+    )
+    plan = InspectionPlan.objects.select_for_update().get(pk=item.plan_id)
+    if item.plan.ordem.status == STATUS_CANCELADA:
+        raise ValidationError("Não é possível aceitar ITP de OF cancelada.")
+    if item.status == InspectionItem.STATUS_ACCEPTED:
+        raise ValidationError("Item de ITP já aceito.")
+
+    item.status = InspectionItem.STATUS_ACCEPTED
+    item.accepted_by = accepted_by
+    item.accepted_at = timezone.now()
+    item.notes = notes or ""
+    item.save(update_fields=["status", "accepted_by", "accepted_at", "notes"])
+
+    pending = plan.items.exclude(status=InspectionItem.STATUS_ACCEPTED).exists()
+    if not pending:
+        plan.status = InspectionPlan.STATUS_COMPLETED
+        plan.completed_at = timezone.now()
+        plan.save(update_fields=["status", "completed_at", "updated_at"])
+
+    if request is not None:
+        log_access(request, "itp_accept", item, {
+            "of_id": item.plan.ordem_id,
+            "inspection_plan_id": item.plan_id,
+            "codigo_op": item.codigo_op,
+        })
+    return item

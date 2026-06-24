@@ -42,7 +42,7 @@ tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 - ✅ Operações: 64 no registry, 0 erros no gate atual
 - ✅ Permutador completo: BEU R$ 128.162,69 vs R$ 128.160,00; BEM R$ 119.297,24 vs R$ 119.295,00 (delta 0,00%)
 - ✅ Geometria BEU/BEM: 18 itens grandes, 0 divergências >15%
-- ✅ CNC confirmado: furar espelho 97,56 mm/min; furar chicanas 83,34 mm/min; alargar espelho usa fallback conservador 70 mm/min
+- ✅ CNC confirmado: furar espelho 97,56 mm/min; furar chicanas 83,34 mm/min; alargar espelho não existe como etapa CNC
 
 ## 🏭 ESTADO DO PRODUTO DJANGO
 - ✅ H1 técnico: cotação feixe + BEU/BEM, EAP persistida, proposta PDF/DOCX, histórico e API DRF.
@@ -50,7 +50,8 @@ tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 - ✅ H2.1: cotação aprovada → Ordem de Fabricação com BOM/roteiro em deep-copy.
 - ✅ H2.2: apontamento de produção e fechamento gerando `ActualRate` por operação.
 - ✅ H2.3: `RateSuggestion` a partir de `ActualRate` elegível; aplicar/descartar com RBAC.
-- ✅ Testes locais: gates do motor OK; `apps.engineering_params` 44 testes OK; log completo registra 198 testes Django OK.
+- ✅ H2.4: ITP básico gerado da OF/roteiro, aceite por item com responsável/data e `AccessLog`.
+- ✅ Testes locais: gates do motor OK; `apps.engineering_params` 44 testes OK; `apps.production` + `apps.audit` 49 testes OK.
 
 ## 🧭 DECISÕES TRAVADAS (não re-litigar)
 Approach C (plataforma completa) · clone fundação Vitali (django-tenants) · HTMX+session auth ·
@@ -61,5 +62,4 @@ Rate dia-1 só camada tenant · ProcessParameter separado de Rate · EAP/WBS com
 gstack em todas etapas · autonomia (perguntas só essenciais) · /cso a cada milestone · Boil the Ocean.
 
 ## ▶️ PRÓXIMO PASSO
-H2.4 — ITP básico: gerar plano de inspeção a partir do roteiro/OF, registrar aceite por item com responsável/data
-e ligar os eventos relevantes ao `AccessLog`.
+H2.5 — Conector TOTVS Protheus: sincronização bidirecional de OF, BOM, materiais e fornecedores.

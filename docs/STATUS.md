@@ -1,10 +1,10 @@
 # SmartQuotation — Status do Projeto
 
 > Documento vivo. Última revisão: 2026-06-24 — H1 técnico estabilizado; H1 auditável fechado (#46);
-> H2.1 (cotação → OF), H2.2 (apontamento de produção) e H2.3 (motor de aprendizado) entregues.
+> H2.1 (cotação → OF), H2.2 (apontamento), H2.3 (aprendizado) e H2.4 (ITP básico) entregues.
 > (colaboração com @WellToMcAt).
 > **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
-> 198 testes Django + 9 testes puros · H2.3 com 44 testes locais · CI verde em todos os PRs.**
+> suítes relevantes locais verdes (`production` + `audit` = 49 testes) · CI verde nos PRs mergeados.**
 
 ---
 
@@ -17,7 +17,8 @@ design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimens�
 - **H1 auditável:** aprovação técnica CREA, `CalculationSnapshot` com hash e trilha mínima (#46) ✅.
 - **H2 (Gestão da Produção):** H2.1 converte cotação aprovada em Ordem de Fabricação (#47); H2.2 registra
   apontamento de horas por operação e, no fechamento, calcula R$/h observado → `ActualRate`; H2.3 lê
-  esses agregados e sugere atualização de `Rate` quando há amostragem e confiança suficientes.
+  esses agregados e sugere atualização de `Rate` quando há amostragem e confiança suficientes; H2.4
+  gera ITP básico a partir do roteiro da OF e registra aceite por item com responsável/data.
 - **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
 | Equipamento | Motor | Gabarito | Erro |
@@ -99,7 +100,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 
 ---
 
-## 3c. H1 auditável + H2 (produção) — CONCLUÍDA até H2.3 (PRs #46–47 + H2.2/H2.3)
+## 3c. H1 auditável + H2 (produção) — CONCLUÍDA até H2.4 (PRs #46–47 + H2.2/H2.3/H2.4)
 
 | Item | Status |
 |---|:--:|
@@ -109,6 +110,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **H2.1 — Cotação → Ordem de Fabricação** — `apps/production`: deep-copy de BOM+roteiro, snapshot_hash pinado, exige aprovação técnica ativa, workflow de status com autoria por transição | ✅ (#47) |
 | **H2.2 — Apontamento de produção** — `ProductionEntry` (horas por operação, somadas); no fechamento da OF grava `ProductionObservation` e agrega `ActualRate` em **R$/h observado = custo ÷ horas reais** (Welford online), usado pelo H2.3 | ✅ (PR) |
 | **H2.3 — Motor de aprendizado de índices** — `RateSuggestion` gerada a partir de `ActualRate` elegível (`N ≥ 20`, confiança `≥ 70%`, delta material), com aplicar/descartar via serviço e UI protegida por RBAC | ✅ (`aa3127c`) |
+| **H2.4 — ITP básico** — `InspectionPlan` gerado a partir das `OFOperation` aplicáveis; `InspectionItem` com snapshot da operação, tipo/critério, aceite por responsável/data e auditoria `itp_generate`/`itp_accept` | ✅ |
 
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
@@ -116,7 +118,8 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 > review: o motor expõe custo (não horas) por operação → baseline = custo, aprendizado em R$/h observado.
 > H2.3 foi codado com TDD e auditado em `aa3127c` (7 achados corrigidos): geração idempotente, bordas
 > de confiança, proteção contra `Rate` inválido/zero, aplicação transacional e RBAC nas views.
-> Próximo: **H2.4 — ITP básico** (plano de inspeção a partir do roteiro; aceite por item com responsável/data).
+> H2.4 seguiu TDD: ITP idempotente, snapshot do roteiro da OF, aceite protegido e eventos no `AccessLog`.
+> Próximo: **H2.5 — Conector TOTVS Protheus**.
 
 ---
 
