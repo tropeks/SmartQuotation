@@ -172,6 +172,7 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     if new_status == STATUS_CONCLUIDA:
         _close_out_observations(of)
+        _schedule_omie_nfe_issue(of)
 
     if request is not None:
         log_access(request, "transition", of, {"transition": f"{old_status}->{new_status}"})
@@ -204,6 +205,29 @@ def _schedule_protheus_export(of):
     schema_name = connection.schema_name
     transaction.on_commit(
         lambda: protheus_services.enqueue_sync_run_async(run, schema_name=schema_name)
+    )
+    return run
+
+
+def _schedule_omie_nfe_issue(of):
+    """Agenda emissão de NF-e via Omie após commit quando houver fila para gerar."""
+    try:
+        from apps.integrations.omie import services as omie_services
+    except ImportError:
+        return None
+
+    maybe_enqueue_nfe_issue = getattr(omie_services, "maybe_enqueue_nfe_issue", None)
+    enqueue_invoice_run_async = getattr(omie_services, "enqueue_invoice_run_async", None)
+    if maybe_enqueue_nfe_issue is None or enqueue_invoice_run_async is None:
+        return None
+
+    run = maybe_enqueue_nfe_issue(of, trigger="of_completed")
+    if run is None:
+        return None
+
+    schema_name = connection.schema_name
+    transaction.on_commit(
+        lambda: enqueue_invoice_run_async(run, schema_name=schema_name)
     )
     return run
 

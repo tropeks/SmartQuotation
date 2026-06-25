@@ -44,6 +44,7 @@ TENANT_APPS = [
     "apps.accounts",
     "apps.audit",
     "apps.integrations.protheus.apps.ProtheusConfig",
+    "apps.integrations.omie.apps.OmieConfig",
     "apps.materials",
     "apps.engineering_params",
     "apps.quotations",
