@@ -42,6 +42,7 @@ TENANT_APPS = [
     "django_filters",
     "apps.accounts",
     "apps.audit",
+    "apps.integrations.protheus.apps.ProtheusConfig",
     "apps.materials",
     "apps.engineering_params",
     "apps.quotations",
