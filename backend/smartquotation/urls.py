@@ -2,7 +2,10 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.integrations.protheus import views as protheus_views
+
 urlpatterns = [
+    path("admin/protheus/health/", admin.site.admin_view(protheus_views.admin_healthcheck), name="protheus-admin-health"),
     path("admin/", admin.site.urls),
     path("", include("apps.accounts.urls")),         # login/logout/dashboard
     path("", include("apps.quotations.urls")),       # cotações + data sheet do feixe

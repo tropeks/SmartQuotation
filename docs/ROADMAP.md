@@ -9,7 +9,7 @@
 ```
 H1 técnico ─ Motor de Cotação           0 – 6 meses     ✅ fechado
 H1 auditável ─ Aprovação + trilha       0 – 3 meses     ✅ fechado
-H2 ─── Gestão da Produção              6 – 18 meses     ← estamos aqui (H2.5.2)
+H2 ─── Gestão da Produção              6 – 18 meses     ← estamos aqui (H2.5.2 entregue)
 H3 ─── ERP Especializado Caldeiraria   18m+
 ```
 
@@ -194,7 +194,7 @@ Sprint 5:   28 SP restantes → entrega 28 SP →   0 SP ✅
 | **H2.2** — Apontamento de produção ✅ **(entregue, PR)** | mês 9 | Operador registra horas por operação; no fechamento da OF calcula R$/h observado (= custo ÷ horas reais) → `ActualRate` (Welford). Baseline = custo (o motor não expõe horas estimadas) |
 | **H2.3** — Motor de aprendizado de índices ✅ **(entregue, `aa3127c`)** | mês 10 | Sistema sugere atualização do `TenantRate` quando `ActualRate` tem N ≥ 20 amostras e confidence ≥ 70%; aplicação/descarta via UI com RBAC |
 | **H2.4** — ITP básico ✅ **(entregue)** | mês 11 | Plano de inspeção gerado a partir do roteiro; aceite por item com responsável e data |
-| **H2.5** — Conector TOTVS Protheus ✅ **(foundation + H2.5.1 operacionais)** | mês 13 | Foundation tenant-scoped + export assíncrono da OF, tasks tenant-aware, adapter HTTP mínimo e staging governado de catálogo |
+| **H2.5** — Conector TOTVS Protheus ✅ **(foundation + H2.5.1 + H2.5.2 entregues)** | mês 13 | Foundation tenant-scoped + export assíncrono da OF, tasks tenant-aware, adapter HTTP mínimo, staging governado de catálogo, scheduler/beat único, healthcheck admin-only, retry tipado e reenfileiramento seguro |
 | **H2.6** — Conector Omie / Bling | mês 14 | Emissão de NF-e via Omie a partir da OF concluída |
 | **H2.7** — Conector SAP B1 | mês 16 | Sincronização de pedidos e BOM com SAP B1 (clientes enterprise) |
 | **H2.8** — Expansão normativa: API 650 | mês 15 | Tanques atmosféricos dimensionados conforme API 650/620 |

@@ -4,6 +4,7 @@ Django 5.2 + django-tenants (schema-per-tenant). Session auth (não JWT).
 Padrão adaptado do Vitali (fundação sólida), sem apps de saúde.
 """
 import sys
+from datetime import timedelta
 from pathlib import Path
 import environ
 
@@ -123,6 +124,8 @@ REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_SERIALIZER = "json"
+PROTHEUS_PULL_INTERVAL_MINUTES = max(1, env.int("PROTHEUS_PULL_INTERVAL_MINUTES", default=15))
+PROTHEUS_PULL_INTERVAL = timedelta(minutes=PROTHEUS_PULL_INTERVAL_MINUTES)
 
 # ─── i18n / tz ────────────────────────────────────────────────────────────────
 LANGUAGE_CODE = "pt-br"

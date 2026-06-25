@@ -38,3 +38,11 @@ class MemoryProtheusClient(BaseProtheusClient):
 
     def list_suppliers(self):
         return [deepcopy(item) for item in self.suppliers.values()]
+
+    def healthcheck(self):
+        return {
+            "status": "ok",
+            "work_orders": len(self.work_orders),
+            "materials": len(self.materials),
+            "suppliers": len(self.suppliers),
+        }

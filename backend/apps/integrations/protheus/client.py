@@ -26,9 +26,25 @@ class BaseProtheusClient:
     def list_suppliers(self):
         raise NotImplementedError
 
+    def healthcheck(self):
+        raise NotImplementedError
+
 
 class HttpProtheusClientError(RuntimeError):
-    pass
+    transient = False
+
+    def __init__(self, message, *, status_code=None, details=None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.details = details or {}
+
+
+class HttpProtheusTransientError(HttpProtheusClientError):
+    transient = True
+
+
+class HttpProtheusPermanentError(HttpProtheusClientError):
+    transient = False
 
 
 @dataclass
@@ -84,15 +100,26 @@ class HttpProtheusClient(BaseProtheusClient):
                 timeout=self.config.timeout_seconds,
             )
             response.raise_for_status()
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            raise HttpProtheusTransientError(str(exc)) from exc
+        except requests.HTTPError as exc:
+            response = exc.response
+            status_code = getattr(response, "status_code", None)
+            error_cls = (
+                HttpProtheusTransientError
+                if status_code in {408, 429} or (status_code and status_code >= 500)
+                else HttpProtheusPermanentError
+            )
+            raise error_cls(str(exc), status_code=status_code) from exc
         except requests.RequestException as exc:
-            raise HttpProtheusClientError(str(exc)) from exc
+            raise HttpProtheusTransientError(str(exc)) from exc
 
         if not getattr(response, "content", b""):
             return {}
         try:
             data = response.json()
         except ValueError as exc:
-            raise HttpProtheusClientError("Protheus response is not valid JSON") from exc
+            raise HttpProtheusPermanentError("Protheus response is not valid JSON") from exc
         return data
 
     def _request_list(self, path, params=None):
@@ -123,6 +150,9 @@ class HttpProtheusClient(BaseProtheusClient):
 
     def list_suppliers(self):
         return self._request_list("/suppliers")
+
+    def healthcheck(self):
+        return self._request("GET", "/health")
 
 
 def build_protheus_client(config=None, *, session=None):

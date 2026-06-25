@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.db import connection
+from django.urls import reverse
+from django.utils.html import format_html
 
 from apps.integrations.protheus.models import (
     ProtheusCatalogStaging,
@@ -16,7 +18,45 @@ from apps.integrations.protheus import services
 
 @admin.register(ProtheusIntegrationConfig)
 class ProtheusIntegrationConfigAdmin(admin.ModelAdmin):
-    list_display = ("provider", "enabled", "company_code", "branch_code", "export_on_release")
+    list_display = (
+        "provider",
+        "enabled",
+        "company_code",
+        "branch_code",
+        "export_on_release",
+        "last_healthcheck_at",
+        "healthcheck_link",
+    )
+    actions = ["run_healthcheck", "enqueue_catalog_pull"]
+
+    @admin.display(description="Healthcheck")
+    def healthcheck_link(self, obj):
+        return format_html('<a href="{}">Ver status</a>', reverse("protheus-admin-health"))
+
+    @admin.action(description="Executar healthcheck operacional")
+    def run_healthcheck(self, request, queryset):
+        checked = 0
+        failures = 0
+        for config in queryset:
+            if not config.enabled:
+                continue
+            summary = services.run_healthcheck()
+            checked += 1
+            if not summary["ok"]:
+                failures += 1
+        self.message_user(request, f"{checked} configuracao(oes) verificada(s); {failures} com falha remota.")
+
+    @admin.action(description="Enfileirar pull de catalogo agora")
+    def enqueue_catalog_pull(self, request, queryset):
+        from apps.integrations.protheus.tasks import pull_protheus_catalog
+
+        queued = 0
+        for config in queryset:
+            if not config.enabled:
+                continue
+            pull_protheus_catalog.delay(schema_name=connection.schema_name)
+            queued += 1
+        self.message_user(request, f"{queued} pull(s) de catalogo enfileirado(s).")
 
 
 @admin.register(ProtheusSyncBinding)
@@ -43,15 +83,14 @@ class ProtheusSyncRunAdmin(admin.ModelAdmin):
     @admin.action(description="Reenfileirar runs selecionados")
     def reenqueue_runs(self, request, queryset):
         queued = 0
+        skipped = 0
         for run in queryset:
-            run.status = ProtheusSyncRun.STATUS_PENDING
-            run.error_message = ""
-            run.finished_at = None
-            run.result_payload = {}
-            run.save(update_fields=["status", "error_message", "finished_at", "result_payload"])
+            if not services.reset_sync_run_for_requeue(run):
+                skipped += 1
+                continue
             services.enqueue_sync_run_async(run, schema_name=connection.schema_name)
             queued += 1
-        self.message_user(request, f"{queued} run(s) reenfileirado(s).")
+        self.message_user(request, f"{queued} run(s) reenfileirado(s); {skipped} ignorado(s).")
 
 
 @admin.register(ProtheusCatalogStaging)

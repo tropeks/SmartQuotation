@@ -73,6 +73,12 @@ services:
       - redis
       - db
 
+> Observação operacional (H2.5.2): o conector Protheus usa **um beat global único** no app Celery.
+> A agenda recorrente do pull fica definida no app (`integrations.protheus.dispatch_recurring_pulls`)
+> e usa `PROTHEUS_PULL_INTERVAL_MINUTES` para definir a cadência sem editar código.
+> O dispatcher só enfileira tenants ativos com integração Protheus habilitada.
+> Não é necessário um beat por tenant.
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
