@@ -1,10 +1,14 @@
 import hashlib
 import json
+import logging
 
 from django.db import transaction
+from django.db import connection
 from django.utils import timezone
 
+from apps.integrations.protheus.client import build_protheus_client
 from apps.integrations.protheus.models import (
+    ProtheusCatalogStaging,
     ProtheusBOMSnapshot,
     ProtheusIntegrationConfig,
     ProtheusSupplier,
@@ -15,6 +19,8 @@ from apps.integrations.protheus.models import (
 )
 from apps.materials.models import Material, MaterialPrice
 from apps.production.models import OrdemFabricacao
+
+logger = logging.getLogger(__name__)
 
 
 def _payload_hash(payload):
@@ -181,8 +187,24 @@ def maybe_enqueue_work_order_export(of: OrdemFabricacao, trigger="status_transit
     return run
 
 
+def enqueue_sync_run_async(run: ProtheusSyncRun, *, schema_name=None):
+    schema_name = schema_name or connection.schema_name
+    from apps.integrations.protheus.tasks import process_protheus_sync_run
+
+    try:
+        process_protheus_sync_run.delay(schema_name=schema_name, run_id=run.pk)
+    except Exception:
+        logger.exception(
+            "Failed to enqueue Protheus sync run",
+            extra={"schema_name": schema_name, "run_id": run.pk},
+        )
+    return run
+
+
 @transaction.atomic
-def process_sync_run(run: ProtheusSyncRun, client):
+def process_sync_run(run: ProtheusSyncRun, client=None):
+    if client is None:
+        client = build_protheus_client(get_enabled_config())
     run = ProtheusSyncRun.objects.select_for_update().get(pk=run.pk)
     if run.status == ProtheusSyncRun.STATUS_SUCCESS:
         return run
@@ -209,8 +231,14 @@ def process_sync_run(run: ProtheusSyncRun, client):
             request_payload=payload,
             response_payload=response,
         )
+        remote_code = (
+            response.get("remote_code")
+            or payload.get("number")
+            or payload.get("code")
+            or ""
+        )
         run.status = ProtheusSyncRun.STATUS_SUCCESS
-        run.remote_code = response.get("remote_code", "")
+        run.remote_code = remote_code
         run.result_payload = response
         run.error_message = ""
         run.finished_at = timezone.now()
@@ -296,22 +324,24 @@ def _record_work_order_binding(run, response):
 
 
 def _record_material_binding(run, response):
+    remote_code = response.get("remote_code") or run.payload.get("code", "")
     _upsert_binding(
         ProtheusSyncBinding.ENTITY_MATERIAL,
         run.local_model,
         run.local_id,
-        response.get("remote_code", ""),
+        remote_code,
         ProtheusSyncBinding.DIRECTION_PUSH,
         run.payload,
     )
 
 
 def _record_supplier_binding(run, response):
+    remote_code = response.get("remote_code") or run.payload.get("code", "")
     _upsert_binding(
         ProtheusSyncBinding.ENTITY_SUPPLIER,
         run.local_model,
         run.local_id,
-        response.get("remote_code", ""),
+        remote_code,
         ProtheusSyncBinding.DIRECTION_PUSH,
         run.payload,
     )
@@ -464,13 +494,168 @@ def import_work_orders(payloads, trigger="pull"):
     return imported
 
 
+def _stage_catalog_payload(entity_type, payload, trigger="pull"):
+    remote_code = payload["code"]
+    payload_hash = _payload_hash(payload)
+    staging, _ = ProtheusCatalogStaging.objects.get_or_create(
+        provider=ProtheusIntegrationConfig.PROVIDER,
+        entity_type=entity_type,
+        remote_code=remote_code,
+        payload_hash=payload_hash,
+        defaults={
+            "payload": payload,
+            "status": ProtheusCatalogStaging.STATUS_PENDING,
+        },
+    )
+    if staging.payload != payload:
+        staging.payload = payload
+        staging.save(update_fields=["payload", "updated_at"])
+
+    run, _ = _build_sync_run(
+        ProtheusSyncRun.DIRECTION_PULL,
+        entity_type,
+        "protheus.ProtheusCatalogStaging",
+        staging.pk,
+        payload,
+        trigger,
+    )
+    if run.status != ProtheusSyncRun.STATUS_SUCCESS:
+        run.status = ProtheusSyncRun.STATUS_SUCCESS
+        run.remote_code = remote_code
+        run.result_payload = {"staged": True, "staging_id": staging.pk}
+        run.finished_at = timezone.now()
+        run.save(update_fields=["status", "remote_code", "result_payload", "finished_at"])
+
+    if staging.source_run_id != run.pk:
+        staging.source_run = run
+        staging.save(update_fields=["source_run", "updated_at"])
+    return staging
+
+
+@transaction.atomic
+def stage_suppliers(payloads, trigger="pull"):
+    return [_stage_catalog_payload(ProtheusCatalogStaging.ENTITY_SUPPLIER, payload, trigger=trigger) for payload in payloads]
+
+
+@transaction.atomic
+def stage_materials(payloads, trigger="pull"):
+    return [_stage_catalog_payload(ProtheusCatalogStaging.ENTITY_MATERIAL, payload, trigger=trigger) for payload in payloads]
+
+
+@transaction.atomic
+def apply_catalog_staging(staging, actor=None):
+    staging = ProtheusCatalogStaging.objects.select_for_update().get(pk=staging.pk)
+    payload = staging.payload or {}
+    now = timezone.now()
+    if staging.entity_type == ProtheusCatalogStaging.ENTITY_MATERIAL:
+        material, _ = Material.objects.update_or_create(
+            sigla=payload["code"],
+            defaults={
+                "tipo": payload.get("description", ""),
+                "norma": payload.get("norm", ""),
+                "forma_padrao": payload.get("shape") or payload.get("default_shape", ""),
+                "is_active": payload.get("is_active", True),
+            },
+        )
+        valid_from = payload.get("valid_from") or timezone.localdate().isoformat()
+        MaterialPrice.objects.update_or_create(
+            material=material,
+            forma=payload.get("shape") or material.forma_padrao or "chapa",
+            valid_from=valid_from,
+            defaults={
+                "preco_brl_kg": str(payload.get("unit_price_kg", "0")),
+                "fornecedor": payload.get("supplier_name", ""),
+                "valid_until": payload.get("valid_until") or None,
+            },
+        )
+        _upsert_binding(
+            ProtheusSyncBinding.ENTITY_MATERIAL,
+            "materials.Material",
+            material.pk,
+            payload["code"],
+            ProtheusSyncBinding.DIRECTION_PULL,
+            payload,
+        )
+        staging.applied_object_model = "materials.Material"
+        staging.applied_object_id = str(material.pk)
+    elif staging.entity_type == ProtheusCatalogStaging.ENTITY_SUPPLIER:
+        supplier, _ = ProtheusSupplier.objects.update_or_create(
+            supplier_code=payload["code"],
+            defaults={
+                "legal_name": payload.get("legal_name", ""),
+                "cnpj": payload.get("cnpj", ""),
+                "email": payload.get("email", ""),
+                "phone": payload.get("phone", ""),
+                "city": payload.get("city", ""),
+                "state": payload.get("state", ""),
+                "is_active": payload.get("is_active", True),
+                "payload": payload,
+            },
+        )
+        _upsert_binding(
+            ProtheusSyncBinding.ENTITY_SUPPLIER,
+            "protheus.ProtheusSupplier",
+            supplier.pk,
+            payload["code"],
+            ProtheusSyncBinding.DIRECTION_PULL,
+            payload,
+        )
+        staging.applied_object_model = "protheus.ProtheusSupplier"
+        staging.applied_object_id = str(supplier.pk)
+    else:
+        raise ValueError(f"Unsupported staging entity type: {staging.entity_type}")
+
+    staging.status = ProtheusCatalogStaging.STATUS_APPLIED
+    staging.error_message = ""
+    staging.reviewed_by = actor if getattr(actor, "pk", None) else None
+    staging.reviewed_at = now
+    staging.applied_at = now
+    staging.rejected_at = None
+    staging.save(
+        update_fields=[
+            "status",
+            "applied_object_model",
+            "applied_object_id",
+            "error_message",
+            "reviewed_by",
+            "reviewed_at",
+            "applied_at",
+            "rejected_at",
+            "updated_at",
+        ]
+    )
+    return staging
+
+
+@transaction.atomic
+def reject_catalog_staging(staging, actor=None, reason=""):
+    staging = ProtheusCatalogStaging.objects.select_for_update().get(pk=staging.pk)
+    now = timezone.now()
+    staging.status = ProtheusCatalogStaging.STATUS_REJECTED
+    staging.error_message = reason or staging.error_message
+    staging.reviewed_by = actor if getattr(actor, "pk", None) else None
+    staging.reviewed_at = now
+    staging.rejected_at = now
+    staging.save(
+        update_fields=[
+            "status",
+            "error_message",
+            "reviewed_by",
+            "reviewed_at",
+            "rejected_at",
+            "updated_at",
+        ]
+    )
+    return staging
+
+
 def pull_from_client(client, config=None):
     config = config or get_enabled_config()
     if config is None or not config.enabled:
         return {"suppliers": [], "materials": [], "work_orders": []}
     imported = {
-        "suppliers": import_suppliers(client.list_suppliers()) if config.pull_suppliers_enabled else [],
-        "materials": import_materials(client.list_materials()) if config.pull_materials_enabled else [],
+        "suppliers": stage_suppliers(client.list_suppliers()) if config.pull_suppliers_enabled else [],
+        "materials": stage_materials(client.list_materials()) if config.pull_materials_enabled else [],
         "work_orders": import_work_orders(client.list_work_orders()) if config.pull_work_orders_enabled else [],
     }
     return imported

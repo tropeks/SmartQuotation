@@ -3,6 +3,7 @@ import math
 import re
 
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.db import transaction
 from django.utils import timezone
 from datetime import date
@@ -166,6 +167,9 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     of.save()
 
+    if new_status == STATUS_LIBERADA:
+        _schedule_protheus_export(of)
+
     if new_status == STATUS_CONCLUIDA:
         _close_out_observations(of)
 
@@ -189,6 +193,19 @@ def concluir(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
 
 def cancelar(of: OrdemFabricacao, by=None, request=None) -> OrdemFabricacao:
     return transition(of, STATUS_CANCELADA, by=by, request=request)
+
+
+def _schedule_protheus_export(of):
+    from apps.integrations.protheus import services as protheus_services
+
+    run = protheus_services.maybe_enqueue_work_order_export(of, trigger="release")
+    if run is None:
+        return None
+    schema_name = connection.schema_name
+    transaction.on_commit(
+        lambda: protheus_services.enqueue_sync_run_async(run, schema_name=schema_name)
+    )
+    return run
 
 
 def _close_out_observations(of):

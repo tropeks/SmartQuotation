@@ -172,6 +172,71 @@ class ProtheusSyncAttempt(models.Model):
         ]
 
 
+class ProtheusCatalogStaging(models.Model):
+    ENTITY_MATERIAL = ProtheusSyncBinding.ENTITY_MATERIAL
+    ENTITY_SUPPLIER = ProtheusSyncBinding.ENTITY_SUPPLIER
+    ENTITY_CHOICES = [
+        (ENTITY_MATERIAL, "Material"),
+        (ENTITY_SUPPLIER, "Supplier"),
+    ]
+    STATUS_PENDING = "pending"
+    STATUS_APPLIED = "applied"
+    STATUS_REJECTED = "rejected"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPLIED, "Applied"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    provider = models.CharField(max_length=20, default=ProtheusIntegrationConfig.PROVIDER)
+    entity_type = models.CharField(max_length=20, choices=ENTITY_CHOICES)
+    remote_code = models.CharField(max_length=100)
+    payload_hash = models.CharField(max_length=64)
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    source_run = models.ForeignKey(
+        ProtheusSyncRun,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="catalog_staging_entries",
+    )
+    applied_object_model = models.CharField(max_length=100, blank=True)
+    applied_object_id = models.CharField(max_length=50, blank=True)
+    error_message = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="protheus_catalog_reviews",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    applied_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "integrations_protheus"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "entity_type", "remote_code", "payload_hash"],
+                name="uniq_protheus_catalog_staging_payload",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["entity_type", "status"]),
+            models.Index(fields=["remote_code", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.entity_type}:{self.remote_code}:{self.status}"
+
+
 class ProtheusSupplier(models.Model):
     supplier_code = models.CharField(max_length=100, unique=True)
     legal_name = models.CharField(max_length=255)
