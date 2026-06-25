@@ -13,6 +13,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 
 class RateManager(models.Manager):
@@ -22,7 +23,7 @@ class RateManager(models.Manager):
         Vigente = valid_from <= on_date e (valid_until nulo ou >= on_date).
         Em caso de sobreposição, vence o de valid_from mais recente.
         """
-        on_date = on_date or date.today()
+        on_date = on_date or timezone.now().date()
         return (
             self.get_queryset()
             .filter(operacao=operacao, valid_from__lte=on_date)
@@ -72,7 +73,7 @@ class ProcessParameterManager(models.Manager):
         Se `material` vier vazio/None, mantém o comportamento atual e procura apenas
         o fallback NULL.
         """
-        on_date = on_date or date.today()
+        on_date = on_date or timezone.now().date()
         material = material or None
         base = (
             self.get_queryset()
