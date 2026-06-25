@@ -1,10 +1,14 @@
 from unittest import mock
 
+from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.test import RequestFactory
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 from django_tenants.utils import schema_context
 
+from apps.integrations.omie.admin import OmieFiscalDocumentAdmin, OmieInvoiceAttemptAdmin, OmieInvoiceRunAdmin
 from apps.accounts.models import UserProfile
 from apps.audit.services import approve_quotation
 from apps.integrations.omie.client import HttpOmiePermanentError, HttpOmieTransientError
@@ -85,6 +89,19 @@ class OmieServicesTests(TenantTestCase):
         self.assertTrue(run.document.remote_document_id)
         self.assertEqual(run.attempts.count(), 1)
 
+    def test_process_invoice_run_uses_run_idempotency_key_remotely(self):
+        run = services.maybe_enqueue_nfe_issue(self.of, trigger="of_completed")
+        client = mock.Mock()
+        client.issue_nfe.return_value = {
+            "remote_document_id": "omie-123",
+            "remote_number": "NFE-123",
+            "status": "issued",
+        }
+
+        services.process_invoice_run(run, client=client)
+
+        client.issue_nfe.assert_called_once_with(run.payload, idempotency_key=run.idempotency_key)
+
     def test_issued_document_is_not_rebuilt_after_success(self):
         run = services.maybe_enqueue_nfe_issue(self.of, trigger="of_completed")
         services.process_invoice_run(run, client=self.client)
@@ -111,7 +128,7 @@ class OmieServicesTests(TenantTestCase):
 
     def test_process_invoice_run_persists_failed_attempt(self):
         class FailingClient(MemoryOmieClient):
-            def issue_nfe(self, payload):
+            def issue_nfe(self, payload, *, idempotency_key=""):
                 raise HttpOmieTransientError("Omie indisponivel")
 
         run = services.maybe_enqueue_nfe_issue(self.of, trigger="of_completed")
@@ -127,8 +144,8 @@ class OmieServicesTests(TenantTestCase):
 
     def test_process_invoice_run_rejects_non_issued_remote_status(self):
         class PendingClient(MemoryOmieClient):
-            def issue_nfe(self, payload):
-                response = super().issue_nfe(payload)
+            def issue_nfe(self, payload, *, idempotency_key=""):
+                response = super().issue_nfe(payload, idempotency_key=idempotency_key)
                 response["status"] = "processing"
                 return response
 
@@ -152,6 +169,17 @@ class OmieServicesTests(TenantTestCase):
 
         self.assertIsNotNone(run)
         self.assertEqual(run.trigger, "admin")
+
+    def test_singleton_config_is_enforced(self):
+        with self.assertRaisesMessage(ValidationError, "apenas uma configuracao Omie"):
+            OmieIntegrationConfig.objects.create(
+                enabled=False,
+                app_key="key-2",
+                app_secret="secret-2",
+                company_code="02",
+                environment="prod",
+                fiscal_defaults={"base_url": "https://omie-2.example/api"},
+            )
 
     def test_run_healthcheck_returns_operational_summary(self):
         summary = services.run_healthcheck(client=self.client)
@@ -217,6 +245,82 @@ class OmieTasksTests(TenantTestCase):
         self.assertEqual(self.run.status, OmieInvoiceRun.STATUS_SKIPPED)
         self.assertEqual(document.status, OmieFiscalDocument.STATUS_READY)
         self.assertEqual(self.run.error_message, "Omie integration is disabled")
+
+    @mock.patch("apps.integrations.omie.tasks.process_invoice_run.delay", side_effect=RuntimeError("broker down"))
+    def test_enqueue_invoice_run_async_marks_run_failed_when_publish_fails(self, _delay):
+        ok = services.enqueue_invoice_run_async(self.run, schema_name=self.tenant.schema_name)
+
+        self.assertFalse(ok)
+        self.run.refresh_from_db()
+        document = self.run.document
+        document.refresh_from_db()
+        self.assertEqual(self.run.status, OmieInvoiceRun.STATUS_FAILED)
+        self.assertEqual(document.status, OmieFiscalDocument.STATUS_READY)
+        self.assertIn("Failed to enqueue Omie invoice run", self.run.error_message)
+
+
+class OmieAdminTests(TenantTestCase):
+    def setUp(self):
+        self.site = AdminSite()
+        self.request = RequestFactory().get("/admin/")
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_omie_admin")
+        self.engineer = UserProfile.objects.create(
+            user=self.user,
+            full_name="Eng Omie Admin",
+            role="engenheiro",
+            crea_number="CREA-993",
+            crea_state="SP",
+        )
+        quotation = create_feixe_quotation(self.customer, "Feixe Omie Admin")
+        approve_quotation(quotation, self.engineer)
+        self.of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
+        production_services.liberar(self.of, by=self.user)
+        production_services.iniciar_producao(self.of, by=self.user)
+        with mock.patch("apps.production.services._schedule_omie_nfe_issue"):
+            production_services.concluir(self.of, by=self.user)
+        self.config = OmieIntegrationConfig.objects.create(
+            enabled=True,
+            app_key="key",
+            app_secret="secret",
+            company_code="01",
+            environment="sandbox",
+            fiscal_defaults={"base_url": "https://omie.example/api"},
+        )
+        self.run = services.maybe_enqueue_nfe_issue(self.of, trigger="admin")
+        services.process_invoice_run(self.run, client=MemoryOmieClient())
+        self.document = OmieFiscalDocument.objects.get(of=self.of)
+        self.attempt = self.run.attempts.first()
+
+    def test_document_admin_is_read_only(self):
+        admin_obj = OmieFiscalDocumentAdmin(OmieFiscalDocument, self.site)
+
+        readonly = admin_obj.get_readonly_fields(self.request, obj=self.document)
+
+        self.assertIn("payload", readonly)
+        self.assertIn("status", readonly)
+        self.assertFalse(admin_obj.has_add_permission(self.request))
+        self.assertFalse(admin_obj.has_delete_permission(self.request, self.document))
+
+    def test_run_admin_is_read_only(self):
+        admin_obj = OmieInvoiceRunAdmin(OmieInvoiceRun, self.site)
+
+        readonly = admin_obj.get_readonly_fields(self.request, obj=self.run)
+
+        self.assertIn("payload", readonly)
+        self.assertIn("status", readonly)
+        self.assertFalse(admin_obj.has_add_permission(self.request))
+        self.assertFalse(admin_obj.has_delete_permission(self.request, self.run))
+
+    def test_attempt_admin_is_read_only(self):
+        admin_obj = OmieInvoiceAttemptAdmin(OmieInvoiceAttempt, self.site)
+
+        readonly = admin_obj.get_readonly_fields(self.request, obj=self.attempt)
+
+        self.assertIn("request_payload", readonly)
+        self.assertIn("status", readonly)
+        self.assertFalse(admin_obj.has_add_permission(self.request))
+        self.assertFalse(admin_obj.has_delete_permission(self.request, self.attempt))
 
 
 class OmieAdminHealthViewTests(TenantTestCase):

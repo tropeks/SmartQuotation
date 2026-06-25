@@ -1,12 +1,13 @@
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
 class OmieIntegrationConfig(models.Model):
     PROVIDER = "omie"
 
-    provider = models.CharField(max_length=20, default=PROVIDER, unique=True)
+    provider = models.CharField(max_length=20, default=PROVIDER, unique=True, editable=False)
     enabled = models.BooleanField(default=False)
     app_key = models.CharField(max_length=255, blank=True)
     app_secret = models.CharField(max_length=255, blank=True)
@@ -26,6 +27,21 @@ class OmieIntegrationConfig(models.Model):
 
     def __str__(self):
         return f"Omie {self.company_code or '-'}"
+
+    def clean(self):
+        self.provider = self.PROVIDER
+        duplicate_exists = (
+            type(self).objects.exclude(pk=self.pk)
+            .filter(provider=self.PROVIDER)
+            .exists()
+        )
+        if duplicate_exists:
+            raise ValidationError("Cada tenant suporta apenas uma configuracao Omie.")
+
+    def save(self, *args, **kwargs):
+        self.provider = self.PROVIDER
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class OmieFiscalDocument(models.Model):

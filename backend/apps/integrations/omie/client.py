@@ -8,7 +8,7 @@ import requests
 
 
 class BaseOmieClient:
-    def issue_nfe(self, payload):
+    def issue_nfe(self, payload, *, idempotency_key=""):
         raise NotImplementedError
 
     def healthcheck(self):
@@ -60,21 +60,23 @@ class HttpOmieClient(BaseOmieClient):
     def _url(self, path):
         return f"{self.config.base_url}/{path.lstrip('/')}"
 
-    def _headers(self):
+    def _headers(self, *, idempotency_key=""):
         headers = {"Accept": "application/json"}
         if self.config.app_key:
             headers["X-Omie-App-Key"] = self.config.app_key
         if self.config.app_secret:
             headers["X-Omie-App-Secret"] = self.config.app_secret
+        if idempotency_key:
+            headers["X-Idempotency-Key"] = idempotency_key
         return headers
 
-    def _request(self, method, path, payload=None):
+    def _request(self, method, path, payload=None, *, idempotency_key=""):
         try:
             response = self.session.request(
                 method=method,
                 url=self._url(path),
                 json=payload,
-                headers=self._headers(),
+                headers=self._headers(idempotency_key=idempotency_key),
                 timeout=self.config.timeout_seconds,
             )
             response.raise_for_status()
@@ -99,8 +101,8 @@ class HttpOmieClient(BaseOmieClient):
         except ValueError as exc:
             raise HttpOmiePermanentError("Omie response is not valid JSON") from exc
 
-    def issue_nfe(self, payload):
-        return self._request("POST", "/nfe/issue", payload=payload)
+    def issue_nfe(self, payload, *, idempotency_key=""):
+        return self._request("POST", "/nfe/issue", payload=payload, idempotency_key=idempotency_key)
 
     def healthcheck(self):
         return self._request("GET", "/health")

@@ -9,9 +9,9 @@ class MemoryOmieClient(BaseOmieClient):
         self.issued_nfes = {}
         self.healthchecks = 0
 
-    def issue_nfe(self, payload):
+    def issue_nfe(self, payload, *, idempotency_key=""):
         payload = deepcopy(payload)
-        digest = payload_digest(payload)
+        digest = idempotency_key or payload_digest(payload)
         remote_id = payload.get("document_number") or payload.get("order_number") or digest[:12]
         response = self.issued_nfes.get(digest)
         if response is None:

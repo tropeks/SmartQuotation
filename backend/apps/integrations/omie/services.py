@@ -40,6 +40,10 @@ _TERMINAL_RUN_STATUSES = {
 _REMOTE_ISSUED_STATUSES = {"issued", "authorized", "emitida", "autorizada"}
 
 
+class OmieTaskEnqueueError(RuntimeError):
+    pass
+
+
 def _payload_hash(payload):
     return payload_digest(payload)
 
@@ -53,11 +57,11 @@ def _canonical_snapshot(value):
 
 
 def get_enabled_config():
-    return OmieIntegrationConfig.objects.filter(enabled=True).first()
+    return OmieIntegrationConfig.objects.filter(provider=OmieIntegrationConfig.PROVIDER, enabled=True).first()
 
 
 def get_config():
-    return OmieIntegrationConfig.objects.order_by("-updated_at").first()
+    return OmieIntegrationConfig.objects.filter(provider=OmieIntegrationConfig.PROVIDER).order_by("-updated_at").first()
 
 
 def _fiscal_defaults_snapshot(config: OmieIntegrationConfig | None):
@@ -295,18 +299,47 @@ def maybe_enqueue_nfe_issue(of: OrdemFabricacao, trigger="of_completed"):
     return run
 
 
-def enqueue_invoice_run_async(run: OmieInvoiceRun, *, schema_name=None):
+def mark_invoice_run_enqueue_failed(run_id, message):
+    with transaction.atomic():
+        run = OmieInvoiceRun.objects.select_for_update().select_related("document").get(pk=run_id)
+        now = timezone.now()
+        result_payload = dict(run.result_payload or {})
+        result_payload.update({
+            "status": "enqueue_failed",
+            "enqueue_failed_at": now.isoformat(),
+            "enqueue_error": message,
+        })
+        run.status = OmieInvoiceRun.STATUS_FAILED
+        run.error_message = message
+        run.result_payload = result_payload
+        run.finished_at = now
+        run.save(update_fields=["status", "error_message", "result_payload", "finished_at"])
+        document = run.document
+        if document.status != OmieFiscalDocument.STATUS_ISSUED:
+            document.status = OmieFiscalDocument.STATUS_READY
+            document.error_message = message
+            document.result_payload = result_payload
+            document.save(update_fields=["status", "error_message", "result_payload", "updated_at"])
+        return run
+
+
+def enqueue_invoice_run_async(run: OmieInvoiceRun, *, schema_name=None, raise_on_error=False):
     schema_name = schema_name or connection.schema_name
     from apps.integrations.omie.tasks import process_invoice_run
 
     try:
         process_invoice_run.delay(schema_name=schema_name, run_id=run.pk)
     except Exception:
+        message = "Failed to enqueue Omie invoice run"
         logger.exception(
-            "Failed to enqueue Omie invoice run",
+            message,
             extra={"schema_name": schema_name, "run_id": run.pk},
         )
-    return run
+        mark_invoice_run_enqueue_failed(run.pk, message)
+        if raise_on_error:
+            raise OmieTaskEnqueueError(message)
+        return False
+    return True
 
 
 def record_invoice_run_failure(run_id, exc, *, response_payload=None):
@@ -399,19 +432,35 @@ def process_invoice_run(run: OmieInvoiceRun, client=None):
             if config is None or not config.enabled:
                 return _mark_run_skipped(run, "Omie integration is disabled")
 
-            if client is None:
-                client = build_omie_client(config)
-
+            payload = run.payload or {}
+            idempotency_key = run.idempotency_key
             run.status = OmieInvoiceRun.STATUS_PROCESSING
-            run.save(update_fields=["status"])
-            response = client.issue_nfe(run.payload or {})
-            remote_issue = _response_confirms_issue(response)
+            run.error_message = ""
+            run.finished_at = None
+            run.save(update_fields=["status", "error_message", "finished_at"])
+
+        if client is None:
+            client = build_omie_client(config)
+        response = client.issue_nfe(payload, idempotency_key=idempotency_key)
+        remote_issue = _response_confirms_issue(response)
+
+        with transaction.atomic():
+            run = OmieInvoiceRun.objects.select_for_update().select_related("document").get(pk=run.pk)
+            document = run.document
+            if document.status == OmieFiscalDocument.STATUS_ISSUED and document.remote_document_id:
+                if run.status != OmieInvoiceRun.STATUS_SUCCESS:
+                    run.status = OmieInvoiceRun.STATUS_SUCCESS
+                    run.error_message = ""
+                    run.result_payload = document.result_payload or response
+                    run.finished_at = timezone.now()
+                    run.save(update_fields=["status", "error_message", "result_payload", "finished_at"])
+                return run
             sequence = run.attempts.count() + 1
             OmieInvoiceAttempt.objects.create(
                 run=run,
                 sequence=sequence,
                 status=OmieInvoiceAttempt.STATUS_SUCCESS,
-                request_payload=run.payload or {},
+                request_payload=payload,
                 response_payload=response,
             )
             run.status = OmieInvoiceRun.STATUS_SUCCESS
@@ -447,8 +496,8 @@ def process_invoice_run(run: OmieInvoiceRun, client=None):
                 close()
 
 
-def run_healthcheck(client=None):
-    config = get_enabled_config()
+def run_healthcheck(config=None, client=None):
+    config = config or get_enabled_config()
     checked_at = timezone.now()
     latest_run = OmieInvoiceRun.objects.order_by("-started_at").first()
     summary = {

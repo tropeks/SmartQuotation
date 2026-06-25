@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib import messages
 from django.db import connection
 from django.urls import reverse
 from django.utils.html import format_html
@@ -20,6 +21,20 @@ class OmieInvoiceAttemptInline(admin.TabularInline):
     readonly_fields = fields
 
 
+class OmieReadOnlyAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = []
+        for field in self.model._meta.fields:
+            fields.append(field.name)
+        return tuple(fields)
+
+
 @admin.register(OmieIntegrationConfig)
 class OmieIntegrationConfigAdmin(admin.ModelAdmin):
     list_display = (
@@ -33,7 +48,7 @@ class OmieIntegrationConfigAdmin(admin.ModelAdmin):
     )
     list_filter = ("enabled", "environment", "emit_on_of_completed")
     search_fields = ("company_code", "environment")
-    readonly_fields = ("created_at", "updated_at", "last_healthcheck_at")
+    readonly_fields = ("provider", "created_at", "updated_at", "last_healthcheck_at")
     actions = ["run_healthcheck"]
 
     @admin.display(description="Healthcheck")
@@ -47,7 +62,7 @@ class OmieIntegrationConfigAdmin(admin.ModelAdmin):
         for config in queryset:
             if not config.enabled:
                 continue
-            summary = services.run_healthcheck()
+            summary = services.run_healthcheck(config=config)
             checked += 1
             if not summary["ok"]:
                 failures += 1
@@ -55,7 +70,7 @@ class OmieIntegrationConfigAdmin(admin.ModelAdmin):
 
 
 @admin.register(OmieFiscalDocument)
-class OmieFiscalDocumentAdmin(admin.ModelAdmin):
+class OmieFiscalDocumentAdmin(OmieReadOnlyAdmin):
     list_display = (
         "of",
         "config",
@@ -67,23 +82,35 @@ class OmieFiscalDocumentAdmin(admin.ModelAdmin):
     )
     list_filter = ("status",)
     search_fields = ("remote_document_id", "remote_number", "of__number")
-    readonly_fields = ("created_at", "updated_at")
     actions = ["issue_documents"]
 
     @admin.action(description="Emitir NF-e para documentos selecionados")
     def issue_documents(self, request, queryset):
         queued = 0
+        failures = 0
         for document in queryset.select_related("of"):
             run = services.maybe_enqueue_nfe_issue(document.of, trigger="admin")
             if run is None:
                 continue
-            services.enqueue_invoice_run_async(run, schema_name=connection.schema_name)
+            ok = services.enqueue_invoice_run_async(
+                run,
+                schema_name=connection.schema_name,
+                raise_on_error=False,
+            )
+            if not ok:
+                failures += 1
+                continue
             queued += 1
-        self.message_user(request, f"{queued} documento(s) enfileirado(s) para emissão.")
+        level = messages.ERROR if failures else messages.INFO
+        self.message_user(
+            request,
+            f"{queued} documento(s) enfileirado(s) para emissão; {failures} falharam ao publicar task.",
+            level=level,
+        )
 
 
 @admin.register(OmieInvoiceRun)
-class OmieInvoiceRunAdmin(admin.ModelAdmin):
+class OmieInvoiceRunAdmin(OmieReadOnlyAdmin):
     list_display = (
         "document",
         "status",
@@ -95,25 +122,36 @@ class OmieInvoiceRunAdmin(admin.ModelAdmin):
     list_filter = ("status", "trigger")
     search_fields = ("idempotency_key", "document__of__number", "document__remote_number")
     inlines = [OmieInvoiceAttemptInline]
-    readonly_fields = ("started_at", "finished_at", "correlation_id")
     actions = ["reenqueue_runs"]
 
     @admin.action(description="Reenfileirar runs selecionados")
     def reenqueue_runs(self, request, queryset):
         queued = 0
         skipped = 0
+        failures = 0
         for run in queryset:
             if not services.reset_invoice_run_for_requeue(run):
                 skipped += 1
                 continue
-            services.enqueue_invoice_run_async(run, schema_name=connection.schema_name)
+            ok = services.enqueue_invoice_run_async(
+                run,
+                schema_name=connection.schema_name,
+                raise_on_error=False,
+            )
+            if not ok:
+                failures += 1
+                continue
             queued += 1
-        self.message_user(request, f"{queued} run(s) reenfileirado(s); {skipped} ignorado(s).")
+        level = messages.ERROR if failures else messages.INFO
+        self.message_user(
+            request,
+            f"{queued} run(s) reenfileirado(s); {skipped} ignorado(s); {failures} falharam ao publicar task.",
+            level=level,
+        )
 
 
 @admin.register(OmieInvoiceAttempt)
-class OmieInvoiceAttemptAdmin(admin.ModelAdmin):
+class OmieInvoiceAttemptAdmin(OmieReadOnlyAdmin):
     list_display = ("run", "sequence", "status", "created_at")
     list_filter = ("status",)
     search_fields = ("run__idempotency_key", "run__document__of__number")
-    readonly_fields = ("created_at",)
