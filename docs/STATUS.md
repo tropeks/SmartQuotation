@@ -2,7 +2,7 @@
 
 > Documento vivo. Última revisão: 2026-06-25 — H1 técnico estabilizado; H1 auditável fechado (#46);
 > H2.1 (cotação → OF), H2.2 (apontamento), H2.3 (aprendizado), H2.4 (ITP básico), H2.5 foundation,
-> H2.5.1 (primeira fatia operacional do conector Protheus) e H2.5.2 entregues.
+> H2.5.1 (primeira fatia operacional do conector Protheus), H2.5.2 e H2.6 entregues.
 > (colaboração com @WellToMcAt).
 > **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
 > suítes relevantes locais verdes (`production` + `audit` = 49 testes) · CI verde nos PRs mergeados.**
@@ -117,6 +117,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **H2.5 foundation — Protheus** — app tenant-scoped `apps.integrations.protheus` com configuração por tenant, `SyncBinding`/`SyncRun`/`SyncAttempt`, snapshots remotos de OF/BOM, fake client, serialização determinística e testes de import/export para OF, BOM, materiais e fornecedores | ✅ (#52) |
 | **H2.5.1 — Protheus operacional (fatia 1)** — export assíncrono da OF no `release`, tasks Celery tenant-aware, adapter HTTP por contrato, staging governado para import de materiais/fornecedores, admin actions de reenfileirar/aplicar/rejeitar e testes de `integrations.protheus` + `production` verdes | ✅ |
 | **H2.5.2 — Operação assistida do Protheus** — scheduler global com beat único, healthcheck operacional admin-only, retry tipado transitório/permanente e reenfileiramento seguro no admin | ✅ |
+| **H2.6 — Conector Omie / Bling** — emissão assistida da NF-e via Omie a partir da OF concluída, com app tenant-scoped, config por tenant, documento fiscal mínimo, runs/attempts assíncronos, admin operacional, healthcheck e runbook | ✅ |
 
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
@@ -133,6 +134,8 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 > H2.5.2 consolidou a operação assistida com scheduler global/beat único, healthcheck operacional,
 > retry tipado e reenfileiramento seguro no admin, mantendo os testes de `apps.integrations.protheus`
 > e `apps.production` verdes.
+> H2.6 fechou o slice Omie-first com emissão assistida da NF-e a partir da OF concluída, sem motor
+> fiscal completo e sem Bling neste incremento.
 
 ---
 

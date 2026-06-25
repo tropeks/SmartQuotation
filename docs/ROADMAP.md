@@ -19,7 +19,7 @@ H3 ─── ERP Especializado Caldeiraria   18m+
 |---|---|
 | H1 técnico | feixe tubular + BEU/BEM, sessão auth, EAP persistida, proposta, histórico e API |
 | H1 auditável | CREA obrigatório, ART opcional, snapshot por cotação e trilha mínima |
-| H2 | OF, apontamento, motor de aprendizado, ITP básico e 1ª fatia operacional do Protheus entregues; próximo foco é operação recorrente |
+| H2 | OF, apontamento, motor de aprendizado, ITP básico e 1ª fatia operacional do Protheus entregues; H2.6 está em fundação administrativa, sem emissão assistida fechada |
 | H1.5/H2+ | Equipment/Component formal, JWT/MFA, PVElite completo e integrações ERP |
 
 ---
@@ -195,7 +195,7 @@ Sprint 5:   28 SP restantes → entrega 28 SP →   0 SP ✅
 | **H2.3** — Motor de aprendizado de índices ✅ **(entregue, `aa3127c`)** | mês 10 | Sistema sugere atualização do `TenantRate` quando `ActualRate` tem N ≥ 20 amostras e confidence ≥ 70%; aplicação/descarta via UI com RBAC |
 | **H2.4** — ITP básico ✅ **(entregue)** | mês 11 | Plano de inspeção gerado a partir do roteiro; aceite por item com responsável e data |
 | **H2.5** — Conector TOTVS Protheus ✅ **(foundation + H2.5.1 + H2.5.2 entregues)** | mês 13 | Foundation tenant-scoped + export assíncrono da OF, tasks tenant-aware, adapter HTTP mínimo, staging governado de catálogo, scheduler/beat único, healthcheck admin-only, retry tipado e reenfileiramento seguro |
-| **H2.6** — Conector Omie / Bling | mês 14 | Emissão de NF-e via Omie a partir da OF concluída |
+| **H2.6** — Conector Omie / Bling ✅ **(Omie entregue, Bling fora do slice)** | mês 14 | Emissão assistida de NF-e via Omie a partir da OF concluída, com config tenant-scoped, runs assíncronos, admin operacional e healthcheck |
 | **H2.7** — Conector SAP B1 | mês 16 | Sincronização de pedidos e BOM com SAP B1 (clientes enterprise) |
 | **H2.8** — Expansão normativa: API 650 | mês 15 | Tanques atmosféricos dimensionados conforme API 650/620 |
 | **H2.9** — Expansão normativa: ASME B31.3 | mês 17 | Tubulações de processo dimensionadas |

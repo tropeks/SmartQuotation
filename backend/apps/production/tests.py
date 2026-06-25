@@ -1,4 +1,6 @@
 """Testes de Ordem de Fabricação (H2.1) — TenantTestCase."""
+import sys
+import types
 from unittest import mock
 
 from django.contrib.auth.models import User
@@ -312,6 +314,14 @@ class FechamentoTests(TenantTestCase):
         services.iniciar_producao(of, by=self.user)
         return of
 
+    def _fake_omie_services(self, run=None):
+        omie_pkg = types.ModuleType("apps.integrations.omie")
+        omie_services = types.ModuleType("apps.integrations.omie.services")
+        omie_services.maybe_enqueue_nfe_issue = mock.Mock(return_value=run)
+        omie_services.enqueue_invoice_run_async = mock.Mock()
+        omie_pkg.services = omie_services
+        return omie_pkg, omie_services
+
     def test_fechamento_grava_observacao_so_com_apontamento(self):
         from decimal import Decimal
         from apps.production.models import ProductionObservation
@@ -343,6 +353,63 @@ class FechamentoTests(TenantTestCase):
         # nenhuma operação apontada -> nenhuma observação, sem div/0
         services.concluir(of, by=self.user)
         self.assertEqual(ProductionObservation.objects.filter(ordem=of).count(), 0)
+
+    def test_concluir_com_omie_habilitado_enfileira_run_pos_commit(self):
+        of = self._of_em_producao("Feixe F")
+        fake_run = types.SimpleNamespace(pk=321)
+        omie_pkg, omie_services = self._fake_omie_services(run=fake_run)
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "apps.integrations.omie": omie_pkg,
+                "apps.integrations.omie.services": omie_services,
+            },
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                services.concluir(of, by=self.user)
+
+        omie_services.maybe_enqueue_nfe_issue.assert_called_once_with(of, trigger="of_completed")
+        omie_services.enqueue_invoice_run_async.assert_called_once_with(
+            fake_run,
+            schema_name=services.connection.schema_name,
+        )
+
+    def test_concluir_com_omie_desabilitado_nao_enfileira(self):
+        of = self._of_em_producao("Feixe G")
+        omie_pkg, omie_services = self._fake_omie_services(run=None)
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "apps.integrations.omie": omie_pkg,
+                "apps.integrations.omie.services": omie_services,
+            },
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                services.concluir(of, by=self.user)
+
+        omie_services.maybe_enqueue_nfe_issue.assert_called_once_with(of, trigger="of_completed")
+        omie_services.enqueue_invoice_run_async.assert_not_called()
+
+    def test_transicao_invalida_nao_cria_run_omie(self):
+        q = create_feixe_quotation(self.customer, "Feixe H")
+        approve_quotation(q, self.engineer)
+        of = services.convert_quotation_to_of(q, created_by=self.user)
+        omie_pkg, omie_services = self._fake_omie_services(run=types.SimpleNamespace(pk=999))
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "apps.integrations.omie": omie_pkg,
+                "apps.integrations.omie.services": omie_services,
+            },
+        ):
+            with self.assertRaises(ValidationError):
+                services.concluir(of, by=self.user)
+
+        omie_services.maybe_enqueue_nfe_issue.assert_not_called()
+        omie_services.enqueue_invoice_run_async.assert_not_called()
 
 
 class ApontamentoViewTests(TenantTestCase):
