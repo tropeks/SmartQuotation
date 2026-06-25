@@ -51,6 +51,7 @@ tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 - ✅ H2.2: apontamento de produção e fechamento gerando `ActualRate` por operação.
 - ✅ H2.3: `RateSuggestion` a partir de `ActualRate` elegível; aplicar/descartar com RBAC.
 - ✅ H2.4: ITP básico gerado da OF/roteiro, aceite por item com responsável/data e `AccessLog`.
+- ✅ H2.5 foundation: app tenant-scoped `apps.integrations.protheus` mergeado (`#52`) com config por tenant, bindings/runs/attempts de sync, snapshots remotos, fake client e testes de OF/BOM/materiais/fornecedores.
 - ✅ Testes locais: gates do motor OK; `apps.engineering_params` 44 testes OK; `apps.production` + `apps.audit` 49 testes OK.
 
 ## 🧭 DECISÕES TRAVADAS (não re-litigar)
@@ -62,4 +63,6 @@ Rate dia-1 só camada tenant · ProcessParameter separado de Rate · EAP/WBS com
 gstack em todas etapas · autonomia (perguntas só essenciais) · /cso a cada milestone · Boil the Ocean.
 
 ## ▶️ PRÓXIMO PASSO
-H2.5 — Conector TOTVS Protheus: sincronização bidirecional de OF, BOM, materiais e fornecedores.
+H2.5.1 — evoluir o conector TOTVS Protheus da fundação para transporte real e operação assistida:
+processamento assíncrono/worker, acionamento por workflow, staging/governança de import de materiais
+e fornecedor, e adapter HTTP por contrato de implantação.

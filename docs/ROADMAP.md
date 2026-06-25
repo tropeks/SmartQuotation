@@ -194,7 +194,7 @@ Sprint 5:   28 SP restantes → entrega 28 SP →   0 SP ✅
 | **H2.2** — Apontamento de produção ✅ **(entregue, PR)** | mês 9 | Operador registra horas por operação; no fechamento da OF calcula R$/h observado (= custo ÷ horas reais) → `ActualRate` (Welford). Baseline = custo (o motor não expõe horas estimadas) |
 | **H2.3** — Motor de aprendizado de índices ✅ **(entregue, `aa3127c`)** | mês 10 | Sistema sugere atualização do `TenantRate` quando `ActualRate` tem N ≥ 20 amostras e confidence ≥ 70%; aplicação/descarta via UI com RBAC |
 | **H2.4** — ITP básico ✅ **(entregue)** | mês 11 | Plano de inspeção gerado a partir do roteiro; aceite por item com responsável e data |
-| **H2.5** — Conector TOTVS Protheus | mês 13 | Sincronização bidirecional: OF, BOM, materiais, fornecedores |
+| **H2.5** — Conector TOTVS Protheus 🚧 **(foundation entregue, PR #52)** | mês 13 | Sincronização bidirecional: OF, BOM, materiais, fornecedores |
 | **H2.6** — Conector Omie / Bling | mês 14 | Emissão de NF-e via Omie a partir da OF concluída |
 | **H2.7** — Conector SAP B1 | mês 16 | Sincronização de pedidos e BOM com SAP B1 (clientes enterprise) |
 | **H2.8** — Expansão normativa: API 650 | mês 15 | Tanques atmosféricos dimensionados conforme API 650/620 |

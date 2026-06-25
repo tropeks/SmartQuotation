@@ -1,7 +1,8 @@
 # SmartQuotation — Status do Projeto
 
-> Documento vivo. Última revisão: 2026-06-24 — H1 técnico estabilizado; H1 auditável fechado (#46);
-> H2.1 (cotação → OF), H2.2 (apontamento), H2.3 (aprendizado) e H2.4 (ITP básico) entregues.
+> Documento vivo. Última revisão: 2026-06-25 — H1 técnico estabilizado; H1 auditável fechado (#46);
+> H2.1 (cotação → OF), H2.2 (apontamento), H2.3 (aprendizado), H2.4 (ITP básico) e H2.5 foundation
+> (conector Protheus base, PR #52) entregues.
 > (colaboração com @WellToMcAt).
 > **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
 > suítes relevantes locais verdes (`production` + `audit` = 49 testes) · CI verde nos PRs mergeados.**
@@ -18,7 +19,8 @@ design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimens�
 - **H2 (Gestão da Produção):** H2.1 converte cotação aprovada em Ordem de Fabricação (#47); H2.2 registra
   apontamento de horas por operação e, no fechamento, calcula R$/h observado → `ActualRate`; H2.3 lê
   esses agregados e sugere atualização de `Rate` quando há amostragem e confiança suficientes; H2.4
-  gera ITP básico a partir do roteiro da OF e registra aceite por item com responsável/data.
+  gera ITP básico a partir do roteiro da OF e registra aceite por item com responsável/data; H2.5
+  iniciou a trilha de ERP com a fundação do app `apps.integrations.protheus`.
 - **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
 | Equipamento | Motor | Gabarito | Erro |
@@ -100,7 +102,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 
 ---
 
-## 3c. H1 auditável + H2 (produção) — CONCLUÍDA até H2.4 (PRs #46–47 + H2.2/H2.3/H2.4)
+## 3c. H1 auditável + H2 (produção) — CONCLUÍDA até H2.5 foundation (PRs #46–47 + H2.2/H2.3/H2.4 + #52)
 
 | Item | Status |
 |---|:--:|
@@ -111,6 +113,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **H2.2 — Apontamento de produção** — `ProductionEntry` (horas por operação, somadas); no fechamento da OF grava `ProductionObservation` e agrega `ActualRate` em **R$/h observado = custo ÷ horas reais** (Welford online), usado pelo H2.3 | ✅ (PR) |
 | **H2.3 — Motor de aprendizado de índices** — `RateSuggestion` gerada a partir de `ActualRate` elegível (`N ≥ 20`, confiança `≥ 70%`, delta material), com aplicar/descartar via serviço e UI protegida por RBAC | ✅ (`aa3127c`) |
 | **H2.4 — ITP básico** — `InspectionPlan` gerado a partir das `OFOperation` aplicáveis; `InspectionItem` com snapshot da operação, tipo/critério, aceite por responsável/data e auditoria `itp_generate`/`itp_accept` | ✅ |
+| **H2.5 foundation — Protheus** — app tenant-scoped `apps.integrations.protheus` com configuração por tenant, `SyncBinding`/`SyncRun`/`SyncAttempt`, snapshots remotos de OF/BOM, fake client, serialização determinística e testes de import/export para OF, BOM, materiais e fornecedores | ✅ (#52) |
 
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
@@ -119,7 +122,10 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 > H2.3 foi codado com TDD e auditado em `aa3127c` (7 achados corrigidos): geração idempotente, bordas
 > de confiança, proteção contra `Rate` inválido/zero, aplicação transacional e RBAC nas views.
 > H2.4 seguiu TDD: ITP idempotente, snapshot do roteiro da OF, aceite protegido e eventos no `AccessLog`.
-> Próximo: **H2.5 — Conector TOTVS Protheus**.
+> H2.5 foundation (PR #52) entregou a espinha tenant-scoped do conector Protheus sem acoplar transporte
+> HTTP especulativo ao domínio. Durante o merge foi corrigido também um bug preexistente de data em
+> `engineering_params` para estabilizar o gate global do CI.
+> Próximo: **H2.5.1 — transporte real, operação assistida e governança de import**.
 
 ---
 
