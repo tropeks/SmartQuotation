@@ -63,6 +63,6 @@ Rate dia-1 só camada tenant · ProcessParameter separado de Rate · EAP/WBS com
 gstack em todas etapas · autonomia (perguntas só essenciais) · /cso a cada milestone · Boil the Ocean.
 
 ## ▶️ PRÓXIMO PASSO
-H2.5.1 — evoluir o conector TOTVS Protheus da fundação para transporte real e operação assistida:
-processamento assíncrono/worker, acionamento por workflow, staging/governança de import de materiais
-e fornecedor, e adapter HTTP por contrato de implantação.
+H2.5.2 — consolidar a operação assistida do conector TOTVS Protheus:
+scheduler/beat para pull recorrente, healthcheck operacional, observabilidade/retry mais fino e
+amarração por contrato de implantação real com o tenant piloto.

@@ -1,4 +1,6 @@
 """Testes de Ordem de Fabricação (H2.1) — TenantTestCase."""
+from unittest import mock
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -8,6 +10,7 @@ from django_tenants.test.cases import TenantTestCase
 from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog
 from apps.audit.services import approve_quotation, revoke_approval
+from apps.integrations.protheus.models import ProtheusIntegrationConfig, ProtheusSyncRun
 from apps.production.models import (
     OrdemFabricacao, OFItem, OFMaterial, OFOperation,
     InspectionItem, InspectionPlan,
@@ -205,6 +208,45 @@ class OrdemFabricacaoTests(TenantTestCase):
         self.assertEqual(of.preco_com_impostos, self.quotation.preco_com_impostos)
         self.assertEqual(of.peso_bruto_kg, self.quotation.peso_bruto_kg)
         self.assertEqual(of.peso_liquido_kg, self.quotation.peso_liquido_kg)
+
+    @mock.patch("apps.integrations.protheus.services.enqueue_sync_run_async")
+    def test_liberar_enfileira_export_protheus_quando_habilitado(self, enqueue_sync_run_async):
+        ProtheusIntegrationConfig.objects.create(
+            enabled=True,
+            base_url="https://protheus.example/api",
+            company_code="01",
+            branch_code="01",
+            export_on_release=True,
+        )
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            services.liberar(of, by=self.user)
+
+        run = ProtheusSyncRun.objects.get(
+            direction=ProtheusSyncRun.DIRECTION_PUSH,
+            entity_type="work_order",
+            local_id=str(of.pk),
+        )
+        enqueue_sync_run_async.assert_called_once()
+        self.assertEqual(enqueue_sync_run_async.call_args.args[0].pk, run.pk)
+
+    @mock.patch("apps.integrations.protheus.services.enqueue_sync_run_async")
+    def test_liberar_nao_enfileira_export_quando_desabilitado(self, enqueue_sync_run_async):
+        ProtheusIntegrationConfig.objects.create(
+            enabled=True,
+            base_url="https://protheus.example/api",
+            company_code="01",
+            branch_code="01",
+            export_on_release=False,
+        )
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            services.liberar(of, by=self.user)
+
+        self.assertFalse(ProtheusSyncRun.objects.exists())
+        enqueue_sync_run_async.assert_not_called()
 
 
 class ApontamentoTests(TenantTestCase):

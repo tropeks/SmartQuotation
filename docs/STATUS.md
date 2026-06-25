@@ -1,8 +1,8 @@
 # SmartQuotation — Status do Projeto
 
 > Documento vivo. Última revisão: 2026-06-25 — H1 técnico estabilizado; H1 auditável fechado (#46);
-> H2.1 (cotação → OF), H2.2 (apontamento), H2.3 (aprendizado), H2.4 (ITP básico) e H2.5 foundation
-> (conector Protheus base, PR #52) entregues.
+> H2.1 (cotação → OF), H2.2 (apontamento), H2.3 (aprendizado), H2.4 (ITP básico), H2.5 foundation
+> e H2.5.1 (primeira fatia operacional do conector Protheus) entregues.
 > (colaboração com @WellToMcAt).
 > **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
 > suítes relevantes locais verdes (`production` + `audit` = 49 testes) · CI verde nos PRs mergeados.**
@@ -114,6 +114,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **H2.3 — Motor de aprendizado de índices** — `RateSuggestion` gerada a partir de `ActualRate` elegível (`N ≥ 20`, confiança `≥ 70%`, delta material), com aplicar/descartar via serviço e UI protegida por RBAC | ✅ (`aa3127c`) |
 | **H2.4 — ITP básico** — `InspectionPlan` gerado a partir das `OFOperation` aplicáveis; `InspectionItem` com snapshot da operação, tipo/critério, aceite por responsável/data e auditoria `itp_generate`/`itp_accept` | ✅ |
 | **H2.5 foundation — Protheus** — app tenant-scoped `apps.integrations.protheus` com configuração por tenant, `SyncBinding`/`SyncRun`/`SyncAttempt`, snapshots remotos de OF/BOM, fake client, serialização determinística e testes de import/export para OF, BOM, materiais e fornecedores | ✅ (#52) |
+| **H2.5.1 — Protheus operacional (fatia 1)** — export assíncrono da OF no `release`, tasks Celery tenant-aware, adapter HTTP por contrato, staging governado para import de materiais/fornecedores, admin actions de reenfileirar/aplicar/rejeitar e testes de `integrations.protheus` + `production` verdes | ✅ |
 
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
@@ -123,9 +124,11 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 > de confiança, proteção contra `Rate` inválido/zero, aplicação transacional e RBAC nas views.
 > H2.4 seguiu TDD: ITP idempotente, snapshot do roteiro da OF, aceite protegido e eventos no `AccessLog`.
 > H2.5 foundation (PR #52) entregou a espinha tenant-scoped do conector Protheus sem acoplar transporte
-> HTTP especulativo ao domínio. Durante o merge foi corrigido também um bug preexistente de data em
-> `engineering_params` para estabilizar o gate global do CI.
-> Próximo: **H2.5.1 — transporte real, operação assistida e governança de import**.
+> HTTP especulativo ao domínio. O fechamento de H2.5.1 adicionou o primeiro slice operacional:
+> export assíncrono por workflow de OF, tasks multi-tenant, adapter HTTP real mínimo e staging
+> assistido para import de catálogo sem aplicar preço direto no domínio. Durante a trilha Protheus
+> foi corrigido também um bug preexistente de data em `engineering_params` para estabilizar o gate global do CI.
+> Próximo: **H2.5.2 — scheduler/beat, healthcheck operacional e observabilidade/retry mais fino**.
 
 ---
 

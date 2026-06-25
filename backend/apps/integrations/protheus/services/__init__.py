@@ -8,7 +8,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from json import dumps
 from pathlib import Path
 
-from apps.integrations.protheus.client import BaseProtheusClient
+from apps.integrations.protheus.client import BaseProtheusClient, HttpProtheusClient, HttpProtheusClientError, build_protheus_client
 from apps.integrations.protheus.fake import MemoryProtheusClient
 
 
@@ -26,10 +26,15 @@ enqueue_work_order_export = _LEGACY.enqueue_work_order_export
 enqueue_material_export = _LEGACY.enqueue_material_export
 enqueue_supplier_export = _LEGACY.enqueue_supplier_export
 maybe_enqueue_work_order_export = _LEGACY.maybe_enqueue_work_order_export
+enqueue_sync_run_async = _LEGACY.enqueue_sync_run_async
 process_sync_run = _LEGACY.process_sync_run
 import_materials = _LEGACY.import_materials
 import_suppliers = _LEGACY.import_suppliers
 import_work_orders = _LEGACY.import_work_orders
+apply_catalog_staging = _LEGACY.apply_catalog_staging
+reject_catalog_staging = _LEGACY.reject_catalog_staging
+stage_materials = _LEGACY.stage_materials
+stage_suppliers = _LEGACY.stage_suppliers
 pull_from_client = _LEGACY.pull_from_client
 
 
@@ -70,11 +75,16 @@ import_payload = pull_from_client
 
 __all__ = [
     "BaseProtheusClient",
+    "HttpProtheusClient",
+    "HttpProtheusClientError",
+    "build_protheus_client",
+    "apply_catalog_staging",
     "MemoryProtheusClient",
     "build_entity_payload",
     "canonical_json",
     "enqueue_material_export",
     "enqueue_supplier_export",
+    "enqueue_sync_run_async",
     "enqueue_work_order_export",
     "extract_remote_code",
     "export_payload",
@@ -86,8 +96,11 @@ __all__ = [
     "maybe_enqueue_work_order_export",
     "payload_digest",
     "process_sync_run",
+    "reject_catalog_staging",
     "pull_from_client",
     "serialize_material",
     "serialize_supplier",
     "serialize_work_order",
+    "stage_materials",
+    "stage_suppliers",
 ]
