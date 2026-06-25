@@ -201,63 +201,94 @@ def enqueue_sync_run_async(run: ProtheusSyncRun, *, schema_name=None):
     return run
 
 
-@transaction.atomic
 def process_sync_run(run: ProtheusSyncRun, client=None):
     if client is None:
         client = build_protheus_client(get_enabled_config())
-    run = ProtheusSyncRun.objects.select_for_update().get(pk=run.pk)
-    if run.status == ProtheusSyncRun.STATUS_SUCCESS:
-        return run
-
-    payload = run.payload or {}
-    sequence = run.attempts.count() + 1
     try:
-        if run.entity_type == ProtheusSyncBinding.ENTITY_WORK_ORDER:
-            response = client.upsert_work_order(payload)
-            _record_work_order_binding(run, response)
-        elif run.entity_type == ProtheusSyncBinding.ENTITY_MATERIAL:
-            response = client.upsert_material(payload)
-            _record_material_binding(run, response)
-        elif run.entity_type == ProtheusSyncBinding.ENTITY_SUPPLIER:
-            response = client.upsert_supplier(payload)
-            _record_supplier_binding(run, response)
-        else:
-            raise ValueError(f"Unsupported entity type: {run.entity_type}")
+        with transaction.atomic():
+            run = ProtheusSyncRun.objects.select_for_update().get(pk=run.pk)
+            if run.status == ProtheusSyncRun.STATUS_SUCCESS:
+                return run
 
-        ProtheusSyncAttempt.objects.create(
-            run=run,
-            sequence=sequence,
-            status=ProtheusSyncAttempt.STATUS_SUCCESS,
-            request_payload=payload,
-            response_payload=response,
-        )
-        remote_code = (
-            response.get("remote_code")
-            or payload.get("number")
-            or payload.get("code")
-            or ""
-        )
-        run.status = ProtheusSyncRun.STATUS_SUCCESS
-        run.remote_code = remote_code
-        run.result_payload = response
-        run.error_message = ""
-        run.finished_at = timezone.now()
-        run.save(update_fields=["status", "remote_code", "result_payload", "error_message", "finished_at"])
-        return run
+            payload = run.payload or {}
+            sequence = run.attempts.count() + 1
+            if run.entity_type == ProtheusSyncBinding.ENTITY_WORK_ORDER:
+                response = client.upsert_work_order(payload)
+                _record_work_order_binding(run, response)
+            elif run.entity_type == ProtheusSyncBinding.ENTITY_MATERIAL:
+                response = client.upsert_material(payload)
+                _record_material_binding(run, response)
+            elif run.entity_type == ProtheusSyncBinding.ENTITY_SUPPLIER:
+                response = client.upsert_supplier(payload)
+                _record_supplier_binding(run, response)
+            else:
+                raise ValueError(f"Unsupported entity type: {run.entity_type}")
+
+            ProtheusSyncAttempt.objects.create(
+                run=run,
+                sequence=sequence,
+                status=ProtheusSyncAttempt.STATUS_SUCCESS,
+                request_payload=payload,
+                response_payload=response,
+            )
+            remote_code = (
+                response.get("remote_code")
+                or payload.get("number")
+                or payload.get("code")
+                or ""
+            )
+            run.status = ProtheusSyncRun.STATUS_SUCCESS
+            run.remote_code = remote_code
+            run.result_payload = response
+            run.error_message = ""
+            run.finished_at = timezone.now()
+            run.save(update_fields=["status", "remote_code", "result_payload", "error_message", "finished_at"])
+            return run
     except Exception as exc:
+        record_sync_run_failure(run.pk, exc)
+        raise
+
+
+def record_sync_run_failure(run_id, exc, *, response_payload=None):
+    with transaction.atomic():
+        run = ProtheusSyncRun.objects.select_for_update().get(pk=run_id)
+        payload = run.payload or {}
+        sequence = run.attempts.count() + 1
+        result_payload = dict(run.result_payload or {})
+        result_payload.update({
+            "last_error_at": timezone.now().isoformat(),
+            "last_error_type": exc.__class__.__name__,
+            "transient": bool(getattr(exc, "transient", False)),
+        })
+        if response_payload:
+            result_payload["last_error_response"] = response_payload
         ProtheusSyncAttempt.objects.create(
             run=run,
             sequence=sequence,
             status=ProtheusSyncAttempt.STATUS_FAILED,
             request_payload=payload,
-            response_payload={},
+            response_payload=response_payload or {},
             error_message=str(exc),
         )
         run.status = ProtheusSyncRun.STATUS_FAILED
         run.error_message = str(exc)
         run.finished_at = timezone.now()
-        run.save(update_fields=["status", "error_message", "finished_at"])
-        raise
+        run.result_payload = result_payload
+        run.save(update_fields=["status", "error_message", "finished_at", "result_payload"])
+        return run
+
+
+def reset_sync_run_for_requeue(run):
+    if run.status == ProtheusSyncRun.STATUS_PENDING:
+        return False
+    result_payload = dict(run.result_payload or {})
+    result_payload["requeued_at"] = timezone.now().isoformat()
+    run.status = ProtheusSyncRun.STATUS_PENDING
+    run.error_message = ""
+    run.finished_at = None
+    run.result_payload = result_payload
+    run.save(update_fields=["status", "error_message", "finished_at", "result_payload"])
+    return True
 
 
 def _upsert_binding(entity_type, local_model, local_id, remote_code, direction, payload, metadata=None):
@@ -647,6 +678,68 @@ def reject_catalog_staging(staging, actor=None, reason=""):
         ]
     )
     return staging
+
+
+def _serialize_run_state(run):
+    if run is None:
+        return None
+    return {
+        "id": run.pk,
+        "direction": run.direction,
+        "entity_type": run.entity_type,
+        "status": run.status,
+        "trigger": run.trigger,
+        "remote_code": run.remote_code,
+        "started_at": run.started_at.isoformat() if run.started_at else None,
+        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+        "error_message": run.error_message,
+    }
+
+
+def run_healthcheck(client=None):
+    config = get_enabled_config()
+    checked_at = timezone.now()
+    latest_run = ProtheusSyncRun.objects.order_by("-started_at").first()
+    latest_success = ProtheusSyncRun.objects.filter(status=ProtheusSyncRun.STATUS_SUCCESS).order_by("-finished_at").first()
+    latest_failure = ProtheusSyncRun.objects.filter(status=ProtheusSyncRun.STATUS_FAILED).order_by("-finished_at").first()
+    summary = {
+        "enabled": bool(config and config.enabled),
+        "checked_at": checked_at.isoformat(),
+        "last_healthcheck_at": config.last_healthcheck_at.isoformat() if config and config.last_healthcheck_at else None,
+        "pending_runs": ProtheusSyncRun.objects.filter(status=ProtheusSyncRun.STATUS_PENDING).count(),
+        "failed_runs": ProtheusSyncRun.objects.filter(status=ProtheusSyncRun.STATUS_FAILED).count(),
+        "pending_staging": ProtheusCatalogStaging.objects.filter(status=ProtheusCatalogStaging.STATUS_PENDING).count(),
+        "latest_run": _serialize_run_state(latest_run),
+        "latest_success": _serialize_run_state(latest_success),
+        "latest_failure": _serialize_run_state(latest_failure),
+        "remote": {"status": "disabled"},
+        "ok": False,
+    }
+    if config is None or not config.enabled:
+        summary["remote"] = {"status": "disabled", "message": "Protheus integration is disabled"}
+        return summary
+
+    try:
+        owns_client = client is None
+        client = client or build_protheus_client(config=config)
+        summary["remote"] = {"status": "ok", "payload": client.healthcheck()}
+        summary["ok"] = True
+    except Exception as exc:
+        summary["remote"] = {
+            "status": "error",
+            "message": str(exc),
+            "transient": bool(getattr(exc, "transient", False)),
+            "error_type": exc.__class__.__name__,
+        }
+    finally:
+        config.last_healthcheck_at = checked_at
+        config.save(update_fields=["last_healthcheck_at", "updated_at"])
+        summary["last_healthcheck_at"] = checked_at.isoformat()
+        if "owns_client" in locals() and owns_client:
+            close = getattr(client, "close", None)
+            if callable(close):
+                close()
+    return summary
 
 
 def pull_from_client(client, config=None):

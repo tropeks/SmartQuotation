@@ -5,11 +5,19 @@ from unittest import mock
 import requests
 from django.contrib.auth.models import User
 from django.db import connection
+from django.utils import timezone
+from django_tenants.test.client import TenantClient
 from django_tenants.test.cases import TenantTestCase
+from django_tenants.utils import schema_context
 
 from apps.accounts.models import UserProfile
 from apps.audit.services import approve_quotation
-from apps.integrations.protheus.client import HttpProtheusClient, HttpProtheusClientError
+from apps.integrations.protheus.client import (
+    HttpProtheusClient,
+    HttpProtheusClientError,
+    HttpProtheusPermanentError,
+    HttpProtheusTransientError,
+)
 from apps.integrations.protheus.fake import MemoryProtheusClient
 from apps.integrations.protheus.models import (
     ProtheusBOMSnapshot,
@@ -22,7 +30,11 @@ from apps.integrations.protheus.models import (
     ProtheusWorkOrderSnapshot,
 )
 from apps.integrations.protheus import services
-from apps.integrations.protheus.tasks import process_protheus_sync_run, pull_protheus_catalog
+from apps.integrations.protheus.tasks import (
+    dispatch_recurring_protheus_pulls,
+    process_protheus_sync_run,
+    pull_protheus_catalog,
+)
 from apps.materials.models import Material, MaterialPrice
 from apps.production import services as production_services
 from apps.quotations.models import Customer
@@ -310,6 +322,51 @@ class ProtheusServicesTests(TenantTestCase):
         self.assertEqual(staging.reviewed_by, self.user)
         self.assertEqual(staging.error_message, "Duplicado")
 
+    def test_process_sync_run_persists_failed_attempt_outside_rolled_back_transaction(self):
+        class FailingClient(MemoryProtheusClient):
+            def upsert_work_order(self, payload):
+                raise HttpProtheusTransientError("ERP indisponivel")
+
+        run, _ = services.enqueue_work_order_export(self.of)
+
+        with self.assertRaises(HttpProtheusTransientError):
+            services.process_sync_run(run, FailingClient())
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, ProtheusSyncRun.STATUS_FAILED)
+        self.assertEqual(run.attempts.count(), 1)
+        self.assertTrue(run.result_payload["transient"])
+
+    def test_run_healthcheck_returns_operational_summary(self):
+        summary = services.run_healthcheck(client=self.client)
+
+        self.config.refresh_from_db()
+        self.assertTrue(summary["ok"])
+        self.assertEqual(summary["remote"]["status"], "ok")
+        self.assertIsNotNone(summary["last_healthcheck_at"])
+        self.assertIsNotNone(self.config.last_healthcheck_at)
+
+    def test_reset_sync_run_for_requeue_skips_pending_runs(self):
+        run, _ = services.enqueue_work_order_export(self.of)
+
+        self.assertFalse(services.reset_sync_run_for_requeue(run))
+
+    def test_reset_sync_run_for_requeue_clears_terminal_state(self):
+        run, _ = services.enqueue_work_order_export(self.of)
+        run.status = ProtheusSyncRun.STATUS_FAILED
+        run.error_message = "boom"
+        run.finished_at = timezone.now()
+        run.result_payload = {"status": "failed"}
+        run.save(update_fields=["status", "error_message", "finished_at", "result_payload"])
+
+        self.assertTrue(services.reset_sync_run_for_requeue(run))
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, ProtheusSyncRun.STATUS_PENDING)
+        self.assertEqual(run.error_message, "")
+        self.assertIsNone(run.finished_at)
+        self.assertIn("requeued_at", run.result_payload)
+
 
 class ProtheusTasksTests(TenantTestCase):
     def setUp(self):
@@ -378,6 +435,36 @@ class ProtheusTasksTests(TenantTestCase):
             ).exists()
         )
 
+    @mock.patch("apps.integrations.protheus.tasks._release_schema_pull_lock")
+    @mock.patch("apps.integrations.protheus.tasks._acquire_schema_pull_lock")
+    @mock.patch("apps.integrations.protheus.tasks.build_protheus_client")
+    def test_pull_catalog_task_skips_when_same_tenant_pull_is_already_running(
+        self,
+        build_client,
+        acquire_lock,
+        release_lock,
+    ):
+        acquire_lock.return_value = False
+
+        summary = pull_protheus_catalog(schema_name=connection.schema_name)
+
+        self.assertEqual(summary["status"], "skipped")
+        self.assertEqual(summary["reason"], "pull_already_running")
+        build_client.assert_not_called()
+        release_lock.assert_not_called()
+
+    @mock.patch("apps.integrations.protheus.tasks._release_schema_pull_lock")
+    @mock.patch("apps.integrations.protheus.tasks._acquire_schema_pull_lock")
+    @mock.patch("apps.integrations.protheus.tasks.build_protheus_client")
+    def test_pull_catalog_task_releases_lock_after_execution(self, build_client, acquire_lock, release_lock):
+        acquire_lock.return_value = True
+        build_client.return_value = self.client
+
+        summary = pull_protheus_catalog(schema_name=connection.schema_name)
+
+        self.assertEqual(summary["status"], "success")
+        release_lock.assert_called_once_with(connection.schema_name)
+
     def test_process_sync_run_task_marks_run_skipped_when_config_is_disabled(self):
         run, _ = services.enqueue_work_order_export(self.of)
         config = ProtheusIntegrationConfig.objects.get()
@@ -390,6 +477,53 @@ class ProtheusTasksTests(TenantTestCase):
         self.assertEqual(result["status"], ProtheusSyncRun.STATUS_SKIPPED)
         self.assertEqual(run.status, ProtheusSyncRun.STATUS_SKIPPED)
         self.assertEqual(run.result_payload["status"], "skipped")
+
+    @mock.patch("apps.integrations.protheus.tasks.pull_protheus_catalog.delay")
+    def test_dispatch_recurring_pulls_only_enqueues_enabled_tenants(self, delay):
+        result = dispatch_recurring_protheus_pulls()
+
+        self.assertEqual(result["dispatched"], 1)
+        delay.assert_called_once_with(schema_name=connection.schema_name)
+
+
+class ProtheusAdminHealthViewTests(TenantTestCase):
+    def setUp(self):
+        self.client = TenantClient(self.tenant)
+        self.user = User.objects.create_superuser(username="admin", email="admin@example.com", password="secret123456")
+        with schema_context(self.tenant.schema_name):
+            ProtheusIntegrationConfig.objects.create(
+                enabled=True,
+                base_url="https://protheus.example/api",
+                company_code="01",
+                branch_code="01",
+            )
+
+    @mock.patch("apps.integrations.protheus.views.services.run_healthcheck")
+    def test_admin_healthcheck_requires_admin_auth(self, run_healthcheck):
+        response = self.client.get("/admin/protheus/health/")
+
+        self.assertEqual(response.status_code, 302)
+        run_healthcheck.assert_not_called()
+
+    @mock.patch("apps.integrations.protheus.views.services.run_healthcheck")
+    def test_admin_healthcheck_returns_json_for_staff(self, run_healthcheck):
+        run_healthcheck.return_value = {"ok": True, "remote": {"status": "ok"}}
+        self.client.force_login(self.user)
+
+        response = self.client.get("/admin/protheus/health/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(response.content, {"ok": True, "remote": {"status": "ok"}})
+
+    @mock.patch("apps.integrations.protheus.views.services.run_healthcheck")
+    def test_admin_healthcheck_returns_503_on_remote_failure(self, run_healthcheck):
+        run_healthcheck.return_value = {"enabled": True, "ok": False, "remote": {"status": "error"}}
+        self.client.force_login(self.user)
+
+        response = self.client.get("/admin/protheus/health/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertJSONEqual(response.content, {"enabled": True, "ok": False, "remote": {"status": "error"}})
 
 
 class HttpProtheusClientTests(TenantTestCase):
@@ -448,5 +582,15 @@ class HttpProtheusClientTests(TenantTestCase):
         session.request.side_effect = requests.RequestException("boom")
         client = HttpProtheusClient(base_url="https://protheus.example/api", session=session)
 
-        with self.assertRaises(HttpProtheusClientError):
+        with self.assertRaises(HttpProtheusTransientError):
+            client.list_suppliers()
+
+    def test_http_404_raises_permanent_error(self):
+        response = mock.Mock(status_code=404)
+        response.raise_for_status.side_effect = requests.HTTPError("404 Client Error", response=response)
+        session = mock.Mock()
+        session.request.return_value = response
+        client = HttpProtheusClient(base_url="https://protheus.example/api", session=session)
+
+        with self.assertRaises(HttpProtheusPermanentError):
             client.list_suppliers()

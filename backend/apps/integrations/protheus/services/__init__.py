@@ -8,7 +8,14 @@ from importlib.util import module_from_spec, spec_from_file_location
 from json import dumps
 from pathlib import Path
 
-from apps.integrations.protheus.client import BaseProtheusClient, HttpProtheusClient, HttpProtheusClientError, build_protheus_client
+from apps.integrations.protheus.client import (
+    BaseProtheusClient,
+    HttpProtheusClient,
+    HttpProtheusClientError,
+    HttpProtheusPermanentError,
+    HttpProtheusTransientError,
+    build_protheus_client,
+)
 from apps.integrations.protheus.fake import MemoryProtheusClient
 
 
@@ -36,6 +43,9 @@ reject_catalog_staging = _LEGACY.reject_catalog_staging
 stage_materials = _LEGACY.stage_materials
 stage_suppliers = _LEGACY.stage_suppliers
 pull_from_client = _LEGACY.pull_from_client
+record_sync_run_failure = _LEGACY.record_sync_run_failure
+reset_sync_run_for_requeue = _LEGACY.reset_sync_run_for_requeue
+run_healthcheck = _LEGACY.run_healthcheck
 
 
 def canonical_json(data):
@@ -77,6 +87,8 @@ __all__ = [
     "BaseProtheusClient",
     "HttpProtheusClient",
     "HttpProtheusClientError",
+    "HttpProtheusPermanentError",
+    "HttpProtheusTransientError",
     "build_protheus_client",
     "apply_catalog_staging",
     "MemoryProtheusClient",
@@ -98,6 +110,9 @@ __all__ = [
     "process_sync_run",
     "reject_catalog_staging",
     "pull_from_client",
+    "record_sync_run_failure",
+    "reset_sync_run_for_requeue",
+    "run_healthcheck",
     "serialize_material",
     "serialize_supplier",
     "serialize_work_order",

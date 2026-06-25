@@ -52,6 +52,7 @@ tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 - ✅ H2.3: `RateSuggestion` a partir de `ActualRate` elegível; aplicar/descartar com RBAC.
 - ✅ H2.4: ITP básico gerado da OF/roteiro, aceite por item com responsável/data e `AccessLog`.
 - ✅ H2.5 foundation: app tenant-scoped `apps.integrations.protheus` mergeado (`#52`) com config por tenant, bindings/runs/attempts de sync, snapshots remotos, fake client e testes de OF/BOM/materiais/fornecedores.
+- ✅ H2.5.2: scheduler global/beat único, healthcheck operacional admin-only, retry tipado transitório/permanente, reenfileiramento seguro no admin e testes verdes em `apps.integrations.protheus` + `apps.production`.
 - ✅ Testes locais: gates do motor OK; `apps.engineering_params` 44 testes OK; `apps.production` + `apps.audit` 49 testes OK.
 
 ## 🧭 DECISÕES TRAVADAS (não re-litigar)
@@ -63,6 +64,4 @@ Rate dia-1 só camada tenant · ProcessParameter separado de Rate · EAP/WBS com
 gstack em todas etapas · autonomia (perguntas só essenciais) · /cso a cada milestone · Boil the Ocean.
 
 ## ▶️ PRÓXIMO PASSO
-H2.5.2 — consolidar a operação assistida do conector TOTVS Protheus:
-scheduler/beat para pull recorrente, healthcheck operacional, observabilidade/retry mais fino e
-amarração por contrato de implantação real com o tenant piloto.
+H2.6 — próximo incremento da camada de produção / integrações após a entrega do H2.5.2.
