@@ -55,8 +55,9 @@ tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 - ✅ H2.5.2: scheduler global/beat único, healthcheck operacional admin-only, retry tipado transitório/permanente, reenfileiramento seguro no admin e testes verdes em `apps.integrations.protheus` + `apps.production`.
 - ✅ H2.6: app tenant-scoped `apps.integrations.omie` com emissão assistida de NF-e via Omie a partir da OF concluída, config por tenant, documento fiscal mínimo, tasks assíncronas, admin operacional e healthcheck.
 - ✅ H2.7a: app tenant-scoped `apps.integrations.sap_b1` registrado em settings, healthcheck admin-only e action manual de export da OF no admin de produção.
-- ✅ H2.7b: `_schedule_sap_b1_export` wired em `production.services.transition()` em STATUS_LIBERADA; enfileira sales_order + BOM via `maybe_enqueue_*` com dispatch `on_commit`; 54 testes OK (PR #58).
-- ✅ Testes locais: gates do motor OK; `apps.engineering_params` 44 testes OK; `apps.production` + `apps.audit` 54 testes OK.
+- ✅ H2.7b: `_schedule_sap_b1_export` wired em `production.services.transition()` em STATUS_LIBERADA; enfileira sales_order + BOM via `maybe_enqueue_*` com dispatch `on_commit`.
+- ✅ H2.x audit (Spock+Ewoks, 2026-06-26, PR #58 commits 1dd1972+15efa48): 8 bugs corrigidos — SAP B1 idempotency PROCESSING guard, Protheus remote_code `or`-fallback (CRITICAL), RBAC appoint view, entry_date str→date parse, hours_hh/hm >24 validation, delta clamp, reset_sync_run select_for_update.
+- ✅ Testes locais: gates do motor OK; 334 testes Django OK (apps.*).
 
 ## 🧭 DECISÕES TRAVADAS (não re-litigar)
 Approach C (plataforma completa) · clone fundação Vitali (django-tenants) · HTMX+session auth ·
@@ -67,4 +68,4 @@ Rate dia-1 só camada tenant · ProcessParameter separado de Rate · EAP/WBS com
 gstack em todas etapas · autonomia (perguntas só essenciais) · /cso a cada milestone · Boil the Ocean.
 
 ## ▶️ PRÓXIMO PASSO
-H2.8 — a definir após validação H2.x (integrações Protheus/Omie/SAP B1 completas).
+H2.8 — a definir. H2.x 100% completo e auditado: integrações Protheus/Omie/SAP B1 + 8 bugs corrigidos via Spock/Ewoks.
