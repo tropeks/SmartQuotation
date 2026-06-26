@@ -387,6 +387,24 @@ class ProtheusServicesTests(TenantTestCase):
             ).exists()
         )
 
+    def test_process_work_order_export_empty_remote_code_falls_back_to_payload_number(self):
+        """response com remote_code='' deve usar payload['number'], não gravar binding vazio."""
+        class EmptyRemoteCodeClient(MemoryProtheusClient):
+            def upsert_work_order(self, payload):
+                return {"remote_code": "", "bom_code": ""}
+
+        run, _ = services.enqueue_work_order_export(self.of)
+        services.process_sync_run(run, EmptyRemoteCodeClient())
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, ProtheusSyncRun.STATUS_SUCCESS)
+        self.assertTrue(
+            ProtheusSyncBinding.objects.filter(
+                entity_type=ProtheusSyncBinding.ENTITY_WORK_ORDER,
+                remote_code=self.of.number,
+            ).exists()
+        )
+
 
 class ProtheusTasksTests(TenantTestCase):
     def setUp(self):

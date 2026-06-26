@@ -930,3 +930,15 @@ class ApontamentoValidacaoViewTests(TenantTestCase):
         )
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+    def test_appoint_view_horas_maquina_acima_de_24(self):
+        """POST com hours_hm='30' retorna 302 sem criar ProductionEntry (hm>24 bloqueado)."""
+        from datetime import date
+        from apps.production.models import ProductionEntry
+        self.client.force_login(self.engineer.user)
+        resp = self.client.post(
+            f"/ofs/operacao/{self.op.pk}/apontar/",
+            {"hours_hh": "2", "hours_hm": "30", "entry_date": str(date.today())},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())

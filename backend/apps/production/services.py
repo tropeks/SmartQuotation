@@ -292,6 +292,8 @@ def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
         raise ValidationError("Horas não podem ser negativas.")
     if hh > 24:
         raise ValidationError("Horas não podem exceder 24 por apontamento.")
+    if hm > 24:
+        raise ValidationError("Horas de máquina não podem exceder 24 por apontamento.")
     if isinstance(entry_date, str) and entry_date:
         try:
             resolved_entry_date = _date.fromisoformat(entry_date)
