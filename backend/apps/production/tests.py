@@ -332,6 +332,8 @@ class OrdemFabricacaoTests(TenantTestCase):
     def test_admin_action_nao_republica_run_sap_b1_ja_concluido(self):
         completed_run = types.SimpleNamespace(pk=779, status="success")
         sap_b1_pkg, sap_b1_services = self._fake_sap_b1_services(run=completed_run, enqueue_ok=True)
+        sap_b1_services.maybe_enqueue_sales_order_sync.return_value = (completed_run, False)
+        sap_b1_services.maybe_enqueue_bom_sync.return_value = (completed_run, False)
         of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
         request = RequestFactory().post("/admin/apps/production/ordemfabricacao/")
         request.user = self.user
