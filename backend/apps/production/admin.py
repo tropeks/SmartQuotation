@@ -36,7 +36,9 @@ def _normalize_run_result(result):
         run = result[0]
         created = bool(result[1]) if len(result) > 1 else False
         return run, created
-    return result, result is not None
+    # Bare run objects (the dedup-aware maybe_enqueue_* style) carry no created
+    # flag, so we don't infer one: the status check decides whether to publish.
+    return result, False
 
 
 def _should_publish_run(run, created):
