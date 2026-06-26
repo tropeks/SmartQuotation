@@ -367,6 +367,44 @@ class ProtheusServicesTests(TenantTestCase):
         self.assertIsNone(run.finished_at)
         self.assertIn("requeued_at", run.result_payload)
 
+    def test_process_work_order_export_without_number_in_payload_uses_response_remote_code(self):
+        class RemoteCodeClient(MemoryProtheusClient):
+            def upsert_work_order(self, payload):
+                return {"remote_code": "OF-RESP", "bom_code": "BOM-OF-RESP"}
+
+        run, _ = services.enqueue_work_order_export(self.of)
+        run.payload.pop("number", None)
+        run.save(update_fields=["payload"])
+
+        services.process_sync_run(run, RemoteCodeClient())
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, ProtheusSyncRun.STATUS_SUCCESS)
+        self.assertTrue(
+            ProtheusSyncBinding.objects.filter(
+                entity_type=ProtheusSyncBinding.ENTITY_WORK_ORDER,
+                remote_code="OF-RESP",
+            ).exists()
+        )
+
+    def test_process_work_order_export_empty_remote_code_falls_back_to_payload_number(self):
+        """response com remote_code='' deve usar payload['number'], não gravar binding vazio."""
+        class EmptyRemoteCodeClient(MemoryProtheusClient):
+            def upsert_work_order(self, payload):
+                return {"remote_code": "", "bom_code": ""}
+
+        run, _ = services.enqueue_work_order_export(self.of)
+        services.process_sync_run(run, EmptyRemoteCodeClient())
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, ProtheusSyncRun.STATUS_SUCCESS)
+        self.assertTrue(
+            ProtheusSyncBinding.objects.filter(
+                entity_type=ProtheusSyncBinding.ENTITY_WORK_ORDER,
+                remote_code=self.of.number,
+            ).exists()
+        )
+
 
 class ProtheusTasksTests(TenantTestCase):
     def setUp(self):

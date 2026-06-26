@@ -58,3 +58,14 @@ class ServicesTests(TestCase):
         sugg.refresh_from_db()
         self.assertEqual(sugg.status, 'dismissed')
         self.assertEqual(sugg.resolved_by, self.user)
+
+    def test_generate_suggestions_clamps_extreme_delta(self):
+        ActualRate.objects.create(
+            operacao='TEST_OP',
+            sample_count=25,
+            mean_rate=Decimal('5000000.00'),
+            confidence=Decimal('0.80')
+        )
+        suggs = generate_suggestions()
+        self.assertEqual(len(suggs), 1)
+        self.assertEqual(suggs[0].delta_pct, Decimal('9999.99'))

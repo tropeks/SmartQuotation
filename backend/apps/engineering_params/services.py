@@ -22,6 +22,7 @@ def generate_suggestions():
         if rate_vigente.rate_hh == 0:
             continue
         delta = (ar.mean_rate - rate_vigente.rate_hh) / rate_vigente.rate_hh * 100
+        delta = max(Decimal('-9999.99'), min(Decimal('9999.99'), delta))
         if abs(delta) < DELTA_MINIMO_PCT:
             continue
         if RateSuggestion.objects.filter(operacao=ar.operacao, status='pending').exists():

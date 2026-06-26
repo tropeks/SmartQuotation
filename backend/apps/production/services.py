@@ -169,6 +169,7 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     if new_status == STATUS_LIBERADA:
         _schedule_protheus_export(of)
+        _schedule_sap_b1_export(of)
 
     if new_status == STATUS_CONCLUIDA:
         _close_out_observations(of)
@@ -207,6 +208,28 @@ def _schedule_protheus_export(of):
         lambda: protheus_services.enqueue_sync_run_async(run, schema_name=schema_name)
     )
     return run
+
+
+def _schedule_sap_b1_export(of):
+    try:
+        from apps.integrations.sap_b1 import services as sap_b1_services
+    except ImportError:
+        return None, None
+
+    schema_name = connection.schema_name
+    so_run = sap_b1_services.maybe_enqueue_sales_order_sync(of, trigger="release")
+    if so_run is not None:
+        transaction.on_commit(
+            lambda: sap_b1_services.enqueue_sync_run_async(so_run, schema_name=schema_name)
+        )
+
+    bom_run = sap_b1_services.maybe_enqueue_bom_sync(of, trigger="release")
+    if bom_run is not None:
+        transaction.on_commit(
+            lambda: sap_b1_services.enqueue_sync_run_async(bom_run, schema_name=schema_name)
+        )
+
+    return so_run, bom_run
 
 
 def _schedule_omie_nfe_issue(of):
@@ -267,12 +290,25 @@ def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
         raise ValidationError("Horas inválidas.")
     if hh < 0 or hm < 0:
         raise ValidationError("Horas não podem ser negativas.")
+    if hh > 24:
+        raise ValidationError("Horas não podem exceder 24 por apontamento.")
+    if hm > 24:
+        raise ValidationError("Horas de máquina não podem exceder 24 por apontamento.")
+    if isinstance(entry_date, str) and entry_date:
+        try:
+            resolved_entry_date = _date.fromisoformat(entry_date)
+        except ValueError:
+            raise ValidationError("Data inválida.")
+    else:
+        resolved_entry_date = entry_date if isinstance(entry_date, _date) else _date.today()
+    if resolved_entry_date > _date.today():
+        raise ValidationError("Data do apontamento não pode ser futura.")
     entry = ProductionEntry.objects.create(
         of_operation=of_operation,
         operator=operator,
         hours_hh=hh,
         hours_hm=hm,
-        entry_date=entry_date or _date.today(),
+        entry_date=resolved_entry_date,
         notes=notes or "",
     )
     if request is not None:

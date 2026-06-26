@@ -367,7 +367,7 @@ def process_sync_run(run: SapB1SyncRun, client=None):
     try:
         with transaction.atomic():
             run = SapB1SyncRun.objects.select_for_update().get(pk=run.pk)
-            if run.status in {SapB1SyncRun.STATUS_SUCCESS, SapB1SyncRun.STATUS_PROCESSING}:
+            if run.status == SapB1SyncRun.STATUS_SUCCESS:
                 return run
 
             config = get_enabled_config()
@@ -432,19 +432,20 @@ def process_sync_run(run: SapB1SyncRun, client=None):
 
 
 def reset_sync_run_for_requeue(run):
-    if run.status in {
-        SapB1SyncRun.STATUS_PENDING,
-        SapB1SyncRun.STATUS_PROCESSING,
-        SapB1SyncRun.STATUS_SUCCESS,
-    }:
-        return False
-    result_payload = dict(run.result_payload or {})
-    result_payload["requeued_at"] = timezone.now().isoformat()
-    run.status = SapB1SyncRun.STATUS_PENDING
-    run.error_message = ""
-    run.finished_at = None
-    run.result_payload = result_payload
-    run.save(update_fields=["status", "error_message", "finished_at", "result_payload"])
+    with transaction.atomic():
+        run = SapB1SyncRun.objects.select_for_update().get(pk=run.pk)
+        if run.status in {
+            SapB1SyncRun.STATUS_PENDING,
+            SapB1SyncRun.STATUS_SUCCESS,
+        }:
+            return False
+        result_payload = dict(run.result_payload or {})
+        result_payload["requeued_at"] = timezone.now().isoformat()
+        run.status = SapB1SyncRun.STATUS_PENDING
+        run.error_message = ""
+        run.finished_at = None
+        run.result_payload = result_payload
+        run.save(update_fields=["status", "error_message", "finished_at", "result_payload"])
     return True
 
 

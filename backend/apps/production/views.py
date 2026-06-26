@@ -80,7 +80,7 @@ def transition_ordem(request, pk):
     return redirect("production:detail", pk=of.pk)
 
 
-@login_required
+@require_role(*_ITP_ROLES)
 @require_POST
 def appoint(request, op_pk):
     op = get_object_or_404(OFOperation, pk=op_pk)
