@@ -169,6 +169,7 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     if new_status == STATUS_LIBERADA:
         _schedule_protheus_export(of)
+        _schedule_sap_b1_export(of)
 
     if new_status == STATUS_CONCLUIDA:
         _close_out_observations(of)
@@ -207,6 +208,28 @@ def _schedule_protheus_export(of):
         lambda: protheus_services.enqueue_sync_run_async(run, schema_name=schema_name)
     )
     return run
+
+
+def _schedule_sap_b1_export(of):
+    try:
+        from apps.integrations.sap_b1 import services as sap_b1_services
+    except ImportError:
+        return None, None
+
+    schema_name = connection.schema_name
+    so_run = sap_b1_services.maybe_enqueue_sales_order_sync(of, trigger="release")
+    if so_run is not None:
+        transaction.on_commit(
+            lambda: sap_b1_services.enqueue_sync_run_async(so_run, schema_name=schema_name)
+        )
+
+    bom_run = sap_b1_services.maybe_enqueue_bom_sync(of, trigger="release")
+    if bom_run is not None:
+        transaction.on_commit(
+            lambda: sap_b1_services.enqueue_sync_run_async(bom_run, schema_name=schema_name)
+        )
+
+    return so_run, bom_run
 
 
 def _schedule_omie_nfe_issue(of):

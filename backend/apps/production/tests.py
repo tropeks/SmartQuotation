@@ -15,6 +15,7 @@ from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog
 from apps.audit.services import approve_quotation, revoke_approval
 from apps.integrations.protheus.models import ProtheusIntegrationConfig, ProtheusSyncRun
+from apps.integrations.sap_b1.models import SapB1IntegrationConfig, SapB1SyncRun
 from apps.production.models import (
     OrdemFabricacao, OFItem, OFMaterial, OFOperation,
     InspectionItem, InspectionPlan,
@@ -251,6 +252,41 @@ class OrdemFabricacaoTests(TenantTestCase):
             services.liberar(of, by=self.user)
 
         self.assertFalse(ProtheusSyncRun.objects.exists())
+        enqueue_sync_run_async.assert_not_called()
+
+    @mock.patch("apps.integrations.sap_b1.services.enqueue_sync_run_async")
+    def test_liberar_enfileira_export_sap_b1_quando_habilitado(self, enqueue_sync_run_async):
+        SapB1IntegrationConfig.objects.create(
+            enabled=True,
+            base_url="https://sap.example/b1s/v2",
+            company_db="ENGEMATEX",
+            sync_sales_orders_enabled=True,
+            sync_boms_enabled=True,
+        )
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            services.liberar(of, by=self.user)
+
+        so_run = SapB1SyncRun.objects.get(entity_type="sales_order", local_id=str(of.pk))
+        bom_run = SapB1SyncRun.objects.get(entity_type="bom", local_id=str(of.pk))
+        self.assertEqual(enqueue_sync_run_async.call_count, 2)
+        called_pks = {c.args[0].pk for c in enqueue_sync_run_async.call_args_list}
+        self.assertEqual(called_pks, {so_run.pk, bom_run.pk})
+
+    @mock.patch("apps.integrations.sap_b1.services.enqueue_sync_run_async")
+    def test_liberar_nao_enfileira_sap_b1_quando_desabilitado(self, enqueue_sync_run_async):
+        SapB1IntegrationConfig.objects.create(
+            enabled=False,
+            base_url="https://sap.example/b1s/v2",
+            company_db="ENGEMATEX",
+        )
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            services.liberar(of, by=self.user)
+
+        self.assertFalse(SapB1SyncRun.objects.exists())
         enqueue_sync_run_async.assert_not_called()
 
     def _fake_sap_b1_services(self, run=None, enqueue_ok=True):
