@@ -60,7 +60,9 @@ class ComposeViewTests(TestCase):
     def setUp(self):
         call_command("seed_tema_catalog")
         User = get_user_model()
-        User.objects.create_user(username="eng", password="x")
+        u = User.objects.create_user(username="eng", password="x")
+        from apps.accounts.models import UserProfile
+        UserProfile.objects.create(user=u, full_name="Eng", role=UserProfile.ROLE_ORCAMENTISTA)
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
         self.client.login(username="eng", password="x")
 

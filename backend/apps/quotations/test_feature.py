@@ -9,6 +9,8 @@ class FeatureViewsTests(TenantTestCase):
         from django.contrib.auth.models import User
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
         self.user = User.objects.create_user(username="orc2", password="123")
+        from apps.accounts.models import UserProfile
+        UserProfile.objects.create(user=self.user, full_name="Orc2", role=UserProfile.ROLE_ORCAMENTISTA)
         self.client.force_login(self.user)
         self.customer = Customer.objects.create(company_name="Cliente Teste")
 

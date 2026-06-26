@@ -67,6 +67,10 @@ class AuthViewTests(TestCase):
         self.user = User.objects.create_user(
             username="bob", email="bob@empresa.com", password="senha-forte-123"
         )
+        # bob pertence a ESTE tenant -> precisa de UserProfile no schema ativo.
+        UserProfile.objects.create(
+            user=self.user, full_name="Bob", role=UserProfile.ROLE_ORCAMENTISTA
+        )
 
     def test_login_autentica_e_cria_sessao(self):
         resp = self.client.post(
@@ -97,6 +101,57 @@ class AuthViewTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.url, "/login/")
         self.assertNotIn("_auth_user_id", self.client.session)
+
+
+class TenantMembershipTests(TestCase):
+    """
+    Isolamento user↔tenant: auth.User é global (schema public), mas só quem tem
+    UserProfile no schema ativo é membro do tenant. Um user sem profile no schema
+    (= usuário de OUTRO tenant) não pode logar nem navegar.
+    """
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        # Usuário SEM UserProfile neste schema -> simula usuário de outro tenant.
+        self.outsider = User.objects.create_user(
+            username="intruso", password="senha-forte-123"
+        )
+
+    def test_login_negado_sem_profile_no_tenant(self):
+        resp = self.client.post(
+            "/login/", {"identifier": "intruso", "password": "senha-forte-123"}
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_middleware_desloga_acesso_sem_profile(self):
+        # force_login burla o gate do login_view; o middleware deve barrar na navegação.
+        self.client.force_login(self.outsider)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, "/login/")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_superuser_sem_profile_passa(self):
+        su = User.objects.create_superuser(
+            username="root", email="root@x.com", password="senha-forte-123"
+        )
+        resp = self.client.post(
+            "/login/", {"identifier": "root", "password": "senha-forte-123"}
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_membro_com_profile_navega(self):
+        membro = User.objects.create_user(
+            username="membro", password="senha-forte-123"
+        )
+        UserProfile.objects.create(
+            user=membro, full_name="Membro", role=UserProfile.ROLE_ORCAMENTISTA
+        )
+        self.client.force_login(membro)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
 
 
 class RbacTests(TestCase):

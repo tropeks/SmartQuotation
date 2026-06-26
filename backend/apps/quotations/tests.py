@@ -149,6 +149,8 @@ class DataSheetViewTests(TenantTestCase):
         from django.contrib.auth.models import User
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
         self.user = User.objects.create_user(username="orc", password="senha-forte-123")
+        from apps.accounts.models import UserProfile
+        UserProfile.objects.create(user=self.user, full_name="Orc", role=UserProfile.ROLE_ORCAMENTISTA)
         self.client.force_login(self.user)
 
     def _form_data(self, **over):

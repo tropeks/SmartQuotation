@@ -2,6 +2,7 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from encrypted_model_fields.fields import EncryptedCharField
 
 
 class OmieIntegrationConfig(models.Model):
@@ -9,8 +10,8 @@ class OmieIntegrationConfig(models.Model):
 
     provider = models.CharField(max_length=20, default=PROVIDER, unique=True, editable=False)
     enabled = models.BooleanField(default=False)
-    app_key = models.CharField(max_length=255, blank=True)
-    app_secret = models.CharField(max_length=255, blank=True)
+    app_key = EncryptedCharField(max_length=255, blank=True)    # cifrado em repouso
+    app_secret = EncryptedCharField(max_length=255, blank=True)  # cifrado em repouso
     company_code = models.CharField(max_length=50, blank=True)
     environment = models.CharField(max_length=50, blank=True)
     timeout_seconds = models.PositiveIntegerField(default=30)

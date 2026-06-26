@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from encrypted_model_fields.fields import EncryptedCharField
 
 
 class ProtheusIntegrationConfig(models.Model):
@@ -20,8 +21,8 @@ class ProtheusIntegrationConfig(models.Model):
     environment = models.CharField(max_length=50, blank=True)
     auth_type = models.CharField(max_length=20, choices=AUTH_CHOICES, default=AUTH_BASIC)
     username = models.CharField(max_length=255, blank=True)
-    password = models.CharField(max_length=255, blank=True)
-    token = models.CharField(max_length=255, blank=True)
+    password = EncryptedCharField(max_length=255, blank=True)  # cifrado em repouso
+    token = EncryptedCharField(max_length=255, blank=True)     # cifrado em repouso
     timeout_seconds = models.PositiveIntegerField(default=30)
     export_on_release = models.BooleanField(default=True)
     pull_materials_enabled = models.BooleanField(default=True)

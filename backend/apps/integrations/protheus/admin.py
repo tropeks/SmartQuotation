@@ -14,10 +14,12 @@ from apps.integrations.protheus.models import (
     ProtheusWorkOrderSnapshot,
 )
 from apps.integrations.protheus import services
+from apps.integrations.admin_forms import secret_config_form
 
 
 @admin.register(ProtheusIntegrationConfig)
 class ProtheusIntegrationConfigAdmin(admin.ModelAdmin):
+    form = secret_config_form(ProtheusIntegrationConfig, ("password", "token"))
     list_display = (
         "provider",
         "enabled",

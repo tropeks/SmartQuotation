@@ -2,6 +2,7 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from encrypted_model_fields.fields import EncryptedCharField
 
 
 class SapB1IntegrationConfig(models.Model):
@@ -12,7 +13,7 @@ class SapB1IntegrationConfig(models.Model):
     base_url = models.URLField(blank=True)
     company_db = models.CharField(max_length=100, blank=True)
     username = models.CharField(max_length=255, blank=True)
-    password = models.CharField(max_length=255, blank=True)
+    password = EncryptedCharField(max_length=255, blank=True)  # cifrado em repouso
     timeout_seconds = models.PositiveIntegerField(default=30)
     sync_sales_orders_enabled = models.BooleanField(default=True)
     sync_boms_enabled = models.BooleanField(default=True)

@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from apps.integrations.omie import services
+from apps.integrations.admin_forms import secret_config_form
 from apps.integrations.omie.models import (
     OmieFiscalDocument,
     OmieIntegrationConfig,
@@ -37,6 +38,7 @@ class OmieReadOnlyAdmin(admin.ModelAdmin):
 
 @admin.register(OmieIntegrationConfig)
 class OmieIntegrationConfigAdmin(admin.ModelAdmin):
+    form = secret_config_form(OmieIntegrationConfig, ("app_key", "app_secret"))
     list_display = (
         "provider",
         "enabled",

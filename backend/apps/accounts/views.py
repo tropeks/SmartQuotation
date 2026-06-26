@@ -11,6 +11,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts.forms import LoginForm
+from apps.accounts.rbac import has_tenant_membership
 
 
 def _resolve_username(identifier):
@@ -38,7 +39,10 @@ def login_view(request):
         user = authenticate(
             request, username=username, password=form.cleaned_data["password"]
         )
-        if user is not None and user.is_active:
+        # has_tenant_membership: o user precisa ter UserProfile no schema (tenant) atual.
+        # Sem isso, um usuário de outro tenant autenticaria aqui (auth.User é global).
+        # Mesma mensagem genérica para não revelar se o usuário existe noutro tenant.
+        if user is not None and user.is_active and has_tenant_membership(user):
             login(request, user)
             return redirect("dashboard")
         form.add_error(None, "Credenciais inválidas.")
