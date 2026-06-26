@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from apps.integrations.sap_b1 import services
+from apps.integrations.admin_forms import secret_config_form
 from apps.integrations.sap_b1.models import (
     SapB1IntegrationConfig,
     SapB1SyncAttempt,
@@ -28,6 +29,7 @@ class SapB1ReadOnlyAdmin(admin.ModelAdmin):
 
 @admin.register(SapB1IntegrationConfig)
 class SapB1IntegrationConfigAdmin(admin.ModelAdmin):
+    form = secret_config_form(SapB1IntegrationConfig, ("password",))
     list_display = (
         "provider",
         "enabled",

@@ -73,6 +73,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "axes.middleware.AxesMiddleware",  # deve vir após AuthenticationMiddleware
+    "apps.accounts.middleware.TenantMembershipMiddleware",  # barra user sem profile no schema ativo
     "django.middleware.locale.LocaleMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -141,9 +142,11 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# django-encrypted-model-fields (preços/margens cifrados)
-# Chave dev — gerada localmente, NÃO publicada. Produção DEVE sobrescrever via env var.
-FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="gq5BmjeBGD9Ji49jNTL6hSEj5woUlf515QRfBgcgSVU=")
+# django-encrypted-model-fields (preços/margens + credenciais de ERP cifradas)
+# SEM default: cada ambiente DEVE prover a chave via env var. base/production falham
+# ruidosamente se faltar (não há chave conhecida embutida). Só development.py define uma
+# chave dev local — nunca usar em produção.
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default=None)
 
 # ─── django-axes (brute-force protection) ────────────────────────────────────
 AXES_FAILURE_LIMIT = 5            # tentativas antes do lockout

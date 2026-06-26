@@ -35,6 +35,23 @@ def user_role(user):
     return profile.role if profile is not None else None
 
 
+def has_tenant_membership(user):
+    """
+    Verdadeiro se `user` pertence ao tenant (schema) ATIVO da requisição.
+
+    auth.User vive no schema public (SHARED_APPS) e é global; o vínculo do usuário
+    com um tenant é o UserProfile (TENANT_APPS, por schema). Sem essa checagem, um
+    usuário de um tenant conseguiria autenticar no domínio de outro e ler dados via
+    views só-@login_required. Superuser/staff são operadores de plataforma (não são
+    usuários-fim de tenant) e passam direto.
+    """
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    return UserProfile.objects.filter(user=user, is_active=True).exists()
+
+
 def require_role(*roles):
     """
     Decorator de view: exige usuário autenticado E com profile.role em `roles`.

@@ -282,13 +282,18 @@ class LearningEngineSuggestionViewTests(TenantTestCase):
         s.refresh_from_db()
         self.assertEqual(s.status, "pending")
 
-    def test_apply_sem_profile_403(self):
-        """Usuário autenticado sem UserProfile (role=None) recebe 403."""
+    def test_apply_sem_profile_barrado(self):
+        """Usuário autenticado SEM UserProfile (não-membro do tenant) é barrado.
+
+        Com TenantMembershipMiddleware, um usuário sem profile no schema ativo é
+        deslogado e redirecionado ao login (302) antes de chegar à view.
+        """
         sem_profile = User.objects.create_user(username="semProfile", password="segredo123")
         self.assertTrue(self.client.login(username="semProfile", password="segredo123"))
         s = self._make_suggestion()
         resp = self.client.post(f"/engenharia/sugestoes/{s.pk}/aplicar/")
-        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, "/login/")
 
     def test_apply_get_405(self):
         """GET no endpoint apply → 405 Method Not Allowed."""
