@@ -1,8 +1,8 @@
 # SmartQuotation — Status do Projeto
 
-> Documento vivo. Última revisão: 2026-06-25 — H1 técnico estabilizado; H1 auditável fechado (#46);
+> Documento vivo. Última revisão: 2026-06-26 — H1 técnico estabilizado; H1 auditável fechado (#46);
 > H2.1 (cotação → OF), H2.2 (apontamento), H2.3 (aprendizado), H2.4 (ITP básico), H2.5 foundation,
-> H2.5.1 (primeira fatia operacional do conector Protheus), H2.5.2 e H2.6 entregues.
+> H2.5.1 (primeira fatia operacional do conector Protheus), H2.5.2, H2.6 e H2.7a entregues.
 > (colaboração com @WellToMcAt).
 > **43 PRs mergeados · gates feixe −2,9% / permutador BEU+BEM 0,0% ·
 > suítes relevantes locais verdes (`production` + `audit` = 49 testes) · CI verde nos PRs mergeados.**
@@ -21,7 +21,8 @@ design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimens�
   esses agregados e sugere atualização de `Rate` quando há amostragem e confiança suficientes; H2.4
   gera ITP básico a partir do roteiro da OF e registra aceite por item com responsável/data; H2.5
   iniciou a trilha de ERP com a fundação do app `apps.integrations.protheus`; H2.5.1 e H2.5.2
-  consolidaram a operação assistida do conector Protheus.
+  consolidaram a operação assistida do conector Protheus. H2.6 fechou a emissão assistida via Omie;
+  H2.7a abriu o SAP B1 manual/admin-only com healthcheck e export manual da OF.
 - **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
 | Equipamento | Motor | Gabarito | Erro |
@@ -118,6 +119,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **H2.5.1 — Protheus operacional (fatia 1)** — export assíncrono da OF no `release`, tasks Celery tenant-aware, adapter HTTP por contrato, staging governado para import de materiais/fornecedores, admin actions de reenfileirar/aplicar/rejeitar e testes de `integrations.protheus` + `production` verdes | ✅ |
 | **H2.5.2 — Operação assistida do Protheus** — scheduler global com beat único, healthcheck operacional admin-only, retry tipado transitório/permanente e reenfileiramento seguro no admin | ✅ |
 | **H2.6 — Conector Omie / Bling** — emissão assistida da NF-e via Omie a partir da OF concluída, com app tenant-scoped, config por tenant, documento fiscal mínimo, runs/attempts assíncronos, admin operacional, healthcheck e runbook | ✅ |
+| **H2.7a — Conector SAP B1 manual/admin-only** — app tenant-scoped `apps.integrations.sap_b1` registrado em settings, healthcheck admin-only e action manual de export da OF no admin de produção | ✅ |
 
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
@@ -136,6 +138,8 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 > e `apps.production` verdes.
 > H2.6 fechou o slice Omie-first com emissão assistida da NF-e a partir da OF concluída, sem motor
 > fiscal completo e sem Bling neste incremento.
+> H2.7a consolidado como SAP B1 manual/admin-only: app tenant-scoped registrado, healthcheck
+> admin-only e export manual de OF via action no admin de produção, sem gatilho automático em `production.services`.
 
 ---
 

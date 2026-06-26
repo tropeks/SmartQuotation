@@ -196,7 +196,7 @@ Sprint 5:   28 SP restantes → entrega 28 SP →   0 SP ✅
 | **H2.4** — ITP básico ✅ **(entregue)** | mês 11 | Plano de inspeção gerado a partir do roteiro; aceite por item com responsável e data |
 | **H2.5** — Conector TOTVS Protheus ✅ **(foundation + H2.5.1 + H2.5.2 entregues)** | mês 13 | Foundation tenant-scoped + export assíncrono da OF, tasks tenant-aware, adapter HTTP mínimo, staging governado de catálogo, scheduler/beat único, healthcheck admin-only, retry tipado e reenfileiramento seguro |
 | **H2.6** — Conector Omie / Bling ✅ **(Omie entregue, Bling fora do slice)** | mês 14 | Emissão assistida de NF-e via Omie a partir da OF concluída, com config tenant-scoped, runs assíncronos, admin operacional e healthcheck |
-| **H2.7** — Conector SAP B1 | mês 16 | Sincronização de pedidos e BOM com SAP B1 (clientes enterprise) |
+| **H2.7a** — Conector SAP B1 manual/admin-only ✅ **(slice entregue)** | mês 16 | Foundation tenant-scoped + healthcheck admin-only + action manual de export da OF para SAP B1 via Service Layer, com reenfileiramento seguro; automação assistida completa fica para H2.7b |
 | **H2.8** — Expansão normativa: API 650 | mês 15 | Tanques atmosféricos dimensionados conforme API 650/620 |
 | **H2.9** — Expansão normativa: ASME B31.3 | mês 17 | Tubulações de processo dimensionadas |
 | **H2.10** — Multi-moeda e exportação | mês 18 | Cotações em USD/EUR; conversão automática; adequação PED para exportação EU |
@@ -219,6 +219,40 @@ SmartQuotation API (DRF)
 
 Cada conector é uma Django app plugável, ativável por tenant via feature flag.
 Autenticação por conector: API key ou OAuth2 armazenados em campo cifrado em `TenantIntegrationConfig`.
+
+### Escopo executável do H2.7a (SAP B1 manual/admin-only)
+
+Objetivo do incremento:
+- abrir a trilha SAP B1 com o mesmo padrão operacional de H2.5/H2.6, sem tentar fechar ERP bidirecional completo num único corte
+- entregar o primeiro slice operacional como fluxo manual/admin-only
+- expor healthcheck e export assistido da OF para o SAP B1 sem acionar automação de release/conclusão
+
+Entregas mínimas do slice:
+- `SAPB1IntegrationConfig` por tenant, com `enabled`, credenciais do Service Layer, `company_db`, `base_url`, timeout e flags operacionais
+- client HTTP mínimo para login e healthcheck
+- trigger manual/admin na OF para export e reenfileiramento seguro
+- healthcheck operacional admin-only
+- fake client + testes de admin/rota
+
+Recorte funcional do slice 1:
+- direção: `push` do SmartQuotation para o SAP B1
+- entidades: OF e BOM derivada do snapshot persistido
+- momento do gatilho: ação manual no admin, sem automação de release/conclusão neste corte
+- source of truth neste slice: SmartQuotation para payload exportado; SAP B1 como destino operacional
+
+Fora de escopo neste incremento:
+- import bidirecional de status, estoque, preço ou cadastro mestre
+- sincronização de roteiro/roteamento completo de produção
+- webhooks, polling contínuo ou reconciliação automática
+- fiscal, faturamento e documentos fiscais SAP
+- múltiplas empresas SAP por tenant no primeiro corte
+- automação em `production.services` ou gatilho por evento de release/conclusão
+
+Critérios de aceite:
+- healthcheck admin-only responde via rota do admin
+- action manual da OF chama o service do app SAP B1 sem depender de automação de domínio
+- nenhuma edição manual de artefato já sincronizado rompe a trilha operacional
+- `python manage.py check` e suíte focada do admin/produção passam
 
 ---
 
