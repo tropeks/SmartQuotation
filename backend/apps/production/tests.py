@@ -3,9 +3,11 @@ import sys
 import types
 from unittest import mock
 
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.http import JsonResponse
 from django.test import RequestFactory
 from django_tenants.test.cases import TenantTestCase
 
@@ -20,6 +22,7 @@ from apps.production.models import (
     STATUS_CONCLUIDA, STATUS_CANCELADA,
 )
 from apps.production import services
+from apps.production.admin import OrdemFabricacaoAdmin
 from apps.quotations.adapter import recompute
 from apps.quotations.models import CalculationSnapshot, Customer
 from apps.quotations.services import create_calculation_snapshot, create_feixe_quotation
@@ -249,6 +252,125 @@ class OrdemFabricacaoTests(TenantTestCase):
 
         self.assertFalse(ProtheusSyncRun.objects.exists())
         enqueue_sync_run_async.assert_not_called()
+
+    def _fake_sap_b1_services(self, run=None, enqueue_ok=True):
+        sap_b1_pkg = types.ModuleType("apps.integrations.sap_b1")
+        sap_b1_services = types.ModuleType("apps.integrations.sap_b1.services")
+        sap_b1_services.maybe_enqueue_sales_order_sync = mock.Mock(return_value=run)
+        sap_b1_services.enqueue_sales_order_sync = mock.Mock(return_value=(run, True))
+        sap_b1_services.maybe_enqueue_bom_sync = mock.Mock(return_value=run)
+        sap_b1_services.enqueue_bom_sync = mock.Mock(return_value=(run, True))
+        sap_b1_services.enqueue_sync_run_async = mock.Mock(return_value=enqueue_ok)
+        sap_b1_pkg.services = sap_b1_services
+        return sap_b1_pkg, sap_b1_services
+
+    def test_admin_action_exporta_of_para_sap_b1(self):
+        fake_run = types.SimpleNamespace(pk=777)
+        sap_b1_pkg, sap_b1_services = self._fake_sap_b1_services(run=fake_run, enqueue_ok=True)
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+        request = RequestFactory().post("/admin/apps/production/ordemfabricacao/")
+        request.user = self.user
+        admin_instance = OrdemFabricacaoAdmin(OrdemFabricacao, admin.site)
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "apps.integrations.sap_b1": sap_b1_pkg,
+                "apps.integrations.sap_b1.services": sap_b1_services,
+            },
+        ):
+            with mock.patch("apps.production.admin.import_module", return_value=sap_b1_services):
+                with mock.patch.object(admin_instance, "message_user") as message_user:
+                    admin_instance.export_to_sap_b1(request, OrdemFabricacao.objects.filter(pk=of.pk))
+
+        sap_b1_services.maybe_enqueue_sales_order_sync.assert_called_once_with(of, trigger="admin")
+        sap_b1_services.maybe_enqueue_bom_sync.assert_called_once_with(of, trigger="admin")
+        self.assertEqual(sap_b1_services.enqueue_sync_run_async.call_count, 2)
+        sap_b1_services.enqueue_sync_run_async.assert_any_call(
+            fake_run,
+            schema_name=services.connection.schema_name,
+        )
+        sap_b1_services.enqueue_sync_run_async.assert_any_call(
+            fake_run,
+            schema_name=services.connection.schema_name,
+        )
+        message_user.assert_called_once()
+
+    def test_admin_action_exporta_of_para_sap_b1_usa_primeira_api_disponivel(self):
+        fake_run = types.SimpleNamespace(pk=778)
+        sap_b1_pkg, sap_b1_services = self._fake_sap_b1_services(run=fake_run, enqueue_ok=True)
+        delattr(sap_b1_services, "maybe_enqueue_sales_order_sync")
+        delattr(sap_b1_services, "maybe_enqueue_bom_sync")
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+        request = RequestFactory().post("/admin/apps/production/ordemfabricacao/")
+        request.user = self.user
+        admin_instance = OrdemFabricacaoAdmin(OrdemFabricacao, admin.site)
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "apps.integrations.sap_b1": sap_b1_pkg,
+                "apps.integrations.sap_b1.services": sap_b1_services,
+            },
+        ):
+            with mock.patch("apps.production.admin.import_module", return_value=sap_b1_services):
+                with mock.patch.object(admin_instance, "message_user"):
+                    admin_instance.export_to_sap_b1(request, OrdemFabricacao.objects.filter(pk=of.pk))
+
+        sap_b1_services.enqueue_sales_order_sync.assert_called_once_with(of, trigger="admin")
+        sap_b1_services.enqueue_bom_sync.assert_called_once_with(of, trigger="admin")
+        self.assertEqual(sap_b1_services.enqueue_sync_run_async.call_count, 2)
+        sap_b1_services.enqueue_sync_run_async.assert_any_call(
+            fake_run,
+            schema_name=services.connection.schema_name,
+        )
+        sap_b1_services.enqueue_sync_run_async.assert_any_call(
+            fake_run,
+            schema_name=services.connection.schema_name,
+        )
+
+    def test_admin_action_nao_republica_run_sap_b1_ja_concluido(self):
+        completed_run = types.SimpleNamespace(pk=779, status="success")
+        sap_b1_pkg, sap_b1_services = self._fake_sap_b1_services(run=completed_run, enqueue_ok=True)
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+        request = RequestFactory().post("/admin/apps/production/ordemfabricacao/")
+        request.user = self.user
+        admin_instance = OrdemFabricacaoAdmin(OrdemFabricacao, admin.site)
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "apps.integrations.sap_b1": sap_b1_pkg,
+                "apps.integrations.sap_b1.services": sap_b1_services,
+            },
+        ):
+            with mock.patch("apps.production.admin.import_module", return_value=sap_b1_services):
+                with mock.patch.object(admin_instance, "message_user") as message_user:
+                    admin_instance.export_to_sap_b1(request, OrdemFabricacao.objects.filter(pk=of.pk))
+
+        sap_b1_services.maybe_enqueue_sales_order_sync.assert_called_once_with(of, trigger="admin")
+        sap_b1_services.maybe_enqueue_bom_sync.assert_called_once_with(of, trigger="admin")
+        sap_b1_services.enqueue_sync_run_async.assert_not_called()
+        message_user.assert_called_once()
+
+    def test_admin_healthcheck_route_delega_para_sap_b1(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        staff_user = User.objects.create_user(username="admin_sap_b1", password="x")
+        staff_user.is_staff = True
+        staff_user.is_superuser = True
+        staff_user.save(update_fields=["is_staff", "is_superuser"])
+        fake_views = types.SimpleNamespace(
+            admin_healthcheck=mock.Mock(return_value=JsonResponse({"ok": True, "source": "sap_b1"}))
+        )
+
+        with mock.patch("smartquotation.urls.import_module", return_value=fake_views):
+            self.client.force_login(staff_user)
+            response = self.client.get("/admin/sap-b1/health/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(response.content, {"ok": True, "source": "sap_b1"})
+        fake_views.admin_healthcheck.assert_called_once()
+
 
 
 class ApontamentoTests(TenantTestCase):
