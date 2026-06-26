@@ -252,6 +252,29 @@ class SapB1TasksTests(TenantTestCase):
 
         self.assertFalse(services.reset_sync_run_for_requeue(self.run))
 
+    def test_process_sync_run_reprocesses_run_stuck_in_processing(self):
+        self.run.status = SapB1SyncRun.STATUS_PROCESSING
+        self.run.save(update_fields=["status"])
+
+        services.process_sync_run(self.run, client=self.client)
+
+        self.run.refresh_from_db()
+        self.assertEqual(self.run.status, SapB1SyncRun.STATUS_SUCCESS)
+        self.assertTrue(SapB1SyncAttempt.objects.filter(run=self.run).exists())
+
+    def test_reset_sync_run_for_requeue_recovers_processing_run(self):
+        self.run.status = SapB1SyncRun.STATUS_PROCESSING
+        self.run.save(update_fields=["status"])
+
+        result = services.reset_sync_run_for_requeue(self.run)
+
+        self.assertTrue(result)
+        self.run.refresh_from_db()
+        self.assertEqual(self.run.status, SapB1SyncRun.STATUS_PENDING)
+        self.assertEqual(self.run.error_message, "")
+        self.assertIsNone(self.run.finished_at)
+        self.assertIn("requeued_at", self.run.result_payload)
+
 
 class SapB1AdminTests(TenantTestCase):
     def setUp(self):

@@ -367,7 +367,7 @@ def process_sync_run(run: SapB1SyncRun, client=None):
     try:
         with transaction.atomic():
             run = SapB1SyncRun.objects.select_for_update().get(pk=run.pk)
-            if run.status in {SapB1SyncRun.STATUS_SUCCESS, SapB1SyncRun.STATUS_PROCESSING}:
+            if run.status == SapB1SyncRun.STATUS_SUCCESS:
                 return run
 
             config = get_enabled_config()
@@ -434,7 +434,6 @@ def process_sync_run(run: SapB1SyncRun, client=None):
 def reset_sync_run_for_requeue(run):
     if run.status in {
         SapB1SyncRun.STATUS_PENDING,
-        SapB1SyncRun.STATUS_PROCESSING,
         SapB1SyncRun.STATUS_SUCCESS,
     }:
         return False

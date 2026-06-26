@@ -290,12 +290,23 @@ def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
         raise ValidationError("Horas inválidas.")
     if hh < 0 or hm < 0:
         raise ValidationError("Horas não podem ser negativas.")
+    if hh > 24:
+        raise ValidationError("Horas não podem exceder 24 por apontamento.")
+    if isinstance(entry_date, str) and entry_date:
+        try:
+            resolved_entry_date = _date.fromisoformat(entry_date)
+        except ValueError:
+            raise ValidationError("Data inválida.")
+    else:
+        resolved_entry_date = entry_date if isinstance(entry_date, _date) else _date.today()
+    if resolved_entry_date > _date.today():
+        raise ValidationError("Data do apontamento não pode ser futura.")
     entry = ProductionEntry.objects.create(
         of_operation=of_operation,
         operator=operator,
         hours_hh=hh,
         hours_hm=hm,
-        entry_date=entry_date or _date.today(),
+        entry_date=resolved_entry_date,
         notes=notes or "",
     )
     if request is not None:

@@ -334,7 +334,7 @@ def _upsert_binding(entity_type, local_model, local_id, remote_code, direction, 
 
 def _record_work_order_binding(run, response):
     payload = run.payload
-    remote_code = response.get("remote_code", payload["number"])
+    remote_code = response.get("remote_code", payload.get("number", ""))
     _upsert_binding(
         ProtheusSyncBinding.ENTITY_WORK_ORDER,
         run.local_model,

@@ -588,13 +588,28 @@ class ApontamentoViewTests(TenantTestCase):
 
     def test_appoint_view_cria_entry(self):
         from apps.production.models import ProductionEntry
-        self.client.force_login(self.user)
+        self.client.force_login(self.engineer.user)
         resp = self.client.post(
             f"/ofs/operacao/{self.op.pk}/apontar/",
             {"hours_hh": "2.5", "hours_hm": "0", "entry_date": "2026-06-23", "notes": "turno A"},
         )
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+    def test_appoint_view_bloqueia_orcamentista(self):
+        from datetime import date
+        from apps.production.models import ProductionEntry
+        orc_user = User.objects.create_user(username="orc_appoint", password="x")
+        UserProfile.objects.create(
+            user=orc_user, full_name="Orcamentista", role=UserProfile.ROLE_ORCAMENTISTA,
+        )
+        self.client.force_login(orc_user)
+        resp = self.client.post(
+            f"/ofs/operacao/{self.op.pk}/apontar/",
+            {"hours_hh": "2.0", "hours_hm": "0", "entry_date": str(date.today())},
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
 
 
 class ITPServiceTests(TenantTestCase):
@@ -872,7 +887,7 @@ class ApontamentoValidacaoViewTests(TenantTestCase):
     def test_appoint_view_horas_invalidas(self):
         """POST com hours_hh='abc' retorna 302 sem criar ProductionEntry."""
         from apps.production.models import ProductionEntry
-        self.client.force_login(self.user)
+        self.client.force_login(self.engineer.user)
         resp = self.client.post(
             f"/ofs/operacao/{self.op.pk}/apontar/",
             {"hours_hh": "abc", "hours_hm": "0", "entry_date": "2026-06-23"},
@@ -883,10 +898,35 @@ class ApontamentoValidacaoViewTests(TenantTestCase):
     def test_appoint_view_horas_negativas(self):
         """POST com hours_hh='-1' retorna 302 sem criar ProductionEntry."""
         from apps.production.models import ProductionEntry
-        self.client.force_login(self.user)
+        self.client.force_login(self.engineer.user)
         resp = self.client.post(
             f"/ofs/operacao/{self.op.pk}/apontar/",
             {"hours_hh": "-1", "hours_hm": "0", "entry_date": "2026-06-23"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+    def test_appoint_view_horas_acima_de_24(self):
+        """POST com hours_hh='30' retorna 302 sem criar ProductionEntry (>24 bloqueado)."""
+        from datetime import date
+        from apps.production.models import ProductionEntry
+        self.client.force_login(self.engineer.user)
+        resp = self.client.post(
+            f"/ofs/operacao/{self.op.pk}/apontar/",
+            {"hours_hh": "30", "hours_hm": "0", "entry_date": str(date.today())},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+    def test_appoint_view_data_futura(self):
+        """POST com entry_date no futuro retorna 302 sem criar ProductionEntry."""
+        from datetime import date, timedelta
+        from apps.production.models import ProductionEntry
+        future_date = date.today() + timedelta(days=1)
+        self.client.force_login(self.engineer.user)
+        resp = self.client.post(
+            f"/ofs/operacao/{self.op.pk}/apontar/",
+            {"hours_hh": "2", "hours_hm": "0", "entry_date": str(future_date)},
         )
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
