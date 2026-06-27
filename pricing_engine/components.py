@@ -9,7 +9,7 @@ Formas:
   barra redonda:    A = π/4 · OD²              (× comprimento)
   barra chata:      A = largura · espessura    (× comprimento)
   tubo:             ver dimensions.tube_*       (espaçador BWG)
-  segmento chicana: disco − corte  → PENDENTE forma exata (ver TODO)
+  segmento chicana: disco − corte (TEMA RCB-4: hc = od − corte)
 """
 from __future__ import annotations
 import math
@@ -85,8 +85,8 @@ def peso_liquido_componente(c: CompSpec) -> float:
 
 
 def peso_componente(c: CompSpec) -> tuple[float, str]:
-    """Retorna (peso_BRUTO_kg, status). Bruto = base de custo (Opção A: cobra perdas).
-    status='ok' ou 'PENDENTE: <motivo>'."""
+    """Retorna (peso_BRUTO_kg, status='ok'). Bruto = base de custo (Opção A: cobra
+    perdas). LEVANTA ValueError para forma desconhecida (falha alto, não custo zerado)."""
     d = mat.density(c.material)
     f = c.forma
     if f == "tubo":
@@ -120,7 +120,10 @@ def peso_componente(c: CompSpec) -> tuple[float, str]:
         # disponível mas não aplicado ao custo por ora.
         area = A_bruta
         return area * c.esp_mm * d * c.qtd, "ok"
-    return 0.0, f"PENDENTE: forma '{f}' não implementada"
+    raise ValueError(
+        f"peso_componente: forma '{f}' desconhecida (componente {c.codigo!r}). "
+        f"Formas suportadas: tubo, disco, barra_redonda, barra_chata, porca, chicana."
+    )
 
 
 def componentes_from_inputs(inp) -> list[CompSpec]:
@@ -177,46 +180,3 @@ def componentes_from_inputs(inp) -> list[CompSpec]:
 def feixe_136_componentes() -> list[CompSpec]:
     from .feixe_inputs import caso_136_tubos
     return componentes_from_inputs(caso_136_tubos())
-
-
-def _feixe_136_componentes_LEGADO() -> list[CompSpec]:
-    return [
-        CompSpec("TUB-01", "Tubos de Troca Térmica", "SA-179", "tubo", 136,
-                 od_spec='3/4"', wall_spec="BWG 14", comp_mm=6096, rkg=13.5),
-        CompSpec("ESP-2a", "Espelho Fixo", "SA-516 GR 70", "disco", 1,
-                 od_mm=475, esp_mm=44.5, rkg=6.5, n_tubes=136, tube_od_mm=19.05),
-        CompSpec("ESP-2b", "Espelho Flutuante", "SA-516 GR 70", "disco", 1,
-                 od_mm=412, esp_mm=44.5, rkg=6.5, n_tubes=136, tube_od_mm=19.05),
-        CompSpec("CHI-3", "Chicanas Transversais", "SA-36", "chicana", 18,
-                 od_mm=416.8, esp_mm=12.5, rkg=6.5,
-                 cut_remaining_mm=300, n_tubes=136, tube_od_mm=19.05),
-        CompSpec("SUP-4", "Chapa Suporte", "SA-36", "chicana", 1,
-                 od_mm=416.8, esp_mm=12.5, rkg=6.5,
-                 cut_remaining_mm=0, n_tubes=136, tube_od_mm=19.05),  # disco cheio (hc=0)
-        CompSpec("TIR-7", "Tirantes", "SAE-1020", "barra_redonda", 12,
-                 od_spec='3/8"', comp_mm=6000, rkg=4.5),
-        CompSpec("BSE1-9.1", "Barras de Selagem (1)", "SA-36", "barra_chata", 2,
-                 larg_mm=50, esp_mm=6.3, comp_mm=6000, rkg=4.5),
-        CompSpec("BSE2-9.2", "Barras de Selagem (2)", "SA-36", "barra_chata", 2,
-                 larg_mm=75, esp_mm=6.3, comp_mm=6000, rkg=4.5),
-        CompSpec("BDE-10", "Barras de Deslizamento", "SA-36", "barra_chata", 2,
-                 larg_mm=50, esp_mm=12.5, comp_mm=6000, rkg=4.5),
-        CompSpec("IMP-11", "Chapa de Impacto", "SA-36", "barra_chata", 1,
-                 larg_mm=250, esp_mm=6.3, comp_mm=250, rkg=6.5),
-        CompSpec("ESC-6a", "Espaçador BWG", "SA-214", "tubo", 12,
-                 od_spec='3/4"', wall_spec="BWG 14", comp_mm=6096, rkg=9,
-                 nota="PENDENTE: comprimento real do espaçador (planilha usa 6096?)"),
-        # itens menores
-        CompSpec("ALC-16", "Alça", "SA-36", "barra_chata", 2,
-                 larg_mm=37, esp_mm=12.5, comp_mm=30, rkg=10),
-        CompSpec("PLG1-19", "Plugues (1)", "AISI-304", "barra_redonda", 2,
-                 od_spec='5/8"', comp_mm=25, rkg=50),
-        CompSpec("PLG2-20", "Plugues (2)", "AISI-304", "barra_redonda", 2,
-                 od_spec='3/4"', comp_mm=30, rkg=50),
-        CompSpec("OLH1-W1", "Olhais (1)", "SAE-1045", "barra_redonda", 2,
-                 od_spec='5/8"', comp_mm=200, rkg=50),
-        CompSpec("OLH2-W2", "Olhais (2)", "SAE-1045", "barra_redonda", 2,
-                 od_spec='3/4"', comp_mm=220, rkg=50),
-        CompSpec("POR-8", "Porcas Sextavadas", "SA-194 GR 2H", "porca", 24,
-                 od_spec='3/8"', rkg=0.5, nota="porca: peso por catálogo ~aprox"),
-    ]
