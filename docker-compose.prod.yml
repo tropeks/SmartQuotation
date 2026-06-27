@@ -49,8 +49,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # No host port: redis is reached only over sq_net by web/worker/beat. Publishing
+    # 6379 on the host exposed an unauthenticated redis (adversarial review finding).
     networks:
       - sq_net
     healthcheck:
