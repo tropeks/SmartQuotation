@@ -26,6 +26,7 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.
 SHARED_APPS = [
     "django_tenants",                 # must be first
     "apps.tenants",                   # Tenant, Domain, Plan (public schema)
+    "apps.health",                    # infra: /health/ endpoint (sem modelo, sem migrations)
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.sessions",
@@ -68,6 +69,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MIDDLEWARE = [
     "django_tenants.middleware.main.TenantMainMiddleware",  # must be first
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # serve static em prod (logo após Security)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

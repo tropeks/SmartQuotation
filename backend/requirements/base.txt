@@ -21,3 +21,6 @@ python-docx>=1.1
 django-axes==7.0.1
 # utils
 python-magic>=0.4.27
+# static files (prod)
+whitenoise>=6.6
+django-storages[s3]>=1.14

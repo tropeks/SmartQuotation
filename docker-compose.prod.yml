@@ -1,0 +1,67 @@
+version: '3.8'
+
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  env_file: .env
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - sq_net
+  restart: unless-stopped
+
+services:
+  web:
+    <<: *app-common
+    command: gunicorn --bind 0.0.0.0:8000 --workers=4 --timeout=60 smartquotation.wsgi:application
+    ports:
+      - "8000:8000"
+
+  worker:
+    <<: *app-common
+    command: celery -A smartquotation.celery_app worker -l info
+
+  beat:
+    <<: *app-common
+    command: celery -A smartquotation.celery_app beat -l info
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartquotation}
+      POSTGRES_USER: ${POSTGRES_USER:-sq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sq}
+    volumes:
+      - sq_postgres_data:/var/lib/postgresql/data
+    networks:
+      - sq_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sq} -d ${POSTGRES_DB:-smartquotation}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # No host port: redis is reached only over sq_net by web/worker/beat. Publishing
+    # 6379 on the host exposed an unauthenticated redis (adversarial review finding).
+    networks:
+      - sq_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  sq_postgres_data:
+
+networks:
+  sq_net:
+    driver: bridge
