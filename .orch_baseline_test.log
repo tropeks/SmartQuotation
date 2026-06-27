@@ -1,0 +1,515 @@
+Creating test database for alias 'default'...
+............................................................................................Failed to enqueue Omie invoice run
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/SmartQuotation/backend/apps/integrations/omie/services.py", line 331, in enqueue_invoice_run_async
+    process_invoice_run.delay(schema_name=schema_name, run_id=run.pk)
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+RuntimeError: broker down
+..................................................Failed to enqueue SAP B1 sync run
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/SmartQuotation/backend/apps/integrations/sap_b1/services.py", line 245, in enqueue_sync_run_async
+    process_sap_b1_sync_run.delay(schema_name=schema_name, run_id=run.pk)
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+RuntimeError: broker down
+......................................................................................................................................................E............EEEEEEE.....
+======================================================================
+ERROR: test_icms_formula_real_por_dentro (apps.tema_templates.tests.ComposeViewTests.test_icms_formula_real_por_dentro)
+B (Wellington): ICMS por dentro real = 1/(1−alíquota), sem o fudge 0,97.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.InterfaceError: cursor already closed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/SmartQuotation/backend/apps/tema_templates/tests.py", line 63, in setUp
+    u = User.objects.create_user(username="eng", password="x")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/contrib/auth/models.py", line 175, in create_user
+    return self._create_user(username, email, password, **extra_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/contrib/auth/models.py", line 163, in _create_user
+    user.save(using=self._db)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/contrib/auth/base_user.py", line 65, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.InterfaceError: cursor already closed
+
+======================================================================
+ERROR: setUpClass (apps.tema_templates.tests.FlangeCorpoTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/test/cases.py", line 38, in setUpClass
+    cls.tenant.save(verbosity=cls.get_verbosity())
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/models.py", line 114, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+======================================================================
+ERROR: setUpClass (apps.tema_templates.tests.LigaCadastroTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/test/cases.py", line 38, in setUpClass
+    cls.tenant.save(verbosity=cls.get_verbosity())
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/models.py", line 114, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+======================================================================
+ERROR: setUpClass (apps.tema_templates.tests.MemorialASMETests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/test/cases.py", line 38, in setUpClass
+    cls.tenant.save(verbosity=cls.get_verbosity())
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/models.py", line 114, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+======================================================================
+ERROR: setUpClass (apps.tema_templates.tests.PermutadorEngineTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/test/cases.py", line 38, in setUpClass
+    cls.tenant.save(verbosity=cls.get_verbosity())
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/models.py", line 114, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+======================================================================
+ERROR: setUpClass (apps.tema_templates.tests.PressaoEstaticaTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/test/cases.py", line 38, in setUpClass
+    cls.tenant.save(verbosity=cls.get_verbosity())
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/models.py", line 114, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+======================================================================
+ERROR: setUpClass (apps.tema_templates.tests.RTExposicoesTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/test/cases.py", line 38, in setUpClass
+    cls.tenant.save(verbosity=cls.get_verbosity())
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/models.py", line 114, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+======================================================================
+ERROR: setUpClass (apps.tema_templates.tests.SeedCatalogTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/test/cases.py", line 38, in setUpClass
+    cls.tenant.save(verbosity=cls.get_verbosity())
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django_tenants/models.py", line 114, in save
+    super().save(*args, **kwargs)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 902, in save
+    self.save_base(
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1008, in save_base
+    updated = self._save_table(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1169, in _save_table
+    results = self._do_insert(
+              ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 1210, in _do_insert
+    return manager._insert(
+           ^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/query.py", line 1854, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1881, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/rcosta00/dev/ClaudeProxy/.venv/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.IntegrityError: duplicate key value violates unique constraint "tenants_tenant_schema_name_key"
+DETAIL:  Key (schema_name)=(test) already exists.
+
+
+----------------------------------------------------------------------
+Ran 310 tests in 522.629s
+
+FAILED (errors=8)
+Destroying test database for alias 'default'...
+Found 338 test(s).
+System check identified no issues (0 silenced).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+Catálogo TEMA: 26 novos. Total: 26 (5 front + 7 shell + 8 rear + 6 sub).
+EXIT_RC=1
