@@ -22,6 +22,11 @@ COPY backend/requirements/ requirements/
 RUN pip install --no-cache-dir -r requirements/base.txt
 
 COPY backend/ .
+# pricing_engine is a pure-Python lib at the repo ROOT (sibling of backend/), not
+# inside backend/. settings/base.py adds /app to sys.path and imports it, so it MUST
+# be in the image at /app/pricing_engine — `COPY backend/ .` alone left it out and
+# `manage.py check` died with ModuleNotFoundError: No module named 'pricing_engine'.
+COPY pricing_engine/ ./pricing_engine/
 
 # Prod entrypoint: migrate_schemas (shared+tenant) + collectstatic, then exec CMD.
 RUN chmod +x /app/entrypoint.sh
