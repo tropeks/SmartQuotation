@@ -6,7 +6,11 @@ from apps.quotations.services import create_feixe_quotation
 
 class QuotationAPITests(TenantTestCase):
     def setUp(self):
+        from apps.accounts.models import UserProfile
         self.user = User.objects.create_user(username="apiuser", password="123")
+        # membro do tenant com papel autorizado a precificar (espelha require_role das views)
+        UserProfile.objects.create(
+            user=self.user, full_name="API User", role=UserProfile.ROLE_GESTOR_COMERCIAL)
         self.client = APIClient(HTTP_HOST=self.get_test_tenant_domain())
         self.client.force_authenticate(user=self.user)
         self.customer = Customer.objects.create(company_name="Test Customer")
@@ -49,3 +53,18 @@ class QuotationAPITests(TenantTestCase):
         r2 = self.client.post("/api/permutador/estimate/", maior, format='json')
         self.assertEqual(r2.status_code, 200)
         self.assertGreater(r2.json()["custo_total"], d["custo_total"] + 10000)
+
+    def test_permutador_estimate_negado_para_usuario_sem_papel(self):
+        # endpoint de PRECIFICAÇÃO é escrita: usuário autenticado sem papel autorizado → 403
+        sem_papel = User.objects.create_user(username="apisemrole", password="123")
+        client = APIClient(HTTP_HOST=self.get_test_tenant_domain())
+        client.force_authenticate(user=sem_papel)
+        base = {
+            "designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
+            "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
+            "comprimento_casco_mm": 1631, "diametro_casco_mm": 764, "esp_casco_mm": 9.5,
+            "n_passes_tubos": 2, "rt_escopo": "Total", "classe_feixe": "CS",
+            "classe_casco": "CS", "fluido_corrosivo": "Tubos", "fator_correcao_mo": 1.0,
+        }
+        r = client.post("/api/permutador/estimate/", base, format='json')
+        self.assertEqual(r.status_code, 403)

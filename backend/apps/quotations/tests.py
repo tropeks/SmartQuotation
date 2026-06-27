@@ -202,6 +202,84 @@ class DataSheetViewTests(TenantTestCase):
         self.assertIn("/login/", resp.url)
 
 
+class QuotationRBACTests(TenantTestCase):
+    """RBAC do app quotations (espelha o padrão require_role de production/engineering_params).
+
+    Regra: qualquer membro autenticado pode VER/listar; só papéis com permissão de
+    escrita podem CRIAR, recomputar/precificar ou revisar.
+
+    Nota de modelagem: orçamentista é o autor das cotações (papel default; exigido pelos
+    testes legados de revisão em test_feature.py), e os papéis que editam
+    engineering_params/production (engenheiro, gestor_comercial, admin) também escrevem —
+    ou seja, TODO papel de tenant é autor. O principal que NÃO tem papel de escrita no
+    tenant é um superusuário de plataforma (passa o TenantMembershipMiddleware pelo atalho
+    is_superuser, mas não possui UserProfile/role) → deve receber 403 na escrita/preço.
+    """
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="RBAC Cliente")
+        # principal SEM papel de escrita no tenant (superuser de plataforma, sem UserProfile → role None)
+        self.user_sem_papel = User.objects.create_superuser(
+            username="platops", password="x123456789", email="ops@x.com")
+        # usuário com papel autorizado (orçamentista = autor de cotações; default e exigido por testes legados)
+        self.user_autorizado = User.objects.create_user(username="orcok", password="x123456789")
+        UserProfile.objects.create(
+            user=self.user_autorizado, full_name="Orc OK", role=UserProfile.ROLE_ORCAMENTISTA)
+
+    def _form_data(self, **over):
+        data = {
+            "title": "Feixe 136 tubos", "customer_name": "RBAC Cliente", "tipo": "TUBO RETO",
+            "n_tubos": 136, "tubo_material": "SA-179", "tubo_od_spec": '3/4"',
+            "tubo_wall_spec": "BWG 14", "tubo_comp_mm": 6096,
+            "espelho_material": "SA-516 GR 70", "espelho_od_mm": 475,
+            "espelho_flutuante_od_mm": 412, "espelho_esp_bruta_mm": 44.5,
+            "chicana_qty": 18, "chicana_od_mm": 416.8, "chicana_esp_mm": 12.5,
+            "chicana_cut_remaining_mm": 300, "tirante_qty": 12,
+        }
+        data.update(over)
+        return data
+
+    def test_criar_negado_para_usuario_sem_papel(self):
+        self.client.force_login(self.user_sem_papel)
+        resp = self.client.post("/cotacoes/criar/", self._form_data())
+        self.assertEqual(resp.status_code, 403)
+
+    def test_recompute_negado_para_usuario_sem_papel(self):
+        self.client.force_login(self.user_sem_papel)
+        resp = self.client.post("/cotacoes/recompute/", self._form_data())
+        self.assertEqual(resp.status_code, 403)
+
+    def test_data_sheet_negado_para_usuario_sem_papel(self):
+        self.client.force_login(self.user_sem_papel)
+        resp = self.client.get("/cotacoes/nova/feixe/")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_revisar_negado_para_usuario_sem_papel(self):
+        q = create_feixe_quotation(self.customer, "Feixe RBAC")
+        self.client.force_login(self.user_sem_papel)
+        resp = self.client.post(f"/cotacoes/{q.pk}/revisar/")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_listar_permitido_para_membro_autenticado(self):
+        # VER/listar continua liberado para qualquer membro autenticado do tenant
+        self.client.force_login(self.user_autorizado)
+        resp = self.client.get("/cotacoes/")
+        self.assertEqual(resp.status_code, 200)
+
+    def test_criar_permitido_para_papel_autorizado(self):
+        self.client.force_login(self.user_autorizado)
+        resp = self.client.post("/cotacoes/criar/", self._form_data())
+        self.assertEqual(resp.status_code, 302)
+
+    def test_recompute_permitido_para_papel_autorizado(self):
+        self.client.force_login(self.user_autorizado)
+        resp = self.client.post("/cotacoes/recompute/", self._form_data())
+        self.assertEqual(resp.status_code, 200)
+
+
 class PermutadorQuotationTests(TenantTestCase):
     """Ciclo cotação→proposta: persistir a cotação do permutador a partir do motor."""
 
