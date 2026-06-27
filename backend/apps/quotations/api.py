@@ -1,11 +1,37 @@
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.exceptions import ValidationError
 
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import user_role
 from apps.quotations.models import Quotation
 from apps.quotations.serializers import QuotationSerializer
+
+# Papéis com permissão de ESCRITA/precificação na API (espelha _WRITE_ROLES das views).
+_WRITE_ROLES = (
+    UserProfile.ROLE_ORCAMENTISTA,
+    UserProfile.ROLE_ENGENHEIRO,
+    UserProfile.ROLE_GESTOR_COMERCIAL,
+    UserProfile.ROLE_ADMIN,
+)
+
+
+class CanWriteQuotations(BasePermission):
+    """Leitura liberada a qualquer autenticado; escrita/preço exige papel de escrita do tenant.
+
+    Equivalente DRF de require_role(*_WRITE_ROLES): um usuário autenticado sem papel
+    autorizado (role None / fora do conjunto) recebe 403 em métodos não-seguros.
+    """
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        return user_role(request.user) in _WRITE_ROLES
+
 
 class QuotationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Quotation.objects.all()
@@ -13,7 +39,7 @@ class QuotationViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
 class PermutadorEstimateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanWriteQuotations]
 
     def post(self, request, *args, **kwargs):
         data = request.data

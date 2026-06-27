@@ -147,6 +147,12 @@ class ComposeViewTests(TestCase):
         """Ciclo cotação→proposta: 'salvar' persiste a Quotation e gera a Proposta."""
         from apps.quotations.models import Quotation
         from apps.proposals.models import Proposal
+        # persistir é escrita: usa papel autorizado (espelha production/engineering_params)
+        from apps.accounts.models import UserProfile
+        User = get_user_model()
+        adm = User.objects.create_user(username="adm", password="x")
+        UserProfile.objects.create(user=adm, full_name="Adm", role=UserProfile.ROLE_ADMIN)
+        self.client.force_login(adm)
         r = self._post(salvar="1", cliente="ACME Ltda")
         self.assertContains(r, "COT-")                                    # nº da cotação na resposta
         self.assertEqual(Quotation.objects.filter(scope="complete").count(), 1)
@@ -657,3 +663,47 @@ class AsmeDataDrivenTests(TestCase):
             self.assertAlmostEqual(S("SA-240 316L", t), exp, places=1, msg="316L")
         self.assertIn("L1", procedencia("SA-240 304L"))
         self.assertIn("L26", procedencia("SA-240 316L"))
+
+
+class DataSheetRBACTests(TestCase):
+    """RBAC: membro vê catálogo/preview; só papéis que editam engineering_params/production
+    persistem a cotação+proposta no data sheet (ação de escrita)."""
+
+    _PAYLOAD = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
+                "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
+                "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
+                "esp_casco_mm": 9.5, "n_passes_tubos": 2, "rt_escopo": "Parcial",
+                "classe_feixe": "CS", "classe_casco": "CS", "fluido_corrosivo": "Tubos",
+                "fator_correcao_mo": 1.0, "salvar": "1", "cliente": "ACME Ltda"}
+
+    def setUp(self):
+        call_command("seed_tema_catalog")
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+    def _login(self, role):
+        User = get_user_model()
+        u = User.objects.create_user(username=f"u-{role}", password="x")
+        from apps.accounts.models import UserProfile
+        UserProfile.objects.create(user=u, full_name=role, role=role)
+        self.client.force_login(u)
+
+    def test_orcamentista_pode_ver_catalogo(self):
+        from apps.accounts.models import UserProfile
+        self._login(UserProfile.ROLE_ORCAMENTISTA)
+        self.assertEqual(self.client.get("/tema/catalogo/").status_code, 200)
+
+    def test_orcamentista_nao_persiste_cotacao(self):
+        from apps.accounts.models import UserProfile
+        from apps.quotations.models import Quotation
+        self._login(UserProfile.ROLE_ORCAMENTISTA)
+        resp = self.client.post("/tema/permutador/", self._PAYLOAD)
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(Quotation.objects.filter(scope="complete").count(), 0)
+
+    def test_admin_persiste_cotacao(self):
+        from apps.accounts.models import UserProfile
+        from apps.quotations.models import Quotation
+        self._login(UserProfile.ROLE_ADMIN)
+        resp = self.client.post("/tema/permutador/", self._PAYLOAD)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Quotation.objects.filter(scope="complete").count(), 1)

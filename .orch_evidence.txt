@@ -1,0 +1,54 @@
+TAREFA: Endurecer RBAC de 3 apps (proposals, cost_discovery, tema_templates),
+espelhando o padrão require_role de apps/production/views.py.
+
+== PADRÃO CONFIRMADO NO CÓDIGO (sem inventar papéis) ==
+- apps/accounts/models.py: ROLE_ORCAMENTISTA, ROLE_ENGENHEIRO, ROLE_GESTOR_COMERCIAL, ROLE_ADMIN.
+- apps/production/views.py: _ITP_ROLES = (ROLE_ENGENHEIRO, ROLE_ADMIN) + @require_role(*_ITP_ROLES).
+- apps/engineering_params/views.py: checagem inline user_role(...) in roles.
+- Conjunto autorizado de ESCRITA adotado = (ROLE_ENGENHEIRO, ROLE_ADMIN) — espelha production.
+  (orcamentista é não-autorizado sob qualquer leitura; admin autorizado sob qualquer leitura.)
+
+== TDD ==
+FASE VERMELHA (antes de implementar) — comando:
+  cd backend && DJANGO_SETTINGS_MODULE=smartquotation.settings.development POSTGRES_HOST=localhost \
+  POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation \
+  /home/rcosta00/dev/ClaudeProxy/.venv/bin/python manage.py test \
+  apps.proposals.tests.ProposalRBACTests apps.cost_discovery.tests.WizardRBACTests \
+  apps.tema_templates.tests.DataSheetRBACTests -v1
+  RESULTADO: Ran 9 tests ... FAILED (failures=4)  -> FALHA ESPERADA (vermelho confirmado).
+  As 4 falhas: papel não-autorizado (orcamentista) recebia 302/200 onde se esperava 403
+  (criar/editar proposta, calibrar cost_discovery, persistir cotação no data sheet TEMA).
+  Os testes de papel autorizado (admin) já passavam. PASS desta fase: parcial (esperado).
+
+FASE VERDE (após implementar + ajustar testes de escrita pré-existentes p/ papel autorizado):
+  cd backend && DJANGO_SETTINGS_MODULE=smartquotation.settings.development POSTGRES_HOST=localhost \
+  POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation \
+  /home/rcosta00/dev/ClaudeProxy/.venv/bin/python manage.py test \
+  apps.proposals apps.cost_discovery apps.tema_templates -v1
+  RESULTADO: Ran 112 tests in 207.932s -> OK  (EXIT=0)
+  PASS: todos os 112 testes dos 3 apps (inclui os 9 novos de RBAC + todos os pré-existentes).
+
+== RESUMO DO DIFF (arquivos tocados — só os permitidos) ==
+- apps/proposals/views.py: _WRITE_ROLES=(ENGENHEIRO,ADMIN); @require_role em proposal_create e
+  proposal_edit (criam/editam/geram proposta). proposal_detail/download seguem @login_required (leitura).
+- apps/proposals/tests.py: nova classe ProposalRBACTests (orcamentista->403 criar/editar; admin->ok).
+  ProposalViewTests.setUp passa a usar ROLE_ADMIN (papel autorizado de escrita).
+- apps/cost_discovery/views.py: _WRITE_ROLES=(ENGENHEIRO,ADMIN); @require_role em top_down e
+  back_solve. wizard_home segue @login_required (leitura/lista).
+- apps/cost_discovery/tests.py: nova classe WizardRBACTests (orcamentista vê home; ->403 calibrar;
+  admin->ok). WizardViewTests.setUp passa a ROLE_ADMIN.
+- apps/tema_templates/views.py: _WRITE_ROLES=(ENGENHEIRO,ADMIN); guarda inline em data_sheet —
+  só o ramo "salvar" (persiste Quotation+Proposal) exige papel autorizado (PermissionDenied/403);
+  catalog/compose/compose_check/preview seguem leitura para qualquer membro.
+- apps/tema_templates/tests.py: nova classe DataSheetRBACTests (orcamentista vê catálogo; salvar->403,
+  0 cotações; admin->200, 1 cotação). test_data_sheet_salvar_* relogado como ROLE_ADMIN.
+
+REGRA APLICADA: qualquer membro autenticado VÊ/lista; só (ENGENHEIRO, ADMIN) — papéis que já
+editam production — CRIAM/EDITAM/geram proposta, rodam o wizard de custos, ou persistem no data sheet.
+
+CONCLUSÃO: tarefa CONCLUÍDA. TDD seguido (vermelho->verde); 112 testes verdes nos 3 apps,
+incluindo os 9 novos de RBAC; nenhum arquivo fora do escopo permitido foi tocado.
+
+TEST_CMD: cd backend && DJANGO_SETTINGS_MODULE=smartquotation.settings.development POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation /home/rcosta00/dev/ClaudeProxy/.venv/bin/python manage.py test apps.proposals apps.cost_discovery apps.tema_templates -v1
+EXIT_SIGNAL: true
+✅ PASS — RBAC endurecido nos 3 apps; 112 testes OK (EXIT=0); escopo de arquivos respeitado.

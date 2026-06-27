@@ -6,6 +6,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import require_role
 from apps.quotations.models import Quotation, Customer
 from apps.quotations.forms import FeixeDataSheetForm
 from apps.quotations.adapter import default_inputs, to_feixe_inputs
@@ -13,6 +15,19 @@ from apps.quotations.services import create_feixe_quotation
 
 from pricing_engine.feixe_inputs import FeixeInputs
 from pricing_engine.feixe_quote import quote_feixe
+
+
+# Papéis com permissão de ESCRITA em cotações (criar/recomputar/precificar/revisar).
+# Espelha o padrão require_role de apps/production e apps/engineering_params: os papéis
+# que editam engineering_params/production (engenheiro, gestor_comercial, admin) escrevem,
+# e o orçamentista é o autor das cotações (papel default). Ver/listar fica liberado a
+# qualquer membro autenticado do tenant.
+_WRITE_ROLES = (
+    UserProfile.ROLE_ORCAMENTISTA,
+    UserProfile.ROLE_ENGENHEIRO,
+    UserProfile.ROLE_GESTOR_COMERCIAL,
+    UserProfile.ROLE_ADMIN,
+)
 
 
 def _initial_from_defaults() -> dict:
@@ -44,7 +59,7 @@ def list_quotations(request):
     return render(request, "quotations/list.html", {"quotations": quotations})
 
 
-@login_required
+@require_role(*_WRITE_ROLES)
 def feixe_data_sheet(request):
     """Tela do data sheet com form + painel de resultados (recálculo HTMX)."""
     form = FeixeDataSheetForm(initial=_initial_from_defaults())
@@ -52,7 +67,7 @@ def feixe_data_sheet(request):
     return render(request, "quotations/data_sheet.html", ctx)
 
 
-@login_required
+@require_role(*_WRITE_ROLES)
 def recompute_preview(request):
     """HTMX: recalcula ao vivo a partir dos campos atuais (sem persistir)."""
     form = FeixeDataSheetForm(request.POST)
@@ -63,7 +78,7 @@ def recompute_preview(request):
                   {"results": _preview(default_inputs()), "form_errors": form.errors})
 
 
-@login_required
+@require_role(*_WRITE_ROLES)
 def create_quotation(request):
     """Persiste a cotação (deep-copy/snapshot via adapter) e vai pro detalhe."""
     form = FeixeDataSheetForm(request.POST)
@@ -85,7 +100,7 @@ def quotation_detail(request, pk):
                   {"q": q, "itens": itens, "has_active_of": has_active_of})
 
 
-@login_required
+@require_role(*_WRITE_ROLES)
 @require_POST
 def quotation_revise(request, pk):
     orig = get_object_or_404(Quotation, pk=pk)
