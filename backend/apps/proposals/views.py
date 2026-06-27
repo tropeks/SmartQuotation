@@ -5,13 +5,19 @@ from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import require_role
 from apps.quotations.models import Quotation
 from apps.proposals.models import Proposal, ProposalTemplate
 from apps.proposals import services
 from apps.audit.services import log_access
 
+# Espelha o RBAC de production/engineering_params: só papéis que JÁ editam custeio
+# criam/editam/geram proposta. Membros sem esses papéis veem (detail/download).
+_WRITE_ROLES = (UserProfile.ROLE_ENGENHEIRO, UserProfile.ROLE_ADMIN)
 
-@login_required
+
+@require_role(*_WRITE_ROLES)
 def proposal_create(request, quotation_pk):
     """Cria a proposta a partir do template padrão (textos já renderizados, editáveis)."""
     q = get_object_or_404(Quotation, pk=quotation_pk)
@@ -20,7 +26,7 @@ def proposal_create(request, quotation_pk):
     return redirect("proposals:edit", pk=proposal.pk)
 
 
-@login_required
+@require_role(*_WRITE_ROLES)
 def proposal_edit(request, pk):
     """Edita/customiza os textos da proposta (template é ponto de partida)."""
     p = get_object_or_404(Proposal.objects.select_related("quotation", "template"), pk=pk)

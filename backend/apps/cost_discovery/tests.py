@@ -67,7 +67,8 @@ class WizardViewTests(TenantTestCase):
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
         self.user = User.objects.create_user(username="dono", password="senha-forte-123")
         from apps.accounts.models import UserProfile
-        UserProfile.objects.create(user=self.user, full_name="Dono", role=UserProfile.ROLE_ORCAMENTISTA)
+        # papel autorizado a rodar o wizard (espelha production/engineering_params)
+        UserProfile.objects.create(user=self.user, full_name="Dono", role=UserProfile.ROLE_ADMIN)
         self.client.force_login(self.user)
 
     def test_home_carrega(self):
@@ -88,3 +89,40 @@ class WizardViewTests(TenantTestCase):
         self.client.logout()
         resp = self.client.get("/custos/")
         self.assertEqual(resp.status_code, 302)
+
+
+class WizardRBACTests(TenantTestCase):
+    """RBAC: membro vê o wizard; só papéis que editam engineering_params/production calibram."""
+
+    _CALIBRAR = {
+        "n_tubos": "136", "tubo_material": "SA-179", "tubo_od_spec": '3/4"',
+        "tubo_wall_spec": "BWG 14", "tubo_comp_mm": "6096", "espelho_od_mm": "475",
+        "chicana_qty": "18", "known_price": "50000", "solve": "1"}
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+    def _login(self, role):
+        from apps.accounts.models import UserProfile
+        u = User.objects.create_user(username=f"u-{role}", password="senha-forte-123")
+        UserProfile.objects.create(user=u, full_name=role, role=role)
+        self.client.force_login(u)
+
+    def test_orcamentista_pode_ver_home(self):
+        from apps.accounts.models import UserProfile
+        self._login(UserProfile.ROLE_ORCAMENTISTA)
+        self.assertEqual(self.client.get("/custos/").status_code, 200)
+
+    def test_orcamentista_nao_pode_calibrar(self):
+        from apps.accounts.models import UserProfile
+        self._login(UserProfile.ROLE_ORCAMENTISTA)
+        resp = self.client.post("/custos/calibrar/", self._CALIBRAR)
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(CostDiscoverySession.objects.exists())
+
+    def test_admin_pode_calibrar(self):
+        from apps.accounts.models import UserProfile
+        self._login(UserProfile.ROLE_ADMIN)
+        resp = self.client.post("/custos/calibrar/", self._CALIBRAR)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(CostDiscoverySession.objects.filter(method="back_solve").exists())

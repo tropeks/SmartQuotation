@@ -1,7 +1,10 @@
 """Catálogo TEMA + seletor de composição (front+shell+rear) com checagem de compatibilidade."""
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
 
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import user_role
 from apps.tema_templates.models import ComponentTemplate, check_compatibility
 from apps.tema_templates.services import (
     estimate_complete, reference_inputs, _physical_params, _metalurgia,
@@ -9,6 +12,10 @@ from apps.tema_templates.services import (
     memorial_asme, COSTABLE)
 from apps.tema_templates.forms import PermutadorDataSheetForm
 from apps.engineering_params.models import TenantParamConfig
+
+# Espelha o RBAC de production/engineering_params: catálogo/composição/preview são leitura
+# (qualquer membro); persistir a cotação+proposta no data sheet é escrita restrita.
+_WRITE_ROLES = (UserProfile.ROLE_ENGENHEIRO, UserProfile.ROLE_ADMIN)
 
 
 def _compat_mode():
@@ -44,6 +51,9 @@ def data_sheet(request):
     avisos = []
     memorial = []
     if request.method == "POST":
+        # Persistir (salvar) é escrita: só papéis que editam custeio. Recompute/preview é leitura.
+        if request.POST.get("salvar") and user_role(request.user) not in _WRITE_ROLES:
+            raise PermissionDenied("Papel sem permissão para persistir cotação/proposta.")
         form = PermutadorDataSheetForm(request.POST)
         if form.is_valid():
             desig = form.cleaned_data["designacao"]

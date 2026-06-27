@@ -3,10 +3,16 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import require_role
 from apps.cost_discovery.models import CostDiscoverySession
 from apps.cost_discovery import services
 from apps.engineering_params.models import TenantParamConfig
 from apps.materials.models import MaterialPrice
+
+# Espelha o RBAC de production/engineering_params: só papéis que JÁ editam custeio
+# rodam o wizard de cadeia de custos (seed/calibração). Membros veem o home.
+_WRITE_ROLES = (UserProfile.ROLE_ENGENHEIRO, UserProfile.ROLE_ADMIN)
 
 
 @login_required
@@ -20,7 +26,7 @@ def wizard_home(request):
     return render(request, "cost_discovery/home.html", ctx)
 
 
-@login_required
+@require_role(*_WRITE_ROLES)
 def top_down(request):
     """Seed: o empresário entra preços de material e o fator de MO de cabeça."""
     if request.method == "POST":
@@ -41,7 +47,7 @@ def top_down(request):
                   {"fator_mo": TenantParamConfig.get_solo().fator_correcao_mo})
 
 
-@login_required
+@require_role(*_WRITE_ROLES)
 def back_solve(request):
     """Calibração: entra um job real (specs + preço conhecido) → fator de MO que o reproduz."""
     result = None

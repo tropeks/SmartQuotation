@@ -84,7 +84,8 @@ class ProposalViewTests(TenantTestCase):
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
         self.user = User.objects.create_user(username="orc", password="senha-forte-123")
         from apps.accounts.models import UserProfile
-        UserProfile.objects.create(user=self.user, full_name="Orc", role=UserProfile.ROLE_ORCAMENTISTA)
+        # papel autorizado a criar/editar/gerar proposta (espelha production/engineering_params)
+        UserProfile.objects.create(user=self.user, full_name="Adm", role=UserProfile.ROLE_ADMIN)
         self.client.force_login(self.user)
         ProposalTemplate.objects.create(name="Padrão", is_default=True)
         self.q = create_feixe_quotation(Customer.objects.create(company_name="Cli"), "Feixe")
@@ -137,6 +138,44 @@ class ProposalViewTests(TenantTestCase):
         resp = self.client.get(f"/cotacoes/{self.q.pk}/proposta/nova/")
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/login/", resp.url)
+
+
+class ProposalRBACTests(TenantTestCase):
+    """RBAC: qualquer membro vê; só papéis que editam engineering_params/production criam/geram."""
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        ProposalTemplate.objects.create(name="Padrão", is_default=True)
+        self.q = create_feixe_quotation(Customer.objects.create(company_name="Cli"), "Feixe")
+
+    def _login(self, role):
+        from apps.accounts.models import UserProfile
+        u = User.objects.create_user(username=f"u-{role}", password="senha-forte-123")
+        UserProfile.objects.create(user=u, full_name=role, role=role)
+        self.client.force_login(u)
+        return u
+
+    def test_orcamentista_nao_pode_criar_proposta(self):
+        from apps.accounts.models import UserProfile
+        self._login(UserProfile.ROLE_ORCAMENTISTA)
+        resp = self.client.get(f"/cotacoes/{self.q.pk}/proposta/nova/")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_admin_pode_criar_proposta(self):
+        from apps.accounts.models import UserProfile
+        self._login(UserProfile.ROLE_ADMIN)
+        resp = self.client.get(f"/cotacoes/{self.q.pk}/proposta/nova/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Proposal.objects.exists())
+
+    def test_orcamentista_nao_pode_editar_proposta(self):
+        from apps.accounts.models import UserProfile
+        admin = self._login(UserProfile.ROLE_ADMIN)
+        p = services.create_proposal(self.q)
+        self._login(UserProfile.ROLE_ORCAMENTISTA)
+        resp = self.client.post(f"/propostas/{p.pk}/editar/", {
+            "intro_text": "x", "scope_text": "x", "terms_text": "x", "closing_text": "x"})
+        self.assertEqual(resp.status_code, 403)
 
 
 class ProposalMemorialTests(TenantTestCase):
