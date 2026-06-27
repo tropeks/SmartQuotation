@@ -30,3 +30,6 @@ graphify-out/
 .idea/
 .vscode/
 .gstack/
+.orch_evidence.txt
+.orch_baseline_test.log
+.orch_*
