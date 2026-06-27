@@ -67,7 +67,8 @@ class WizardViewTests(TenantTestCase):
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
         self.user = User.objects.create_user(username="dono", password="senha-forte-123")
         from apps.accounts.models import UserProfile
-        UserProfile.objects.create(user=self.user, full_name="Dono", role=UserProfile.ROLE_ORCAMENTISTA)
+        # /custos/calibrar/ exige papel de escrita (RBAC H2.8: Engenheiro/Admin).
+        UserProfile.objects.create(user=self.user, full_name="Dono", role=UserProfile.ROLE_ADMIN)
         self.client.force_login(self.user)
 
     def test_home_carrega(self):
