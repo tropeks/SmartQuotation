@@ -2,12 +2,15 @@
 Tests: scripts/backup_db.sh exists and is executable.
 """
 import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BACKUP_SCRIPT = ROOT / "scripts" / "backup_db.sh"
 ENV_PROD_EXAMPLE = ROOT / ".env.prod.example"
+INFRA_DOC = ROOT / "docs" / "INFRASTRUCTURE.md"
 
 
 def test_backup_script_exists():
@@ -50,6 +53,82 @@ def test_backup_script_uses_compose_exec_not_hardcoded_container():
     )
 
 
+def test_backup_script_has_set_u():
+    """Script must use set -u (or set -euo pipefail) so unbound vars are fatal, not silently empty."""
+    text = BACKUP_SCRIPT.read_text()
+    has_set_u = "set -u" in text or "set -euo pipefail" in text or "set -eu" in text
+    assert has_set_u, (
+        "backup_db.sh must use 'set -u' (or 'set -euo pipefail') so that missing "
+        "POSTGRES_USER / POSTGRES_DB fail loudly instead of producing a corrupt dump"
+    )
+
+
+def test_infrastructure_doc_sources_env_with_allexport():
+    """INFRASTRUCTURE.md must document 'set -a' when sourcing .env.prod.
+
+    Without 'set -a', variables defined in .env.prod without 'export' are only
+    available in the current shell — not inherited by the child process
+    (./scripts/backup_db.sh). With 'set -u' in the script, this causes
+    POSTGRES_USER / POSTGRES_DB to be 'unbound' and the script aborts.
+
+    The correct invocation is:
+        set -a && source .env.prod && set +a && ./scripts/backup_db.sh
+    or equivalently:
+        ( set -a; source .env.prod; ./scripts/backup_db.sh )
+    """
+    text = INFRA_DOC.read_text()
+    # The doc must show 'set -a' in the context of sourcing .env.prod
+    assert "set -a" in text, (
+        "INFRASTRUCTURE.md must document 'set -a' before 'source .env.prod' so that "
+        "shell variables are exported and inherited by scripts/backup_db.sh child process. "
+        "Without this, POSTGRES_USER/POSTGRES_DB are unbound in the script (set -u aborts)."
+    )
+
+
+def test_sourced_env_without_allexport_does_not_reach_child():
+    """Regression: sourcing .env without 'export' leaves vars unset in child process.
+
+    This test runs a minimal shell snippet that mirrors the bug scenario:
+      source <env-without-export> && bash -c 'echo ${MY_VAR}'
+    and verifies it fails (set -u) — confirming the fix (set -a) is necessary.
+    """
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
+        f.write("MY_VAR=hello\n")  # no 'export'
+        env_file = f.name
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".sh", delete=False) as f:
+        f.write("#!/usr/bin/env bash\nset -u\necho ${MY_VAR}\n")
+        child_script = f.name
+    os.chmod(child_script, 0o755)
+
+    # Without set -a: child should NOT inherit MY_VAR → set -u causes exit ≠ 0
+    result = subprocess.run(
+        ["bash", "-c", f"source {env_file} && {child_script}"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0, (
+        "Without 'set -a', sourced vars must NOT reach child process (set -u should abort). "
+        "This confirms the bug is real and set -a is necessary."
+    )
+
+    # With set -a: child SHOULD inherit MY_VAR → exit 0
+    result_fixed = subprocess.run(
+        ["bash", "-c", f"set -a && source {env_file} && set +a && {child_script}"],
+        capture_output=True,
+        text=True,
+    )
+    assert result_fixed.returncode == 0, (
+        "With 'set -a; source .env; set +a', vars must be inherited by child process."
+    )
+    assert "hello" in result_fixed.stdout, (
+        "Child process must see MY_VAR=hello when sourced with set -a."
+    )
+
+    os.unlink(env_file)
+    os.unlink(child_script)
+
+
 if __name__ == "__main__":
     tests = [
         test_backup_script_exists,
@@ -57,6 +136,9 @@ if __name__ == "__main__":
         test_backup_script_contains_pg_dump,
         test_env_prod_example_has_backup_dir,
         test_backup_script_uses_compose_exec_not_hardcoded_container,
+        test_backup_script_has_set_u,
+        test_infrastructure_doc_sources_env_with_allexport,
+        test_sourced_env_without_allexport_does_not_reach_child,
     ]
     failed = []
     for t in tests:

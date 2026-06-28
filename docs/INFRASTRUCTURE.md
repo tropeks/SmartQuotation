@@ -411,8 +411,12 @@ o resultado com gzip. Ele pode ser chamado diretamente ou agendado via cron do h
 # Uso manual
 POSTGRES_USER=sq POSTGRES_DB=smartquotation BACKUP_DIR=/backups/sq ./scripts/backup_db.sh
 # ou (usa POSTGRES_BACKUP_DIR do .env.prod):
-source .env.prod && ./scripts/backup_db.sh
+set -a && source .env.prod && set +a && ./scripts/backup_db.sh
 ```
+
+> **Atenção:** use `set -a` antes de `source` para que as variáveis do `.env.prod` (sem `export`)
+> sejam exportadas e herdadas pelo processo filho (`backup_db.sh`). Sem isso, com `set -u` no
+> script, `POSTGRES_USER`/`POSTGRES_DB` ficam "unbound" e o script aborta.
 
 **Agendamento via cron do host** (crontab do usuário de deploy):
 
