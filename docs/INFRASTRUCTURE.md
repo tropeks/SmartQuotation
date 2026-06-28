@@ -400,9 +400,9 @@ jobs:
 
 ---
 
-## 6. Backup
+## 6. Backup e Recuperação
 
-### 6.0 Backup rápido via scripts/backup_db.sh
+### Backup rápido via scripts/backup_db.sh
 
 O script `scripts/backup_db.sh` executa um dump do PostgreSQL usando `docker exec` e comprime
 o resultado com gzip. Ele pode ser chamado diretamente ou agendado via cron do host.
@@ -425,10 +425,6 @@ Para editar: `crontab -e`
 
 > A variável `POSTGRES_BACKUP_DIR` (padrão `/backups/sq`) é definida em `.env.prod.example`.
 > O script cria o diretório automaticamente se não existir.
-
----
-
-## 6. Backup e Recuperação
 
 ### Estratégia de backup
 
