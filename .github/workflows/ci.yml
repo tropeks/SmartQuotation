@@ -36,6 +36,8 @@ jobs:
         run: python -m tests.test_media_volume_config
       - name: Verificar backup de media e runbook de restore
         run: python -m tests.test_media_backup
+      - name: Verificar contrato default_storage em proposals (geração + download)
+        run: python -m tests.test_proposals_storage_contract
 
   django-check:
     name: Django check + migrations
