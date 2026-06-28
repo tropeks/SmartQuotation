@@ -38,6 +38,51 @@ def test_env_prod_example_has_backup_dir():
     )
 
 
+def test_env_prod_example_has_media_backup_dir():
+    """MEDIA_BACKUP_DIR must be documented in .env.prod.example.
+
+    backup_media.sh resolves its destination as:
+        BACKUP_DIR="${BACKUP_DIR:-${MEDIA_BACKUP_DIR:-/backups/sq}}"
+
+    Without MEDIA_BACKUP_DIR in .env.prod.example an operator who customises
+    POSTGRES_BACKUP_DIR to a dedicated path will not realise that media backups
+    land in a different (default) directory.  Both vars must appear together in
+    the Backup section so the operator configures them as a pair.
+    """
+    text = ENV_PROD_EXAMPLE.read_text()
+    assert "MEDIA_BACKUP_DIR" in text, (
+        ".env.prod.example must document MEDIA_BACKUP_DIR alongside "
+        "POSTGRES_BACKUP_DIR so operators know where media backups land. "
+        "Without it, customising POSTGRES_BACKUP_DIR silently puts DB and "
+        "media backups in different directories."
+    )
+    assert "MEDIA_BACKUP_DIR=/backups/sq" in text, (
+        ".env.prod.example must set MEDIA_BACKUP_DIR=/backups/sq (same default "
+        "as POSTGRES_BACKUP_DIR so both go to the same place by default)."
+    )
+
+
+def test_env_prod_backup_vars_have_same_default():
+    """POSTGRES_BACKUP_DIR and MEDIA_BACKUP_DIR should share the same default path.
+
+    If their default values differ an operator who relies on the example file
+    without reading it carefully will have DB and media backups silently
+    separated, making a consistent restore harder.
+    """
+    text = ENV_PROD_EXAMPLE.read_text()
+    import re
+    pg_match = re.search(r"POSTGRES_BACKUP_DIR=(\S+)", text)
+    media_match = re.search(r"MEDIA_BACKUP_DIR=(\S+)", text)
+    assert pg_match, ".env.prod.example must define POSTGRES_BACKUP_DIR"
+    assert media_match, ".env.prod.example must define MEDIA_BACKUP_DIR"
+    assert pg_match.group(1) == media_match.group(1), (
+        f"POSTGRES_BACKUP_DIR ({pg_match.group(1)!r}) and MEDIA_BACKUP_DIR "
+        f"({media_match.group(1)!r}) must share the same default value in "
+        f".env.prod.example so DB and media backups go to the same directory "
+        f"out of the box."
+    )
+
+
 def test_backup_script_uses_compose_exec_not_hardcoded_container():
     """Script must use 'docker compose exec' (service name) not a hardcoded container name."""
     text = BACKUP_SCRIPT.read_text()
