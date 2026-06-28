@@ -35,12 +35,28 @@ def test_env_prod_example_has_backup_dir():
     )
 
 
+def test_backup_script_uses_compose_exec_not_hardcoded_container():
+    """Script must use 'docker compose exec' (service name) not a hardcoded container name."""
+    text = BACKUP_SCRIPT.read_text()
+    assert "docker exec" not in text, (
+        "backup_db.sh must not use 'docker exec' with a hardcoded container name; "
+        "use 'docker compose exec' so COMPOSE_PROJECT_NAME changes don't break it silently"
+    )
+    assert "docker compose" in text or "docker-compose" in text, (
+        "backup_db.sh must use 'docker compose exec' to reference the db service by name"
+    )
+    assert "exec" in text, (
+        "backup_db.sh must use 'docker compose exec' to reference the db service by name"
+    )
+
+
 if __name__ == "__main__":
     tests = [
         test_backup_script_exists,
         test_backup_script_is_executable,
         test_backup_script_contains_pg_dump,
         test_env_prod_example_has_backup_dir,
+        test_backup_script_uses_compose_exec_not_hardcoded_container,
     ]
     failed = []
     for t in tests:
