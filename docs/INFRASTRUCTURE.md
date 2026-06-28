@@ -443,13 +443,16 @@ BACKUP_DIR="/backups/${TIMESTAMP}"
 mkdir -p "${BACKUP_DIR}"
 
 # 1. Dump completo do PostgreSQL
-docker compose exec -T db pg_dumpall -U ${POSTGRES_USER} \
+docker compose -f docker-compose.prod.yml exec -T db pg_dumpall -U ${POSTGRES_USER} \
   | age --encrypt --recipient "${BACKUP_PUBLIC_KEY}" \
   > "${BACKUP_DIR}/postgres_${TIMESTAMP}.sql.age"
 
-# 2. Snapshot do volume de uploads (rsync incremental)
-rsync -av --link-dest=/backups/latest/uploads/ \
-  /data/uploads/ "${BACKUP_DIR}/uploads/"
+# 2. Snapshot do volume de mídia (media_data: PDFs/DOCX de propostas em /app/backend/media)
+BACKUP_DIR="${BACKUP_DIR}" COMPOSE_FILE=docker-compose.prod.yml \
+  ./scripts/backup_media.sh
+# Ou equivalente inline:
+# docker compose -f docker-compose.prod.yml exec -T web \
+#   tar czf - /app/backend/media > "${BACKUP_DIR}/media_${TIMESTAMP}.tar.gz"
 
 # 3. Atualiza symlink de backup mais recente
 ln -sfn "${BACKUP_DIR}" /backups/latest
@@ -500,13 +503,15 @@ docker compose up -d db
 # 5. Descriptografar e restaurar banco
 age --decrypt --identity /path/to/private.key \
   /backups/latest/postgres_*.sql.age | \
-  docker compose exec -T db psql -U ${POSTGRES_USER}
+  docker compose -f docker-compose.prod.yml exec -T db psql -U ${POSTGRES_USER}
 
-# 6. Restaurar uploads
-rsync -av /backups/latest/uploads/ /data/uploads/
+# 6. Restaurar mídia (volume media_data → /app/backend/media dentro do container)
+docker compose -f docker-compose.prod.yml up -d web
+docker compose -f docker-compose.prod.yml exec -T web \
+  tar xzf - -C / < /backups/latest/media_*.tar.gz
 
 # 7. Subir todos os serviços
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # 8. Validar
 curl -f https://novo-vps.smartquotation.com.br/health/
