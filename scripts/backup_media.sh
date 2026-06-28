@@ -9,6 +9,13 @@ BACKUP_DIR="${BACKUP_DIR:-${MEDIA_BACKUP_DIR:-/backups/sq}}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 mkdir -p "${BACKUP_DIR}"
 
+FINAL="${BACKUP_DIR}/media_$(date +%Y%m%d_%H%M%S).tar.gz"
+TMPFILE="${FINAL}.tmp"
+
+trap 'rm -f "${TMPFILE}"' EXIT INT TERM
+
 docker compose -f "${COMPOSE_FILE}" exec -T web \
   tar czf - /app/backend/media \
-  > "${BACKUP_DIR}/media_$(date +%Y%m%d_%H%M%S).tar.gz"
+  > "${TMPFILE}"
+
+mv "${TMPFILE}" "${FINAL}"
