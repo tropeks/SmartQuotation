@@ -89,4 +89,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build Docker image
-        run: docker build -t smartquotation-ci:test ./backend
+        run: docker build -f backend/Dockerfile -t smartquotation-ci:test .
