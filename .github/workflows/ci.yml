@@ -20,6 +20,19 @@ jobs:
       - name: Validar motor do PERMUTADOR completo (BEU+BEM) vs gabarito (stdlib puro)
         run: python -m tests.validate_permutador_completo
 
+  ops-tests:
+    name: Testes de ops/infra (backup + media volume)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verificar script de backup (backup_db.sh)
+        run: python -m tests.test_backup_script
+      - name: Verificar configuração de volume de media
+        run: python -m tests.test_media_volume_config
+
   django-check:
     name: Django check + migrations
     runs-on: ubuntu-latest
