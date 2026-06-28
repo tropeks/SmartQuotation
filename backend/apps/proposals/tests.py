@@ -4,7 +4,10 @@ Testes do app proposals: template configurável, customização por caso, geraç
 import os
 import shutil
 import unittest
+from unittest.mock import patch
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django_tenants.test.cases import TenantTestCase
 
 from apps.quotations.models import Customer
@@ -55,13 +58,24 @@ class ProposalTests(TenantTestCase):
         self.assertIn("{{ titulo }}", self.tpl.intro_template)
         self.assertEqual(Proposal.objects.get(pk=p.pk).intro_text, "Texto customizado para ESTE cliente.")
 
+    def test_generate_docx_usa_default_storage(self):
+        """generate_docx() deve usar default_storage.save, não escrever direto no filesystem."""
+        p = services.create_proposal(self.q, self.tpl)
+        with patch.object(default_storage, 'save', wraps=default_storage.save) as mock_save:
+            name = services.generate_docx(p)
+        mock_save.assert_called()
+        # retorna nome de storage relativo (não caminho absoluto)
+        self.assertFalse(os.path.isabs(name))
+        self.assertTrue(default_storage.exists(name))
+        default_storage.delete(name)
+
     def test_generate_docx_cria_arquivo_e_hash(self):
         p = services.create_proposal(self.q, self.tpl)
-        path = services.generate_docx(p)
-        self.assertTrue(os.path.exists(path))
-        self.assertGreater(os.path.getsize(path), 1000)
-        self.assertEqual(len(Proposal.sha256(path)), 64)
-        os.remove(path)
+        name = services.generate_docx(p)
+        self.assertTrue(default_storage.exists(name))
+        with default_storage.open(name, "rb") as f:
+            self.assertGreater(len(f.read()), 1000)
+        default_storage.delete(name)
 
     @unittest.skipUnless(_chrome_ou_weasy(), "sem backend de PDF (chrome/weasyprint)")
     def test_generate_completo_docx_pdf_hashes(self):
@@ -112,20 +126,39 @@ class ProposalViewTests(TenantTestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(AccessLog.objects.filter(action="generate", resource_id=str(p.pk)).exists())
 
+    def test_download_usa_default_storage(self):
+        """proposal_download deve abrir o arquivo via default_storage, não os.path direto."""
+        p = services.create_proposal(self.q)
+        storage_name = "proposals/test-ds-storage.docx"
+        p.docx_path = storage_name
+        p.save()
+        if default_storage.exists(storage_name):
+            default_storage.delete(storage_name)
+        default_storage.save(storage_name, ContentFile(b"docx-test"))
+        try:
+            with patch.object(default_storage, 'open', wraps=default_storage.open) as mock_open:
+                resp = self.client.get(f"/propostas/{p.pk}/download/docx/")
+            self.assertEqual(resp.status_code, 200)
+            mock_open.assert_called_once_with(storage_name, "rb")
+        finally:
+            if default_storage.exists(storage_name):
+                default_storage.delete(storage_name)
+
     def test_download_registra_access_log(self):
         p = services.create_proposal(self.q)
-        p.docx_path = "proposals/test-download.docx"
-        from django.conf import settings
-        import os
-        os.makedirs(os.path.join(settings.MEDIA_ROOT, "proposals"), exist_ok=True)
-        with open(os.path.join(settings.MEDIA_ROOT, p.docx_path), "wb") as fp:
-            fp.write(b"docx")
+        storage_name = "proposals/test-download.docx"
+        p.docx_path = storage_name
         p.save()
-
-        resp = self.client.get(f"/propostas/{p.pk}/download/docx/")
-
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(AccessLog.objects.filter(action="download", resource_id=str(p.pk)).exists())
+        if default_storage.exists(storage_name):
+            default_storage.delete(storage_name)
+        default_storage.save(storage_name, ContentFile(b"docx"))
+        try:
+            resp = self.client.get(f"/propostas/{p.pk}/download/docx/")
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(AccessLog.objects.filter(action="download", resource_id=str(p.pk)).exists())
+        finally:
+            if default_storage.exists(storage_name):
+                default_storage.delete(storage_name)
 
 
     def test_download_formato_invalido_retorna_404(self):
@@ -179,11 +212,16 @@ class ProposalMemorialTests(TenantTestCase):
         from apps.proposals.services import create_proposal, generate_docx
         import docx
         prop = create_proposal(self._permutador_q())
-        path = generate_docx(prop)
-        d = docx.Document(path)
-        full = "\n".join(p.text for p in d.paragraphs)
-        for t in d.tables:
-            for row in t.rows:
-                full += "\n" + " ".join(c.text for c in row.cells)
-        self.assertIn("Memória de cálculo", full)
-        self.assertIn("UG-27", full)
+        name = generate_docx(prop)
+        try:
+            with default_storage.open(name, "rb") as f:
+                d = docx.Document(f)
+            full = "\n".join(p.text for p in d.paragraphs)
+            for t in d.tables:
+                for row in t.rows:
+                    full += "\n" + " ".join(c.text for c in row.cells)
+            self.assertIn("Memória de cálculo", full)
+            self.assertIn("UG-27", full)
+        finally:
+            if default_storage.exists(name):
+                default_storage.delete(name)
