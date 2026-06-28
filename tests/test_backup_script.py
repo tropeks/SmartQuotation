@@ -63,6 +63,33 @@ def test_backup_script_has_set_u():
     )
 
 
+def test_cron_entry_sources_env_prod():
+    """The documented cron entry must source .env.prod (with set -a) before calling backup_db.sh.
+
+    A bare cron entry like:
+        0 3 * * * /opt/smartquotation/scripts/backup_db.sh
+    runs without the shell profile, so POSTGRES_USER/POSTGRES_DB are unbound
+    and the script aborts (set -u). The cron entry must use:
+        bash -c 'set -a && source /opt/smartquotation/.env.prod && set +a && /opt/.../backup_db.sh'
+    or an equivalent that exports the .env.prod variables into the child process.
+    """
+    text = INFRA_DOC.read_text()
+    lines = text.splitlines()
+    cron_lines = [l for l in lines if "backup_db.sh" in l and ("* * *" in l or "cron" in l.lower())]
+    # Find the literal cron schedule line (starts with digits or 0-59)
+    schedule_lines = [l for l in lines if "backup_db.sh" in l and l.strip().startswith("0 ")]
+    assert schedule_lines, (
+        "INFRASTRUCTURE.md must contain a cron schedule line with 'backup_db.sh'"
+    )
+    for line in schedule_lines:
+        sources_env = ".env.prod" in line or "env.prod" in line
+        assert sources_env, (
+            f"Cron entry must source .env.prod to export POSTGRES_USER/POSTGRES_DB, "
+            f"but found: {line!r}. "
+            f"Without sourcing .env.prod, the cron job fails with 'unbound variable'."
+        )
+
+
 def test_infrastructure_doc_sources_env_with_allexport():
     """INFRASTRUCTURE.md must document 'set -a' when sourcing .env.prod.
 
@@ -137,6 +164,7 @@ if __name__ == "__main__":
         test_env_prod_example_has_backup_dir,
         test_backup_script_uses_compose_exec_not_hardcoded_container,
         test_backup_script_has_set_u,
+        test_cron_entry_sources_env_prod,
         test_infrastructure_doc_sources_env_with_allexport,
         test_sourced_env_without_allexport_does_not_reach_child,
     ]

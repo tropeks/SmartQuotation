@@ -422,7 +422,7 @@ set -a && source .env.prod && set +a && ./scripts/backup_db.sh
 
 ```
 # Backup diário às 3h
-0 3 * * * /opt/smartquotation/scripts/backup_db.sh >> /var/log/sq_backup.log 2>&1
+0 3 * * * bash -c 'set -a && source /opt/smartquotation/.env.prod && set +a && /opt/smartquotation/scripts/backup_db.sh' >> /var/log/sq_backup.log 2>&1
 ```
 
 Para editar: `crontab -e`
