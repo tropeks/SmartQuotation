@@ -20,10 +20,14 @@ services:
     command: gunicorn --bind 0.0.0.0:8000 --workers=4 --timeout=60 smartquotation.wsgi:application
     ports:
       - "8000:8000"
+    volumes:
+      - media_data:/app/backend/media
 
   worker:
     <<: *app-common
     command: celery -A smartquotation.celery_app worker -l info
+    volumes:
+      - media_data:/app/backend/media
 
   beat:
     <<: *app-common
@@ -61,6 +65,7 @@ services:
 
 volumes:
   sq_postgres_data:
+  media_data:
 
 networks:
   sq_net:
