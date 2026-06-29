@@ -45,7 +45,7 @@ def export_of_to_bling_for_schema(of_id: int, tenant_schema: str) -> dict:
         client = BlingClient(config=config)
         try:
             response = client.post_nfe(payload)
-            bling_nfe_id = str(response.get("id", ""))
+            bling_nfe_id = str(response.get("data", response).get("id", ""))
             BlingExportLog.objects.create(
                 of_id=of_id,
                 status=BlingExportLog.STATUS_SUCCESS,

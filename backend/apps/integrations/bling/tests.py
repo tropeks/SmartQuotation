@@ -391,6 +391,20 @@ class BlingExportTaskTests(TenantTestCase):
             f"disparou {len(ctx.captured_queries)}: {[q['sql'][:120] for q in ctx.captured_queries]}",
         )
 
+    def test_export_of_to_bling_extracts_id_from_data_envelope(self):
+        """Bling API v3 wraps responses in {'data': {...}}; bling_nfe_id must still be captured."""
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import export_of_to_bling
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.return_value = {"data": {"id": 99, "situacao": {"valor": 100}}}
+            export_of_to_bling(self.of.pk, self.tenant.schema_name)
+
+        log = BlingExportLog.objects.get(of_id=self.of.pk)
+        self.assertEqual(log.status, BlingExportLog.STATUS_SUCCESS)
+        self.assertEqual(log.bling_nfe_id, "99", "id deve ser extraído de dentro do envelope 'data'")
+        self.assertIsNone(log.error)
+
     def test_export_of_to_bling_builds_payload_with_of_number_and_cnpj(self):
         from unittest import mock
 
