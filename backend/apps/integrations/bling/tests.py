@@ -8,6 +8,15 @@ from django_tenants.test.cases import TenantTestCase
 from apps.integrations.bling.models import BlingIntegrationConfig
 
 
+class BlingInitModuleTests(TenantTestCase):
+    def test_default_app_config_not_defined(self):
+        import apps.integrations.bling as bling_module
+        self.assertFalse(
+            hasattr(bling_module, "default_app_config"),
+            "default_app_config é código morto no Django 4.1+ e deve ser removido",
+        )
+
+
 class BlingIntegrationConfigTests(TenantTestCase):
     def test_config_create_and_retrieve(self):
         config = BlingIntegrationConfig.objects.create(
