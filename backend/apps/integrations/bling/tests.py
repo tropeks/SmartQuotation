@@ -525,6 +525,124 @@ class BlingFakeClientTests(TenantTestCase):
         self.assertIn("id", result)
 
 
+class BlingClientTokenAutoRefreshTests(TenantTestCase):
+    def setUp(self):
+        from apps.integrations.bling.client import BlingClient
+
+        self.config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="cid-autorefresh",
+            client_secret="csec-autorefresh",
+            access_token="old-token",
+            refresh_token="rtk-autorefresh",
+            company_id="empresa-autorefresh",
+        )
+        self.bling_client = BlingClient(config=self.config)
+
+    def _make_success_response(self):
+        resp = mock.MagicMock()
+        resp.status_code = 200
+        resp.content = b'{"id": 1}'
+        resp.json.return_value = {"id": 1}
+        resp.raise_for_status.return_value = None
+        return resp
+
+    def _make_401_response(self):
+        import requests as req_lib
+
+        resp = mock.MagicMock()
+        resp.status_code = 401
+        resp.raise_for_status.side_effect = req_lib.HTTPError("401 Unauthorized", response=resp)
+        return resp
+
+    def test_expired_token_triggers_refresh_before_request(self):
+        """Token expired → oauth_refresh_token called before API request."""
+        self.config.token_expires_at = timezone.now() - timedelta(seconds=30)
+        self.config.save(update_fields=["token_expires_at"])
+
+        self.bling_client._session.request = mock.MagicMock(
+            return_value=self._make_success_response()
+        )
+        with mock.patch.object(self.bling_client, "oauth_refresh_token") as mock_refresh:
+            self.bling_client.post_nfe({"numero": "001"})
+
+        mock_refresh.assert_called_once()
+
+    def test_valid_token_does_not_trigger_preemptive_refresh(self):
+        """Token still valid → oauth_refresh_token must NOT be called preemptively."""
+        self.config.token_expires_at = timezone.now() + timedelta(hours=1)
+        self.config.save(update_fields=["token_expires_at"])
+
+        self.bling_client._session.request = mock.MagicMock(
+            return_value=self._make_success_response()
+        )
+        with mock.patch.object(self.bling_client, "oauth_refresh_token") as mock_refresh:
+            self.bling_client.post_nfe({"numero": "001"})
+
+        mock_refresh.assert_not_called()
+
+    def test_missing_token_expiry_skips_preemptive_refresh(self):
+        """No token_expires_at → oauth_refresh_token must NOT be called preemptively."""
+        self.config.token_expires_at = None
+        self.config.save(update_fields=["token_expires_at"])
+
+        self.bling_client._session.request = mock.MagicMock(
+            return_value=self._make_success_response()
+        )
+        with mock.patch.object(self.bling_client, "oauth_refresh_token") as mock_refresh:
+            self.bling_client.post_nfe({"numero": "001"})
+
+        mock_refresh.assert_not_called()
+
+    def test_401_triggers_refresh_and_retry(self):
+        """On 401, client refreshes token and retries the request exactly once."""
+        call_count = 0
+
+        def session_side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return self._make_401_response()
+            return self._make_success_response()
+
+        self.bling_client._session.request = mock.MagicMock(side_effect=session_side_effect)
+        with mock.patch.object(self.bling_client, "oauth_refresh_token") as mock_refresh:
+            result = self.bling_client.post_nfe({"numero": "001"})
+
+        self.assertEqual(call_count, 2, "Should make exactly 2 HTTP calls: original + retry")
+        mock_refresh.assert_called_once()
+        self.assertEqual(result, {"id": 1})
+
+    def test_401_after_refresh_raises_client_error(self):
+        """If the retry after 401+refresh also returns 401, raises BlingClientError."""
+        from apps.integrations.bling.client import BlingClientError
+
+        self.bling_client._session.request = mock.MagicMock(
+            return_value=self._make_401_response()
+        )
+        with mock.patch.object(self.bling_client, "oauth_refresh_token"):
+            with self.assertRaises(BlingClientError):
+                self.bling_client.post_nfe({"numero": "001"})
+
+    def test_oauth_endpoint_does_not_trigger_401_retry_loop(self):
+        """oauth_refresh_token itself uses explicit headers → 401 on it raises immediately."""
+        import requests as req_lib
+        from apps.integrations.bling.client import BlingClientError
+
+        self.bling_client._session.request = mock.MagicMock(
+            return_value=self._make_401_response()
+        )
+        with self.assertRaises(BlingClientError) as ctx:
+            self.bling_client.oauth_refresh_token(
+                client_id="cid",
+                client_secret="csec",
+                refresh_token="rtk",
+            )
+
+        self.assertEqual(self.bling_client._session.request.call_count, 1)
+        self.assertEqual(ctx.exception.status_code, 401)
+
+
 class BlingHealthCheckAdminTests(TenantTestCase):
     def setUp(self):
         from django.contrib.auth.models import User

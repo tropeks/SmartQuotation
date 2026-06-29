@@ -10,6 +10,7 @@ from django.utils import timezone
 BLING_BASE_URL = "https://api.bling.com.br/Api/v3"
 _TIMEOUT = 30
 _TRANSIENT_STATUSES = {408, 429}
+_TOKEN_REFRESH_BUFFER = timedelta(seconds=60)
 
 
 class BlingClientError(RuntimeError):
@@ -53,6 +54,17 @@ class BlingClient(BaseBlingClient):
             "Accept": "application/json",
         }
 
+    def _ensure_fresh_token(self):
+        expires_at = self.config.token_expires_at
+        if expires_at is None:
+            return
+        if timezone.now() >= expires_at - _TOKEN_REFRESH_BUFFER:
+            self.oauth_refresh_token(
+                client_id=self.config.client_id,
+                client_secret=self.config.client_secret,
+                refresh_token=self.config.refresh_token,
+            )
+
     def oauth_refresh_token(self, client_id, client_secret, refresh_token):
         credentials = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
         response = self._request(
@@ -83,7 +95,9 @@ class BlingClient(BaseBlingClient):
     def _request(self, method, path, **kwargs):
         url = f"{self._base_url}/{path.lstrip('/')}"
         headers = kwargs.pop("headers", None)
-        if headers is None:
+        _use_auth = headers is None
+        if _use_auth:
+            self._ensure_fresh_token()
             headers = self.get_headers()
         try:
             resp = self._session.request(
@@ -100,6 +114,32 @@ class BlingClient(BaseBlingClient):
         except requests.HTTPError as exc:
             resp = exc.response
             status = resp.status_code if resp is not None else None
+            if status == 401 and _use_auth:
+                self.oauth_refresh_token(
+                    client_id=self.config.client_id,
+                    client_secret=self.config.client_secret,
+                    refresh_token=self.config.refresh_token,
+                )
+                try:
+                    resp2 = self._session.request(
+                        method=method,
+                        url=url,
+                        headers=self.get_headers(),
+                        timeout=self._timeout,
+                        **kwargs,
+                    )
+                    resp2.raise_for_status()
+                    if not getattr(resp2, "content", b""):
+                        return {}
+                    return resp2.json()
+                except requests.HTTPError as exc2:
+                    resp2 = exc2.response
+                    status2 = resp2.status_code if resp2 is not None else None
+                    if status2 in _TRANSIENT_STATUSES or (status2 is not None and status2 >= 500):
+                        raise BlingTransientError(str(exc2)) from exc2
+                    raise BlingClientError(str(exc2), status_code=status2) from exc2
+                except requests.RequestException as exc2:
+                    raise BlingTransientError(str(exc2)) from exc2
             if status in _TRANSIENT_STATUSES or (status is not None and status >= 500):
                 raise BlingTransientError(str(exc)) from exc
             raise BlingClientError(str(exc), status_code=status) from exc
