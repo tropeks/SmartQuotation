@@ -1,0 +1,145 @@
+from __future__ import annotations
+
+import base64
+import time
+from datetime import timedelta
+
+import requests
+from django.utils import timezone
+
+
+BLING_BASE_URL = "https://www.bling.com.br/Api/v3"
+_TIMEOUT = 30
+_MAX_RETRIES = 3
+_TRANSIENT_STATUSES = {408, 429}
+
+
+class BlingClientError(RuntimeError):
+    def __init__(self, message, *, status_code=None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class BaseBlingClient:
+    def oauth_refresh_token(self, client_id, client_secret, refresh_token):
+        raise NotImplementedError
+
+    def get_headers(self):
+        raise NotImplementedError
+
+    def post_nfe(self, payload):
+        raise NotImplementedError
+
+    def get_nfe_status(self, nfe_id):
+        raise NotImplementedError
+
+
+class BlingClient(BaseBlingClient):
+    def __init__(self, config, *, base_url=BLING_BASE_URL, session=None):
+        self.config = config
+        self._base_url = base_url.rstrip("/")
+        self._session = session or requests.Session()
+        self._timeout = _TIMEOUT
+        self._max_retries = _MAX_RETRIES
+
+    def get_headers(self):
+        return {
+            "Authorization": f"Bearer {self.config.access_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+    def oauth_refresh_token(self, client_id, client_secret, refresh_token):
+        credentials = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+        response = self._request(
+            "POST",
+            "/oauth/token",
+            headers={
+                "Authorization": f"Basic {credentials}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data={"grant_type": "refresh_token", "refresh_token": refresh_token},
+        )
+        access_token = response["access_token"]
+        expires_in = response.get("expires_in", 3600)
+        expires_at = timezone.now() + timedelta(seconds=expires_in)
+        self.config.access_token = access_token
+        self.config.token_expires_at = expires_at
+        self.config.save(update_fields=["access_token", "token_expires_at"])
+
+    def post_nfe(self, payload):
+        return self._request("POST", "/nfe", json=payload)
+
+    def get_nfe_status(self, nfe_id):
+        return self._request("GET", f"/nfe/{nfe_id}")
+
+    def _request(self, method, path, **kwargs):
+        url = f"{self._base_url}/{path.lstrip('/')}"
+        headers = kwargs.pop("headers", None)
+        if headers is None:
+            headers = self.get_headers()
+        last_exc = None
+        for attempt in range(self._max_retries):
+            try:
+                resp = self._session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    timeout=self._timeout,
+                    **kwargs,
+                )
+                resp.raise_for_status()
+                if not getattr(resp, "content", b""):
+                    return {}
+                return resp.json()
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                last_exc = exc
+            except requests.HTTPError as exc:
+                resp = exc.response
+                status = resp.status_code if resp is not None else None
+                if status in _TRANSIENT_STATUSES or (status is not None and status >= 500):
+                    last_exc = exc
+                else:
+                    raise BlingClientError(str(exc), status_code=status) from exc
+            except requests.RequestException as exc:
+                last_exc = exc
+
+            if attempt < self._max_retries - 1:
+                time.sleep(2**attempt)
+
+        raise BlingClientError(str(last_exc)) from last_exc
+
+    def close(self):
+        self._session.close()
+
+
+class BlingFakeClient(BaseBlingClient):
+    def __init__(self, config):
+        self.config = config
+        self._nfes = {}
+        self._next_id = 1
+
+    def get_headers(self):
+        return {
+            "Authorization": f"Bearer {self.config.access_token}",
+            "Content-Type": "application/json",
+        }
+
+    def oauth_refresh_token(self, client_id, client_secret, refresh_token):
+        fake_token = f"fake-access-{client_id}-refreshed"
+        expires_at = timezone.now() + timedelta(hours=1)
+        self.config.access_token = fake_token
+        self.config.token_expires_at = expires_at
+        self.config.save(update_fields=["access_token", "token_expires_at"])
+
+    def post_nfe(self, payload):
+        nfe_id = self._next_id
+        self._next_id += 1
+        self._nfes[nfe_id] = {"id": nfe_id, "situacao": {"valor": 100}, "payload": payload}
+        return {"id": nfe_id, "situacao": {"valor": 100}}
+
+    def get_nfe_status(self, nfe_id):
+        nfe_id_int = int(nfe_id)
+        if nfe_id_int in self._nfes:
+            return self._nfes[nfe_id_int]
+        return {"id": nfe_id_int, "situacao": {"valor": 100}}

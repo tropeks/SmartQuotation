@@ -1,4 +1,8 @@
+from datetime import timedelta
+from unittest import mock
+
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.integrations.bling.models import BlingIntegrationConfig
@@ -80,3 +84,110 @@ class BlingIntegrationConfigTests(TenantTestCase):
         )
 
         self.assertEqual(config.provider, "bling")
+
+
+class BlingClientTests(TenantTestCase):
+    def setUp(self):
+        from apps.integrations.bling.client import BlingClient
+
+        self.config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="client-id-test",
+            client_secret="client-secret-test",
+            access_token="old-access-token",
+            refresh_token="old-refresh-token",
+            company_id="empresa-test",
+        )
+        self.bling_client = BlingClient(config=self.config)
+
+    def test_oauth_refresh_token_updates_access_token_and_expires_at(self):
+        fake_now = timezone.now()
+        token_response = {
+            "access_token": "new-access-token",
+            "expires_in": 3600,
+            "token_type": "Bearer",
+        }
+        with mock.patch.object(self.bling_client, "_request", return_value=token_response):
+            with mock.patch("apps.integrations.bling.client.timezone") as mock_tz:
+                mock_tz.now.return_value = fake_now
+                self.bling_client.oauth_refresh_token(
+                    client_id="client-id-test",
+                    client_secret="client-secret-test",
+                    refresh_token="old-refresh-token",
+                )
+
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.access_token, "new-access-token")
+        expected_expires = fake_now + timedelta(seconds=3600)
+        self.assertEqual(self.config.token_expires_at, expected_expires)
+
+    def test_get_headers_returns_bearer_token(self):
+        self.config.access_token = "my-bearer-token"
+        self.config.save(update_fields=["access_token"])
+
+        headers = self.bling_client.get_headers()
+
+        self.assertEqual(headers["Authorization"], "Bearer my-bearer-token")
+        self.assertIn("Content-Type", headers)
+
+    def test_post_nfe_calls_correct_endpoint(self):
+        payload = {"numero": "001", "serie": "1"}
+        expected_response = {"id": 42, "situacao": {"valor": 100}}
+        with mock.patch.object(self.bling_client, "_request", return_value=expected_response) as mock_req:
+            result = self.bling_client.post_nfe(payload)
+
+        mock_req.assert_called_once_with("POST", "/nfe", json=payload)
+        self.assertEqual(result, expected_response)
+
+    def test_get_nfe_status_calls_correct_endpoint(self):
+        nfe_id = "12345"
+        expected_response = {"id": 12345, "situacao": {"valor": 101}}
+        with mock.patch.object(self.bling_client, "_request", return_value=expected_response) as mock_req:
+            result = self.bling_client.get_nfe_status(nfe_id)
+
+        mock_req.assert_called_once_with("GET", f"/nfe/{nfe_id}")
+        self.assertEqual(result, expected_response)
+
+
+class BlingFakeClientTests(TenantTestCase):
+    def setUp(self):
+        from apps.integrations.bling.client import BlingFakeClient
+
+        self.config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="fake-client-id",
+            client_secret="fake-client-secret",
+            access_token="fake-access-token",
+            refresh_token="fake-refresh-token",
+            company_id="empresa-fake",
+        )
+        self.fake_client = BlingFakeClient(config=self.config)
+
+    def test_fake_oauth_refresh_updates_config(self):
+        self.fake_client.oauth_refresh_token(
+            client_id="fake-client-id",
+            client_secret="fake-client-secret",
+            refresh_token="fake-refresh-token",
+        )
+
+        self.config.refresh_from_db()
+        self.assertIsNotNone(self.config.access_token)
+        self.assertIsNotNone(self.config.token_expires_at)
+
+    def test_fake_get_headers_returns_bearer(self):
+        headers = self.fake_client.get_headers()
+
+        self.assertTrue(headers["Authorization"].startswith("Bearer "))
+
+    def test_fake_post_nfe_returns_dict(self):
+        payload = {"numero": "001"}
+        result = self.fake_client.post_nfe(payload)
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("id", result)
+
+    def test_fake_get_nfe_status_returns_dict(self):
+        result = self.fake_client.get_nfe_status("999")
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("id", result)
