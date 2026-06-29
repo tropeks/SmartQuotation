@@ -94,6 +94,36 @@ class BlingIntegrationConfigTests(TenantTestCase):
 
         self.assertEqual(config.provider, "bling")
 
+    def test_access_token_accepts_jwt_up_to_4096_chars(self):
+        """Bling JWTs can reach ~3 000 chars; max_length must accommodate them without ValidationError."""
+        long_token = "a" * 3001
+        config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="cid-long",
+            client_secret="csec-long",
+            access_token=long_token,
+            refresh_token="rtk-long",
+            company_id="emp-long",
+        )
+
+        config.refresh_from_db()
+        self.assertEqual(config.access_token, long_token)
+
+    def test_refresh_token_accepts_jwt_up_to_4096_chars(self):
+        """Refresh tokens from Bling may also be JWTs; max_length must not truncate or reject them."""
+        long_token = "r" * 3001
+        config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="cid-long-rt",
+            client_secret="csec-long-rt",
+            access_token="atk-long-rt",
+            refresh_token=long_token,
+            company_id="emp-long-rt",
+        )
+
+        config.refresh_from_db()
+        self.assertEqual(config.refresh_token, long_token)
+
 
 class BlingClientTests(TenantTestCase):
     def setUp(self):
