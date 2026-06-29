@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.db import transaction
 from django.db.models import Prefetch
 from django_tenants.utils import schema_context
 
@@ -32,29 +33,44 @@ def _build_nfe_payload(of: OrdemFabricacao) -> dict:
 
 def export_of_to_bling_for_schema(of_id: int, tenant_schema: str) -> dict:
     with schema_context(tenant_schema):
-        of = OrdemFabricacao.objects.select_related(
-            "quotation__customer"
-        ).prefetch_related(
-            Prefetch("itens", queryset=OFItem.objects.order_by("sort_order", "codigo_item", "pk"))
-        ).get(pk=of_id)
-        config = BlingIntegrationConfig.objects.filter(enabled=True).first()
-        if config is None:
-            raise BlingClientError("Integracao Bling nao esta habilitada para este tenant.")
-
-        payload = _build_nfe_payload(of)
-        client = BlingClient(config=config)
         try:
-            response = client.post_nfe(payload)
-            bling_nfe_id = str(response.get("data", response).get("id", ""))
-            BlingExportLog.objects.create(
-                of_id=of_id,
-                status=BlingExportLog.STATUS_SUCCESS,
-                bling_nfe_id=bling_nfe_id,
-            )
-            return {"status": "success", "bling_nfe_id": bling_nfe_id}
+            with transaction.atomic():
+                # Lock the OF row to prevent concurrent duplicate exports of the same OF.
+                of = (
+                    OrdemFabricacao.objects
+                    .select_related("quotation__customer")
+                    .prefetch_related(
+                        Prefetch("itens", queryset=OFItem.objects.order_by("sort_order", "codigo_item", "pk"))
+                    )
+                    .select_for_update()
+                    .get(pk=of_id)
+                )
+
+                # Idempotency: reuse existing success log instead of creating a duplicate NF-e.
+                existing = BlingExportLog.objects.filter(
+                    of_id=of_id, status=BlingExportLog.STATUS_SUCCESS
+                ).first()
+                if existing:
+                    return {"status": "success", "bling_nfe_id": existing.bling_nfe_id}
+
+                config = BlingIntegrationConfig.objects.filter(enabled=True).first()
+                if config is None:
+                    raise BlingClientError("Integracao Bling nao esta habilitada para este tenant.")
+
+                payload = _build_nfe_payload(of)
+                client = BlingClient(config=config)
+                response = client.post_nfe(payload)
+                bling_nfe_id = str(response.get("data", response).get("id", ""))
+                BlingExportLog.objects.create(
+                    of_id=of_id,
+                    status=BlingExportLog.STATUS_SUCCESS,
+                    bling_nfe_id=bling_nfe_id,
+                )
+                return {"status": "success", "bling_nfe_id": bling_nfe_id}
         except BlingTransientError:
             raise  # Celery retries transient errors; log only on final failure
         except BlingClientError as exc:
+            # Error log is written outside the rolled-back atomic block so it always persists.
             BlingExportLog.objects.create(
                 of_id=of_id,
                 status=BlingExportLog.STATUS_ERROR,

@@ -840,3 +840,123 @@ class BlingHealthCheckAdminTests(TenantTestCase):
                 forms.PasswordInput,
                 f"{field_name} deve usar PasswordInput para mascarar o segredo",
             )
+
+
+class BlingIdempotencyTests(TenantTestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from apps.accounts.models import UserProfile
+        from apps.audit.services import approve_quotation
+        from apps.production import services as prod_services
+        from apps.quotations.models import Customer
+        from apps.quotations.services import create_feixe_quotation
+
+        self.customer = Customer.objects.create(
+            company_name="ACME Idempotency",
+            cnpj="55.666.777/0001-88",
+        )
+        self.quotation = create_feixe_quotation(self.customer, "Feixe Idempotency")
+        user = User.objects.create_user(username="eng_idem")
+        engineer = UserProfile.objects.create(
+            user=user,
+            full_name="Eng Idem",
+            role="engenheiro",
+            crea_number="CREA-111",
+            crea_state="SP",
+        )
+        approve_quotation(self.quotation, engineer)
+        self.of = prod_services.convert_quotation_to_of(self.quotation, created_by=user)
+
+        self.config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="cid-idem",
+            client_secret="csec-idem",
+            access_token="atk-idem",
+            refresh_token="rtk-idem",
+            company_id="emp-idem",
+        )
+
+    def test_second_export_returns_existing_nfe_id_without_api_call(self):
+        """Second call for the same OF must return the existing bling_nfe_id without calling the API."""
+        from unittest import mock
+
+        from apps.integrations.bling.tasks import export_of_to_bling_for_schema
+
+        call_count = 0
+
+        def counting_post_nfe(payload):
+            nonlocal call_count
+            call_count += 1
+            return {"id": 42}
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.side_effect = counting_post_nfe
+
+            result1 = export_of_to_bling_for_schema(self.of.pk, self.tenant.schema_name)
+            result2 = export_of_to_bling_for_schema(self.of.pk, self.tenant.schema_name)
+
+        self.assertEqual(call_count, 1, "API deve ser chamada apenas uma vez para a mesma OF")
+        self.assertEqual(result1["bling_nfe_id"], "42")
+        self.assertEqual(result2["bling_nfe_id"], "42")
+        self.assertEqual(result2["status"], "success")
+
+    def test_second_export_does_not_create_second_success_log(self):
+        """Exportar a mesma OF duas vezes não deve criar dois BlingExportLog de sucesso."""
+        from unittest import mock
+
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import export_of_to_bling_for_schema
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.return_value = {"id": 55}
+
+            export_of_to_bling_for_schema(self.of.pk, self.tenant.schema_name)
+            export_of_to_bling_for_schema(self.of.pk, self.tenant.schema_name)
+
+        logs = BlingExportLog.objects.filter(
+            of_id=self.of.pk, status=BlingExportLog.STATUS_SUCCESS
+        )
+        self.assertEqual(logs.count(), 1, "Deve existir apenas um log de sucesso para a OF")
+
+    def test_unique_constraint_prevents_duplicate_success_logs(self):
+        """Constraint de banco: criar dois logs de sucesso para a mesma OF lança IntegrityError."""
+        from django.db import IntegrityError
+
+        from apps.integrations.bling.models import BlingExportLog
+
+        BlingExportLog.objects.create(
+            of_id=self.of.pk,
+            status=BlingExportLog.STATUS_SUCCESS,
+            bling_nfe_id="100",
+        )
+
+        with self.assertRaises(IntegrityError):
+            BlingExportLog.objects.create(
+                of_id=self.of.pk,
+                status=BlingExportLog.STATUS_SUCCESS,
+                bling_nfe_id="200",
+            )
+
+    def test_multiple_error_logs_allowed_for_same_of(self):
+        """Múltiplos logs de erro para a mesma OF devem ser permitidos (apenas sucesso é único)."""
+        from apps.integrations.bling.models import BlingExportLog
+
+        BlingExportLog.objects.create(
+            of_id=self.of.pk,
+            status=BlingExportLog.STATUS_ERROR,
+            error="Erro 1",
+        )
+        BlingExportLog.objects.create(
+            of_id=self.of.pk,
+            status=BlingExportLog.STATUS_ERROR,
+            error="Erro 2",
+        )
+
+        self.assertEqual(
+            BlingExportLog.objects.filter(
+                of_id=self.of.pk, status=BlingExportLog.STATUS_ERROR
+            ).count(),
+            2,
+            "Múltiplos logs de erro para a mesma OF devem ser permitidos",
+        )

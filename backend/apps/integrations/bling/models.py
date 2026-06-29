@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from encrypted_model_fields.fields import EncryptedCharField
 
 
@@ -60,6 +61,13 @@ class BlingExportLog(models.Model):
         verbose_name = "Log de Exportacao Bling"
         verbose_name_plural = "Logs de Exportacao Bling"
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["of_id"],
+                condition=Q(status="success"),
+                name="unique_bling_export_success_per_of",
+            )
+        ]
 
     def __str__(self):
         return f"BlingExportLog OF={self.of_id} {self.status}"
