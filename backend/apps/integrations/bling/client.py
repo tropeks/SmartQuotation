@@ -52,6 +52,7 @@ class BlingClient(BaseBlingClient):
             "Authorization": f"Bearer {self.config.access_token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "enable-jwt": "1",
         }
 
     def _ensure_fresh_token(self):
@@ -73,6 +74,7 @@ class BlingClient(BaseBlingClient):
             headers={
                 "Authorization": f"Basic {credentials}",
                 "Content-Type": "application/x-www-form-urlencoded",
+                "enable-jwt": "1",
             },
             data={"grant_type": "refresh_token", "refresh_token": refresh_token},
         )

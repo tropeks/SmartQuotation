@@ -232,6 +232,39 @@ class BlingClientTests(TenantTestCase):
         self.assertEqual(headers["Authorization"], "Bearer my-bearer-token")
         self.assertIn("Content-Type", headers)
 
+    def test_get_headers_includes_enable_jwt(self):
+        """Chamadas autenticadas devem enviar enable-jwt: 1 para usar o fluxo JWT não-opaco."""
+        headers = self.bling_client.get_headers()
+
+        self.assertEqual(
+            headers.get("enable-jwt"),
+            "1",
+            "get_headers deve incluir enable-jwt: 1 (migracao JWT Bling)",
+        )
+
+    def test_oauth_refresh_token_sends_enable_jwt_header(self):
+        """POST /oauth/token deve incluir enable-jwt: 1 para migrar do fluxo opaco depreciado."""
+        token_response = {"access_token": "new-token", "expires_in": 3600}
+        captured_kwargs = {}
+
+        def capture_request(method, path, **kwargs):
+            captured_kwargs.update(kwargs)
+            return token_response
+
+        with mock.patch.object(self.bling_client, "_request", side_effect=capture_request):
+            self.bling_client.oauth_refresh_token(
+                client_id="cid",
+                client_secret="csec",
+                refresh_token="rtk",
+            )
+
+        sent_headers = captured_kwargs.get("headers", {})
+        self.assertEqual(
+            sent_headers.get("enable-jwt"),
+            "1",
+            "oauth_refresh_token deve enviar enable-jwt: 1 no POST /oauth/token",
+        )
+
     def test_post_nfe_calls_correct_endpoint(self):
         payload = {"numero": "001", "serie": "1"}
         expected_response = {"id": 42, "situacao": {"valor": 100}}
