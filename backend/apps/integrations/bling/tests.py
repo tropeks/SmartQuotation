@@ -109,6 +109,20 @@ class BlingClientTests(TenantTestCase):
         )
         self.bling_client = BlingClient(config=self.config)
 
+    def test_base_url_uses_api_host(self):
+        from apps.integrations.bling.client import BLING_BASE_URL
+
+        self.assertIn(
+            "api.bling.com.br",
+            BLING_BASE_URL,
+            "BLING_BASE_URL deve usar api.bling.com.br (host atual da API v3), não www.bling.com.br",
+        )
+        self.assertNotIn(
+            "www.bling.com.br",
+            BLING_BASE_URL,
+            "BLING_BASE_URL não deve usar www.bling.com.br (host legado)",
+        )
+
     def test_oauth_refresh_token_updates_access_token_and_expires_at(self):
         fake_now = timezone.now()
         token_response = {

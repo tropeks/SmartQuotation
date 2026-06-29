@@ -7,7 +7,7 @@ import requests
 from django.utils import timezone
 
 
-BLING_BASE_URL = "https://www.bling.com.br/Api/v3"
+BLING_BASE_URL = "https://api.bling.com.br/Api/v3"
 _TIMEOUT = 30
 _TRANSIENT_STATUSES = {408, 429}
 
