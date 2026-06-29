@@ -15,10 +15,6 @@ class BlingIntegrationConfigAdmin(admin.ModelAdmin):
         "provider",
         "created_at",
         "updated_at",
-        "client_id",
-        "client_secret",
-        "access_token",
-        "refresh_token",
     )
     actions = ("check_health",)
 

@@ -498,7 +498,7 @@ class BlingHealthCheckAdminTests(TenantTestCase):
             call_args = mock_message.call_args
             self.assertIn("erro", call_args[0][1].lower())
 
-    def test_check_health_displays_fields_readonly(self):
+    def test_credential_fields_are_editable_not_readonly(self):
         from apps.integrations.bling.admin import BlingIntegrationConfigAdmin
         from apps.integrations.bling.models import BlingIntegrationConfig
         from django.contrib import admin
@@ -506,23 +506,44 @@ class BlingHealthCheckAdminTests(TenantTestCase):
         admin_instance = BlingIntegrationConfigAdmin(
             BlingIntegrationConfig, admin.site
         )
-        self.assertIn(
-            "client_id",
-            admin_instance.readonly_fields,
-            "client_id should be read-only",
+        credential_fields = ("client_id", "client_secret", "access_token", "refresh_token")
+        for field_name in credential_fields:
+            self.assertNotIn(
+                field_name,
+                admin_instance.readonly_fields,
+                f"{field_name} deve ser editável (com máscara), não readonly",
+            )
+
+    def test_metadata_fields_are_readonly(self):
+        from apps.integrations.bling.admin import BlingIntegrationConfigAdmin
+        from apps.integrations.bling.models import BlingIntegrationConfig
+        from django.contrib import admin
+
+        admin_instance = BlingIntegrationConfigAdmin(
+            BlingIntegrationConfig, admin.site
         )
-        self.assertIn(
-            "client_secret",
-            admin_instance.readonly_fields,
-            "client_secret should be read-only",
+        for field_name in ("provider", "created_at", "updated_at"):
+            self.assertIn(
+                field_name,
+                admin_instance.readonly_fields,
+                f"{field_name} deve ser readonly",
+            )
+
+    def test_credential_fields_use_password_widget_in_form(self):
+        from apps.integrations.bling.admin import BlingIntegrationConfigAdmin
+        from apps.integrations.bling.models import BlingIntegrationConfig
+        from django.contrib import admin
+        from django import forms
+
+        admin_instance = BlingIntegrationConfigAdmin(
+            BlingIntegrationConfig, admin.site
         )
-        self.assertIn(
-            "access_token",
-            admin_instance.readonly_fields,
-            "access_token should be read-only",
-        )
-        self.assertIn(
-            "refresh_token",
-            admin_instance.readonly_fields,
-            "refresh_token should be read-only",
-        )
+        form_instance = admin_instance.form()
+        credential_fields = ("client_id", "client_secret", "access_token", "refresh_token")
+        for field_name in credential_fields:
+            widget = form_instance.fields[field_name].widget
+            self.assertIsInstance(
+                widget,
+                forms.PasswordInput,
+                f"{field_name} deve usar PasswordInput para mascarar o segredo",
+            )
