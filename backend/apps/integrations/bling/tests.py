@@ -144,6 +144,55 @@ class BlingClientTests(TenantTestCase):
         expected_expires = fake_now + timedelta(seconds=3600)
         self.assertEqual(self.config.token_expires_at, expected_expires)
 
+    def test_oauth_refresh_token_saves_new_refresh_token_when_rotated(self):
+        """Provider returns a new refresh_token → it must be persisted so next refresh succeeds."""
+        fake_now = timezone.now()
+        token_response = {
+            "access_token": "rotated-access-token",
+            "refresh_token": "rotated-refresh-token",
+            "expires_in": 3600,
+            "token_type": "Bearer",
+        }
+        with mock.patch.object(self.bling_client, "_request", return_value=token_response):
+            with mock.patch("apps.integrations.bling.client.timezone") as mock_tz:
+                mock_tz.now.return_value = fake_now
+                self.bling_client.oauth_refresh_token(
+                    client_id="client-id-test",
+                    client_secret="client-secret-test",
+                    refresh_token="old-refresh-token",
+                )
+
+        self.config.refresh_from_db()
+        self.assertEqual(
+            self.config.refresh_token,
+            "rotated-refresh-token",
+            "refresh_token deve ser atualizado quando o provedor rotaciona tokens",
+        )
+
+    def test_oauth_refresh_token_preserves_old_refresh_token_when_not_rotated(self):
+        """Provider omits refresh_token in response → old one must be kept intact."""
+        fake_now = timezone.now()
+        token_response = {
+            "access_token": "new-access-no-rotation",
+            "expires_in": 3600,
+            "token_type": "Bearer",
+        }
+        with mock.patch.object(self.bling_client, "_request", return_value=token_response):
+            with mock.patch("apps.integrations.bling.client.timezone") as mock_tz:
+                mock_tz.now.return_value = fake_now
+                self.bling_client.oauth_refresh_token(
+                    client_id="client-id-test",
+                    client_secret="client-secret-test",
+                    refresh_token="old-refresh-token",
+                )
+
+        self.config.refresh_from_db()
+        self.assertEqual(
+            self.config.refresh_token,
+            "old-refresh-token",
+            "refresh_token original deve ser preservado quando o provedor não rotaciona",
+        )
+
     def test_get_headers_returns_bearer_token(self):
         self.config.access_token = "my-bearer-token"
         self.config.save(update_fields=["access_token"])

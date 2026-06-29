@@ -81,7 +81,12 @@ class BlingClient(BaseBlingClient):
         expires_at = timezone.now() + timedelta(seconds=expires_in)
         self.config.access_token = access_token
         self.config.token_expires_at = expires_at
-        self.config.save(update_fields=["access_token", "token_expires_at"])
+        update_fields = ["access_token", "token_expires_at"]
+        new_refresh_token = response.get("refresh_token")
+        if new_refresh_token:
+            self.config.refresh_token = new_refresh_token
+            update_fields.append("refresh_token")
+        self.config.save(update_fields=update_fields)
 
     def post_nfe(self, payload):
         return self._request("POST", "/nfe", json=payload)
