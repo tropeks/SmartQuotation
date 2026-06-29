@@ -7,12 +7,14 @@ Fluxo:
   create_proposal(quotation, tpl)   -> Proposal com textos editáveis pré-preenchidos
   generate(proposal)                -> escreve DOCX + PDF em MEDIA, grava hashes
 """
+import hashlib
 import os
 import shutil
 import subprocess
 import tempfile
 from datetime import date
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.template import engines
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -80,12 +82,6 @@ def create_proposal(quotation, template: ProposalTemplate = None) -> Proposal:
 
 # ---------------- Geração de arquivos ----------------
 
-def _media_dir() -> str:
-    d = os.path.join(settings.MEDIA_ROOT, "proposals")
-    os.makedirs(d, exist_ok=True)
-    return d
-
-
 def _chrome_bin() -> str | None:
     for c in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
         p = shutil.which(c)
@@ -101,34 +97,59 @@ def _pdf_context(proposal: Proposal) -> dict:
             "memorial": proposal_memorial(q)}
 
 
+def _save_to_storage(local_path: str, storage_name: str) -> str:
+    """Move um arquivo local para default_storage, retorna o storage name salvo."""
+    if default_storage.exists(storage_name):
+        default_storage.delete(storage_name)
+    with open(local_path, "rb") as f:
+        return default_storage.save(storage_name, f)
+
+
+def _sha256_storage(name: str) -> str:
+    h = hashlib.sha256()
+    with default_storage.open(name, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def generate_pdf(proposal: Proposal) -> str:
-    """Renderiza a proposta como HTML (design G) e converte para PDF.
+    """Renderiza a proposta como HTML (design G), converte para PDF e salva via default_storage.
     Usa WeasyPrint se disponível, senão chrome headless --print-to-pdf."""
     html = render_to_string("proposals/proposal_pdf.html", _pdf_context(proposal))
-    out = os.path.join(_media_dir(), f"{proposal.number}.pdf")
+    storage_name = f"proposals/{proposal.number}.pdf"
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
+    os.close(tmp_fd)
     try:
-        from weasyprint import HTML  # lazy (libs de sistema)
-        HTML(string=html).write_pdf(out)
-        return out
-    except Exception:
-        pass
-    chrome = _chrome_bin()
-    if not chrome:
-        raise RuntimeError("Sem backend de PDF (weasyprint ou chrome).")
-    with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as fp:
-        fp.write(html)
-        tmp_html = fp.name
-    try:
-        subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu",
-                        "--no-pdf-header-footer", f"--print-to-pdf={out}", f"file://{tmp_html}"],
-                       check=True, capture_output=True, timeout=60)
+        written = False
+        try:
+            from weasyprint import HTML  # lazy (libs de sistema)
+            HTML(string=html).write_pdf(tmp_path)
+            written = True
+        except Exception:
+            pass
+        if not written:
+            chrome = _chrome_bin()
+            if not chrome:
+                raise RuntimeError("Sem backend de PDF (weasyprint ou chrome).")
+            with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as fp:
+                fp.write(html)
+                tmp_html = fp.name
+            try:
+                subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu",
+                                "--no-pdf-header-footer", f"--print-to-pdf={tmp_path}",
+                                f"file://{tmp_html}"],
+                               check=True, capture_output=True, timeout=60)
+            finally:
+                os.unlink(tmp_html)
+        return _save_to_storage(tmp_path, storage_name)
     finally:
-        os.unlink(tmp_html)
-    return out
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 
 def generate_docx(proposal: Proposal) -> str:
-    """Gera o DOCX (editável no Word) com os textos da proposta + tabela de itens."""
+    """Gera o DOCX (editável no Word) e salva via default_storage. Retorna o storage name."""
     from docx import Document
     from docx.shared import Pt, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -187,19 +208,24 @@ def generate_docx(proposal: Proposal) -> str:
     doc.add_paragraph(proposal.terms_text)
     doc.add_paragraph(proposal.closing_text)
 
-    out = os.path.join(_media_dir(), f"{proposal.number}.docx")
-    doc.save(out)
-    return out
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".docx")
+    os.close(tmp_fd)
+    try:
+        doc.save(tmp_path)
+        return _save_to_storage(tmp_path, f"proposals/{proposal.number}.docx")
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 
 def generate(proposal: Proposal) -> Proposal:
-    """Gera DOCX + PDF, grava caminhos + hashes, marca como pronta."""
-    docx_path = generate_docx(proposal)
-    pdf_path = generate_pdf(proposal)
-    proposal.docx_path = os.path.relpath(docx_path, settings.MEDIA_ROOT)
-    proposal.pdf_path = os.path.relpath(pdf_path, settings.MEDIA_ROOT)
-    proposal.docx_sha256 = Proposal.sha256(docx_path)
-    proposal.pdf_sha256 = Proposal.sha256(pdf_path)
+    """Gera DOCX + PDF via default_storage, grava storage names + hashes, marca como pronta."""
+    docx_name = generate_docx(proposal)
+    pdf_name = generate_pdf(proposal)
+    proposal.docx_path = docx_name
+    proposal.pdf_path = pdf_name
+    proposal.docx_sha256 = _sha256_storage(docx_name)
+    proposal.pdf_sha256 = _sha256_storage(pdf_name)
     proposal.status = "ready"
     proposal.generated_at = timezone.now()
     proposal.save()

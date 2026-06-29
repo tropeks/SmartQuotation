@@ -402,6 +402,34 @@ jobs:
 
 ## 6. Backup e Recuperação
 
+### Backup rápido via scripts/backup_db.sh
+
+O script `scripts/backup_db.sh` executa um dump do PostgreSQL usando `docker exec` e comprime
+o resultado com gzip. Ele pode ser chamado diretamente ou agendado via cron do host.
+
+```bash
+# Uso manual
+POSTGRES_USER=sq POSTGRES_DB=smartquotation BACKUP_DIR=/backups/sq ./scripts/backup_db.sh
+# ou (usa POSTGRES_BACKUP_DIR do .env.prod):
+set -a && source .env.prod && set +a && ./scripts/backup_db.sh
+```
+
+> **Atenção:** use `set -a` antes de `source` para que as variáveis do `.env.prod` (sem `export`)
+> sejam exportadas e herdadas pelo processo filho (`backup_db.sh`). Sem isso, com `set -u` no
+> script, `POSTGRES_USER`/`POSTGRES_DB` ficam "unbound" e o script aborta.
+
+**Agendamento via cron do host** (crontab do usuário de deploy):
+
+```
+# Backup diário às 3h
+0 3 * * * bash -c 'set -a && source /opt/smartquotation/.env.prod && set +a && /opt/smartquotation/scripts/backup_db.sh' >> /var/log/sq_backup.log 2>&1
+```
+
+Para editar: `crontab -e`
+
+> A variável `POSTGRES_BACKUP_DIR` (padrão `/backups/sq`) é definida em `.env.prod.example`.
+> O script cria o diretório automaticamente se não existir.
+
 ### Estratégia de backup
 
 ```bash
@@ -415,13 +443,16 @@ BACKUP_DIR="/backups/${TIMESTAMP}"
 mkdir -p "${BACKUP_DIR}"
 
 # 1. Dump completo do PostgreSQL
-docker compose exec -T db pg_dumpall -U ${POSTGRES_USER} \
+docker compose -f docker-compose.prod.yml exec -T db pg_dumpall -U ${POSTGRES_USER} \
   | age --encrypt --recipient "${BACKUP_PUBLIC_KEY}" \
   > "${BACKUP_DIR}/postgres_${TIMESTAMP}.sql.age"
 
-# 2. Snapshot do volume de uploads (rsync incremental)
-rsync -av --link-dest=/backups/latest/uploads/ \
-  /data/uploads/ "${BACKUP_DIR}/uploads/"
+# 2. Snapshot do volume de mídia (media_data: PDFs/DOCX de propostas em /app/backend/media)
+BACKUP_DIR="${BACKUP_DIR}" COMPOSE_FILE=docker-compose.prod.yml \
+  ./scripts/backup_media.sh
+# Ou equivalente inline:
+# docker compose -f docker-compose.prod.yml exec -T web \
+#   tar czf - /app/backend/media > "${BACKUP_DIR}/media_${TIMESTAMP}.tar.gz"
 
 # 3. Atualiza symlink de backup mais recente
 ln -sfn "${BACKUP_DIR}" /backups/latest
@@ -472,13 +503,15 @@ docker compose up -d db
 # 5. Descriptografar e restaurar banco
 age --decrypt --identity /path/to/private.key \
   /backups/latest/postgres_*.sql.age | \
-  docker compose exec -T db psql -U ${POSTGRES_USER}
+  docker compose -f docker-compose.prod.yml exec -T db psql -U ${POSTGRES_USER}
 
-# 6. Restaurar uploads
-rsync -av /backups/latest/uploads/ /data/uploads/
+# 6. Restaurar mídia (volume media_data → /app/backend/media dentro do container)
+docker compose -f docker-compose.prod.yml up -d web
+docker compose -f docker-compose.prod.yml exec -T web \
+  tar xzf - -C / < /backups/latest/media_*.tar.gz
 
 # 7. Subir todos os serviços
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # 8. Validar
 curl -f https://novo-vps.smartquotation.com.br/health/

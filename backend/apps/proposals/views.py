@@ -1,7 +1,7 @@
 """Views da proposta: criar (do template) -> editar texto -> gerar DOCX/PDF -> baixar."""
 import os
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -57,8 +57,7 @@ def proposal_download(request, pk, fmt):
     rel = p.pdf_path if fmt == "pdf" else p.docx_path
     if not rel:
         raise Http404("Arquivo ainda não gerado.")
-    path = os.path.join(settings.MEDIA_ROOT, rel)
-    if not os.path.exists(path):
+    if not default_storage.exists(rel):
         raise Http404("Arquivo não encontrado.")
     log_access(request, "download", p, {"format": fmt, "path": rel})
-    return FileResponse(open(path, "rb"), as_attachment=True, filename=os.path.basename(path))
+    return FileResponse(default_storage.open(rel, "rb"), as_attachment=True, filename=os.path.basename(rel))

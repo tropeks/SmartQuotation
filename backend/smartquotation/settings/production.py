@@ -13,6 +13,8 @@ FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")
 # ─── Static files (WhiteNoise + optional S3 for media) ───────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = "/app/staticfiles"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = "/app/backend/media"
 
 STORAGES = {
     "default": {
