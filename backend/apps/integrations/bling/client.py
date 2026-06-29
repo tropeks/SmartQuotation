@@ -20,6 +20,10 @@ class BlingClientError(RuntimeError):
         self.status_code = status_code
 
 
+class BlingTransientError(BlingClientError):
+    """Raised for transient network/server failures that Celery should retry."""
+
+
 class BaseBlingClient:
     def oauth_refresh_token(self, client_id, client_secret, refresh_token):
         raise NotImplementedError
@@ -107,7 +111,7 @@ class BlingClient(BaseBlingClient):
             if attempt < self._max_retries - 1:
                 time.sleep(2**attempt)
 
-        raise BlingClientError(str(last_exc)) from last_exc
+        raise BlingTransientError(str(last_exc)) from last_exc
 
     def close(self):
         self._session.close()

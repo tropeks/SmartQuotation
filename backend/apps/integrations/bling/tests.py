@@ -149,6 +149,203 @@ class BlingClientTests(TenantTestCase):
         self.assertEqual(result, expected_response)
 
 
+class BlingExportLogTests(TenantTestCase):
+    def test_export_log_success_creates_and_retrieves(self):
+        from apps.integrations.bling.models import BlingExportLog
+
+        log = BlingExportLog.objects.create(
+            of_id=1,
+            status=BlingExportLog.STATUS_SUCCESS,
+            bling_nfe_id="42",
+        )
+        fetched = BlingExportLog.objects.get(pk=log.pk)
+
+        self.assertEqual(fetched.of_id, 1)
+        self.assertEqual(fetched.status, BlingExportLog.STATUS_SUCCESS)
+        self.assertEqual(fetched.bling_nfe_id, "42")
+        self.assertIsNone(fetched.error)
+        self.assertIsNotNone(fetched.created_at)
+
+    def test_export_log_error_stores_message(self):
+        from apps.integrations.bling.models import BlingExportLog
+
+        log = BlingExportLog.objects.create(
+            of_id=99,
+            status=BlingExportLog.STATUS_ERROR,
+            error="API falhou com status 500",
+        )
+        fetched = BlingExportLog.objects.get(pk=log.pk)
+
+        self.assertEqual(fetched.status, BlingExportLog.STATUS_ERROR)
+        self.assertEqual(fetched.error, "API falhou com status 500")
+        self.assertFalse(fetched.bling_nfe_id)
+
+
+class BlingExportTaskTests(TenantTestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from apps.accounts.models import UserProfile
+        from apps.audit.services import approve_quotation
+        from apps.production import services as prod_services
+        from apps.quotations.models import Customer
+        from apps.quotations.services import create_feixe_quotation
+
+        self.customer = Customer.objects.create(
+            company_name="ACME Caldeiraria",
+            cnpj="12.345.678/0001-99",
+            email="fiscal@acme.com",
+            city="Sao Paulo",
+            state="SP",
+        )
+        self.quotation = create_feixe_quotation(self.customer, "Feixe Bling")
+        user = User.objects.create_user(username="eng_bling_task")
+        engineer = UserProfile.objects.create(
+            user=user,
+            full_name="Eng Bling",
+            role="engenheiro",
+            crea_number="CREA-999",
+            crea_state="SP",
+        )
+        approve_quotation(self.quotation, engineer)
+        self.of = prod_services.convert_quotation_to_of(self.quotation, created_by=user)
+
+        self.config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="cid-task",
+            client_secret="csec-task",
+            access_token="atk-task",
+            refresh_token="rtk-task",
+            company_id="emp-task",
+        )
+
+    def test_export_of_to_bling_creates_success_log(self):
+        from unittest import mock
+
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import export_of_to_bling
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.return_value = {"id": 77, "situacao": {"valor": 100}}
+            export_of_to_bling(self.of.pk, self.tenant.schema_name)
+
+        log = BlingExportLog.objects.get(of_id=self.of.pk)
+        self.assertEqual(log.status, BlingExportLog.STATUS_SUCCESS)
+        self.assertEqual(log.bling_nfe_id, "77")
+        self.assertIsNone(log.error)
+
+    def test_export_of_to_bling_uses_schema_context(self):
+        from unittest import mock
+
+        from django_tenants.utils import schema_context
+
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import export_of_to_bling
+
+        with mock.patch(
+            "apps.integrations.bling.tasks.schema_context", wraps=schema_context
+        ) as mock_ctx:
+            with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+                MockClient.return_value.post_nfe.return_value = {"id": 88}
+                export_of_to_bling(self.of.pk, self.tenant.schema_name)
+
+        mock_ctx.assert_called_once_with(self.tenant.schema_name)
+        self.assertTrue(BlingExportLog.objects.filter(of_id=self.of.pk).exists())
+
+    def test_export_of_to_bling_creates_error_log_on_client_failure(self):
+        from unittest import mock
+
+        from apps.integrations.bling.client import BlingClientError
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import export_of_to_bling
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.side_effect = BlingClientError(
+                "Servidor indisponivel", status_code=503
+            )
+            with self.assertRaises(Exception):
+                export_of_to_bling(self.of.pk, self.tenant.schema_name)
+
+        log = BlingExportLog.objects.get(of_id=self.of.pk)
+        self.assertEqual(log.status, BlingExportLog.STATUS_ERROR)
+        self.assertIn("Servidor indisponivel", log.error)
+
+    def test_export_of_to_bling_builds_payload_with_of_number_and_cnpj(self):
+        from unittest import mock
+
+        from apps.integrations.bling.tasks import export_of_to_bling
+
+        captured_payload = {}
+
+        def capture_post_nfe(payload):
+            captured_payload.update(payload)
+            return {"id": 55}
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.side_effect = capture_post_nfe
+            export_of_to_bling(self.of.pk, self.tenant.schema_name)
+
+        self.assertIn("numero", captured_payload)
+        self.assertEqual(captured_payload["numero"], self.of.number)
+        self.assertIn("contato", captured_payload)
+        self.assertEqual(captured_payload["contato"]["cpfCnpj"], "12.345.678/0001-99")
+        self.assertIn("itens", captured_payload)
+        self.assertIsInstance(captured_payload["itens"], list)
+        self.assertGreater(len(captured_payload["itens"]), 0)
+
+
+class BlingAdminActionTests(TenantTestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from apps.accounts.models import UserProfile
+        from apps.audit.services import approve_quotation
+        from apps.production import services as prod_services
+        from apps.quotations.models import Customer
+        from apps.quotations.services import create_feixe_quotation
+
+        self.customer = Customer.objects.create(
+            company_name="ACME Admin",
+            cnpj="11.222.333/0001-44",
+        )
+        self.quotation = create_feixe_quotation(self.customer, "Feixe Admin Bling")
+        user = User.objects.create_user(username="eng_bling_admin")
+        engineer = UserProfile.objects.create(
+            user=user,
+            full_name="Eng Admin",
+            role="engenheiro",
+            crea_number="CREA-777",
+            crea_state="SP",
+        )
+        approve_quotation(self.quotation, engineer)
+        self.of = prod_services.convert_quotation_to_of(self.quotation, created_by=user)
+        self.user = user
+
+    def test_admin_action_export_to_bling_dispatches_task(self):
+        from unittest import mock
+
+        from django.contrib import admin
+        from django.test import RequestFactory
+
+        from apps.production.admin import OrdemFabricacaoAdmin
+        from apps.production.models import OrdemFabricacao
+
+        request = RequestFactory().post("/admin/")
+        request.user = self.user
+
+        admin_instance = OrdemFabricacaoAdmin(OrdemFabricacao, admin.site)
+
+        with mock.patch(
+            "apps.production.admin.export_of_to_bling_task"
+        ) as mock_task:
+            with mock.patch.object(admin_instance, "message_user"):
+                admin_instance.export_to_bling(
+                    request, OrdemFabricacao.objects.filter(pk=self.of.pk)
+                )
+
+        mock_task.delay.assert_called_once_with(self.of.pk, mock.ANY)
+
+
 class BlingFakeClientTests(TenantTestCase):
     def setUp(self):
         from apps.integrations.bling.client import BlingFakeClient

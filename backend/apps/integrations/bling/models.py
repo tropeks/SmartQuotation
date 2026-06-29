@@ -39,3 +39,27 @@ class BlingIntegrationConfig(models.Model):
         self.provider = self.PROVIDER
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class BlingExportLog(models.Model):
+    STATUS_SUCCESS = "success"
+    STATUS_ERROR = "error"
+    STATUS_CHOICES = [
+        (STATUS_SUCCESS, "Sucesso"),
+        (STATUS_ERROR, "Erro"),
+    ]
+
+    of_id = models.PositiveIntegerField(db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    bling_nfe_id = models.CharField(max_length=100, blank=True, default="")
+    error = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = "integrations_bling"
+        verbose_name = "Log de Exportacao Bling"
+        verbose_name_plural = "Logs de Exportacao Bling"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"BlingExportLog OF={self.of_id} {self.status}"

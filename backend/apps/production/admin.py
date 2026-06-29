@@ -4,6 +4,8 @@ from django.contrib import admin, messages
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
 
+from apps.integrations.bling.tasks import export_of_to_bling as export_of_to_bling_task
+
 from apps.production.models import (
     InspectionItem, InspectionPlan, OrdemFabricacao, OFItem, OFMaterial, OFOperation,
 )
@@ -53,7 +55,20 @@ def _should_publish_run(run, created):
 class OrdemFabricacaoAdmin(admin.ModelAdmin):
     list_display = ("number", "quotation_number", "customer_name", "status", "created_at")
     list_filter = ("status",)
-    actions = ["export_to_sap_b1"]
+    actions = ["export_to_sap_b1", "export_to_bling"]
+
+    @admin.action(description="Exportar OF selecionadas para Bling (NF-e)")
+    def export_to_bling(self, request, queryset):
+        schema_name = connection.schema_name
+        queued = 0
+        for of in queryset:
+            export_of_to_bling_task.delay(of.pk, schema_name)
+            queued += 1
+        self.message_user(
+            request,
+            f"{queued} OF(s) enfileirada(s) para exportacao Bling.",
+            messages.INFO,
+        )
 
     @admin.action(description="Exportar OF selecionadas para SAP B1")
     def export_to_sap_b1(self, request, queryset):
