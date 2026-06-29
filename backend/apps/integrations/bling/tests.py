@@ -279,6 +279,30 @@ class BlingExportTaskTests(TenantTestCase):
         self.assertEqual(log.status, BlingExportLog.STATUS_ERROR)
         self.assertIn("Servidor indisponivel", log.error)
 
+    def test_build_nfe_payload_uses_prefetch_cache_without_extra_query(self):
+        from django.db import connection
+        from django.db.models import Prefetch
+        from django.test.utils import CaptureQueriesContext
+
+        from apps.integrations.bling.tasks import _build_nfe_payload
+        from apps.production.models import OFItem, OrdemFabricacao
+
+        of = OrdemFabricacao.objects.select_related(
+            "quotation__customer"
+        ).prefetch_related(
+            Prefetch("itens", queryset=OFItem.objects.order_by("sort_order", "codigo_item", "pk"))
+        ).get(pk=self.of.pk)
+
+        with CaptureQueriesContext(connection) as ctx:
+            _build_nfe_payload(of)
+
+        self.assertEqual(
+            len(ctx.captured_queries),
+            0,
+            f"_build_nfe_payload deve usar o prefetch cache sem disparar queries extras; "
+            f"disparou {len(ctx.captured_queries)}: {[q['sql'][:120] for q in ctx.captured_queries]}",
+        )
+
     def test_export_of_to_bling_builds_payload_with_of_number_and_cnpj(self):
         from unittest import mock
 

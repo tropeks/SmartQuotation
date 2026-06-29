@@ -1,15 +1,16 @@
 from celery import shared_task
+from django.db.models import Prefetch
 from django_tenants.utils import schema_context
 
 from apps.integrations.bling.client import BlingClient, BlingClientError, BlingTransientError
 from apps.integrations.bling.models import BlingExportLog, BlingIntegrationConfig
-from apps.production.models import OrdemFabricacao
+from apps.production.models import OFItem, OrdemFabricacao
 
 
 def _build_nfe_payload(of: OrdemFabricacao) -> dict:
     customer = of.quotation.customer
     items = []
-    for item in of.itens.order_by("sort_order", "codigo_item", "pk"):
+    for item in of.itens.all():
         items.append({
             "descricao": item.descricao,
             "quantidade": 1,
@@ -31,7 +32,9 @@ def export_of_to_bling_for_schema(of_id: int, tenant_schema: str) -> dict:
     with schema_context(tenant_schema):
         of = OrdemFabricacao.objects.select_related(
             "quotation__customer"
-        ).prefetch_related("itens").get(pk=of_id)
+        ).prefetch_related(
+            Prefetch("itens", queryset=OFItem.objects.order_by("sort_order", "codigo_item", "pk"))
+        ).get(pk=of_id)
         config = BlingIntegrationConfig.objects.filter(enabled=True).first()
         if config is None:
             raise BlingClientError("Integracao Bling nao esta habilitada para este tenant.")
