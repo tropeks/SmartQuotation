@@ -6,6 +6,8 @@ from apps.integrations.bling.client import BlingClient, BlingClientError, BlingT
 from apps.integrations.bling.models import BlingExportLog, BlingIntegrationConfig
 from apps.production.models import OFItem, OrdemFabricacao
 
+_TASK_MAX_RETRIES = 3
+
 
 def _build_nfe_payload(of: OrdemFabricacao) -> dict:
     customer = of.quotation.customer
@@ -50,6 +52,8 @@ def export_of_to_bling_for_schema(of_id: int, tenant_schema: str) -> dict:
                 bling_nfe_id=bling_nfe_id,
             )
             return {"status": "success", "bling_nfe_id": bling_nfe_id}
+        except BlingTransientError:
+            raise  # Celery retries transient errors; log only on final failure
         except BlingClientError as exc:
             BlingExportLog.objects.create(
                 of_id=of_id,
@@ -63,9 +67,19 @@ def export_of_to_bling_for_schema(of_id: int, tenant_schema: str) -> dict:
     bind=True,
     name="integrations.bling.export_of_to_bling",
     autoretry_for=(BlingTransientError,),
+    max_retries=_TASK_MAX_RETRIES,
     retry_backoff=True,
     retry_jitter=True,
-    retry_kwargs={"max_retries": 3},
 )
 def export_of_to_bling(self, of_id: int, tenant_schema: str) -> dict:
-    return export_of_to_bling_for_schema(of_id, tenant_schema)
+    try:
+        return export_of_to_bling_for_schema(of_id, tenant_schema)
+    except BlingTransientError as exc:
+        if self.request.retries >= _TASK_MAX_RETRIES:
+            with schema_context(tenant_schema):
+                BlingExportLog.objects.create(
+                    of_id=of_id,
+                    status=BlingExportLog.STATUS_ERROR,
+                    error=str(exc),
+                )
+        raise

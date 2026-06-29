@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import time
 from datetime import timedelta
 
 import requests
@@ -10,7 +9,6 @@ from django.utils import timezone
 
 BLING_BASE_URL = "https://www.bling.com.br/Api/v3"
 _TIMEOUT = 30
-_MAX_RETRIES = 3
 _TRANSIENT_STATUSES = {408, 429}
 
 
@@ -47,7 +45,6 @@ class BlingClient(BaseBlingClient):
         self._base_url = base_url.rstrip("/")
         self._session = session or requests.Session()
         self._timeout = _TIMEOUT
-        self._max_retries = _MAX_RETRIES
 
     def get_headers(self):
         return {
@@ -88,36 +85,26 @@ class BlingClient(BaseBlingClient):
         headers = kwargs.pop("headers", None)
         if headers is None:
             headers = self.get_headers()
-        last_exc = None
-        for attempt in range(self._max_retries):
-            try:
-                resp = self._session.request(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    timeout=self._timeout,
-                    **kwargs,
-                )
-                resp.raise_for_status()
-                if not getattr(resp, "content", b""):
-                    return {}
-                return resp.json()
-            except (requests.Timeout, requests.ConnectionError) as exc:
-                last_exc = exc
-            except requests.HTTPError as exc:
-                resp = exc.response
-                status = resp.status_code if resp is not None else None
-                if status in _TRANSIENT_STATUSES or (status is not None and status >= 500):
-                    last_exc = exc
-                else:
-                    raise BlingClientError(str(exc), status_code=status) from exc
-            except requests.RequestException as exc:
-                last_exc = exc
-
-            if attempt < self._max_retries - 1:
-                time.sleep(2**attempt)
-
-        raise BlingTransientError(str(last_exc)) from last_exc
+        try:
+            resp = self._session.request(
+                method=method,
+                url=url,
+                headers=headers,
+                timeout=self._timeout,
+                **kwargs,
+            )
+            resp.raise_for_status()
+            if not getattr(resp, "content", b""):
+                return {}
+            return resp.json()
+        except requests.HTTPError as exc:
+            resp = exc.response
+            status = resp.status_code if resp is not None else None
+            if status in _TRANSIENT_STATUSES or (status is not None and status >= 500):
+                raise BlingTransientError(str(exc)) from exc
+            raise BlingClientError(str(exc), status_code=status) from exc
+        except requests.RequestException as exc:
+            raise BlingTransientError(str(exc)) from exc
 
     def close(self):
         self._session.close()

@@ -157,6 +157,28 @@ class BlingClientTests(TenantTestCase):
         mock_req.assert_called_once_with("GET", f"/nfe/{nfe_id}")
         self.assertEqual(result, expected_response)
 
+    def test_request_makes_single_http_attempt_on_transient_failure(self):
+        import requests as req_lib
+        from apps.integrations.bling.client import BlingTransientError
+
+        call_count = 0
+
+        def timeout_side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise req_lib.Timeout("timeout simulado")
+
+        self.bling_client._session.request = timeout_side_effect
+
+        with self.assertRaises(BlingTransientError):
+            self.bling_client._request("GET", "/test")
+
+        self.assertEqual(
+            call_count,
+            1,
+            "_request deve fazer exatamente 1 tentativa HTTP; retry é responsabilidade do Celery",
+        )
+
 
 class BlingExportLogTests(TenantTestCase):
     def test_export_log_success_creates_and_retrieves(self):
@@ -278,6 +300,58 @@ class BlingExportTaskTests(TenantTestCase):
         log = BlingExportLog.objects.get(of_id=self.of.pk)
         self.assertEqual(log.status, BlingExportLog.STATUS_ERROR)
         self.assertIn("Servidor indisponivel", log.error)
+
+    def test_export_of_for_schema_no_log_on_transient_error(self):
+        from apps.integrations.bling.client import BlingTransientError
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import export_of_to_bling_for_schema
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.side_effect = BlingTransientError("timeout")
+            with self.assertRaises(BlingTransientError):
+                export_of_to_bling_for_schema(self.of.pk, self.tenant.schema_name)
+
+        self.assertFalse(
+            BlingExportLog.objects.filter(of_id=self.of.pk).exists(),
+            "Erros transientes não devem gerar log de erro em tentativas intermediárias",
+        )
+
+    def test_task_no_log_on_intermediate_transient_retry(self):
+        from apps.integrations.bling.client import BlingTransientError
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import export_of_to_bling
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.side_effect = BlingTransientError("timeout")
+            with self.assertRaises(Exception):
+                export_of_to_bling.apply(
+                    args=[self.of.pk, self.tenant.schema_name],
+                    retries=0,
+                    throw=True,
+                )
+
+        self.assertFalse(
+            BlingExportLog.objects.filter(of_id=self.of.pk).exists(),
+            "Tentativas intermediárias transientes não devem criar log de erro",
+        )
+
+    def test_task_logs_error_on_final_transient_retry_exhaustion(self):
+        from apps.integrations.bling.client import BlingTransientError
+        from apps.integrations.bling.models import BlingExportLog
+        from apps.integrations.bling.tasks import _TASK_MAX_RETRIES, export_of_to_bling
+
+        with mock.patch("apps.integrations.bling.tasks.BlingClient") as MockClient:
+            MockClient.return_value.post_nfe.side_effect = BlingTransientError("servidor indisponivel")
+            with self.assertRaises(Exception):
+                export_of_to_bling.apply(
+                    args=[self.of.pk, self.tenant.schema_name],
+                    retries=_TASK_MAX_RETRIES,
+                    throw=True,
+                )
+
+        log = BlingExportLog.objects.get(of_id=self.of.pk)
+        self.assertEqual(log.status, BlingExportLog.STATUS_ERROR)
+        self.assertIn("servidor indisponivel", log.error)
 
     def test_build_nfe_payload_uses_prefetch_cache_without_extra_query(self):
         from django.db import connection
