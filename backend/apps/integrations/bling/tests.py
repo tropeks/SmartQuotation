@@ -388,3 +388,132 @@ class BlingFakeClientTests(TenantTestCase):
 
         self.assertIsInstance(result, dict)
         self.assertIn("id", result)
+
+
+class BlingHealthCheckAdminTests(TenantTestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from django.test import RequestFactory
+
+        self.config = BlingIntegrationConfig.objects.create(
+            enabled=True,
+            client_id="health-check-client-id",
+            client_secret="health-check-client-secret",
+            access_token="health-check-access-token",
+            refresh_token="health-check-refresh-token",
+            company_id="empresa-health",
+        )
+        self.user = User.objects.create_superuser(
+            username="admin",
+            email="admin@test.com",
+            password="admin-pass",
+        )
+        self.factory = RequestFactory()
+
+    def test_check_health_action_exists_on_admin(self):
+        from apps.integrations.bling.admin import BlingIntegrationConfigAdmin
+        from apps.integrations.bling.models import BlingIntegrationConfig
+        from django.contrib import admin
+
+        admin_instance = BlingIntegrationConfigAdmin(
+            BlingIntegrationConfig, admin.site
+        )
+        self.assertTrue(
+            hasattr(admin_instance, "check_health"),
+            "check_health action should exist on admin"
+        )
+        self.assertIn(
+            "check_health",
+            admin_instance.actions,
+            "check_health should be in available actions",
+        )
+
+    def test_check_health_success_with_fake_client(self):
+        from unittest import mock
+
+        from django.contrib import admin
+        from apps.integrations.bling.admin import BlingIntegrationConfigAdmin
+        from apps.integrations.bling.models import BlingIntegrationConfig
+
+        request = self.factory.post("/admin/")
+        request.user = self.user
+        request.session = {}
+
+        admin_instance = BlingIntegrationConfigAdmin(
+            BlingIntegrationConfig, admin.site
+        )
+
+        with mock.patch(
+            "apps.integrations.bling.admin.BlingClient"
+        ) as MockClient:
+            MockClient.return_value.ping.return_value = {}
+            with mock.patch.object(admin_instance, "message_user") as mock_message:
+                admin_instance.check_health(
+                    request,
+                    BlingIntegrationConfig.objects.filter(pk=self.config.pk),
+                )
+
+            mock_message.assert_called()
+            call_args = mock_message.call_args
+            self.assertIn("sucesso", call_args[0][1].lower())
+
+    def test_check_health_failure_with_fake_client(self):
+        from unittest import mock
+
+        from django.contrib import admin
+        from apps.integrations.bling.admin import BlingIntegrationConfigAdmin
+        from apps.integrations.bling.models import BlingIntegrationConfig
+        from apps.integrations.bling.client import BlingClientError
+
+        request = self.factory.post("/admin/")
+        request.user = self.user
+        request.session = {}
+
+        admin_instance = BlingIntegrationConfigAdmin(
+            BlingIntegrationConfig, admin.site
+        )
+
+        with mock.patch(
+            "apps.integrations.bling.admin.BlingClient"
+        ) as MockClient:
+            MockClient.return_value.ping.side_effect = BlingClientError(
+                "Servidor indisponível", status_code=503
+            )
+            with mock.patch.object(admin_instance, "message_user") as mock_message:
+                admin_instance.check_health(
+                    request,
+                    BlingIntegrationConfig.objects.filter(pk=self.config.pk),
+                )
+
+            mock_message.assert_called()
+            call_args = mock_message.call_args
+            self.assertIn("erro", call_args[0][1].lower())
+
+    def test_check_health_displays_fields_readonly(self):
+        from apps.integrations.bling.admin import BlingIntegrationConfigAdmin
+        from apps.integrations.bling.models import BlingIntegrationConfig
+        from django.contrib import admin
+
+        admin_instance = BlingIntegrationConfigAdmin(
+            BlingIntegrationConfig, admin.site
+        )
+        self.assertIn(
+            "client_id",
+            admin_instance.readonly_fields,
+            "client_id should be read-only",
+        )
+        self.assertIn(
+            "client_secret",
+            admin_instance.readonly_fields,
+            "client_secret should be read-only",
+        )
+        self.assertIn(
+            "access_token",
+            admin_instance.readonly_fields,
+            "access_token should be read-only",
+        )
+        self.assertIn(
+            "refresh_token",
+            admin_instance.readonly_fields,
+            "refresh_token should be read-only",
+        )

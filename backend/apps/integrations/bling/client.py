@@ -37,6 +37,9 @@ class BaseBlingClient:
     def get_nfe_status(self, nfe_id):
         raise NotImplementedError
 
+    def ping(self):
+        raise NotImplementedError
+
 
 class BlingClient(BaseBlingClient):
     def __init__(self, config, *, base_url=BLING_BASE_URL, session=None):
@@ -76,6 +79,9 @@ class BlingClient(BaseBlingClient):
 
     def get_nfe_status(self, nfe_id):
         return self._request("GET", f"/nfe/{nfe_id}")
+
+    def ping(self):
+        return self._request("GET", "/ping")
 
     def _request(self, method, path, **kwargs):
         url = f"{self._base_url}/{path.lstrip('/')}"
@@ -147,3 +153,6 @@ class BlingFakeClient(BaseBlingClient):
         if nfe_id_int in self._nfes:
             return self._nfes[nfe_id_int]
         return {"id": nfe_id_int, "situacao": {"valor": 100}}
+
+    def ping(self):
+        return {"status": "ok"}
