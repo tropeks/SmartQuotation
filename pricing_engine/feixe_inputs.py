@@ -22,6 +22,8 @@ class FeixeInputs:
     inspecao_q: bool = True
     pmi: bool = False
     fator_correcao_mo: float = 1.0
+    # transporte é cotado caso a caso pelo orçamentista; default = caso ref RPBC.
+    custo_transporte: float = 1600.0
 
     # --- tubos ---
     n_tubos: int = 136

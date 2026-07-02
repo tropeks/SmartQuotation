@@ -194,7 +194,7 @@ _op("OP-HIDRO", "END-01", "Teste Hidrostático",
 _op("OP-TRANSP-PREP", "END-01", "Transporte - Preparação e Embalagem",
     lambda i: 1 * 150, group="ensaios")
 _op("OP-TRANSP-ENT", "END-01", "Transporte: ENGEMATEX p/ Cliente",
-    lambda i: 1 * 1600, group="ensaios")
+    lambda i: i.custo_transporte, group="ensaios")
 
 # ===================== ENGENHARIA (item ENG-01) =====================
 _op("OP-PROJETO", "ENG-01", "Projeto - Detalhamento (Desenhos p/ Cliente)",
