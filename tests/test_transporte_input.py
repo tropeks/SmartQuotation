@@ -22,3 +22,16 @@ def test_custo_transporte_reduz_custo_total_em_exatamente_a_diferenca():
     cot_custom = quote_feixe(inp_custom, engematex_seed())
 
     assert abs((cot_default.custo_total - cot_custom.custo_total) - 800.0) < 1e-6
+
+
+def test_markup_nao_se_aplica_a_ensaios_e_transporte():
+    inp = caso_136_tubos()
+    # Usamos o seed que carrega o fator_preco padrão (ex: 1.20)
+    cot = quote_feixe(inp, engematex_seed())
+    
+    custo_end_total = sum(it.custo_end for it in cot.itens)
+    custo_base = cot.custo_total - custo_end_total
+    
+    preco_esperado = (custo_base * cot.fator_preco) + custo_end_total
+    
+    assert abs(cot.preco_sem_impostos - preco_esperado) < 1e-6

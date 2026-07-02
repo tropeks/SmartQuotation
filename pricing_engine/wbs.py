@@ -100,8 +100,13 @@ class Cotacao:
         return self.custo_itens + self.custo_engenharia + self.custo_ferramentas
 
     @property
+    def custo_end(self) -> float:
+        return sum(it.custo_end for it in self.itens)
+
+    @property
     def preco_sem_impostos(self) -> float:
-        return self.custo_total * self.fator_preco
+        base_tributavel = self.custo_total - self.custo_end
+        return base_tributavel * self.fator_preco + self.custo_end
 
     @property
     def preco_com_impostos(self) -> float:
