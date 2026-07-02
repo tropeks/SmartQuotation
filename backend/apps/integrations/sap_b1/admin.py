@@ -6,6 +6,7 @@ from django.utils.html import format_html
 from apps.integrations.sap_b1 import services
 from apps.integrations.admin_forms import secret_config_form
 from apps.integrations.sap_b1.models import (
+    SapB1ExportLog,
     SapB1IntegrationConfig,
     SapB1SyncAttempt,
     SapB1SyncBinding,
@@ -112,3 +113,36 @@ class SapB1SyncAttemptAdmin(SapB1ReadOnlyAdmin):
     list_display = ("run", "sequence", "status", "created_at")
     list_filter = ("status",)
     search_fields = ("run__idempotency_key", "run__local_id")
+
+
+@admin.register(SapB1ExportLog)
+class SapB1ExportLogAdmin(admin.ModelAdmin):
+    list_display = ("sap_doc_entry", "sap_status", "conflict", "last_checked_at", "created_at")
+    list_filter = ("sap_status", "conflict")
+    search_fields = ("sap_doc_entry",)
+    readonly_fields = ("created_at", "updated_at", "last_checked_at")
+    actions = ["force_resync"]
+
+    @admin.action(description="Forçar re-sync de export logs selecionados")
+    def force_resync(self, request, queryset):
+        from django.db import connection
+        from apps.integrations.sap_b1.tasks import check_sap_b1_export_status
+
+        schema_name = connection.schema_name
+        resynced = 0
+        conflicts_cleared = 0
+        for log in queryset:
+            had_conflict = log.conflict
+            log.sap_status = SapB1ExportLog.SAP_STATUS_PENDING
+            log.error_message = ""
+            log.conflict = False
+            log.conflict_reason = ""
+            log.save(update_fields=["sap_status", "error_message", "conflict", "conflict_reason", "updated_at"])
+            check_sap_b1_export_status.delay(log_id=log.pk, tenant_schema=schema_name)
+            resynced += 1
+            if had_conflict:
+                conflicts_cleared += 1
+        msg = f"{resynced} export log(s) reenfileirado(s) para re-sync."
+        if conflicts_cleared:
+            msg += f" {conflicts_cleared} conflito(s) resolvido(s)."
+        self.message_user(request, msg)

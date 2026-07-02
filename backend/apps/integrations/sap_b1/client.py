@@ -14,6 +14,9 @@ class BaseSapB1Client:
     def upsert_bom(self, payload):
         raise NotImplementedError
 
+    def get_sales_order_status(self, sap_doc_entry):
+        raise NotImplementedError
+
     def healthcheck(self):
         raise NotImplementedError
 
@@ -134,11 +137,18 @@ class HttpSapB1Client(BaseSapB1Client):
 
     def upsert_sales_order(self, payload):
         self._ensure_login()
+        sap_doc_entry = payload.get("sap_doc_entry")
+        if sap_doc_entry:
+            return self._request("PATCH", f"/Orders({sap_doc_entry})", payload=payload)
         return self._request("POST", "/Orders", payload=payload)
 
     def upsert_bom(self, payload):
         self._ensure_login()
         return self._request("POST", "/ProductTrees", payload=payload)
+
+    def get_sales_order_status(self, sap_doc_entry):
+        self._ensure_login()
+        return self._request("GET", f"/Orders({sap_doc_entry})")
 
     def healthcheck(self):
         self._ensure_login()

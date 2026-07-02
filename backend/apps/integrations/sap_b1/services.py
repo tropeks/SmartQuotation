@@ -13,6 +13,7 @@ from apps.integrations.sap_b1.client import (
     payload_digest,
 )
 from apps.integrations.sap_b1.models import (
+    SapB1ExportLog,
     SapB1IntegrationConfig,
     SapB1SyncAttempt,
     SapB1SyncBinding,
@@ -90,6 +91,15 @@ def _serialize_items(of: OrdemFabricacao):
     return items
 
 
+def _get_sales_order_binding(of: OrdemFabricacao):
+    return SapB1SyncBinding.objects.filter(
+        provider=SapB1IntegrationConfig.PROVIDER,
+        entity_type=SapB1SyncBinding.ENTITY_SALES_ORDER,
+        local_model="production.OrdemFabricacao",
+        local_id=str(of.pk),
+    ).first()
+
+
 def serialize_sales_order_from_of(of: OrdemFabricacao):
     items = _serialize_items(of)
     return {
@@ -123,6 +133,27 @@ def serialize_sales_order_from_of(of: OrdemFabricacao):
     }
 
 
+def _run_payload(payload):
+    return {key: value for key, value in payload.items() if key != "sap_doc_entry"}
+
+
+def _execution_payload(run: SapB1SyncRun):
+    payload = dict(run.payload or {})
+    if run.entity_type != SapB1SyncBinding.ENTITY_SALES_ORDER:
+        return payload
+    if payload.get("sap_doc_entry"):
+        return payload
+    binding = SapB1SyncBinding.objects.filter(
+        provider=SapB1IntegrationConfig.PROVIDER,
+        entity_type=SapB1SyncBinding.ENTITY_SALES_ORDER,
+        local_model=run.local_model,
+        local_id=run.local_id,
+    ).first()
+    if binding and binding.remote_code:
+        payload["sap_doc_entry"] = binding.remote_code
+    return payload
+
+
 def serialize_bom_from_of(of: OrdemFabricacao):
     items = _serialize_items(of)
     return {
@@ -143,7 +174,12 @@ def serialize_bom_from_of(of: OrdemFabricacao):
 
 
 def _build_sync_run(direction, entity_type, local_model, local_id, payload, trigger):
-    payload_hash = _payload_hash(payload)
+    # `sap_doc_entry` is a post-export artifact (the remote code SAP returns and we
+    # store on the binding), not source data. Including it in the idempotency hash
+    # makes a re-export of an unchanged OF look different from the first export
+    # (binding exists the 2nd time), spawning a duplicate run/log. Hash source only.
+    stored_payload = _run_payload(payload)
+    payload_hash = _payload_hash(stored_payload)
     raw_key = ":".join([
         SapB1IntegrationConfig.PROVIDER,
         direction,
@@ -162,7 +198,7 @@ def _build_sync_run(direction, entity_type, local_model, local_id, payload, trig
             "local_model": local_model,
             "local_id": str(local_id),
             "payload_hash": payload_hash,
-            "payload": payload,
+            "payload": stored_payload,
         },
     )
     if not created:
@@ -185,8 +221,8 @@ def _build_sync_run(direction, entity_type, local_model, local_id, payload, trig
         if run.payload_hash != payload_hash:
             run.payload_hash = payload_hash
             changed = True
-        if run.payload != payload:
-            run.payload = payload
+        if run.payload != stored_payload:
+            run.payload = stored_payload
             changed = True
         if changed:
             run.save(update_fields=["direction", "entity_type", "trigger", "local_model", "local_id", "payload_hash", "payload"])
@@ -304,10 +340,14 @@ def record_sync_run_failure(run_id, exc, *, response_payload=None):
 
 
 def _response_remote_code(response, payload):
+    r = response or {}
+    doc_entry = r.get("DocEntry")
     return (
-        (response or {}).get("remote_code")
-        or (response or {}).get("remote_id")
-        or (response or {}).get("number")
+        r.get("remote_code")
+        or r.get("remote_id")
+        or (str(doc_entry) if doc_entry is not None else None)
+        or payload.get("sap_doc_entry")
+        or r.get("number")
         or payload.get("order_number")
         or payload.get("document_number")
         or payload.get("bom_code")
@@ -374,7 +414,7 @@ def process_sync_run(run: SapB1SyncRun, client=None):
             if config is None or not config.enabled:
                 return _mark_run_skipped(run, "SAP B1 integration is disabled")
 
-            payload = run.payload or {}
+            payload = _execution_payload(run)
             sequence = run.attempts.count() + 1
             run.status = SapB1SyncRun.STATUS_PROCESSING
             run.error_message = ""
@@ -414,6 +454,14 @@ def process_sync_run(run: SapB1SyncRun, client=None):
                 payload,
                 metadata=metadata,
             )
+            if run.entity_type == SapB1SyncBinding.ENTITY_SALES_ORDER:
+                SapB1ExportLog.objects.get_or_create(
+                    sync_run=run,
+                    defaults={
+                        "sap_doc_entry": remote_code,
+                        "sap_status": SapB1ExportLog.SAP_STATUS_PENDING,
+                    },
+                )
             run.status = SapB1SyncRun.STATUS_SUCCESS
             run.remote_code = remote_code
             run.result_payload = response
@@ -486,6 +534,127 @@ def run_healthcheck(config=None, client=None):
             if callable(close):
                 close()
     return summary
+
+
+def _on_of_pre_save(sender, instance, **kwargs):
+    """Stash the current DB status so post_save can detect CONCLUIDA transitions."""
+    if instance.pk:
+        try:
+            instance._pre_save_status = (
+                sender.objects.filter(pk=instance.pk).values_list("status", flat=True).get()
+            )
+        except sender.DoesNotExist:
+            instance._pre_save_status = None
+    else:
+        instance._pre_save_status = None
+
+
+def _detect_and_flag_of_conflict(of):
+    """Flag SapB1ExportLog.conflict when critical OF fields changed after a successful export."""
+    successful_run = (
+        SapB1SyncRun.objects.filter(
+            entity_type=SapB1SyncBinding.ENTITY_SALES_ORDER,
+            local_model="production.OrdemFabricacao",
+            local_id=str(of.pk),
+            status=SapB1SyncRun.STATUS_SUCCESS,
+        )
+        .order_by("-started_at")
+        .first()
+    )
+    if successful_run is None:
+        return
+
+    try:
+        export_log = successful_run.export_log
+    except SapB1ExportLog.DoesNotExist:
+        return
+
+    if export_log.conflict:
+        return
+
+    payload = successful_run.payload or {}
+    source_snapshot = payload.get("source_snapshot", {})
+
+    changed_fields = []
+    if payload.get("status") != of.status:
+        changed_fields.append("status")
+    if source_snapshot.get("snapshot_hash") != of.snapshot_hash:
+        changed_fields.append("snapshot_hash")
+    if _payload_hash(payload.get("items", [])) != _payload_hash(_serialize_items(of)):
+        changed_fields.append("items")
+
+    for field in ["customer_name", "title", "scope"]:
+        if field in source_snapshot and source_snapshot[field] != getattr(of, field, None):
+            changed_fields.append(field)
+
+    if "of_number" in source_snapshot and source_snapshot["of_number"] != of.number:
+        changed_fields.append("number")
+        
+    if "totals" in payload:
+        totals = payload["totals"]
+        if totals.get("custo_material") != str(of.custo_material):
+            changed_fields.append("custo_material")
+        if totals.get("custo_mo") != str(of.custo_mo):
+            changed_fields.append("custo_mo")
+        if totals.get("custo_total") != str(of.custo_total):
+            changed_fields.append("custo_total")
+        if totals.get("preco_com_impostos") != str(of.preco_com_impostos):
+            changed_fields.append("preco_com_impostos")
+
+    if not changed_fields:
+        return
+
+    reason = f"Campos alterados após exportação: {', '.join(changed_fields)}"
+    export_log.conflict = True
+    export_log.conflict_reason = reason
+    export_log.save(update_fields=["conflict", "conflict_reason", "updated_at"])
+    logger.warning(
+        "SAP B1 conflito detectado: OF %s editada após exportação. Campos: %s. ExportLog pk=%s",
+        of.pk,
+        ", ".join(changed_fields),
+        export_log.pk,
+    )
+
+
+def _dispatch_export_of_task(of_id, schema_name):
+    from apps.integrations.sap_b1.tasks import export_of_to_sap_b1
+
+    try:
+        export_of_to_sap_b1.delay(schema_name=schema_name, of_id=of_id)
+    except Exception:
+        logger.exception(
+            "Failed to enqueue export_of_to_sap_b1",
+            extra={"schema_name": schema_name, "of_id": of_id},
+        )
+
+
+def _on_of_post_save(sender, instance, created, **kwargs):
+    """Detect conflicts on exported OFs and auto-export on CONCLUIDA transition."""
+    from apps.production.models import STATUS_CONCLUIDA
+
+    # Conflict detection: check if a previously exported OF was edited
+    if not created:
+        _detect_and_flag_of_conflict(instance)
+
+    if instance.status != STATUS_CONCLUIDA:
+        return
+    pre_status = getattr(instance, "_pre_save_status", None)
+    if not created and pre_status == STATUS_CONCLUIDA:
+        return  # no status transition
+    config = get_enabled_config()
+    if config is None or not config.auto_export:
+        return
+    # Idempotency: skip if already successfully auto-exported
+    if SapB1SyncRun.objects.filter(
+        local_model="production.OrdemFabricacao",
+        local_id=str(instance.pk),
+        trigger="auto_export",
+        status=SapB1SyncRun.STATUS_SUCCESS,
+    ).exists():
+        return
+    of_id = instance.pk
+    schema_name = connection.schema_name
+    transaction.on_commit(lambda: _dispatch_export_of_task(of_id, schema_name))
 
 
 serialize_sales_order_payload = serialize_sales_order_from_of

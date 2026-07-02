@@ -9,6 +9,10 @@ app.conf.beat_schedule = {
     "dispatch-recurring-protheus-pulls": {
         "task": "integrations.protheus.dispatch_recurring_pulls",
         "schedule": settings.PROTHEUS_PULL_INTERVAL,
-    }
+    },
+    "check-pending-sap-b1-exports": {
+        "task": "integrations.sap_b1.check_pending_exports",
+        "schedule": settings.SAP_B1_EXPORT_CHECK_INTERVAL,
+    },
 }
 app.autodiscover_tasks()
