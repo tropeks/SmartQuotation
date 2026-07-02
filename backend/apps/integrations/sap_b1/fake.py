@@ -12,7 +12,12 @@ class MemorySapB1Client(BaseSapB1Client):
     def upsert_sales_order(self, payload):
         payload = deepcopy(payload)
         digest = payload_digest(payload)
-        remote_code = payload.get("order_number") or payload.get("document_number") or digest[:12]
+        remote_code = (
+            payload.get("sap_doc_entry")
+            or payload.get("order_number")
+            or payload.get("document_number")
+            or digest[:12]
+        )
         self.sales_orders[remote_code] = payload
         return {
             "remote_code": remote_code,
@@ -31,6 +36,9 @@ class MemorySapB1Client(BaseSapB1Client):
             "payload_digest": digest,
         }
 
+    def get_sales_order_status(self, sap_doc_entry):
+        return {"DocEntry": sap_doc_entry, "DocumentStatus": "bost_Close"}
+
     def healthcheck(self):
         self.healthchecks += 1
         return {
@@ -39,4 +47,3 @@ class MemorySapB1Client(BaseSapB1Client):
             "boms": len(self.boms),
             "healthchecks": self.healthchecks,
         }
-

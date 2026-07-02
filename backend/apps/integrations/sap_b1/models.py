@@ -17,6 +17,7 @@ class SapB1IntegrationConfig(models.Model):
     timeout_seconds = models.PositiveIntegerField(default=30)
     sync_sales_orders_enabled = models.BooleanField(default=True)
     sync_boms_enabled = models.BooleanField(default=True)
+    auto_export = models.BooleanField(default=False)
     last_healthcheck_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -144,6 +145,44 @@ class SapB1SyncRun(models.Model):
 
     def __str__(self):
         return f"{self.direction}:{self.entity_type}:{self.idempotency_key}"
+
+
+class SapB1ExportLog(models.Model):
+    SAP_STATUS_PENDING = "pending"
+    SAP_STATUS_SYNCED = "synced"
+    SAP_STATUS_ERROR = "error"
+    SAP_STATUS_CHOICES = [
+        (SAP_STATUS_PENDING, "Pending"),
+        (SAP_STATUS_SYNCED, "Synced"),
+        (SAP_STATUS_ERROR, "Error"),
+    ]
+
+    sync_run = models.OneToOneField(
+        SapB1SyncRun,
+        on_delete=models.CASCADE,
+        related_name="export_log",
+        null=True,
+        blank=True,
+    )
+    sap_doc_entry = models.CharField(max_length=100, blank=True)
+    sap_status = models.CharField(max_length=20, choices=SAP_STATUS_CHOICES, default=SAP_STATUS_PENDING)
+    conflict = models.BooleanField(default=False)
+    conflict_reason = models.TextField(blank=True)
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "integrations_sap_b1"
+        verbose_name = "SAP B1 Export Log"
+        verbose_name_plural = "SAP B1 Export Logs"
+        indexes = [
+            models.Index(fields=["sap_status"]),
+        ]
+
+    def __str__(self):
+        return f"ExportLog:{self.sap_doc_entry}:{self.sap_status}"
 
 
 class SapB1SyncAttempt(models.Model):
