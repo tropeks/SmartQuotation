@@ -1,20 +1,30 @@
-TEST_CMD: python -m pytest tests/test_transporte_input.py tests/test_weld_gate.py -v
+TEST_CMD: /home/rcosta00/dev/ClaudeProxy/.venv/bin/python -m pytest tests/test_material_alias.py tests/test_transporte_input.py tests/test_weld_gate.py -v && /home/rcosta00/dev/ClaudeProxy/.venv/bin/python -m tests.validate_feixe_completo
 
-1) Comando(s) de teste rodados + resumo da saida
-- `python -m pytest tests/test_transporte_input.py tests/test_weld_gate.py -v`
-  Resumo: 5 testes coletados, 5 passed in 0.22s.
+1) Comando(s) de teste rodados + resumo da saída
+- `/home/rcosta00/dev/ClaudeProxy/.venv/bin/python -m pytest tests/test_material_alias.py tests/test_transporte_input.py tests/test_weld_gate.py -v`
+  Resumo: 17 passed in 0.19s.
   Casos:
+  `tests/test_material_alias.py` (12 casos) PASSED
   `tests/test_transporte_input.py::test_default_custo_transporte_preserva_gabarito` PASSED
   `tests/test_transporte_input.py::test_custo_transporte_reduz_custo_total_em_exatamente_a_diferenca` PASSED
   `tests/test_weld_gate.py::test_weld_gate_solda_selagem_false` PASSED
   `tests/test_weld_gate.py::test_weld_gate_solda_selagem_true` PASSED
   `tests/test_weld_gate.py::test_weld_gate_caso_136_tubos` PASSED
+- `/home/rcosta00/dev/ClaudeProxy/.venv/bin/python -m tests.validate_feixe_completo`
+  Resumo: gate completo do feixe 136 tubos com `delta total: -2.9%`, `delta ops: +4.9%`, `0 erros`, `GATE OK`.
 
 2) PASS/FAIL de cada um
-- `python -m pytest tests/test_transporte_input.py tests/test_weld_gate.py -v`: PASS
+- `/home/rcosta00/dev/ClaudeProxy/.venv/bin/python -m pytest tests/test_material_alias.py tests/test_transporte_input.py tests/test_weld_gate.py -v`: PASS
+- `/home/rcosta00/dev/ClaudeProxy/.venv/bin/python -m tests.validate_feixe_completo`: PASS
 
 3) Resumo do diff
-- `.orch_evidence.txt`: atualizado o `TEST_CMD` para incluir `tests/test_transporte_input.py` e `tests/test_weld_gate.py`, e registrado o novo resultado de execucao.
+- `tests/test_material_alias.py`: novo teste parametrizado cobrindo os 6 aliases confirmados de materiais.
+- `pricing_engine/materials.py`: suporte e resolução de `material_alias` para buscar densidade corretamente.
+- `pricing_engine/feixe_inputs.py`: implementados `solda_selagem` e `custo_transporte` para input do orçamentista.
+- `pricing_engine/operations_registry.py`: lógica em gates/condições das operações (ex. `OP-TRANSP-ENT`) baseada nos novos inputs.
+- `tests/test_transporte_input.py`: novos testes para verificar impacto no `custo_transporte`.
+- `tests/test_weld_gate.py`: novos testes avaliando a lógica de `solda_selagem`.
+- `.orch_evidence.txt`: documento atualizado para refletir os múltiplos escopos e features entregues de uma vez no pull request.
 
-4) Conclusao da tarefa
-- Concluida: os dois testes novos pedidos agora estao incluidos no `TEST_CMD` registrado e tiveram PASS comprovado na reexecucao.
+4) Conclusão da tarefa
+- Concluída. A evidência agora descreve corretamente as três features incluídas na branch: `aliases de material`, `solda_selagem` e `custo_transporte`. Testes provam que as três funcionam independentes e mantêm a integridade geral calculada em `validate_feixe_completo`.
