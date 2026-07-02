@@ -91,3 +91,35 @@ class FeixeInputs:
 def caso_136_tubos() -> FeixeInputs:
     """Caso de validação (gabarito: custo R$ 35.353)."""
     return FeixeInputs()
+
+
+def caso_of_3672() -> FeixeInputs:
+    """Caso de regressão OF-3672 (REPLAN, opportunity nº 7004563412, feixe tubular reto,
+    P.28510). Fonte: orçamento manuscrito real (uploads/OF-3672 - Feixe tubular.pdf).
+
+    Campos extraídos com confiança do manuscrito: MP.IT.1 "TUBO Ø3/4"X14BWGX3048MMX210"
+    material A-179 (= SA-179, já é o default) e "TRANSP. EWG/REPLAN ... 800,00". Os demais
+    campos (chicanas, espelhos, tirantes etc.) não são inequivocamente legíveis no rascunho
+    manuscrito e herdam os defaults de referência — este caso é uma regressão/snapshot do
+    motor, não uma validação financeira completa contra o orçamento real (diferente de
+    caso_136_tubos, cujos campos vêm de uma planilha estruturada).
+    """
+    return FeixeInputs(n_tubos=210, tubo_comp_mm=3048.0, custo_transporte=800.0)
+
+
+def caso_of_3399() -> FeixeInputs:
+    """Caso de regressão OF-3399 (REFAP, opportunity nº 7004264653, feixe tubular U,
+    P.544). Fonte: orçamento manuscrito real (uploads/OF-3399 - Feixe tubular U.pdf).
+
+    Campos extraídos com confiança do manuscrito: "IT.14 = TUBO Ø3/4X14BWGX13000MMX64"
+    material B.3003H14 (alumínio, resolvido via alias — ver test_material_alias.py). Os
+    demais campos (chicanas, tirantes etc.) não são inequivocamente legíveis no rascunho
+    manuscrito e herdam os defaults de referência — este caso é uma regressão/snapshot do
+    motor, não uma validação financeira completa contra o orçamento real.
+    """
+    return FeixeInputs(
+        tipo="TUBO U",
+        n_tubos=64,
+        tubo_comp_mm=13000.0,
+        tubo_material="B.3003H14",
+    )
