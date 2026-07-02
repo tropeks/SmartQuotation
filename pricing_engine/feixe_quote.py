@@ -139,7 +139,7 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
                 raise RuntimeError(f"Erro calculando operação {op.code} ({op.label})") from exc
             it = itens.get(op.item, itens["MON-01"])
             oe = OperacaoExecutada(op.code, op.label, aplicavel=aplic, custo_fixo=custo)
-            if op.group in ("ensaios",):
+            if op.group in ("engenharia",):
                 it.ensaios.append(oe)
             else:
                 it.operacoes.append(oe)

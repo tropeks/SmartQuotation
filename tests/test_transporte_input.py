@@ -23,15 +23,7 @@ def test_custo_transporte_reduz_custo_total_em_exatamente_a_diferenca():
 
     assert abs((cot_default.custo_total - cot_custom.custo_total) - 800.0) < 1e-6
 
-
-def test_markup_nao_se_aplica_a_ensaios_e_transporte():
-    inp = caso_136_tubos()
-    # Usamos o seed que carrega o fator_preco padrão (ex: 1.20)
-    cot = quote_feixe(inp, engematex_seed())
-    
-    custo_end_total = sum(it.custo_end for it in cot.itens)
-    custo_base = cot.custo_total - custo_end_total
-    
-    preco_esperado = (custo_base * cot.fator_preco) + custo_end_total
-    
-    assert abs(cot.preco_sem_impostos - preco_esperado) < 1e-6
+# NOTA: o markup sobre ensaios/transporte "depende do job" (PE Wellington, 2026-07-02)
+# — não é regra fixa. Removido o teste que hardcodava "markup nunca sobre ensaios/transp".
+# Default do motor volta a aplicar F.C. sobre o custo total (baseline validado -2,9%).
+# Follow-up: toggle POR ORÇAMENTO p/ excluir ensaios/transporte do markup quando o job pedir.
