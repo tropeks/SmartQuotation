@@ -1,44 +1,20 @@
-TEST_CMD: python -m pytest tests/test_weld_gate.py -v && python -m tests.validate_feixe_completo
+TEST_CMD: python -m pytest tests/test_transporte_input.py tests/test_weld_gate.py -v
 
-1) Comandos de teste rodados + resumo da saída
-- `python -m pytest tests/test_weld_gate.py -v`
-  Resumo: 3 passed in 0.08s
-    - test_weld_gate_solda_selagem_false PASSED
-    - test_weld_gate_solda_selagem_true PASSED
-    - test_weld_gate_caso_136_tubos PASSED
-- `python -m tests.validate_feixe_completo`
-  Resumo: gate completo do feixe 136 tubos (solda_selagem default True), `delta total: -2.9%`,
-  0 erros, `GATE OK: delta -2.9% dentro de ±10%`.
+1) Comando(s) de teste rodados + resumo da saida
+- `python -m pytest tests/test_transporte_input.py tests/test_weld_gate.py -v`
+  Resumo: 5 testes coletados, 5 passed in 0.22s.
+  Casos:
+  `tests/test_transporte_input.py::test_default_custo_transporte_preserva_gabarito` PASSED
+  `tests/test_transporte_input.py::test_custo_transporte_reduz_custo_total_em_exatamente_a_diferenca` PASSED
+  `tests/test_weld_gate.py::test_weld_gate_solda_selagem_false` PASSED
+  `tests/test_weld_gate.py::test_weld_gate_solda_selagem_true` PASSED
+  `tests/test_weld_gate.py::test_weld_gate_caso_136_tubos` PASSED
 
-Sanity check adicional (RED antes do GREEN, para provar que o teste não é vácuo):
-temporariamente troquei `applicable=lambda i: i.solda_selagem` por `applicable=lambda i: True`
-nas 4 operações de solda de selagem (OP-SOLDAR-RAIZ, OP-LP-RAIZ, OP-SOLDAR-ACAB, OP-LP-ACAB) em
-`pricing_engine/operations_registry.py` e rodei `pytest tests/test_weld_gate.py`:
-`test_weld_gate_solda_selagem_false` FALHOU (`assert 1660.0 == 0.0`), confirmando que o teste
-de fato exercita o gate. Revertido em seguida (`git checkout -- pricing_engine/operations_registry.py`);
-working tree ficou limpo (`git diff --stat` vazio).
-
-2) PASS/FAIL de cada comando
-- `python -m pytest tests/test_weld_gate.py -v`: PASS (3/3)
-- `python -m tests.validate_feixe_completo`: PASS (GATE OK, -2.9%, 0 erros)
-- Sanity check RED (gate quebrado propositalmente): FAIL como esperado, depois revertido → confirma
-  que o teste real (com o código correto) é significativo, não vácuo.
+2) PASS/FAIL de cada um
+- `python -m pytest tests/test_transporte_input.py tests/test_weld_gate.py -v`: PASS
 
 3) Resumo do diff
-- Nenhuma mudança de código foi necessária: a feature `solda_selagem` (pricing_engine/feixe_inputs.py,
-  pricing_engine/operations_registry.py) e o teste dedicado `tests/test_weld_gate.py` (caso
-  `solda_selagem=False` que soma custo de "Passe de Raiz"/"Passe de Acabamento"/"L.P. Passe" nas 64
-  operações e afirma soma == 0.0) já existiam no HEAD deste branch (commit 0267d96 "Add solda_selagem
-  and tests"), e já cobriam exatamente o caso reportado como não-exercido.
-- O gap real era de EVIDÊNCIA: o `.orch_evidence.txt` anterior (de uma tarefa não relacionada, aliases
-  de material) não incluía nenhum comando que rodasse `tests/test_weld_gate.py`, então o caso
-  `solda_selagem=False` nunca aparecia comprovado em nenhuma saída de teste registrada. Este arquivo
-  substitui aquela evidência por uma que efetivamente roda e comprova o caso solda_selagem=False.
-- `git status --short` e `git diff --stat` estão vazios: nenhum arquivo de produção foi alterado.
+- `.orch_evidence.txt`: atualizado o `TEST_CMD` para incluir `tests/test_transporte_input.py` e `tests/test_weld_gate.py`, e registrado o novo resultado de execucao.
 
-4) Conclusão da tarefa
-- Concluída: o caso `solda_selagem=False` está agora comprovadamente exercitado e verde
-  (`tests/test_weld_gate.py::test_weld_gate_solda_selagem_false` passa e some a zero), e confirmei
-  via sanity check que o teste realmente falha se o gate `applicable=lambda i: i.solda_selagem` for
-  removido — não é uma asserção vácua. Nenhum código de produção precisou mudar, pois a feature já
-  estava implementada corretamente; o problema era falta de evidência de execução, agora corrigido.
+4) Conclusao da tarefa
+- Concluida: os dois testes novos pedidos agora estao incluidos no `TEST_CMD` registrado e tiveram PASS comprovado na reexecucao.
