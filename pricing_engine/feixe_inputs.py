@@ -14,6 +14,8 @@ class FeixeInputs:
     tipo: str = "TUBO RETO"            # TUBO RETO | TUBO U
     uniao_tubo_espelho: str = "EXPANSÃO + 2 GROOVES"
     num_grooves: int = 2
+    # dado de entrada do cliente (definido por fluidos/pressao/corrosao/processo), liga/desliga as soldas de passe; default True porque o caso de referencia RPBC (136 tubos) e SOLDADO.
+    solda_selagem: bool = True
     tratamento_termico: bool = False
     teste_hidrostatico: bool = False
     projeto_detalhamento: bool = False

@@ -137,13 +137,13 @@ _op("OP-MANDRILAR", "MON-01", "Mandrilar",
 _op("OP-REBAIXAR", "MON-01", "Rebaixar e Dar Acabamento",
     lambda i: ceil(i.n_tubos/40 if i.n_tubos<500 else (i.n_tubos/60 if i.n_tubos<1000 else i.n_tubos/65))*FC(i) * 60, group="montagem")
 _op("OP-SOLDAR-RAIZ", "MON-01", "Soldar Passe de Raiz",
-    lambda i: ceil(NF(i)/pp.get("SOLDAR_RAIZ",pp.MANUAL))*FC(i) * 90, group="montagem")
+    lambda i: ceil(NF(i)/pp.get("SOLDAR_RAIZ",pp.MANUAL))*FC(i) * 90, applicable=lambda i: i.solda_selagem, group="montagem")
 _op("OP-LP-RAIZ", "MON-01", "Exame L.P. Passe Raiz",
-    lambda i: 1 * 200, group="montagem")
+    lambda i: 1 * 200, applicable=lambda i: i.solda_selagem, group="montagem")
 _op("OP-SOLDAR-ACAB", "MON-01", "Soldar Passe de Acabamento",
-    lambda i: ceil(NF(i)/pp.get("SOLDAR_ACABAMENTO",pp.MANUAL))*FC(i) * 90, group="montagem")
+    lambda i: ceil(NF(i)/pp.get("SOLDAR_ACABAMENTO",pp.MANUAL))*FC(i) * 90, applicable=lambda i: i.solda_selagem, group="montagem")
 _op("OP-LP-ACAB", "MON-01", "Exame L.P. Passe Acabamento",
-    lambda i: 1 * 200, group="montagem")
+    lambda i: 1 * 200, applicable=lambda i: i.solda_selagem, group="montagem")
 _op("OP-INSP-TUBOS", "MON-01", "Inspecionar Tubos Montados",
     lambda i: 1 * 110, group="montagem")
 
