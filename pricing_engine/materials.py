@@ -7,6 +7,7 @@ Catálogo de materiais (densidade) — seed da planilha ENGEMATEX (aba P.E., 423
 from __future__ import annotations
 import json
 import os
+import re
 from dataclasses import dataclass
 
 _SEEDS = os.path.join(os.path.dirname(__file__), "seeds")
@@ -23,6 +24,26 @@ class Material:
 
 def _norm(s: str) -> str:
     return str(s).strip().upper().replace("SA-", "A-").replace("SA ", "A-")
+
+
+def _alias_norm(s: str) -> str:
+    base = _norm(s)
+    return re.sub(r"[^A-Z0-9]+", "", base)
+
+
+_MATERIAL_ALIAS_TARGETS = {
+    "B.3003H14": "SB-234 3003-H14",
+    "B.5052F": "ALUMÍNIO 5052-F",
+    "B.5052-0": "ALUMÍNIO 5052-0",
+    "B.6351T6": "ALUMÍNIO 6351 T-6",
+    "A-266": "A-266 GR 2",
+    "A-516.60": "A-516 GR 60",
+}
+
+_MATERIAL_ALIASES = {
+    _alias_norm(alias): _norm(target)
+    for alias, target in _MATERIAL_ALIAS_TARGETS.items()
+}
 
 
 def load_materials() -> dict[str, Material]:
@@ -64,7 +85,12 @@ def density(sigla: str, tipo_hint: str = "") -> float:
     global _CATALOG
     if _CATALOG is None:
         _CATALOG = load_materials()
-    m = _CATALOG.get(_norm(sigla))
+    key = _norm(sigla)
+    m = _CATALOG.get(key)
+    if not m:
+        alias_key = _MATERIAL_ALIASES.get(_alias_norm(sigla))
+        if alias_key:
+            m = _CATALOG.get(alias_key)
     if m and m.densidade_kg_mm3:
         return m.densidade_kg_mm3
     grupo = (m.tipo if m else "") or tipo_hint
