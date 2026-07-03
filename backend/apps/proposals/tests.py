@@ -69,6 +69,17 @@ class ProposalTests(TenantTestCase):
         self.assertTrue(default_storage.exists(name))
         default_storage.delete(name)
 
+    def test_generate_docx_prefixa_por_tenant_schema(self):
+        """O storage name deve conter o schema do tenant → isolamento no MEDIA/bucket
+        compartilhado. Sem o prefixo, dois tenants com o mesmo proposal.number
+        colidiriam e um baixaria o arquivo do outro."""
+        from django.db import connection
+        p = services.create_proposal(self.q, self.tpl)
+        name = services.generate_docx(p)
+        self.assertIn(f"proposals/{connection.schema_name}/", name)
+        self.assertTrue(name.endswith(f"/{p.number}.docx"))
+        default_storage.delete(name)
+
     def test_generate_docx_cria_arquivo_e_hash(self):
         p = services.create_proposal(self.q, self.tpl)
         name = services.generate_docx(p)

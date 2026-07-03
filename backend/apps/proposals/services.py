@@ -15,6 +15,7 @@ import tempfile
 from datetime import date
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.db import connection
 from django.template import engines
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -97,6 +98,15 @@ def _pdf_context(proposal: Proposal) -> dict:
             "memorial": proposal_memorial(q)}
 
 
+def _proposal_storage_name(proposal: Proposal, ext: str) -> str:
+    """Storage name prefixado pelo schema do tenant → isolamento por tenant no
+    filesystem/S3 compartilhado. Sem o prefixo, dois tenants com o mesmo
+    proposal.number colidiriam (overwrite) e um poderia baixar o arquivo do outro
+    (mesmo com schema-per-tenant no banco, o MEDIA_ROOT/bucket é compartilhado)."""
+    schema = connection.schema_name or "public"
+    return f"proposals/{schema}/{proposal.number}.{ext}"
+
+
 def _save_to_storage(local_path: str, storage_name: str) -> str:
     """Move um arquivo local para default_storage, retorna o storage name salvo."""
     if default_storage.exists(storage_name):
@@ -117,7 +127,7 @@ def generate_pdf(proposal: Proposal) -> str:
     """Renderiza a proposta como HTML (design G), converte para PDF e salva via default_storage.
     Usa WeasyPrint se disponível, senão chrome headless --print-to-pdf."""
     html = render_to_string("proposals/proposal_pdf.html", _pdf_context(proposal))
-    storage_name = f"proposals/{proposal.number}.pdf"
+    storage_name = _proposal_storage_name(proposal, "pdf")
     tmp_fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
     os.close(tmp_fd)
     try:
@@ -212,7 +222,7 @@ def generate_docx(proposal: Proposal) -> str:
     os.close(tmp_fd)
     try:
         doc.save(tmp_path)
-        return _save_to_storage(tmp_path, f"proposals/{proposal.number}.docx")
+        return _save_to_storage(tmp_path, _proposal_storage_name(proposal, "docx"))
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)

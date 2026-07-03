@@ -39,7 +39,9 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-smartquotation}
       POSTGRES_USER: ${POSTGRES_USER:-sq}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sq}
+      # Sem default: `docker compose up` em produção aborta se POSTGRES_PASSWORD não
+      # estiver setada. O default fraco `sq` seria um segredo de produção adivinhável.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no ambiente/.env}
     volumes:
       - sq_postgres_data:/var/lib/postgresql/data
     networks:

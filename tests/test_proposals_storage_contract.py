@@ -15,6 +15,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SERVICES_PY = ROOT / "backend" / "apps" / "proposals" / "services.py"
 VIEWS_PY = ROOT / "backend" / "apps" / "proposals" / "views.py"
 PRODUCTION_PY = ROOT / "backend" / "smartquotation" / "settings" / "production.py"
+DOCKERIGNORE = ROOT / ".dockerignore"
+DOCKERFILE = ROOT / "backend" / "Dockerfile"
+COMPOSE_PROD = ROOT / "docker-compose.prod.yml"
 
 
 def _text(path: Path) -> str:
@@ -184,6 +187,76 @@ def test_production_filesystem_storage_is_fallback():
     )
 
 
+# ──── tenant isolation: proposal storage names ──────────────────────────────
+
+def test_services_prefixes_storage_by_tenant_schema():
+    """services.py must prefix proposal storage names with the tenant schema, so the
+    shared MEDIA_ROOT / S3 bucket isolates tenants. A bare `proposals/{number}` name
+    lets two tenants with the same proposal number overwrite/read each other's files."""
+    text = _text(SERVICES_PY)
+    assert "connection.schema_name" in text, (
+        "proposals/services.py must derive the storage path from the current tenant "
+        "(connection.schema_name). Without it, files land in a shared, tenant-agnostic path."
+    )
+    # The old vulnerable literal must be gone.
+    assert 'f"proposals/{proposal.number}.pdf"' not in text, (
+        "proposals/services.py still builds the un-prefixed name "
+        'f"proposals/{proposal.number}.pdf" — that is not tenant-isolated.'
+    )
+    assert 'f"proposals/{proposal.number}.docx"' not in text, (
+        "proposals/services.py still builds the un-prefixed name "
+        'f"proposals/{proposal.number}.docx" — that is not tenant-isolated.'
+    )
+
+
+# ──── secrets hardening: encryption key + docker ────────────────────────────
+
+def test_production_rejects_dev_encryption_key():
+    """production.py must refuse to boot if FIELD_ENCRYPTION_KEY equals the committed
+    dev key — that key is public in the repo, so reusing it leaves ERP creds in clear."""
+    text = _text(PRODUCTION_PY)
+    assert "gq5BmjeBGD9Ji49jNTL6hSEj5woUlf515QRfBgcgSVU=" in text and "ImproperlyConfigured" in text, (
+        "production.py must raise ImproperlyConfigured when FIELD_ENCRYPTION_KEY matches "
+        "the committed development key. Otherwise a copy-pasted dev key silently ships."
+    )
+
+
+def test_dockerignore_excludes_env_secrets():
+    """A .dockerignore at the build-context root must exclude .env files so secrets are
+    not baked into the image by `COPY backend/ .`."""
+    assert DOCKERIGNORE.exists(), (
+        ".dockerignore is missing at the repo root (docker build context). Without it, "
+        "backend/.env — with FIELD_ENCRYPTION_KEY and DB password — is baked into the image."
+    )
+    text = _text(DOCKERIGNORE)
+    assert ".env" in text and "backend/.env" in text, (
+        ".dockerignore must exclude .env and backend/.env to keep secrets out of the image."
+    )
+
+
+def test_dockerfile_runs_as_non_root():
+    """backend/Dockerfile must drop to a non-root user before running the app."""
+    text = _text(DOCKERFILE)
+    assert "USER appuser" in text, (
+        "backend/Dockerfile must switch to a non-root USER (appuser). Running gunicorn as "
+        "root widens the blast radius of any RCE in the web process."
+    )
+
+
+def test_prod_compose_requires_postgres_password():
+    """docker-compose.prod.yml must not ship a weak default DB password; it must require
+    POSTGRES_PASSWORD from the environment (`:?` fails fast if unset)."""
+    text = _text(COMPOSE_PROD)
+    assert "POSTGRES_PASSWORD:-sq" not in text, (
+        "docker-compose.prod.yml still defaults POSTGRES_PASSWORD to 'sq' — a guessable "
+        "production secret. Require it from the environment instead."
+    )
+    assert "${POSTGRES_PASSWORD:?" in text, (
+        "docker-compose.prod.yml must require POSTGRES_PASSWORD via ${POSTGRES_PASSWORD:?...} "
+        "so `docker compose up` aborts when it is not set."
+    )
+
+
 if __name__ == "__main__":
     tests = [
         test_services_imports_default_storage,
@@ -193,6 +266,7 @@ if __name__ == "__main__":
         test_services_generate_docx_exists,
         test_services_generate_exists,
         test_services_generate_saves_storage_names,
+        test_services_prefixes_storage_by_tenant_schema,
         test_views_imports_default_storage,
         test_views_download_uses_default_storage_open,
         test_views_download_checks_default_storage_exists,
@@ -201,6 +275,10 @@ if __name__ == "__main__":
         test_production_s3boto3_storage_referenced,
         test_production_use_s3_env_var_gates_s3_backend,
         test_production_filesystem_storage_is_fallback,
+        test_production_rejects_dev_encryption_key,
+        test_dockerignore_excludes_env_secrets,
+        test_dockerfile_runs_as_non_root,
+        test_prod_compose_requires_postgres_password,
     ]
     failed = []
     for t in tests:

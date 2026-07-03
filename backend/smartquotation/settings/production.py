@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 from .base import *  # noqa
 DEBUG = False
 SECURE_SSL_REDIRECT = True
@@ -14,6 +15,16 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 # Obriga a env var — falha ruidosamente se não estiver setada no deploy.
 FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")
+# A chave de desenvolvimento é commitada (settings/development.py) → pública.
+# Rejeita reutilizá-la em produção: dados cifrados (credenciais ERP, MaterialPrice)
+# estariam efetivamente em claro para qualquer um com acesso ao repo.
+_DEV_ENCRYPTION_KEY = "gq5BmjeBGD9Ji49jNTL6hSEj5woUlf515QRfBgcgSVU="
+if FIELD_ENCRYPTION_KEY == _DEV_ENCRYPTION_KEY:
+    raise ImproperlyConfigured(
+        "FIELD_ENCRYPTION_KEY em produção é igual à chave de desenvolvimento commitada. "
+        "Gere uma chave secreta nova: "
+        "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+    )
 
 # ─── Static files (WhiteNoise + optional S3 for media) ───────────────────────
 STATIC_URL = "/static/"

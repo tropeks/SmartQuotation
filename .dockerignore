@@ -1,0 +1,45 @@
+# Build context = repo root (docker-compose.prod.yml). Sem isto, `COPY backend/ .`
+# assa backend/.env (segredos: FIELD_ENCRYPTION_KEY, senha do Postgres, credenciais ERP)
+# dentro da imagem — qualquer um que puxe a imagem lê os segredos.
+
+# Segredos — NUNCA na imagem (o deploy injeta via env do compose/orquestrador)
+.env
+.env.*
+!.env.example
+!.env.*.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Controle de versão / CI
+.git
+.gitignore
+.github
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / assets
+**/node_modules/
+
+# Dados de runtime que não pertencem à imagem
+**/media/
+**/staticfiles/
+*.sqlite3
+*.log
+
+# Artefatos do orchestrator / worktrees
+.orch_evidence.txt
+.orch-test.sh
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store

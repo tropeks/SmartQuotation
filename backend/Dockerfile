@@ -31,6 +31,14 @@ COPY pricing_engine/ ./pricing_engine/
 # Prod entrypoint: migrate_schemas (shared+tenant) + collectstatic, then exec CMD.
 RUN chmod +x /app/entrypoint.sh
 
+# Roda como usuário não-root. collectstatic (STATIC_ROOT=/app/staticfiles) e a
+# geração de propostas (MEDIA_ROOT=/app/backend/media) escrevem em runtime, então
+# esses diretórios precisam pertencer ao appuser.
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /app/staticfiles /app/backend/media \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
