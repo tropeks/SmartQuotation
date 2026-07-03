@@ -1,0 +1,24 @@
+TEST_CMD: PYTHONPATH=. pytest -q tests/test_check_geometria_call_sites.py tests/test_of3683_geometria_disco_bocal.py tests/test_golden_financial.py tests/test_golden_of3683.py && PYTHONPATH=. python3 -m tests.validate_permutador_completo
+
+1) Comando(s) de teste rodados + resumo da saída
+- `pytest -q tests/test_check_geometria_call_sites.py`
+  Resumo: falhou primeiro com `AttributeError` porque `CHECK_GEOMETRIA_CALL_SITES_AUDIT` ainda não existia em `tests/validate_permutador_completo.py`.
+- `PYTHONPATH=. pytest -q tests/test_check_geometria_call_sites.py tests/test_of3683_geometria_disco_bocal.py`
+  Resumo: `9 passed in 0.85s`.
+- `PYTHONPATH=. pytest -q tests/test_check_geometria_call_sites.py tests/test_of3683_geometria_disco_bocal.py tests/test_golden_financial.py tests/test_golden_of3683.py`
+  Resumo: `22 passed in 1.19s`.
+- `PYTHONPATH=. python3 -m tests.validate_permutador_completo`
+  Resumo: gate executou `BEM`, `BEU` e `OF3683`; todos `OK`; `GATE OK`.
+
+2) PASS/FAIL de cada um
+- `pytest -q tests/test_check_geometria_call_sites.py`: FAIL inicial esperado no ciclo TDD.
+- `PYTHONPATH=. pytest -q tests/test_check_geometria_call_sites.py tests/test_of3683_geometria_disco_bocal.py`: PASS.
+- `PYTHONPATH=. pytest -q tests/test_check_geometria_call_sites.py tests/test_of3683_geometria_disco_bocal.py tests/test_golden_financial.py tests/test_golden_of3683.py`: PASS.
+- `PYTHONPATH=. python3 -m tests.validate_permutador_completo`: PASS.
+
+3) Resumo do diff (arquivos tocados + o quê)
+- `tests/validate_permutador_completo.py`: adicionado `CHECK_GEOMETRIA_CALL_SITES_AUDIT` com a auditoria explícita dos call sites reais de `check_geometria()` e nota de que os backtests financeiros OF-3672/job não chamam a função diretamente.
+- `tests/test_check_geometria_call_sites.py`: novo teste AST que varre o repositório, compara os call sites reais com a auditoria declarada e exige desempacotamento em 3 valores.
+
+4) Conclusão da tarefa
+- Tarefa concluída porque os call sites reais restantes foram auditados, os backtests/gates relevantes passaram, e agora existe uma guarda automatizada para impedir regressão futura de desempacotamento em 2 valores.

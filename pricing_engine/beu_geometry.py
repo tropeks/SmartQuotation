@@ -7,9 +7,11 @@ devolve o peso LÍQUIDO (kgf) de UMA peça. O peso BRUTO (base de custo, Opção
 × (1 + perda). Validadas contra o gabarito BEU/BEM da planilha ENGEMATEX.
 
 Famílias geometrizáveis: tubo · chapa_retangular (virola/divisora) · anel (flange
-principal, anel de reforço) · pipe (pescoço de bocal) · disco (espelho/chapa suporte) ·
-tampo_2_1 (tampo elíptico). Itens comerciais (flange WN, conexões, porcas, suporte
-N-466) usam peso/preço de catálogo — não são geometrizados aqui.
+principal, anel de reforço) · pipe (pescoço de bocal) · disco (espelho/blank redondo,
+peso bruto ≈ círculo) · disco_bocal (disco pequeno cortado de retalho QUADRADO de
+chapa, peso bruto ≈ quadrado envolvente OD×OD — ver peso_disco_bocal) · tampo_2_1
+(tampo elíptico). Itens comerciais (flange WN, conexões, porcas, suporte N-466) usam
+peso/preço de catálogo — não são geometrizados aqui.
 """
 from __future__ import annotations
 import math
@@ -68,6 +70,17 @@ def peso_disco(od, esp, qtd=1, rho=RHO):
     return area * esp * rho * qtd
 
 
+def peso_disco_bocal(od, esp, qtd=1, rho=RHO):
+    """Disco BOCAL pequeno (chapa Φ<OD>, recortado de retalho QUADRADO de chapa —
+    ao contrário do espelho/tampo, que é um blank forjado/redondo cotado direto).
+    O peso BRUTO (Opção A, cobra a perda) é o do quadrado envolvente OD×OD, não o
+    do círculo: confirmado no manuscrito OF-3683 (DES 17.263-04-2, IT.4/IT.5/IT.6 —
+    "CHAPA Φ<OD>X<ESP>"), onde peso_bruto/preço reconcilia com OD² e não com
+    π/4·OD² (razão observada 41,978/32,1 ≈ 1,307 ≈ 4/π). Família distinta de
+    'disco' para não afetar espelhos/tampos (blanks redondos, sem esse refugo)."""
+    return od * od * esp * rho * qtd
+
+
 def peso_tampo_2_1(od_disco, esp, qtd=1, rho=RHO):
     """Tampo elíptico 2:1: peso ≈ chapa quadrada de lado od_disco (ver CALIB_TAMPO_2_1)."""
     area = math.pi / 4 * od_disco ** 2
@@ -86,6 +99,8 @@ GEOMETRIZAVEIS = {
     "chapa_retangular": (peso_chapa_retangular, ("ESP.", "LARGURA", "COMPR.")),
     "anel": (peso_anel, ("OD", "ID", "ESP.")),
     "disco": (peso_disco, ("OD", "ESP.")),
+    # disco pequeno cortado de retalho quadrado (bocal) — ver peso_disco_bocal.
+    "disco_bocal": (peso_disco_bocal, ("OD", "ESP.")),
     # espelho = disco maciço furado: peso BRUTO da chapa-disco original (os furos saem como
     # refugo, capturados na perda). Fora do gate geométrico estrito (peso_liq desconta furos).
     "espelho": (peso_disco, ("OD", "ESP.")),
