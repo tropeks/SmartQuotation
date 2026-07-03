@@ -87,10 +87,11 @@ def test_of3672_MP_dentro_do_gate():
     assert abs(_delta_pct(mp, real)) <= GATE_HARD_PCT
 
 
-@pytest.mark.xfail(strict=True, reason="MO +14,5%: o motor modela recorte/acabamento de chicana "
-                   "MANUAL, mas o OF-3672 terceirizou o corte das chicanas a LASER (serviço fixo). "
-                   "Routing laser-vs-manual nao modelado; residuo objetivo e explicado.")
 def test_of3672_MO_dentro_do_gate():
+    """MO ~0%: com o routing laser-vs-manual modelado (chicana_corte_laser=True no caso),
+    o corte de contorno das chicanas sai da MO (chapas cortadas a LASER, terceirizado) e o
+    motor bate a MO real. As 3 ops de traçado/recorte manual somavam exatamente o resíduo
+    de +14,5% que sobrava antes (ver tests/test_chicana_corte_gate.py)."""
     real = _ANCHORS["OF-3672"]["subtotais"]["MO"]
     mo = sum(it.custo_mo for it in _cot_3672().itens)
     assert abs(_delta_pct(mo, real)) <= GATE_HARD_PCT
