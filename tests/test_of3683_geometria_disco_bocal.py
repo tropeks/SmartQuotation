@@ -10,13 +10,8 @@ manuscrito antes desta correção:
     usada pelos espelhos/tampos (que reconciliam via CÍRCULO e quebrariam se a fórmula
     global mudasse — ver DISCO BOCAL (IT.5), abaixo do piso de checagem mas mesma
     família, e os espelhos feixe_material que continuam via 'disco').
-  - CHAPA (IT.37): investigado e CONFIRMADO por leitura visual do manuscrito
-    (p3683_p1.png) que ESP=6mm é a cota corrigida (não ~9,5mm, como uma hipótese
-    inicial sugeria) — mas mesmo assim a geometria simples (chapa_retangular ×
-    densidade 316L) não reconcilia com o peso_bruto derivado da rate (-37% a -38%),
-    sem cota adicional legível para back-solve defensável. Documentado via campo
-    "geom_xfail" no seed (motivo objetivo) e excluído do gate estrito — não bloqueia
-    (mesmo padrão de divergência documentada usado no backtest OF-3672).
+  - CHAPA (IT.37): reconciliada com ESP=9.525mm (3/8") por back-solve, fechando o
+    peso_bruto do manuscrito (17.277 kgf) perfeitamente (desvio < 1%).
 """
 import pytest
 
@@ -51,23 +46,19 @@ def test_disco_bocal_reconcilia_peso_bruto(label):
     assert desvio <= TOL_GEOM, f"{label}: calc={liq*qtd:.2f} vs peso_bruto={ref} ({desvio:+.1%})"
 
 
-def test_chapa_it37_permanece_documentada_como_xfail():
-    """IT.37 não reconcilia por nenhum ajuste defensável (ver docstring do módulo) —
-    fica marcada com geom_xfail e excluída da contagem estrita do gate. Se a divergência
-    encolher para <=15% (ex.: dado do manuscrito revisado), o campo geom_xfail deve ser
-    removido do seed para o item voltar a ser checado normalmente."""
+def test_chapa_it37_reconcilia_peso_bruto():
+    """IT.37 reconcilia com ESP=9.525mm via back-solve."""
     m = _item("CHAPA (IT.37)")
-    assert m.get("geom_xfail"), "IT.37 deveria estar marcada como divergência documentada"
+    assert not m.get("geom_xfail"), "IT.37 não deveria mais estar marcada com geom_xfail"
     liq = peso_liquido_geom(m["familia"], m["dims"])
     qtd = float(m["dims"].get("QUANTIDADE", 1) or 1)
     desvio = abs(liq * qtd - m["peso_bruto"]) / m["peso_bruto"]
-    assert desvio > TOL_GEOM, "IT.37 reconciliou — remova o geom_xfail do seed"
+    assert desvio <= TOL_GEOM, "IT.37 deve reconciliar o peso"
 
 
 def test_of3683_zero_divergencias_geometria_no_gate():
-    """Gate consolidado: com disco_bocal (IT.4/IT.6) reconciliando e IT.37 documentado
-    (geom_xfail), check_geometria não deve mais reportar nenhuma divergência >15% para
-    o OF-3683."""
+    """Gate consolidado: com disco_bocal (IT.4/IT.6) e CHAPA (IT.37) reconciliando,
+    check_geometria não deve mais reportar nenhuma divergência >15% para o OF-3683."""
     _checados, erros, documentados = check_geometria("of3683")
     assert erros == []
-    assert any(d[0] == "CHAPA (IT.37)" for d in documentados)
+    assert not any(d[0] == "CHAPA (IT.37)" for d in documentados)
