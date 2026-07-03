@@ -94,17 +94,28 @@ def caso_136_tubos() -> FeixeInputs:
 
 
 def caso_of_3672() -> FeixeInputs:
-    """Caso de regressão OF-3672 (REPLAN, opportunity nº 7004563412, feixe tubular reto,
-    P.28510). Fonte: orçamento manuscrito real (uploads/OF-3672 - Feixe tubular.pdf).
+    """Caso REAL OF-3672 (REPLAN, opportunity nº 7004563412, feixe tubular reto, P.28510).
+    Fonte: orçamento manuscrito real (uploads/OF-3672 - Feixe tubular.pdf), transcrito e
+    validado pelo PE Wellington. Backtest financeiro em tests/test_golden_financial.py
+    (total +3,5% dentro da banda ideal ≤5%; ver tests/golden_anchors.json).
 
-    Campos extraídos com confiança do manuscrito: MP.IT.1 "TUBO Ø3/4"X14BWGX3048MMX210"
-    material A-179 (= SA-179, já é o default) e "TRANSP. EWG/REPLAN ... 800,00". Os demais
-    campos (chicanas, espelhos, tirantes etc.) não são inequivocamente legíveis no rascunho
-    manuscrito e herdam os defaults de referência — este caso é uma regressão/snapshot do
-    motor, não uma validação financeira completa contra o orçamento real (diferente de
-    caso_136_tubos, cujos campos vêm de uma planilha estruturada).
+    Transcrição do manuscrito (2 páginas):
+      - IT.1: TUBO Ø3/4"×14BWG×3048mm ×210, A-179 (=SA-179) — R$15.750 (65% da MP).
+      - IT.2/IT.3: DISCOS (espelhos) Ø540×27 e Ø482×27, A-266 gr.2 FORJADO — R$3.570+3.030.
+      - IT.4: 10 CHAPAS 495×326×1/4" (chicanas), A-516 gr.60; cortadas a LASER (terceirizado).
+      - União tubo-espelho MANDRILADA (expansão + 2 grooves), SEM solda de selagem (Wellington
+        confirmou: reduz MO ao excluir soldas de passe). Transporte R$800 (TRANSP. EWG/REPLAN).
+    Preços R$/kg reais deste job vivem na cost_chain do backtest, não aqui (motor = lib pura).
     """
-    return FeixeInputs(n_tubos=210, tubo_comp_mm=3048.0, custo_transporte=800.0)
+    return FeixeInputs(
+        n_tubos=210, tubo_comp_mm=3048.0, tubo_material="SA-179",
+        custo_transporte=800.0,
+        solda_selagem=False,                      # MANDRILADO — sem soldas de passe
+        chicana_qty=10,                           # IT.4 = 10 chapas
+        espelho_material="A-266 GR 2",
+        espelho_od_mm=540.0, espelho_esp_bruta_mm=27.0,
+        espelho_flutuante_od_mm=482.0,
+    )
 
 
 def caso_of_3399() -> FeixeInputs:
