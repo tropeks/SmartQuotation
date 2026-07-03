@@ -19,6 +19,16 @@ TOL_CUSTO = 0.10
 TOL_GEOM = 0.15
 SEEDS = os.path.join(ROOT, "pricing_engine", "seeds")
 
+# Auditoria da assinatura 3-tupla de check_geometria():
+# - o gate validar() consome (checados, erros, documentados);
+# - o backtest geométrico do OF-3683 também desempacota 3 valores;
+# - os backtests financeiros citados nas docstrings (OF-3672 / job backtests) não chamam
+#   check_geometria() diretamente.
+CHECK_GEOMETRIA_CALL_SITES_AUDIT = {
+    "tests/test_of3683_geometria_disco_bocal.py": 3,
+    "tests/validate_permutador_completo.py": 3,
+}
+
 
 def _load(n):
     with open(os.path.join(SEEDS, n), encoding="utf-8") as f:
