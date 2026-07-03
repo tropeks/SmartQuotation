@@ -8,11 +8,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/design-system-g.css' %}">
-  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script defer src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body>
   <div class="g-rail">
-    <span class="brand">SMART<b>QUOTATION</b></span>
+    <span class="brand" aria-label="SMARTQUOTATION">SMART<b>QUOTATION</b></span>
     <span class="spacer"></span>
     {% if user.is_authenticated %}
       <span class="tenant">{{ request.tenant.name|default:"—" }}</span>

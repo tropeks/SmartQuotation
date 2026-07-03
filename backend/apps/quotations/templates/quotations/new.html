@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Nova Cotação{% endblock %}
+{% block content %}
+<div class="eyebrow">COT · Nova</div>
+<div class="q-number">NOVA COTAÇÃO</div>
+<p style="color:var(--g-gray-1)">Fluxo linear de entrada da cotação. Os campos abaixo usam apenas dados já persistidos no modelo; os demais são exibidos para a operação e não são gravados nesta tela de UI.</p>
+
+<form method="post">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <section class="g-section">
+      <div class="g-section-body">
+        {% for error in form.non_field_errors %}
+          <div class="error">{{ error }}</div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>Identificação</h3></header>
+    <div class="g-section-body">
+      <div class="g-form">
+        <label class="field col-12">
+          <span>{{ form.customer.label }}</span>
+          {{ form.customer }}
+          {% for error in form.customer.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+        <label class="field col-12">
+          <span>{{ form.title.label }}</span>
+          {{ form.title }}
+          {% for error in form.title.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>Dados Comerciais</h3></header>
+    <div class="g-section-body">
+      <div class="g-form">
+        <label class="field col-12">
+          <span>{{ form.description.label }}</span>
+          {{ form.description }}
+          {% for error in form.description.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+        <label class="field col-12">
+          <span>{{ form.valid_until.label }}</span>
+          {{ form.valid_until }}
+          {% for error in form.valid_until.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+        <label class="field col-12">
+          <span>{{ form.delivery_weeks.label }}</span>
+          {{ form.delivery_weeks }}
+          {% for error in form.delivery_weeks.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+        <label class="field col-12">
+          <span>{{ form.payment_terms.label }}</span>
+          {{ form.payment_terms }}
+          {% for error in form.payment_terms.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>Responsável Técnico</h3></header>
+    <div class="g-section-body">
+      <div class="g-form">
+        <label class="field col-12">
+          <span>{{ form.engineer_responsavel.label }}</span>
+          {{ form.engineer_responsavel }}
+          {% for error in form.engineer_responsavel.errors %}<span class="error">{{ error }}</span>{% endfor %}
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="g-section">
+    <div class="g-section-body" style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="q-btn primary" type="submit">Salvar e continuar</button>
+      <a class="q-btn" href="{% url 'quotations:list' %}">Cancelar</a>
+    </div>
+  </section>
+</form>
+{% endblock %}

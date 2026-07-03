@@ -33,6 +33,14 @@ class FeatureViewsTests(TenantTestCase):
         self.assertContains(resp, "Feixe A")
         self.assertContains(resp, q.number)
         self.assertContains(resp, "Estrutura Analítica")
+        self.assertContains(resp, "COT-03")
+        self.assertContains(resp, "Command Center")
+        self.assertContains(resp, "g3-minimap")
+        self.assertContains(resp, 'href="#sec-resumo"')
+        self.assertContains(resp, 'id="sec-preco"')
+        self.assertContains(resp, "Progresso da Cotação")
+        self.assertContains(resp, "§1")
+        self.assertContains(resp, "§6")
         
     def test_quotation_revise_feixe(self):
         q = create_feixe_quotation(self.customer, "Feixe A")

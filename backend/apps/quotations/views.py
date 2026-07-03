@@ -3,13 +3,15 @@ Views do data sheet do feixe — session auth + HTMX (recálculo ao vivo).
 Vertical slice: criar feixe -> recompute (preview ao vivo) -> salvar -> detalhe (EAP + preço).
 """
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.accounts.models import UserProfile
-from apps.accounts.rbac import require_role
+from apps.accounts.rbac import require_role, user_role
 from apps.quotations.models import Quotation, Customer
-from apps.quotations.forms import FeixeDataSheetForm
+from apps.quotations.forms import FeixeDataSheetForm, QuotationEntryForm
 from apps.quotations.adapter import default_inputs, to_feixe_inputs
 from apps.quotations.services import create_feixe_quotation
 
@@ -29,12 +31,90 @@ _WRITE_ROLES = (
     UserProfile.ROLE_ADMIN,
 )
 
+_ENTRY_ROLES = (
+    UserProfile.ROLE_ORCAMENTISTA,
+    UserProfile.ROLE_ENGENHEIRO,
+    UserProfile.ROLE_ADMIN,
+)
+
+_STATUS_PILL_CLASSES = {
+    "draft": "q-status--draft",
+    "in_review": "q-status--review",
+    "approved": "q-status--approved",
+    "sent": "q-status--sent",
+    "won": "q-status--won",
+    "lost": "q-status--lost",
+}
+
 
 def _initial_from_defaults() -> dict:
     d = default_inputs()
     d["title"] = "Feixe Tubular"
     d["customer_name"] = ""
     return d
+
+
+def _revision_label(revision: int) -> str:
+    if 0 <= revision < 26:
+        return f"Rev. {chr(ord('A') + revision)}"
+    return f"Rev. {revision + 1}"
+
+
+def _status_class(status: str) -> str:
+    return _STATUS_PILL_CLASSES.get(status, "q-status--draft")
+
+
+def _list_context(request):
+    qs = Quotation.objects.select_related("customer", "created_by")
+
+    search = (request.GET.get("q") or "").strip()
+    if search:
+        qs = qs.filter(
+            Q(number__icontains=search)
+            | Q(title__icontains=search)
+            | Q(customer__company_name__icontains=search)
+        )
+
+    statuses = [status for status in request.GET.getlist("status") if status]
+    if statuses:
+        qs = qs.filter(status__in=statuses)
+
+    customer_id = request.GET.get("customer") or ""
+    if customer_id:
+        qs = qs.filter(customer_id=customer_id)
+
+    qs = qs.order_by("-created_at")
+    paginator = Paginator(qs, 12)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    querystring = request.GET.copy()
+    querystring.pop("page", None)
+    rows = []
+    for quotation in page_obj.object_list:
+        created_by = quotation.created_by
+        created_by_display = "—"
+        if created_by is not None:
+            created_by_display = created_by.get_full_name() or created_by.username
+        rows.append({
+            "obj": quotation,
+            "revision_label": _revision_label(quotation.revision),
+            "status_class": _status_class(quotation.status),
+            "status_label": quotation.get_status_display(),
+            "created_by_display": created_by_display,
+            "validity_display": "—",
+            "is_italic": quotation.status in {"lost", "cancelled", "canceled"},
+        })
+
+    return {
+        "quotations": rows,
+        "page_obj": page_obj,
+        "querystring": querystring.urlencode(),
+        "status_choices": Quotation.STATUS,
+        "selected_statuses": statuses,
+        "customers": Customer.objects.order_by("company_name"),
+        "selected_customer": customer_id,
+        "search": search,
+        "can_create_quotation": user_role(request.user) in _ENTRY_ROLES,
+    }
 
 
 def _preview(inputs: dict):
@@ -55,8 +135,38 @@ def _preview(inputs: dict):
 
 @login_required
 def list_quotations(request):
-    quotations = Quotation.objects.select_related("customer").all()
-    return render(request, "quotations/list.html", {"quotations": quotations})
+    return render(request, "quotations/list.html", _list_context(request))
+
+
+@require_role(*_ENTRY_ROLES)
+def quotation_new(request):
+    """COT-02: formulário linear para criar uma cotação draft."""
+    customer_qs = Customer.objects.order_by("company_name")
+    engineer_qs = UserProfile.objects.filter(role=UserProfile.ROLE_ENGENHEIRO, is_active=True).select_related("user")
+
+    if request.method == "POST":
+        form = QuotationEntryForm(
+            request.POST,
+            customer_queryset=customer_qs,
+            engineer_queryset=engineer_qs,
+        )
+        if form.is_valid():
+            q = create_feixe_quotation(
+                form.cleaned_data["customer"],
+                form.cleaned_data["title"],
+                created_by=request.user,
+            )
+            return redirect("quotations:detail", pk=q.pk)
+    else:
+        form = QuotationEntryForm(customer_queryset=customer_qs, engineer_queryset=engineer_qs)
+
+    return render(
+        request,
+        "quotations/new.html",
+        {
+            "form": form,
+        },
+    )
 
 
 @require_role(*_WRITE_ROLES)

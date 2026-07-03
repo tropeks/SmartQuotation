@@ -280,6 +280,94 @@ class QuotationRBACTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
 
 
+class QuotationEntryFlowTests(TenantTestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.user = User.objects.create_user(username="orc-entry", password="senha-forte-123")
+        UserProfile.objects.create(
+            user=self.user,
+            full_name="Orc Entry",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+        )
+
+        self.engineer_user = User.objects.create_user(username="eng-entry", password="senha-forte-123")
+        self.engineer_profile = UserProfile.objects.create(
+            user=self.engineer_user,
+            full_name="Eng Entry",
+            role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="12345",
+            crea_state="SP",
+        )
+
+        self.customer_a = Customer.objects.create(company_name="Cliente Alpha")
+        self.customer_b = Customer.objects.create(company_name="Cliente Beta")
+        self.client.force_login(self.user)
+
+    def _new_quotation_payload(self, **overrides):
+        data = {
+            "customer": self.customer_a.pk,
+            "title": "Nova Cotacao Alpha",
+            "description": "Descricao livre",
+            "valid_until": "2026-08-01",
+            "delivery_weeks": "6",
+            "payment_terms": "30 dias",
+            "engineer_responsavel": self.engineer_profile.pk,
+        }
+        data.update(overrides)
+        return data
+
+    def test_lista_cotacoes_exibe_statuspill_filtros_e_botao_nova(self):
+        q_draft = create_feixe_quotation(self.customer_a, "Feixe Alpha", created_by=self.user)
+        q_draft.status = "lost"
+        q_draft.save(update_fields=["status"])
+        create_feixe_quotation(self.customer_b, "Feixe Beta", created_by=self.user)
+
+        resp = self.client.get("/cotacoes/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "+ Nova Cotação")
+        self.assertContains(resp, "q-status")
+        self.assertContains(resp, "Rev. A")
+        self.assertContains(resp, "Cliente Alpha")
+        self.assertContains(resp, "font-style: italic")
+
+        filtered = self.client.get("/cotacoes/", {"status": ["lost"], "customer": self.customer_a.pk, "q": "Alpha"})
+        self.assertEqual(filtered.status_code, 200)
+        self.assertContains(filtered, "Feixe Alpha")
+        self.assertNotContains(filtered, "Feixe Beta")
+
+    def test_cotacao_nova_carrega_campos_chave(self):
+        resp = self.client.get("/cotacoes/nova/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "COT · Nova")
+        self.assertContains(resp, "Cliente")
+        self.assertContains(resp, "Título")
+        self.assertContains(resp, "Descrição")
+        self.assertContains(resp, "Válido até")
+        self.assertContains(resp, "Prazo de entrega")
+        self.assertContains(resp, "Condições de pagamento")
+        self.assertContains(resp, "Engenheiro responsável")
+        self.assertContains(resp, "Salvar e continuar")
+        self.assertContains(resp, "Cancelar")
+
+    def test_cotacao_nova_post_valido_cria_rascunho_e_redireciona(self):
+        resp = self.client.post("/cotacoes/nova/", self._new_quotation_payload())
+
+        self.assertEqual(resp.status_code, 302)
+        q = Quotation.objects.latest("created_at")
+        self.assertEqual(q.status, "draft")
+        self.assertEqual(q.customer, self.customer_a)
+        self.assertEqual(q.title, "Nova Cotacao Alpha")
+        self.assertEqual(q.created_by, self.user)
+        detalhe = self.client.get(resp.url)
+        self.assertEqual(detalhe.status_code, 200)
+        self.assertContains(detalhe, q.number)
+
+
 class PermutadorQuotationTests(TenantTestCase):
     """Ciclo cotação→proposta: persistir a cotação do permutador a partir do motor."""
 

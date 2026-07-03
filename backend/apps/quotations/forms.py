@@ -1,6 +1,9 @@
 """Data sheet do feixe tubular — campos que o orçamentista preenche."""
 from django import forms
 
+from apps.accounts.models import UserProfile
+from apps.quotations.models import Customer
+
 TIPO = [("TUBO RETO", "Tubo Reto"), ("TUBO U", "Tubo U")]
 OD_TUBO = [('3/4"', '3/4"'), ('1"', '1"'), ('1.1/4"', '1.1/4"'), ('5/8"', '5/8"')]
 BWG = [(f"BWG {n}", f"BWG {n}") for n in (12, 13, 14, 16, 18)]
@@ -50,3 +53,41 @@ class FeixeDataSheetForm(forms.Form):
         except Exception:
             pass
         return d
+
+
+class QuotationEntryForm(forms.Form):
+    customer = forms.ModelChoiceField(label="Cliente", queryset=Customer.objects.none(), empty_label="Selecione")
+    title = forms.CharField(label="Título", max_length=500)
+    description = forms.CharField(
+        label="Descrição",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3, "style": "min-height:96px;"}),
+    )
+    valid_until = forms.DateField(
+        label="Válido até",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    delivery_weeks = forms.IntegerField(label="Prazo de entrega (semanas)", required=False, min_value=1)
+    payment_terms = forms.CharField(
+        label="Condições de pagamento",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3, "style": "min-height:96px;"}),
+    )
+    engineer_responsavel = forms.ModelChoiceField(
+        label="Engenheiro responsável",
+        queryset=UserProfile.objects.none(),
+        required=False,
+        empty_label="Selecione",
+    )
+
+    def __init__(self, *args, customer_queryset=None, engineer_queryset=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["customer"].queryset = (
+            customer_queryset if customer_queryset is not None else Customer.objects.order_by("company_name")
+        )
+        self.fields["engineer_responsavel"].queryset = (
+            engineer_queryset
+            if engineer_queryset is not None
+            else UserProfile.objects.filter(role=UserProfile.ROLE_ENGENHEIRO, is_active=True).select_related("user")
+        )

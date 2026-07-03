@@ -2,27 +2,102 @@
 {% block title %}Cotações{% endblock %}
 {% block content %}
 <div class="eyebrow">COT · Lista</div>
-<div class="q-number">COTAÇÕES</div>
-<p><a class="q-btn primary" href="{% url 'quotations:feixe_new' %}">+ Nova Cotação de Feixe</a></p>
+<div class="q-number" style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <span>COTAÇÕES</span>
+  {% if can_create_quotation %}
+    <a class="q-btn primary" href="{% url 'quotations:new' %}">+ Nova Cotação</a>
+  {% endif %}
+</div>
+
+<section class="g-section" style="margin-top:8px">
+  <header class="g-section-head"><h3>Filtros</h3></header>
+  <div class="g-section-body">
+    <form method="get" class="g-form">
+      <label class="field col-4">
+        <span>Busca</span>
+        <input type="text" name="q" value="{{ search }}" placeholder="Número, título ou cliente">
+      </label>
+      <label class="field col-4">
+        <span>Status</span>
+        <select name="status" multiple size="6">
+          {% for status_key, status_label in status_choices %}
+            <option value="{{ status_key }}" {% if status_key in selected_statuses %}selected{% endif %}>{{ status_label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field col-4">
+        <span>Cliente</span>
+        <select name="customer">
+          <option value="">Todos</option>
+          {% for customer in customers %}
+            <option value="{{ customer.pk }}" {% if selected_customer|stringformat:"s" == customer.pk|stringformat:"s" %}selected{% endif %}>{{ customer.company_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="field col-12" style="flex-direction:row;gap:8px;align-items:center">
+        <button class="q-btn primary" type="submit">Aplicar</button>
+        <a class="q-btn" href="{% url 'quotations:list' %}">Limpar</a>
+      </div>
+    </form>
+  </div>
+</section>
+
 <section class="g-section" style="margin-top:8px">
   <div class="g-section-body" style="padding:0">
     <table class="g-table">
-      <thead><tr><th>Número</th><th>Cliente</th><th>Título</th><th>Status</th><th>Data</th><th class="num">Preço de Venda</th></tr></thead>
-      <tbody>
-        {% for q in quotations %}
-        <tr onclick="location.href='{% url 'quotations:detail' q.pk %}'" style="cursor:pointer">
-          <td class="mono" style="color:var(--g-orange)">{{ q.number }}</td>
-          <td>{{ q.customer.company_name }}</td>
-          <td>{{ q.title }}</td>
-          <td>{{ q.get_status_display }}</td>
-          <td>{{ q.created_at|date:"d/m/Y" }}</td>
-          <td class="num">R$ {{ q.preco_com_impostos|floatformat:2 }}</td>
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Revisão</th>
+          <th>Cliente</th>
+          <th>Título</th>
+          <th>Status</th>
+          <th class="num">Valor Total R$</th>
+          <th>Validade</th>
+          <th>Criado por</th>
+          <th>Data</th>
+          <th>Ações</th>
         </tr>
+      </thead>
+      <tbody>
+        {% for row in quotations %}
+          <tr onclick="location.href='{% url 'quotations:detail' row.obj.pk %}'" style="cursor:pointer{% if row.is_italic %};font-style: italic;{% endif %}">
+            <td class="mono" style="color:var(--g-orange)">{{ row.obj.number }}</td>
+            <td class="mono">{{ row.revision_label }}</td>
+            <td>{{ row.obj.customer.company_name }}</td>
+            <td>{{ row.obj.title }}</td>
+            <td><span class="q-status {{ row.status_class }}">{{ row.status_label }}</span></td>
+            <td class="num">R$ {{ row.obj.preco_com_impostos|floatformat:2 }}</td>
+            <td>{{ row.validity_display }}</td>
+            <td>{{ row.created_by_display }}</td>
+            <td>{{ row.obj.created_at|date:"d/m/Y" }}</td>
+            <td><a href="{% url 'quotations:detail' row.obj.pk %}">Detalhe</a></td>
+          </tr>
         {% empty %}
-        <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação ainda. Crie a primeira.</td></tr>
+          <tr>
+            <td colspan="10" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação encontrada.</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </section>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<section class="g-section" style="margin-top:8px">
+  <div class="g-section-body" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="mono" style="color:var(--g-gray-1)">
+      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      {% if page_obj.has_previous %}
+        <a class="q-btn mini" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a class="q-btn mini" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

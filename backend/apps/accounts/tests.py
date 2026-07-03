@@ -154,6 +154,89 @@ class TenantMembershipTests(TestCase):
         self.assertEqual(resp.status_code, 200)
 
 
+class ShellSmokeTests(TestCase):
+    """Smoke test: verifica que o shell (base.html) renderiza com Alpine.js, CSS, e navegação profissional."""
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.user = User.objects.create_user(
+            username="alice", email="alice@empresa.com", password="senha-forte-123"
+        )
+        UserProfile.objects.create(
+            user=self.user, full_name="Alice", role=UserProfile.ROLE_ORCAMENTISTA
+        )
+
+    def test_shell_carrega_alpine_js(self):
+        """Base.html deve incluir Alpine.js (CDN)."""
+        self.client.force_login(self.user)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "alpine", count=None)  # Alpine.js via CDN
+
+    def test_shell_carrega_design_system_css(self):
+        """Base.html deve referenciar design-system-g.css."""
+        self.client.force_login(self.user)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "design-system-g.css")
+
+    def test_shell_tem_rail_marca(self):
+        """Rail horizontal deve existir com marca SMARTQUOTATION."""
+        self.client.force_login(self.user)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "SMARTQUOTATION")
+        self.assertContains(resp, "g-rail")
+
+    def test_shell_tem_navegacao_modulos(self):
+        """Shell deve exibir navegação de módulos: Cotações, OFs, Custos, TEMA, Permutador."""
+        self.client.force_login(self.user)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Cotações")
+        self.assertContains(resp, "OFs")
+        self.assertContains(resp, "Custos")
+        self.assertContains(resp, "TEMA")
+
+    def test_dashboard_command_center_mostra_kpis_reais(self):
+        from decimal import Decimal
+        from apps.quotations.models import Customer, Quotation
+
+        customer = Customer.objects.create(company_name="Cliente Dashboard")
+        Quotation.objects.create(
+            number="COT-2026-001",
+            customer=customer,
+            title="Feixe ganho",
+            status=Quotation.STATUS[4][0],
+            preco_com_impostos=Decimal("125000.00"),
+            custo_total=Decimal("100000.00"),
+        )
+        Quotation.objects.create(
+            number="COT-2026-002",
+            customer=customer,
+            title="Feixe em revisão",
+            status="in_review",
+            preco_com_impostos=Decimal("98000.00"),
+            custo_total=Decimal("76000.00"),
+        )
+
+        self.client.force_login(self.user)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "DASH-01")
+        self.assertContains(resp, "Command Center")
+        self.assertContains(resp, "g3-minimap")
+        self.assertContains(resp, "Cotações Ativas")
+        self.assertContains(resp, "2")
+        self.assertContains(resp, "Pipeline")
+        self.assertContains(resp, "R$ 223000,00")
+        self.assertContains(resp, "Ganhas")
+        self.assertContains(resp, "1")
+        self.assertContains(resp, "Em Revisão")
+        self.assertContains(resp, "Feixe em revisão")
+        self.assertContains(resp, "Cliente Dashboard")
+
+
 class RbacTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()

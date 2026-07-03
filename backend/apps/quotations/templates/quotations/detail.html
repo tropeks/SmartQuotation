@@ -1,84 +1,160 @@
 {% extends "base.html" %}
 {% block title %}{{ q.number }} — {{ q.title }}{% endblock %}
 {% block content %}
-<div class="eyebrow">COT · Detalhe</div>
-<div class="q-number" style="display: flex; justify-content: space-between; align-items: center;">
-  <div>{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></div>
-  <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline; margin: 0;">
-    {% csrf_token %}
-    <button type="submit" class="q-btn">Revisar</button>
-  </form>
-</div>
-<p class="mono" style="color:var(--g-gray-1)">{{ q.customer.company_name }} · {{ q.get_scope_display }} · {{ q.get_status_display }}</p>
+<div class="command-center-layout">
+  <div class="command-center-main">
+    <header class="q-header">
+      <div class="row1">
+        <div class="id-block">
+          <div class="breadcrumb-q">COT-03 · Detalhe</div>
+          <div class="number">{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></div>
+          <div class="subtitle"><b>{{ q.customer.company_name }}</b> · {{ q.title }}<span class="equip">{{ q.get_scope_display }} · {{ q.get_status_display }}</span></div>
+        </div>
+        <div class="status-block">
+          <div class="q-status q-status--{% if q.status == 'approved' %}approved{% elif q.status == 'in_review' %}review{% elif q.status == 'sent' %}sent{% elif q.status == 'won' %}won{% elif q.status == 'lost' %}lost{% else %}draft{% endif %}">{{ q.get_status_display }}</div>
+          <div class="meta">Command Center<br>Computado {{ q.computed_at|date:"d/m/Y H:i" }}</div>
+        </div>
+      </div>
+      <div class="q-actions">
+        <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline; margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="q-btn">Revisar</button>
+        </form>
+        <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">Gerar Proposta</a>
+        {% if not has_active_of %}
+        <form method="post" action="{% url 'production:convert' q.pk %}" style="display:inline">{% csrf_token %}
+          <button type="submit" class="q-btn primary">Converter em OF</button>
+        </form>
+        {% endif %}
+      </div>
+    </header>
 
-<div class="stat-row" style="margin-top:12px">
-  <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ q.custo_total|floatformat:0 }}</div><div class="delta">mat {{ q.custo_material|floatformat:0 }} + MO {{ q.custo_mo|floatformat:0 }}</div></div>
-  <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ q.peso_bruto_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">base de custo</div></div>
-  <div class="stat"><div class="lbl">Refugo</div><div class="val mono">{{ q.perda_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">bruto − líquido</div></div>
-  <div class="stat"><div class="lbl">Computado</div><div class="val mono" style="font-size:14px">{{ q.computed_at|date:"d/m/Y H:i" }}</div></div>
-</div>
+    <div class="stat-row" style="margin-top:12px">
+      <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ q.custo_total|floatformat:0 }}</div><div class="delta">mat {{ q.custo_material|floatformat:0 }} + MO {{ q.custo_mo|floatformat:0 }}</div></div>
+      <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ q.peso_bruto_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">base de custo</div></div>
+      <div class="stat"><div class="lbl">Refugo</div><div class="val mono">{{ q.perda_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">bruto − líquido</div></div>
+      <div class="stat"><div class="lbl">Propostas</div><div class="val mono">{{ q.proposals.count }}</div><div class="delta">OFs {{ q.ordens_fabricacao.count }}</div></div>
+    </div>
 
-<section class="g-section" style="margin-top:16px">
-  <header class="g-section-head"><h3>Estrutura Analítica (EAP)</h3></header>
-  <div class="g-section-body" style="padding:0">
-    <table class="g-table">
-      <thead><tr><th>Código</th><th>Item</th><th class="num">Material</th><th class="num">Mão de Obra</th><th class="num">Total</th></tr></thead>
-      <tbody>
-        {% for it in itens %}
-        <tr>
-          <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
-          <td>{{ it.descricao }}</td>
-          <td class="num">R$ {{ it.custo_material|floatformat:0 }}</td>
-          <td class="num">R$ {{ it.custo_mo|floatformat:0 }}</td>
-          <td class="num">R$ {{ it.custo_total|floatformat:0 }}</td>
-        </tr>
+    <section id="sec-resumo" class="g-section" style="margin-top:16px">
+      <header class="g-section-head"><h3>§1 Resumo</h3></header>
+      <div class="g-section-body">
+        <div class="param-grid">
+          <div class="param"><div class="lbl">Escopo</div><div class="val">{{ q.get_scope_display }}</div></div>
+          <div class="param"><div class="lbl">Status</div><div class="val">{{ q.get_status_display }}</div></div>
+          <div class="param"><div class="lbl">Revisão</div><div class="val mono">{{ q.revision }}</div></div>
+          <div class="param"><div class="lbl">Atualizada</div><div class="val mono">{{ q.updated_at|date:"d/m/Y H:i" }}</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-eap" class="g-section">
+      <header class="g-section-head"><h3>§2 Estrutura Analítica</h3></header>
+      <div class="g-section-body" style="padding:0">
+        <table class="g-table">
+          <thead><tr><th>Código</th><th>Item</th><th class="num">Material</th><th class="num">Mão de Obra</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            {% for it in itens %}
+            <tr>
+              <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
+              <td>{{ it.descricao }}</td>
+              <td class="num">R$ {{ it.custo_material|floatformat:0 }}</td>
+              <td class="num">R$ {{ it.custo_mo|floatformat:0 }}</td>
+              <td class="num">R$ {{ it.custo_total|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="sec-preco" class="g-section">
+      <header class="g-section-head"><h3>§3 Formação de Preço</h3></header>
+      <div class="g-section-body">
+        <div class="price-line" style="margin-top:0">
+          <span class="lbl">Preço de Venda</span>
+          <span class="val mono">R$ {{ q.preco_com_impostos|floatformat:2 }}</span>
+        </div>
+        <div class="price-sub">
+          <span>Sem impostos: R$ {{ q.preco_sem_impostos|floatformat:2 }}</span>
+          <span>Markup: {{ q.fator_preco }}</span>
+          <span>Impostos: {{ q.impostos_pct }}%</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-aprovacao" class="g-section">
+      <header class="g-section-head"><h3>§4 Aprovação Técnica</h3></header>
+      <div class="g-section-body">
+        {% with approval=q.technical_approvals.first %}
+          {% if approval and approval.is_active %}
+          <div class="approval-banner">
+            <div class="lt">
+              <div class="check">✓</div>
+              <div>
+                <strong>Aprovação técnica ativa</strong>
+                <div class="meta">{{ approval.approved_by.full_name }} · CREA {{ approval.crea_state }}/{{ approval.crea_number }} · {{ approval.approved_at|date:"d/m/Y H:i" }}</div>
+              </div>
+            </div>
+            <div class="rt">hash {{ approval.calculation_snapshot_hash|slice:":10" }}</div>
+          </div>
+          {% else %}
+          <div class="approval-banner approval-banner--pending">
+            <div class="lt">
+              <div class="check">!</div>
+              <div>
+                <strong>Aprovação pendente</strong>
+                <div class="meta">Ainda não existe aprovação técnica ativa para esta cotação.</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </section>
+
+    <section id="sec-proposta" class="g-section">
+      <header class="g-section-head"><h3>§5 Proposta Comercial</h3></header>
+      <div class="g-section-body">
+        {% for p in q.proposals.all %}
+          <p><a href="{% url 'proposals:detail' p.pk %}" class="mono" style="color:var(--g-orange)">{{ p.number }}</a>
+             · {{ p.get_status_display }}
+             {% if p.pdf_path %}· <a href="{% url 'proposals:download' p.pk 'pdf' %}">PDF</a>
+             · <a href="{% url 'proposals:download' p.pk 'docx' %}">DOCX</a>{% endif %}</p>
+        {% empty %}
+          <p style="color:var(--g-gray-1)">Nenhuma proposta ainda. Gere a partir do template configurável.</p>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
+      </div>
+    </section>
 
-<div class="price-line">
-  <span class="lbl">Preço de Venda</span>
-  <span class="val mono">R$ {{ q.preco_com_impostos|floatformat:2 }}</span>
+    <section id="sec-of" class="g-section">
+      <header class="g-section-head"><h3>§6 Ordem de Fabricação</h3></header>
+      <div class="g-section-body">
+        {% for of in q.ordens_fabricacao.all %}
+          <p><a href="{% url 'production:detail' of.pk %}" class="mono" style="color:var(--g-orange)">{{ of.number }}</a>
+             · {{ of.get_status_display }}</p>
+        {% empty %}
+          <p style="color:var(--g-gray-1)">Nenhuma OF ainda.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="g3-minimap">
+    <h4>Command Center</h4>
+    <a href="#sec-resumo" class="on">Resumo<span class="n">§1</span></a>
+    <a href="#sec-eap">EAP<span class="n">§2</span></a>
+    <a href="#sec-preco">Preço<span class="n">§3</span></a>
+    <a href="#sec-aprovacao">Aprovação<span class="n">§4</span></a>
+    <a href="#sec-proposta">Proposta<span class="n">§5</span></a>
+    <a href="#sec-of">OF<span class="n">§6</span></a>
+    <div class="div"></div>
+    <div class="progress">
+      <div class="lbl">Progresso da Cotação</div>
+      <div class="val">100%</div>
+      <div class="bar"></div>
+      <div class="steps">6 de 6 blocos visíveis</div>
+    </div>
+  </aside>
 </div>
-<div class="price-sub">
-  <span>Sem impostos: R$ {{ q.preco_sem_impostos|floatformat:2 }}</span>
-  <span>Markup: {{ q.fator_preco }}</span>
-  <span>Impostos: {{ q.impostos_pct }}%</span>
-</div>
-
-<section class="g-section" style="margin-top:16px">
-  <header class="g-section-head"><h3>Proposta Comercial</h3>
-    <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">+ Gerar Proposta</a>
-  </header>
-  <div class="g-section-body">
-    {% for p in q.proposals.all %}
-      <p><a href="{% url 'proposals:detail' p.pk %}" class="mono" style="color:var(--g-orange)">{{ p.number }}</a>
-         · {{ p.get_status_display }}
-         {% if p.pdf_path %}· <a href="{% url 'proposals:download' p.pk 'pdf' %}">PDF</a>
-         · <a href="{% url 'proposals:download' p.pk 'docx' %}">DOCX</a>{% endif %}</p>
-    {% empty %}
-      <p style="color:var(--g-gray-1)">Nenhuma proposta ainda. Gere a partir do template configurável.</p>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="g-section" style="margin-top:16px">
-  <header class="g-section-head"><h3>Ordem de Fabricação</h3>
-    {% if not has_active_of %}
-    <form method="post" action="{% url 'production:convert' q.pk %}">{% csrf_token %}
-      <button type="submit" class="q-btn primary">Converter em OF</button>
-    </form>
-    {% endif %}
-  </header>
-  <div class="g-section-body">
-    {% for of in q.ordens_fabricacao.all %}
-      <p><a href="{% url 'production:detail' of.pk %}" class="mono" style="color:var(--g-orange)">{{ of.number }}</a>
-         · {{ of.get_status_display }}</p>
-    {% empty %}
-      <p style="color:var(--g-gray-1)">Nenhuma OF ainda.</p>
-    {% endfor %}
-  </div>
-</section>
 {% endblock %}
