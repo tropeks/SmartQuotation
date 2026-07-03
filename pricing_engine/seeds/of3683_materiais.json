@@ -1,0 +1,806 @@
+{
+  "fonte": "Manuscrito ENGEMATEX OF-3683 (ENG. 02/03/26) — PERMUTADOR DE CALOR ELEKEIROZ-CAMAÇARI TAG E-51303, desenho 17.263-00-1 Rev.2 + folhas 01-2,02-2,03-3,04-2,05-2,06-4,07-4,08-3. uploads/render/p3683_p1.png, p3683_p2.png (MATÉRIA-PRIMA; p3683_p3.png em diante = MÃO-DE-OBRA, fora de escopo).",
+  "designacao_tema": "OF3683",
+  "n_materiais": 54,
+  "materiais": [
+    {
+      "secao": "casco_material",
+      "label": "VIROLA / CHAPA CASCO (IT.1)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 3600,
+        "LARGURA": 2900,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 23100.0,
+      "peso_bruto": 502.174,
+      "peso_liq": 502.174,
+      "price_kgf": 46.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA REFORÇO (IT.4)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 340,
+        "LARGURA": 380,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 302.0,
+      "peso_bruto": 6.565,
+      "peso_liq": 6.565,
+      "price_kgf": 46.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA REFORÇO (IT.5)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 340,
+        "LARGURA": 530,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 421.0,
+      "peso_bruto": 9.152,
+      "peso_liq": 9.152,
+      "price_kgf": 46.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA CASCO CS (IT.6)",
+      "familia": "chapa_retangular",
+      "material": "A-516 GR 60",
+      "dims": {
+        "COMPR.": 3626,
+        "LARGURA": 564,
+        "ESP.": 12.7,
+        "QUANTIDADE": 1
+      },
+      "preco": 2447.0,
+      "peso_bruto": 203.917,
+      "peso_liq": 203.917,
+      "price_kgf": 12.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA CASCO CS (IT.7)",
+      "familia": "chapa_retangular",
+      "material": "A-516 GR 60",
+      "dims": {
+        "COMPR.": 1078,
+        "LARGURA": 670,
+        "ESP.": 12.7,
+        "QUANTIDADE": 1
+      },
+      "preco": 864.0,
+      "peso_bruto": 72.0,
+      "peso_liq": 72.0,
+      "price_kgf": 12.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA CASCO CS (IT.8)",
+      "familia": "chapa_retangular",
+      "material": "A-516 GR 60",
+      "dims": {
+        "COMPR.": 3626,
+        "LARGURA": 264,
+        "ESP.": 12.7,
+        "QUANTIDADE": 1
+      },
+      "preco": 1144.0,
+      "peso_bruto": 95.333,
+      "peso_liq": 95.333,
+      "price_kgf": 12.0
+    },
+    {
+      "secao": "feixe_material",
+      "label": "ESPELHO FIXO (ANEL bruto, IT.9a)",
+      "familia": "anel",
+      "material": "A-105",
+      "dims": {
+        "OD": 1235,
+        "ID": 1078,
+        "ESP.": 78,
+        "QUANTIDADE": 2
+      },
+      "preco": 20000.0,
+      "peso_bruto": 349.269,
+      "peso_liq": 349.269,
+      "price_kgf": 57.263,
+      "obs": "Peso derivado por geometria (anel OD x ID x espessura x densidade 7850 kg/m3) — manuscrito nao da rate R$/kg explicito para forjados A-105."
+    },
+    {
+      "secao": "feixe_material",
+      "label": "ESPELHO MÓVEL (ANEL bruto, IT.9b)",
+      "familia": "anel",
+      "material": "A-105",
+      "dims": {
+        "OD": 1235,
+        "ID": 1078,
+        "ESP.": 73,
+        "QUANTIDADE": 2
+      },
+      "preco": 19000.0,
+      "peso_bruto": 326.879,
+      "peso_liq": 326.879,
+      "price_kgf": 58.125,
+      "obs": "Peso derivado por geometria — mesma observacao do IT.9a."
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA (IT.10)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 100,
+        "LARGURA": 1160,
+        "ESP.": 9.525,
+        "QUANTIDADE": 1
+      },
+      "preco": 414.0,
+      "peso_bruto": 8.809,
+      "peso_liq": 8.809,
+      "price_kgf": 47.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA (IT.11)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 160,
+        "LARGURA": 240,
+        "ESP.": 19.05,
+        "QUANTIDADE": 4
+      },
+      "preco": 1167.0,
+      "peso_bruto": 23.34,
+      "peso_liq": 23.34,
+      "price_kgf": 50.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA (IT.12)",
+      "familia": "chapa_retangular",
+      "material": "A-516 GR 60",
+      "dims": {
+        "COMPR.": 60,
+        "LARGURA": 760,
+        "ESP.": 9.525,
+        "QUANTIDADE": 1
+      },
+      "preco": 41.0,
+      "peso_bruto": 3.417,
+      "peso_liq": 3.417,
+      "price_kgf": 12.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA (IT.13)",
+      "familia": "chapa_retangular",
+      "material": "A-36",
+      "dims": {
+        "COMPR.": 80,
+        "LARGURA": 200,
+        "ESP.": 12.7,
+        "QUANTIDADE": 4
+      },
+      "preco": 64.0,
+      "peso_bruto": 6.4,
+      "peso_liq": 6.4,
+      "price_kgf": 10.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA (IT.14)",
+      "familia": "catalogo",
+      "material": "AISI 316",
+      "dims": {
+        "COMPR.": 50,
+        "LARGURA": 100,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 11.0,
+      "obs": "Item de valor residual (R$11) sem rate R$/kg legivel no manuscrito — tratado como catalogo (preco fixo)."
+    },
+    {
+      "secao": "feixe_material",
+      "label": "TUBOS DE TROCA TÉRMICA (IT.15)",
+      "familia": "tubo",
+      "material": "A-249 TP316L",
+      "dims": {
+        "OD": 19.05,
+        "BWG": 14,
+        "COMPR.": 3006,
+        "QUANTIDADE": 1570
+      },
+      "preco": 188770.0,
+      "peso_bruto": 4719.25,
+      "peso_liq": 4719.25,
+      "price_kgf": 40.0
+    },
+    {
+      "secao": "feixe_material",
+      "label": "TIRANTES/BARRAS (IT.16/17)",
+      "familia": "catalogo",
+      "material": "AISI 316L",
+      "dims": {
+        "OD": 12.7,
+        "COMPR.": 6000,
+        "QUANTIDADE": 4
+      },
+      "preco": 1046.0,
+      "peso_bruto": 24.326,
+      "peso_liq": 24.326,
+      "price_kgf": 43.0,
+      "obs": "Barras roscadas 1/2\", tratadas como peso*preco (nao familia catalogo p/ efeito de custeio, mas hardware de fixacao)."
+    },
+    {
+      "secao": "feixe_material",
+      "label": "TUBOS ESPAÇADORES (IT.18-21)",
+      "familia": "tubo",
+      "material": "A-249 TP316L",
+      "dims": {
+        "OD": 19.05,
+        "BWG": 14,
+        "COMPR.": 3006,
+        "QUANTIDADE": 8
+      },
+      "preco": 962.0,
+      "peso_bruto": 16.033,
+      "peso_liq": 16.033,
+      "price_kgf": 60.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "ESTOJOS (IT.22)",
+      "familia": "catalogo",
+      "material": "A-193 GR B7 + BICROMATIZADO",
+      "dims": {
+        "ROSCA": "3/4 UNC",
+        "COMPR.": 205,
+        "QUANTIDADE": 70
+      },
+      "preco": 1260.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "ESTOJOS (IT.23)",
+      "familia": "catalogo",
+      "material": "A-193 GR B7 + BICROMATIZADO",
+      "dims": {
+        "ROSCA": "3/4 UNC",
+        "COMPR.": 190,
+        "QUANTIDADE": 70
+      },
+      "preco": 1190.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "PARAFUSO CAB.SEXT. (IT.25)",
+      "familia": "catalogo",
+      "material": "AISI 304L",
+      "dims": {
+        "ROSCA": "5/8 UNC",
+        "COMPR.": "4x16",
+        "QUANTIDADE": 1
+      },
+      "preco": 200.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "PORCA SEXTAVADA (IT.26)",
+      "familia": "catalogo",
+      "material": "AISI 316L",
+      "dims": {
+        "ROSCA": "1/2 UNC",
+        "COMPR.": 16,
+        "QUANTIDADE": 1
+      },
+      "preco": 40.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA (IT.37)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 125,
+        "LARGURA": 1818,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 812.0,
+      "peso_bruto": 17.277,
+      "peso_liq": 17.277,
+      "price_kgf": 47.0,
+      "obs": "Desenho traz espessura corrigida a mao de 4mm para 6mm; peso derivado do rate 47,00 R$/kg do lote de chapas finas 316L."
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA/DISCO TAMPO CASCO (DES 17.263-03-3 IT.1/2)",
+      "familia": "disco",
+      "material": "A-516 GR 70",
+      "dims": {
+        "OD": 1245,
+        "ESP.": 63.5,
+        "QUANTIDADE": 2
+      },
+      "preco": 24725.0,
+      "peso_bruto": 1213.674,
+      "peso_liq": 1213.674,
+      "price_kgf": 20.372,
+      "obs": "Peso derivado por geometria (disco OD x espessura x densidade 7850) — sem rate R$/kg explicito no manuscrito para este desenho."
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA BOCAL (IT.1/2)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 1200,
+        "LARGURA": 340,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 901.0,
+      "peso_bruto": 19.587,
+      "peso_liq": 19.587,
+      "price_kgf": 46.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA BOCAL (IT.3)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 500,
+        "LARGURA": 1160,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 1285.0,
+      "peso_bruto": 27.935,
+      "peso_liq": 27.935,
+      "price_kgf": 46.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "DISCO BOCAL (IT.4)",
+      "familia": "disco",
+      "material": "A-240 TP316L",
+      "dims": {
+        "OD": 405,
+        "ESP.": 15.875,
+        "QUANTIDADE": 2
+      },
+      "preco": 1931.0,
+      "peso_bruto": 41.978,
+      "peso_liq": 41.978,
+      "price_kgf": 46.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "DISCO BOCAL (IT.5)",
+      "familia": "disco",
+      "material": "A-240 TP316L",
+      "dims": {
+        "OD": 130,
+        "ESP.": 12.7,
+        "QUANTIDADE": 1
+      },
+      "preco": 86.0,
+      "peso_bruto": 1.72,
+      "peso_liq": 1.72,
+      "price_kgf": 50.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "DISCO BOCAL (IT.6)",
+      "familia": "disco",
+      "material": "A-240 TP316L",
+      "dims": {
+        "OD": 275,
+        "ESP.": 15.875,
+        "QUANTIDADE": 1
+      },
+      "preco": 484.0,
+      "peso_bruto": 9.68,
+      "peso_liq": 9.68,
+      "price_kgf": 50.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA BOCAL (IT.7)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 360,
+        "LARGURA": 550,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 463.0,
+      "peso_bruto": 9.26,
+      "peso_liq": 9.26,
+      "price_kgf": 50.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA BOCAL (IT.8)",
+      "familia": "chapa_retangular",
+      "material": "A-516 GR 60",
+      "dims": {
+        "COMPR.": 360,
+        "LARGURA": 900,
+        "ESP.": 6.35,
+        "QUANTIDADE": 1
+      },
+      "preco": 194.0,
+      "peso_bruto": 16.167,
+      "peso_liq": 16.167,
+      "price_kgf": 12.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "PESCOÇO BOCAL (IT.9)",
+      "familia": "catalogo",
+      "material": "A-312 TP316L",
+      "dims": {
+        "TIPO": "TUBO",
+        "ND": "8\"",
+        "SCH": "10S",
+        "COMPR.": 310,
+        "QUANTIDADE": 1
+      },
+      "preco": 1890.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "PESCOÇO BOCAL (IT.10)",
+      "familia": "catalogo",
+      "material": "A-312 TP316L",
+      "dims": {
+        "TIPO": "TUBO",
+        "ND": "3\"",
+        "SCH": "10S",
+        "COMPR.": 300,
+        "QUANTIDADE": 1
+      },
+      "preco": 375.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "PESCOÇO BOCAL (IT.11)",
+      "familia": "pipe",
+      "material": "A-106 GR B",
+      "dims": {
+        "TIPO": "TUBO",
+        "ND": "8\"",
+        "SCH": 80,
+        "COMPR.": 840,
+        "QUANTIDADE": 1
+      },
+      "preco": 915.0,
+      "peso_bruto": 41.403,
+      "peso_liq": 41.403,
+      "price_kgf": 22.1
+    },
+    {
+      "secao": "casco_material",
+      "label": "FLANGE C.J. (IT.12)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "TIPO": "C.J.",
+        "ND": "12\"",
+        "RATING": "150#",
+        "QUANTIDADE": 2
+      },
+      "preco": 1782.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "FLANGE C.J. (IT.13)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "TIPO": "C.J.",
+        "ND": "8\"",
+        "RATING": "150#",
+        "QUANTIDADE": 1
+      },
+      "preco": 448.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "FLANGE C.J. (IT.14)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "TIPO": "C.J.",
+        "ND": "3\"",
+        "RATING": "150#",
+        "QUANTIDADE": 1
+      },
+      "preco": 121.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "FLANGE SO (IT.15)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "TIPO": "SO",
+        "FACE": "RF",
+        "ND": "8\"",
+        "RATING": "150#",
+        "QUANTIDADE": 2
+      },
+      "preco": 770.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CURVA R.C. 90° (IT.16)",
+      "familia": "catalogo",
+      "material": "A-403 WP316L",
+      "dims": {
+        "ND": "12\"",
+        "SCH": "20S",
+        "QUANTIDADE": 2
+      },
+      "preco": 9600.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "LUVA NPT (IT.17)",
+      "familia": "catalogo",
+      "material": "A-182 F316L",
+      "dims": {
+        "ND": "1\"",
+        "RATING": "3000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 3
+      },
+      "preco": 348.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CURVA NPT (IT.18)",
+      "familia": "catalogo",
+      "material": "A-182 F316L",
+      "dims": {
+        "ND": "1/2\"",
+        "RATING": "3000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 4
+      },
+      "preco": 184.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "LUVA NPT (IT.19)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "ND": "1\"",
+        "RATING": "3000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "preco": 52.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "LUVA NPT (IT.20)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "ND": "1/2\"",
+        "RATING": "3000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "preco": 25.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "LUVA NPT (IT.21)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "ND": "3/4\"",
+        "RATING": "3000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "preco": 32.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "PLUG NPT (IT.22)",
+      "familia": "catalogo",
+      "material": "A-105",
+      "dims": {
+        "ND": "3/4\"",
+        "RATING": "3000#",
+        "FACE": "NPT",
+        "QUANTIDADE": 2
+      },
+      "preco": 62.0
+    },
+    {
+      "secao": "feixe_material",
+      "label": "CHAPA/DISCO ESPELHO FIXO bruto (DES 17.263-01-2 IT.1)",
+      "familia": "disco",
+      "material": "A-240 TP316L",
+      "dims": {
+        "OD": 1245,
+        "ESP.": 76.2,
+        "QUANTIDADE": 1
+      },
+      "preco": 70000.0,
+      "peso_bruto": 742.119,
+      "peso_liq": 742.119,
+      "price_kgf": 94.324,
+      "obs": "Peso derivado por geometria (disco OD1245 x 3pol x densidade 316L 8000) — sem rate R$/kg explicito p/ chapa forjada espessa."
+    },
+    {
+      "secao": "feixe_material",
+      "label": "CHAPA/DISCO ESPELHO MÓVEL bruto (DES 17.263-02-2 IT.1)",
+      "familia": "disco",
+      "material": "A-240 TP316L",
+      "dims": {
+        "OD": 1245,
+        "ESP.": 76.2,
+        "QUANTIDADE": 1
+      },
+      "preco": 70000.0,
+      "peso_bruto": 742.119,
+      "peso_liq": 742.119,
+      "price_kgf": 94.324,
+      "obs": "Mesma observacao do espelho fixo (DES 01-2)."
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA (DES 05-2 IT.1)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 300,
+        "LARGURA": 2740,
+        "ESP.": 6,
+        "QUANTIDADE": 1
+      },
+      "preco": 1921.0,
+      "peso_bruto": 41.761,
+      "peso_liq": 41.761,
+      "price_kgf": 46.0
+    },
+    {
+      "secao": "feixe_material",
+      "label": "CHICANA (DES 05-2 IT.2/3)",
+      "familia": "perfurado",
+      "material": "A-36",
+      "dims": {
+        "COMPR.": 250,
+        "LARGURA": 950,
+        "ESP.": 19.05,
+        "QUANTIDADE": 2
+      },
+      "preco": 709.0,
+      "peso_bruto": 70.9,
+      "peso_liq": 70.9,
+      "price_kgf": 10.0
+    },
+    {
+      "secao": "feixe_material",
+      "label": "CHICANA (DES 05-2 IT.4)",
+      "familia": "perfurado",
+      "material": "A-36",
+      "dims": {
+        "COMPR.": 952,
+        "LARGURA": 950,
+        "ESP.": 12.7,
+        "QUANTIDADE": 2
+      },
+      "preco": 1803.0,
+      "peso_bruto": 180.3,
+      "peso_liq": 180.3,
+      "price_kgf": 10.0
+    },
+    {
+      "secao": "feixe_material",
+      "label": "BARRA ESPAÇADORA (DES 05-2 IT.5)",
+      "familia": "chapa_retangular",
+      "material": "A-36",
+      "dims": {
+        "COMPR.": 680,
+        "LARGURA": 119,
+        "ESP.": 12.7,
+        "QUANTIDADE": 4
+      },
+      "preco": 323.0,
+      "peso_bruto": 32.3,
+      "peso_liq": 32.3,
+      "price_kgf": 10.0
+    },
+    {
+      "secao": "feixe_material",
+      "label": "BARRA ESPAÇADORA (DES 05-2 IT.6)",
+      "familia": "chapa_retangular",
+      "material": "A-36",
+      "dims": {
+        "COMPR.": 755,
+        "LARGURA": 119,
+        "ESP.": 12.7,
+        "QUANTIDADE": 8
+      },
+      "preco": 717.0,
+      "peso_bruto": 71.7,
+      "peso_liq": 71.7,
+      "price_kgf": 10.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "PLACA DE IDENTIFICAÇÃO",
+      "familia": "catalogo",
+      "material": null,
+      "dims": {
+        "QUANTIDADE": 1
+      },
+      "preco": 400.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "CHAPA VIROLA (DES 08-3 IT.1/2)",
+      "familia": "chapa_retangular",
+      "material": "A-240 TP316L",
+      "dims": {
+        "COMPR.": 1250,
+        "LARGURA": 3400,
+        "ESP.": 9.525,
+        "QUANTIDADE": 2
+      },
+      "preco": 21520.0,
+      "peso_bruto": 647.7,
+      "peso_liq": 647.7,
+      "price_kgf": 33.225,
+      "obs": "Rate R$/kg do manuscrito ilegivel neste desenho — peso derivado por geometria (2 chapas 316L, densidade 8000) e price_kgf implicito calculado."
+    },
+    {
+      "secao": "casco_material",
+      "label": "JUNTA C/DIVISÓRIA (IT.34)",
+      "familia": "catalogo",
+      "material": "NA-1002",
+      "dims": {
+        "OD": 1140,
+        "ID": 1090,
+        "ESP.": 3,
+        "QUANTIDADE": 6
+      },
+      "preco": 2400.0
+    },
+    {
+      "secao": "casco_material",
+      "label": "JUNTA S/DIVISÓRIA (IT.35)",
+      "familia": "catalogo",
+      "material": "NA-1002",
+      "dims": {
+        "OD": 1140,
+        "ID": 1090,
+        "ESP.": 3,
+        "QUANTIDADE": 6
+      },
+      "preco": 1800.0
+    }
+  ]
+}

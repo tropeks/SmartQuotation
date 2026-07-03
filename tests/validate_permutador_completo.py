@@ -72,10 +72,22 @@ def validar(designacao):
     return ok, delta, len(gerros)
 
 
+def _tem_ground_truth(designacao):
+    return os.path.exists(os.path.join(SEEDS, f"{designacao.lower()}_ground_truth.json"))
+
+
 def main():
-    designacoes = designacoes_disponiveis()
+    todas = designacoes_disponiveis()
+    # Nem toda designação com seed de MATERIAIS tem gabarito TOTAL (MO+serviços) —
+    # ex.: OF3683 é job avulso com seed de MP apenas (ver test_golden_of3683.py para
+    # o backtest de MP dele). Este gate só valida o custo TOTAL, então pula quem não
+    # tiver ground_truth em vez de quebrar a suíte.
+    designacoes = [d for d in todas if _tem_ground_truth(d)]
+    puladas = [d for d in todas if d not in designacoes]
     print("=" * 72)
     print(f"VALIDAÇÃO — PERMUTADOR COMPLETO · designações: {', '.join(designacoes)}")
+    if puladas:
+        print(f"  (puladas, sem ground_truth de custo TOTAL: {', '.join(puladas)})")
     print("=" * 72)
     resultados = [(d, *validar(d)) for d in designacoes]
     todas_ok = all(r[1] for r in resultados)

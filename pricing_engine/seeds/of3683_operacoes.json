@@ -1,0 +1,5 @@
+{
+  "_doc": "Seed de MAO-DE-OBRA para OF-3683 (permutador ELEKEIROZ E-51303) NAO IMPLEMENTADO nesta task — escopo era validar apenas a MATERIA-PRIMA (MP) contra a ancora tests/golden_anchors.json['OF-3683']. As paginas 3-8 do manuscrito (uploads/render/p3683_p3.png em diante) trazem as operacoes de usinagem/solda/inspecao (MO ancora R$213.500) mas nao foram transcritas aqui. Lista vazia proposital: quote_completo() exige o arquivo <designacao>_operacoes.json para existir, mas custo_material (o unico campo usado pelo teste de MP) independe de 'operacoes' — custo_mao_obra e custo_servicos ficam 0,0 neste seed.",
+  "designacao_tema": "OF3683",
+  "operacoes": []
+}
