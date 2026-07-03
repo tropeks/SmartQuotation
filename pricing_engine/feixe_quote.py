@@ -123,6 +123,7 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
         pp.override(getattr(cost_chain, "process_params", None))
         if cost_chain is not None else nullcontext()
     )
+    passthrough = 0.0    # ensaios/transporte fora da base de markup (por job)
     with override_ctx:
         # --- operações (custo computado das fórmulas) ---
         for op in REGISTRY:
@@ -143,6 +144,13 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
                 it.ensaios.append(oe)
             else:
                 it.operacoes.append(oe)
+            # markup por job: transporte/ensaios podem passar a custo (Wellington)
+            is_transp = op.code.startswith("OP-TRANSP")
+            is_ensaio = op.group == "ensaios" and not is_transp
+            if is_transp and not inp.markup_sobre_transporte:
+                passthrough += oe.custo
+            elif is_ensaio and not inp.markup_sobre_ensaios:
+                passthrough += oe.custo
 
     # engenharia e ferramentas entram como custos separados na Cotacao
     custo_eng = sum(o.custo for o in itens["ENG-01"].operacoes + itens["ENG-01"].ensaios)
@@ -153,5 +161,6 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
         itens=[it for code, it in itens.items() if code not in ("ENG-01", "FER-01")],
         custo_engenharia=custo_eng, custo_ferramentas=custo_fer,
         fator_preco=fator_preco, impostos_pct=impostos_pct,
+        custo_passthrough=passthrough,
     )
     return cot

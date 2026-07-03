@@ -90,6 +90,9 @@ class Cotacao:
     custo_ferramentas: float = 0.0
     fator_preco: float = 1.0
     impostos_pct: float = 0.0
+    # parcela que entra a custo, FORA da base de markup (ensaios/transporte por job,
+    # quando o orçamentista desliga o markup sobre eles). Default 0 = baseline.
+    custo_passthrough: float = 0.0
 
     @property
     def custo_itens(self) -> float:
@@ -101,7 +104,8 @@ class Cotacao:
 
     @property
     def preco_sem_impostos(self) -> float:
-        return self.custo_total * self.fator_preco
+        base_marcada = self.custo_total - self.custo_passthrough
+        return base_marcada * self.fator_preco + self.custo_passthrough
 
     @property
     def preco_com_impostos(self) -> float:

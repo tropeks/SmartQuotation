@@ -24,6 +24,11 @@ class FeixeInputs:
     fator_correcao_mo: float = 1.0
     # transporte é cotado caso a caso pelo orçamentista; default = caso ref RPBC.
     custo_transporte: float = 1600.0
+    # markup sobre ensaios (END) e transporte é decisão POR JOB (Wellington, caso a
+    # caso). Default True = baseline validado (markup sobre o custo total). False =
+    # aquela parcela passa a custo (pass-through), fora da base de markup.
+    markup_sobre_ensaios: bool = True
+    markup_sobre_transporte: bool = True
 
     # --- tubos ---
     n_tubos: int = 136
