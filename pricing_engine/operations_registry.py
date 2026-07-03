@@ -93,7 +93,8 @@ _op("OP-ESP-INSPECIONAR", "ESP-01", "Espelhos - Inspecionar",
 # ===================== CHICANAS (item CHI-01) =====================
 def _nchic(i): return i.chicana_qty + i.chapa_suporte_qty
 _op("OP-CHI-TRACAR-REC", "CHI-01", "Chicanas - Traçar e Recortar",
-    lambda i: faixa(_nchic(i), [(11,5),(31,7)], 8)*FC(i) * 90, group="chicanas")
+    lambda i: faixa(_nchic(i), [(11,5),(31,7)], 8)*FC(i) * 90,
+    applicable=lambda i: not i.chicana_corte_laser, group="chicanas")
 _op("OP-CHI-TRACAR-FUROS", "CHI-01", "Chicanas - Traçar Furos",
     lambda i: faixa(i.n_tubos, [(300,2),(1000,3),(1500,4),(2000,5)], 6)*FC(i) * 80, group="chicanas")
 _op("OP-CHI-FORMAR-PACOTE", "CHI-01", "Chicanas - Formar Pacote",
@@ -106,11 +107,13 @@ _op("OP-CHI-PREP-USINAR", "CHI-01", "Chicanas - Preparação p/ Usinar",
 _op("OP-CHI-USINAR", "CHI-01", "Chicanas - Usinar",
     lambda i: (2 if _nchic(i)<5 else 3)*FC(i) * (200 if i.esp_pacote_chicanas_mm>1100 else 150), group="chicanas")
 _op("OP-CHI-TRACAR-RECORTES", "CHI-01", "Chicanas - Traçar Recortes",
-    lambda i: faixa(_nchic(i), [(11,5),(31,7)], 8)*FC(i) * 90, group="chicanas")
+    lambda i: faixa(_nchic(i), [(11,5),(31,7)], 8)*FC(i) * 90,
+    applicable=lambda i: not i.chicana_corte_laser, group="chicanas")
 _op("OP-CHI-ESCAREAR", "CHI-01", "Chicanas - Escarear",
     lambda i: ceil(pp.get("ESCAREAR_CHICANA",pp.RADIAL)*(i.n_tubos*i.chicana_qty)/60)*FC(i) * 110, group="chicanas")
 _op("OP-CHI-RECORTAR-ACAB", "CHI-01", "Chicanas - Recortar e Dar Acabamento",
-    lambda i: faixa(_nchic(i), [(5,2),(10,4),(20,6),(30,8),(40,9)], 10)*FC(i) * 130, group="chicanas")
+    lambda i: faixa(_nchic(i), [(5,2),(10,4),(20,6),(30,8),(40,9)], 10)*FC(i) * 130,
+    applicable=lambda i: not i.chicana_corte_laser, group="chicanas")
 _op("OP-CHI-INSPECIONAR", "CHI-01", "Chicanas - Inspecionar",
     lambda i: 1*FC(i) * 110, group="chicanas")
 

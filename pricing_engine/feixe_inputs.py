@@ -50,6 +50,8 @@ class FeixeInputs:
     chicana_od_mm: float = 416.8          # AW31
     chicana_material: str = "SA-36"
     chicana_cut_remaining_mm: float = 300.0  # "CORTE": altura que sobra (hc = od - este)
+    chicana_corte_laser: bool = False        # chapa chega cortada no perfil a laser (terceirizado)
+                                             # → remove traçado/recorte/acabamento de contorno da MO
     chapa_suporte_qty: int = 1            # AP35
     chapa_suporte_esp_mm: float = 12.5    # BD35
 
@@ -117,6 +119,7 @@ def caso_of_3672() -> FeixeInputs:
         custo_transporte=800.0,
         solda_selagem=False,                      # MANDRILADO — sem soldas de passe
         chicana_qty=10,                           # IT.4 = 10 chapas
+        chicana_corte_laser=True,                 # IT.4: chapas cortadas a LASER (terceirizado)
         espelho_material="A-266 GR 2",
         espelho_od_mm=540.0, espelho_esp_bruta_mm=27.0,
         espelho_flutuante_od_mm=482.0,

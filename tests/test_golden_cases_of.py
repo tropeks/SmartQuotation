@@ -29,7 +29,8 @@ def test_caso_of_3672_cotacao_snapshot():
     # 40.756 com preços reais do job) está em tests/test_golden_financial.py.
     inp = caso_of_3672()
     cot = quote_feixe(inp, engematex_seed())
-    assert abs(cot.custo_total - 29640.53) < 1.0
+    # 27600.53 = 29640.53 − 2040 (chicana_corte_laser=True remove as 3 ops de contorno manual)
+    assert abs(cot.custo_total - 27600.53) < 1.0
 
 
 def test_caso_of_3399_inputs_refletem_o_orcamento_real():
