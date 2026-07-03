@@ -1,0 +1,51 @@
+{
+  "_doc": "Âncoras financeiras REAIS dos Golden Cases, transcritas dos orçamentos manuscritos da ENGEMATEX e validadas pelo PE Wellington (2026-07-02). Fonte durável de backtest — antes destes números viviam só em manuscrito (uploads/) e na memória de sessão. Valores em BRL. Gate beta: |delta| <= 5% ideal, <= 10% hard-fail.",
+  "_fonte": "uploads/render/f3672_p1-2.png, p3683_p1-8.png; totais confirmados por Wellington.",
+  "OF-3672": {
+    "equipamento": "Feixe tubular reto — REPLAN (Petrobras)",
+    "desenho": "DE-REPLAN-283A-45-00098 Rev.B",
+    "opportunity": "7004563412",
+    "engine_path": "feixe (pricing_engine.feixe_quote.quote_feixe)",
+    "uniao_tubo_espelho": "mandrilado (expansão + 2 grooves), SEM solda de selagem",
+    "custo_total": 40756.00,
+    "subtotais": {
+      "MP": 24053.00,
+      "MO": 14080.00,
+      "inspecoes": 1400.00,
+      "PIT": 150.00,
+      "PS": 250.00,
+      "ferramentas": 300.00,
+      "expandidores": 273.00,
+      "data_book": 250.00
+    },
+    "PV": 54000.00,
+    "impostos": {"ICMS_pct": 18.0, "IPI_pct": 3.25, "NCM": "8419.9090"},
+    "transporte": 800.00,
+    "prazo_dias": 150
+  },
+  "OF-3683": {
+    "equipamento": "Permutador de calor casco-tubo — ELEKEIROZ Camaçari, TAG E-51303 (feixe removível)",
+    "desenho": "17.263-00-1 Rev.2",
+    "engine_path": "permutador (pricing_engine.permutador_quote.quote_completo) — SEM seed ainda (equipamento custom, ~6x BEU, inox 316L)",
+    "material_principal": "A-240 TP 316L (inox) + A-516 Gr.60 + A-105",
+    "peso_kg": 8400.0,
+    "custo_total": 733510.00,
+    "subtotais": {
+      "MP": 481528.00,
+      "MO": 213500.00,
+      "proj_termico": 20000.00,
+      "proj_mecanico": 6000.00,
+      "desenho": 2500.00,
+      "PIT": 400.00,
+      "PS": 1200.00,
+      "ferramentas": 1600.00,
+      "expandidores": 4082.00,
+      "data_book": 2500.00,
+      "consumivel": 2500.00
+    },
+    "PV": 900000.00,
+    "impostos": {"ICMS_pct_reduzido": 5.14, "IPI_pct": 0.0, "NCM": "8419.50.90"},
+    "prazo_dias": 180,
+    "obs": "Exclusão de isolamento térmico. Backtest exige seed novo ou mapeamento TEMA + escala por params."
+  }
+}
