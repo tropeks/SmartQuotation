@@ -10,12 +10,12 @@
   {% endif %}
 
   {% for field in form %}
-  <p>
+  <div class="field">
     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
     {{ field }}
     {% for error in field.errors %}<span class="error">{{ error }}</span>{% endfor %}
-  </p>
+  </div>
   {% endfor %}
 
-  <button type="submit">Entrar</button>
+  <button type="submit" class="q-btn primary">Entrar</button>
 </form>

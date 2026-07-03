@@ -1,18 +1,16 @@
-<!DOCTYPE html>
-{# Login funcional e semântico. O design system será aplicado depois. #}
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Entrar — SmartQuotation</title>
-</head>
-<body>
-  <main>
-    <h1>SmartQuotation</h1>
-    <section aria-labelledby="login-title">
-      <h2 id="login-title">Acessar conta</h2>
+{% extends "base.html" %}
+{% block title %}Entrar — SmartQuotation{% endblock %}
+
+{% block content %}
+<div class="login-wrap">
+  <section class="g-section login-card" aria-labelledby="login-title">
+    <div class="g-section-head">
+      <h3 id="login-title">Acessar conta</h3>
+    </div>
+    <div class="g-section-body">
+      <p class="login-sub">Entre com seu usuário ou e-mail.</p>
       {% include "accounts/_login_form.html" %}
-    </section>
-  </main>
-</body>
-</html>
+    </div>
+  </section>
+</div>
+{% endblock %}
