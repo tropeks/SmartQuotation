@@ -322,6 +322,7 @@
       "peso_bruto": 17.277,
       "peso_liq": 17.277,
       "price_kgf": 47.0,
+      "geom_xfail": "Cota ESP=6mm confirmada por leitura visual do manuscrito (4mm riscado, corrigido a mao para 6mm — p3683_p1.png). Com essa cota + densidade 316L (8,0e-6), calc chapa_retangular = 10,7-10,9 kgf vs peso_bruto (rate) 17,277 kgf (-37% a -38%): nao reconcilia por nenhum ajuste de densidade defensavel. Cotas COMPR=125/LARGURA=1818 tambem legiveis, sem indicacao de dobra/desenvolvido no desenho para justificar back-solve de uma delas. Hipotese mais provavel: rate 47,00 R$/kg e media do 'lote de chapas finas 316L' (varios itens finos cortados juntos), nao um preco unitario puro para esta peca — o peso_bruto herda a distorcao do lote. Sem cota adicional legivel para back-solve defensavel; mantido como divergencia geometrica DOCUMENTADA (excluida do gate estrito) em vez de fudge factor sem base fisica.",
       "obs": "Desenho traz espessura corrigida a mao de 4mm para 6mm; peso derivado do rate 47,00 R$/kg do lote de chapas finas 316L."
     },
     {
@@ -375,7 +376,7 @@
     {
       "secao": "casco_material",
       "label": "DISCO BOCAL (IT.4)",
-      "familia": "disco",
+      "familia": "disco_bocal",
       "material": "A-240 TP316L",
       "dims": {
         "OD": 405,
@@ -385,12 +386,13 @@
       "preco": 1931.0,
       "peso_bruto": 41.978,
       "peso_liq": 41.978,
-      "price_kgf": 46.0
+      "price_kgf": 46.0,
+      "obs": "Chapa Φ405x5/8\" (DES 17.263-04-2, IT.4) cortada de retalho QUADRADO — peso_bruto do rate reconcilia com OD^2 (bounding square), nao com o circulo (pi/4.OD^2); familia 'disco_bocal' modela isso (ver beu_geometry.peso_disco_bocal)."
     },
     {
       "secao": "casco_material",
       "label": "DISCO BOCAL (IT.5)",
-      "familia": "disco",
+      "familia": "disco_bocal",
       "material": "A-240 TP316L",
       "dims": {
         "OD": 130,
@@ -400,12 +402,13 @@
       "preco": 86.0,
       "peso_bruto": 1.72,
       "peso_liq": 1.72,
-      "price_kgf": 50.0
+      "price_kgf": 50.0,
+      "obs": "Chapa Φ130x1/2\" (DES 17.263-04-2, IT.5) — mesmo caso do IT.4/IT.6, familia 'disco_bocal'. Abaixo do piso de checagem geometrica (peso_liq<5kgf), mas mantido consistente."
     },
     {
       "secao": "casco_material",
       "label": "DISCO BOCAL (IT.6)",
-      "familia": "disco",
+      "familia": "disco_bocal",
       "material": "A-240 TP316L",
       "dims": {
         "OD": 275,
@@ -415,7 +418,8 @@
       "preco": 484.0,
       "peso_bruto": 9.68,
       "peso_liq": 9.68,
-      "price_kgf": 50.0
+      "price_kgf": 50.0,
+      "obs": "Chapa Φ275x5/8\" (DES 17.263-04-2, IT.6) cortada de retalho QUADRADO — mesmo caso do IT.4, familia 'disco_bocal'."
     },
     {
       "secao": "casco_material",
