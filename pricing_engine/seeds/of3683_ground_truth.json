@@ -1,0 +1,1311 @@
+{
+  "fonte": "Manuscrito ENGEMATEX OF-3683 (uploads/render/p3683_p1.png..p3683_p8.png)",
+  "designacao_tema": "OF3683",
+  "descricao": "Permutador casco-tubo custom ELEKEIROZ Camacari (TAG E-51303, desenho 17.263-00-1 Rev.2, inox A-240 TP316L + A-516 Gr.60/70 + A-105, ~8400 kg)",
+  "custo_total_com_impostos": 733510.0,
+  "preco_venda_com_impostos": 900000.0,
+  "peso_liquido_total_kgf": 8400.0,
+  "icms_pct_reduzido": 5.14,
+  "ipi_pct": 0.0,
+  "prazo_dias": 180,
+  "por_secao": {
+    "MP": 481528.0,
+    "MO": 213500.0,
+    "proj_termico": 20000.0,
+    "proj_mecanico": 6000.0,
+    "desenho": 2500.0,
+    "PIT": 400.0,
+    "PS": 1200.0,
+    "ferramentas": 1600.0,
+    "expandidores": 4082.0,
+    "data_book": 2500.0,
+    "consumivel": 2500.0
+  },
+  "n_blocos": 214,
+  "blocos": [
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "USINAR OS ESPELHOS",
+      "preco": 4200.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "TRAÇAR FUNDOS",
+      "preco": 720.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 300.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "FURAR (2X157F Ø23/32X73MM+2X32F Ø7/8X70MM)",
+      "preco": 23100.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "ESCAREAR (2X157F Ø19,30X70MM)",
+      "preco": 3000.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "ALARGAR",
+      "preco": 12000.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "USINAR GROOVE",
+      "preco": 2700.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "USINAR FUNDOS P/ TIRANTES",
+      "preco": 600.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "TRAÇAR RASGO",
+      "preco": 90.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "USINAR RASGO",
+      "preco": 1500.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 180.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CONTAR AS CHICANAS",
+      "preco": 450.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "TRAÇAR FUNDOS",
+      "preco": 360.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "FORMAR OS PACOTES",
+      "preco": 480.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "FURAR (94F Ø25/32X38MM+157F Ø25/32X91MM)",
+      "preco": 5250.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "PREP. P/ USINAGEM",
+      "preco": 340.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "USINAR",
+      "preco": 1400.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "TRAÇAR RECORTE",
+      "preco": 360.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "ESCAREAR",
+      "preco": 1200.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "RECORTAR E DAR ACABAMENTO",
+      "preco": 520.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "PREP. OS TIRANTES",
+      "preco": 360.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "PREP. OS ESPAÇADORES",
+      "preco": 240.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "MONTAR O CJT. DO FEIXE",
+      "preco": 480.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INTRODUZIR OS TUBOS",
+      "preco": 1520.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "MONTAR BARRA IT 37",
+      "preco": 180.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "SOLDAR",
+      "preco": 270.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "SOLDAR PONTEAR",
+      "preco": 90.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CONTAR CH. DO CASCO",
+      "preco": 270.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "CALANDRAR CILINDRO (Ø INT.1090X2900X6MM)",
+      "preco": 2600.0
+    },
+    {
+      "page": 3,
+      "secao": "fabricacao",
+      "label": "SOLDAR LONGITUDINAL (2900X6MM)",
+      "preco": 1260.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "MONTAR OS 2 CILINDROS",
+      "preco": 880.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "SOLDAR CIRCUNFERENCIAL (3443X6MM)",
+      "preco": 1260.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR RX PARCIAL",
+      "preco": 4000.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "TRAÇAR POS. DAS CONEXÕES",
+      "preco": 520.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "RECORTAR E BISELAR",
+      "preco": 450.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 200.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CONTAR CH. DAS CONEXÕES (12\")",
+      "preco": 180.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "CALANDRAR CILINDRO (Ø INT.312X340X6MM)",
+      "preco": 300.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "SOLDAR LONGITUDINAL (340X6MM)",
+      "preco": 90.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 40.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 120.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "MONTAR CILINDROS C/ CURVAS X2",
+      "preco": 540.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "SOLDAR (4X1000X6MM)",
+      "preco": 0.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 180.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME",
+      "preco": 150.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 150.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR RX",
+      "preco": 2800.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "TRANSP. P/ RX",
+      "preco": 300.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CONTAR FLANGES",
+      "preco": 180.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "MONTAR FLANGES C/ TUBOS",
+      "preco": 360.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "SOLDAR (2XDN12\"+1XDN8\"+1XDN3\")",
+      "preco": 540.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 150.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "USINAR AS PESTANAS (RANHURA CONC.)",
+      "preco": 1050.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "TRAÇAR POS. DAS LUVAS (11X)",
+      "preco": 540.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "RECORTAR E BISELAR",
+      "preco": 720.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 150.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "MONTAR AS LUVAS",
+      "preco": 810.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "SOLDAR (5XDN1\"+6XDN1/2\"+2XDN3/4\")",
+      "preco": 990.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 240.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 200.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "PRÉ-MONTAR AS CONEXÕES NO CASCO",
+      "preco": 1170.0
+    },
+    {
+      "page": 4,
+      "secao": "fabricacao",
+      "label": "RECORTAR",
+      "preco": 180.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "MONTAR AS CONEXÕES NO CASCO",
+      "preco": 1320.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "SOLDAR (2XDN12\"+1XDN8\"+1XDN3\" #6MM)",
+      "preco": 1080.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 200.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "EXAME POR PHASED ARRAY",
+      "preco": 3000.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CORTAR CHAPA P/ ANEIS DE REF.",
+      "preco": 180.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "CALANDRAR ANEIS DE REFORÇO",
+      "preco": 600.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CONTAR OS ANEIS",
+      "preco": 360.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "USINAR FUNDOS N.P.T. 1/4\"",
+      "preco": 150.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "MONTAR ANEIS DE REFORÇOS",
+      "preco": 1100.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "SOLDAR (2X1445MM+2X1052+1X1100+1X720MM)",
+      "preco": 1620.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "EXAME POR PHASED ARRAY",
+      "preco": 3000.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "FABRICAR OS PEDESTAIS",
+      "preco": 1170.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "MONTAR OS PEDESTAIS",
+      "preco": 1760.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "SOLDAR (12.560X10MM)",
+      "preco": 3240.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 480.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 350.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "MONTAR OS PEDESTAIS AO CASCO",
+      "preco": 660.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "SOLDAR (12160MM X6MM)",
+      "preco": 3240.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "GUARNIR O CASCO",
+      "preco": 390.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "DECAPAR O CASCO",
+      "preco": 7800.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "TRANSP. PARA DECAPAGEM",
+      "preco": 1000.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "INTRODUZIR O FEIXE NO CASCO",
+      "preco": 1200.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "MONTAR O 2º ESPELHO",
+      "preco": 880.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "SOLDAR OS TUBOS",
+      "preco": 720.0
+    },
+    {
+      "page": 5,
+      "secao": "fabricacao",
+      "label": "SOLDAR OS ESPELHOS AO CASCO (2X3162MM X6MM)",
+      "preco": 2340.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 160.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR PHASED ARRAY",
+      "preco": 3000.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "GABARITAR OS TUBOS",
+      "preco": 360.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "MANDRILAR OS TUBOS",
+      "preco": 3720.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "REMOVER OS TUBOS",
+      "preco": 240.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 400.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "PRÉ-USINAR OS FLANGES",
+      "preco": 4200.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "TRAÇAR FUROS",
+      "preco": 720.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "FURAR (4X32F Ø7/8\"X67MM)",
+      "preco": 1800.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "CALANDRAR CILINDRO (Ø INT.1078X830X1/2\")",
+      "preco": 1500.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "SOLDAR LONGITUDINAL (830X1/2\")",
+      "preco": 450.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 150.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR RX PARCIAL",
+      "preco": 0.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CONTAR OS 2 CILINDROS",
+      "preco": 180.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "MONTAR OS CILINDROS C/ FLANGES",
+      "preco": 2640.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 300.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "SOLDAR (4X342GX1/2\"+4X3466X9MM)",
+      "preco": 8550.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 240.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 300.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR PHASED ARRAY",
+      "preco": 0.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "TRAÇAR POS. DAS CONEXÕES CARRETEL ENT./SAIDA",
+      "preco": 390.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "RECORTAR E BISELAR",
+      "preco": 540.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 150.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "PRÉ-MONTAR AS CONEXÕES",
+      "preco": 780.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "RECORTAR",
+      "preco": 90.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "MONTAR AS CONEXÕES",
+      "preco": 880.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "SOLDAR (2X723MM X1/2\" Δ12,7MM)",
+      "preco": 720.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 200.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "EXAME POR PHASED ARRAY",
+      "preco": 0.0
+    },
+    {
+      "page": 6,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CONTAR CH. P/ANEL DE REF",
+      "preco": 180.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "CALANDRAR ANEL DE REFORÇO",
+      "preco": 600.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E RECORTAR OS ANEIS",
+      "preco": 270.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "USINAR FUROS N.P.T. 1/4\"",
+      "preco": 150.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "MONTAR ANEIS DE REFORÇOS",
+      "preco": 660.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "SOLDAR (2X723MM+2X1100MM+6MM)",
+      "preco": 810.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "EXAME POR PHASED ARRAY",
+      "preco": 0.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "TRAÇAR E CORTAR CH. DIV.",
+      "preco": 90.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "MONTAR CH. JUNTÁRIA",
+      "preco": 260.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "SOLDAR (2X660MM X9MM)",
+      "preco": 450.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 120.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 150.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "USINAR O CARRETEL",
+      "preco": 3500.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 270.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "FAB. MONTAR ALÇAS (8X)",
+      "preco": 540.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "SOLDAR",
+      "preco": 450.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 250.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "TRAÇAR POS. DAS LUVAS NO CARRETEL DE RET.",
+      "preco": 90.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "RECORTAR E BISELAR",
+      "preco": 180.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 80.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "MONTAR AS LUVAS",
+      "preco": 270.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "SOLDAR",
+      "preco": 180.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 80.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "EXAME POR LP",
+      "preco": 80.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "USINAR O CARRETEL DE RETORNO",
+      "preco": 1500.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "USINAR AS TAMPAS",
+      "preco": 3500.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "TRAÇAR FUNDOS",
+      "preco": 450.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "FURAR (2X32F Ø7/8\"X62MM)",
+      "preco": 900.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "TRAÇAR RASGO",
+      "preco": 90.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 7,
+      "secao": "fabricacao",
+      "label": "USINAR RASGO",
+      "preco": 1250.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "DAR ACABAMENTO",
+      "preco": 90.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 150.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 520.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "PREP. P/TESTE",
+      "preco": 800.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "TESTAR LADO DO CASCO",
+      "preco": 150.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 260.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "REMOVER OS CAVALETES",
+      "preco": 1360.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "MONTAR OS CARRETEIS E TAMPAS",
+      "preco": 390.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "PREP. P/TESTE",
+      "preco": 800.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "TESTE HIDROSTÁTICO LADO DOS TUBOS",
+      "preco": 150.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 260.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "REMOVER OS CAVALETES (±16M²X350,00)",
+      "preco": 5600.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "JATO E PINTURA DOS CARRETEIS, TAMPAS E BERÇOS",
+      "preco": 1200.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "TRANSP. JATO",
+      "preco": 650.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "PLANO DE PINTURA",
+      "preco": 650.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "INSPEÇÃO DE PINTURA",
+      "preco": 360.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "FAB. MONTAR CHAPA DEFLETORA",
+      "preco": 150.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 90.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "SOLDAR",
+      "preco": 1300.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "INSPECIONAR",
+      "preco": 620.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "PREP. P/TRANSP.",
+      "preco": 5320.0
+    },
+    {
+      "page": 8,
+      "secao": "fabricacao",
+      "label": "TRANSP. ENG/ELEKEIRDZ.BA (8400 Kg)",
+      "preco": 12000.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "PROJETO TERMICO",
+      "preco": 20000.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "PROJETO MECANICO",
+      "preco": 6000.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "DESENHO",
+      "preco": 2500.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "PIT",
+      "preco": 400.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "PS",
+      "preco": 1200.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "FERRAMENTAS",
+      "preco": 1600.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "EXPANDIDORES",
+      "preco": 4082.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "DATA BOOK",
+      "preco": 2500.0
+    },
+    {
+      "page": 8,
+      "secao": "finalizacao",
+      "label": "CONSUMIVEL DE SOLDAGEM",
+      "preco": 2500.0
+    }
+  ]
+}

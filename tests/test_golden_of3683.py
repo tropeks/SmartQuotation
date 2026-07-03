@@ -27,14 +27,26 @@ fecha em R$ 481.521,00 (delta de R$ 7,00 sobre ~meio milhão — 0,0015%, ruído
 arredondamento de 1-2 dígitos manuscritos), o que dá confiança na fidelidade da
 transcrição.
 
-Seed de operações (of3683_operacoes.json) é uma lista VAZIA de propósito: a MO real
-do job (âncora R$ 213.500) está nas páginas 3-8 do manuscrito (operações de usinagem/
-solda/inspeção), que NÃO foram transcritas — escopo desta task é só a MP. Isso é
-seguro porque quote_completo() separa custo_material de custo_mao_obra/custo_servicos;
-com "operacoes": [] os dois últimos ficam 0,0 e não contaminam a validação de MP.
+Seed de operações (of3683_operacoes.json) foi completado nesta task: transcrição das
+páginas 3-8 do manuscrito (uploads/render/p3683_p3.png..p3683_p8.png — operações de
+usinagem/solda/inspeção/exame LP-RX-phased array/transporte). O próprio manuscrito
+bundla TODAS essas linhas num único bloco "MO" (boxed R$ 213.500,00 na página 8,
+checagem intermediária 195.560,00 [pág. 3-7] + 17.940,00 [pág. 8] = 213.500,00); por
+isso as 205 linhas transcritas entram como tipo="mao_obra", secao="fabricacao" — mesma
+convenção do gabarito original, não a separação mão_obra/serviço do BEU/BEM (que é uma
+classificação de PLANILHA, não deste manuscrito). Os 9 itens lump-sum do RESUMO da
+página 8 que NÃO têm detalhamento em operações (projeto térmico, projeto mecânico,
+desenho, PIT, PS, ferramentas, expandidores, data book, consumível de soldagem) entram
+como tipo="servico", secao="finalizacao".
 
-Gate beta do PE: |delta| <= 10% (hard-fail), <= 5% (ideal). Resultado: delta ≈ -0,0016%
-— VERDE, bem dentro da banda ideal.
+Sem cost_chain (quote_completo(..., cost_chain=None)) e sem params, o motor usa
+preco_gabarito direto e eff=1,0 para toda operação — custo_mao_obra e custo_servicos
+reproduzem a soma dos valores transcritos exatamente, sem depender de horas/rate/driver
+(não usados nesta validação, apenas preco_gabarito). Resultado: MO motor R$ 212.310,00
+vs âncora R$ 213.500,00 (delta -0,56%); custo_total motor R$ 734.612,13 vs âncora
+R$ 733.510,00 (delta +0,15%) — ambos VERDES, bem dentro da banda ideal (<=5%).
+
+Gate beta do PE: |delta| <= 10% (hard-fail), <= 5% (ideal).
 """
 import json
 import pathlib
@@ -58,10 +70,10 @@ def _cot_of3683():
 
 
 def test_of3683_seed_carrega_54_itens():
-    """Guarda de integridade: o seed transcrito não pode encolher/crescer silenciosamente."""
+    """Guarda de integridade: os seeds transcritos não podem encolher/crescer silenciosamente."""
     cot = _cot_of3683()
     assert cot["n_materiais"] == 54
-    assert cot["n_operacoes"] == 0
+    assert cot["n_operacoes"] == 214
 
 
 def test_of3683_MP_dentro_do_gate():
@@ -82,3 +94,44 @@ def test_of3683_MP_dentro_da_banda_ideal():
     real = _ANCHORS["OF-3683"]["subtotais"]["MP"]
     mp = _cot_of3683()["custo_material"]
     assert abs(_delta_pct(mp, real)) <= GATE_IDEAL_PCT
+
+
+# ---- MO (mão-de-obra, páginas 3-8) vs a âncora real R$ 213.500,00 ----
+
+def test_of3683_MO_dentro_do_gate():
+    """MO do motor (Σ preco_gabarito das 205 linhas transcritas de of3683_operacoes.json,
+    tipo=mao_obra) vs a âncora real R$ 213.500,00. Sem cost_chain/params, eff=1,0 para toda
+    operação — custo_mao_obra reproduz a soma dos valores manuscritos quase diretamente
+    (delta ~ -0,56%, ruído de leitura de ~205 linhas manuscritas densas)."""
+    real = _ANCHORS["OF-3683"]["subtotais"]["MO"]
+    mo = _cot_of3683()["custo_mao_obra"]
+    delta = _delta_pct(mo, real)
+    assert abs(delta) <= GATE_HARD_PCT, (
+        f"OF-3683 MO fora do gate hard-fail: motor={mo:,.2f} real={real:,.2f} delta={delta:+.2f}%")
+
+
+def test_of3683_MO_dentro_da_banda_ideal():
+    """Banda ideal (<=5%) — mais apertada que o gate hard-fail acima."""
+    real = _ANCHORS["OF-3683"]["subtotais"]["MO"]
+    mo = _cot_of3683()["custo_mao_obra"]
+    assert abs(_delta_pct(mo, real)) <= GATE_IDEAL_PCT
+
+
+# ---- TOTAL (MP + MO + itens lump-sum do resumo) vs a âncora real R$ 733.510,00 ----
+
+def test_of3683_TOTAL_dentro_do_gate():
+    """Validação financeira principal: custo_total do motor (MP + MO + serviços lump-sum
+    do resumo — projeto térmico/mecânico, desenho, PIT, PS, ferramentas, expandidores,
+    data book, consumível) vs a âncora real R$ 733.510,00 (delta ~ +0,15%)."""
+    real = _ANCHORS["OF-3683"]["custo_total"]
+    total = _cot_of3683()["custo_total"]
+    delta = _delta_pct(total, real)
+    assert abs(delta) <= GATE_HARD_PCT, (
+        f"OF-3683 TOTAL fora do gate hard-fail: motor={total:,.2f} real={real:,.2f} delta={delta:+.2f}%")
+
+
+def test_of3683_TOTAL_dentro_da_banda_ideal():
+    """Banda ideal (<=5%) — mais apertada que o gate hard-fail acima."""
+    real = _ANCHORS["OF-3683"]["custo_total"]
+    total = _cot_of3683()["custo_total"]
+    assert abs(_delta_pct(total, real)) <= GATE_IDEAL_PCT

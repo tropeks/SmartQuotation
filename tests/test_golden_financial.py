@@ -9,9 +9,10 @@ sem solda de selagem, 10 chicanas cortadas a laser, espelhos A-266 gr.2 forjado)
 preços R$/kg reais do job, o motor bate o TOTAL a +3,5% (banda ideal <=5%) e a MP a -3,5%
 — ambos VERDES. Resta a MO a +14,5% (xfail documentado): o job terceirizou o corte das
 chicanas a LASER, routing que o motor modela como recorte manual. O OF-3683 (permutador
-custom inox, ~6x BEU) agora tem seed próprio (pricing_engine/seeds/of3683_materiais.json,
-54 itens transcritos do manuscrito) — backtest de MP em tests/test_golden_of3683.py,
-delta ~0,0016% (VERDE). MO do OF-3683 (âncora R$213.500) segue pendente de transcrição.
+custom inox, ~6x BEU) agora tem seed completo (pricing_engine/seeds/of3683_materiais.json,
+54 itens de MP + of3683_operacoes.json, 205 linhas de MO + 9 itens lump-sum do resumo) —
+backtest de MP, MO e TOTAL em tests/test_golden_of3683.py: MP delta ~0,0016%, MO delta
+~-0,56%, TOTAL delta ~+0,15% (todos VERDES, dentro da banda ideal).
 """
 import json
 import math
@@ -95,10 +96,10 @@ def test_of3672_MO_dentro_do_gate():
     assert abs(_delta_pct(mo, real)) <= GATE_HARD_PCT
 
 
-# ---- OF-3683 (permutador) — seed + backtest de MP em tests/test_golden_of3683.py ----
+# ---- OF-3683 (permutador) — seed completo + backtest MP/MO/TOTAL em tests/test_golden_of3683.py ----
 #
-# Seed criado (pricing_engine/seeds/of3683_materiais.json, 54 itens transcritos das
-# páginas 1-2 do manuscrito) e validado via quote_completo("of3683", ...). Ver
-# tests/test_golden_of3683.py para o backtest financeiro da MP (delta ~0,0016%,
-# dentro da banda ideal <=5%). MO (âncora R$213.500) segue pendente — páginas 3-8
-# do manuscrito (operações de usinagem/solda/inspeção) não transcritas nesta task.
+# Seeds criados (pricing_engine/seeds/of3683_materiais.json, 54 itens de MP das páginas
+# 1-2; of3683_operacoes.json, 205 linhas de MO das páginas 3-8 + 9 itens lump-sum do
+# resumo da página 8) e validados via quote_completo("of3683", ...). Ver
+# tests/test_golden_of3683.py: MP delta ~0,0016%, MO delta ~-0,56%, TOTAL delta ~+0,15%
+# — todos dentro da banda ideal (<=5%).
