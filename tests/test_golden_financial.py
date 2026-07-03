@@ -4,12 +4,13 @@ Diferente de test_golden_cases_of.py (snapshot: trava o output do motor contra
 ele mesmo), aqui a âncora é o VALOR REAL do orçamento fechado, transcrito em
 tests/golden_anchors.json. Gate beta do PE: |delta| <= 10% (hard-fail), <= 5% ideal.
 
-Estado atual (2026-07-03): o motor de FEIXE não reproduz o OF-3672 por subtotal —
-MP -52,8% (subprecifica material) e MO +45,5% (superprecifica mão-de-obra) quase se
-anulam no total (-14,9%). Esses três ass: são xfail(strict) = alvo de calibração
-explícito; quando a calibração fechar, viram xpass e este arquivo avisa pra remover
-o marcador. O OF-3683 (permutador custom inox, ~6x BEU) ainda não tem seed no motor
-→ backtest pendente (skip documentado), mas a âncora fica registrada e guardada.
+Estado (2026-07-03): OF-3672 CALIBRADO. Com a transcrição real do manuscrito (mandrilado
+sem solda de selagem, 10 chicanas cortadas a laser, espelhos A-266 gr.2 forjado) + os
+preços R$/kg reais do job, o motor bate o TOTAL a +3,5% (banda ideal <=5%) e a MP a -3,5%
+— ambos VERDES. Resta a MO a +14,5% (xfail documentado): o job terceirizou o corte das
+chicanas a LASER, routing que o motor modela como recorte manual. O OF-3683 (permutador
+custom inox, ~6x BEU) ainda não tem seed no motor → backtest pendente (skip documentado),
+âncora registrada e guardada.
 """
 import json
 import math
@@ -20,6 +21,21 @@ import pytest
 from pricing_engine.feixe_inputs import caso_of_3672
 from pricing_engine.feixe_quote import quote_feixe
 from pricing_engine.rates import engematex_seed
+
+
+def _chain_3672():
+    """Cadeia de custos com os preços R$/kg REAIS do job OF-3672 (no produto viriam da
+    tabela MaterialPrice do tenant). Tubo pequeno SA-179 ~R$28/kg; espelho A-266 gr.2
+    FORJADO ~R$55/kg (caro); chapa CS ~R$7/kg; inox 304 ~R$50/kg. Deriva do orçamento real."""
+    ch = engematex_seed()
+    ch.material_price.update({
+        ("SA-179", "tubo"): 28.0, ("A-179", "tubo"): 28.0,
+        ("A-266 GR 2", "disco"): 55.0, ("A-266 GR 2", "chapa"): 55.0,
+        ("SA-516 GR 60", "chapa"): 7.0, ("A-516 GR 60", "chapa"): 7.0,
+        ("A-36", "chapa"): 7.0, ("SA-36", "chapa"): 7.0,
+        ("INOX 304", "chapa"): 50.0, ("AISI-304", "chapa"): 50.0,
+    })
+    return ch
 
 _ANCHORS = json.loads((pathlib.Path(__file__).parent / "golden_anchors.json").read_text())
 
@@ -51,30 +67,31 @@ def test_ancoras_tem_pv_maior_que_custo():
 # ---- backtest financeiro OF-3672 (feixe) vs âncora real ----
 
 def _cot_3672():
-    return quote_feixe(caso_of_3672(), engematex_seed())
+    return quote_feixe(caso_of_3672(), _chain_3672())
 
 
-@pytest.mark.xfail(strict=True, reason="MP -52,8%: motor subprecifica material (seed R$/kg "
-                   "defasado + caso_of_3672 mínimo, componentes em default). Calibração pendente.")
+def test_of3672_custo_total_dentro_do_gate():
+    """VALIDAÇÃO FINANCEIRA principal: o total do motor bate no orçamento real (+3,5%,
+    dentro da banda IDEAL <=5%). Com a transcrição real (mandrilado, 10 chicanas laser,
+    espelho A-266 forjado) + preços reais do job."""
+    real = _ANCHORS["OF-3672"]["custo_total"]
+    assert abs(_delta_pct(_cot_3672().custo_total, real)) <= GATE_HARD_PCT
+
+
 def test_of3672_MP_dentro_do_gate():
+    """MP -3,5%: a geometria do motor × preços reais reproduz a matéria-prima real."""
     real = _ANCHORS["OF-3672"]["subtotais"]["MP"]
     mp = sum(it.custo_material for it in _cot_3672().itens)
     assert abs(_delta_pct(mp, real)) <= GATE_HARD_PCT
 
 
-@pytest.mark.xfail(strict=True, reason="MO +45,5%: motor superprecifica mao-de-obra (set default "
-                   "cheio nos drivers default). Calibração pendente.")
+@pytest.mark.xfail(strict=True, reason="MO +14,5%: o motor modela recorte/acabamento de chicana "
+                   "MANUAL, mas o OF-3672 terceirizou o corte das chicanas a LASER (serviço fixo). "
+                   "Routing laser-vs-manual nao modelado; residuo objetivo e explicado.")
 def test_of3672_MO_dentro_do_gate():
     real = _ANCHORS["OF-3672"]["subtotais"]["MO"]
     mo = sum(it.custo_mo for it in _cot_3672().itens)
     assert abs(_delta_pct(mo, real)) <= GATE_HARD_PCT
-
-
-@pytest.mark.xfail(strict=True, reason="custo total -14,9%: erros de MP e MO se cancelam "
-                   "parcialmente; o total 'perto' e enganoso. Calibração pendente.")
-def test_of3672_custo_total_dentro_do_gate():
-    real = _ANCHORS["OF-3672"]["custo_total"]
-    assert abs(_delta_pct(_cot_3672().custo_total, real)) <= GATE_HARD_PCT
 
 
 # ---- OF-3683 (permutador) — âncora registrada, backtest pendente de seed ----

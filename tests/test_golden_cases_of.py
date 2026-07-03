@@ -25,9 +25,11 @@ def test_caso_of_3672_inputs_refletem_o_orcamento_real():
 
 
 def test_caso_of_3672_cotacao_snapshot():
+    # guarda de regressão pura (seed genérico). A VALIDAÇÃO FINANCEIRA real (vs orçamento
+    # 40.756 com preços reais do job) está em tests/test_golden_financial.py.
     inp = caso_of_3672()
     cot = quote_feixe(inp, engematex_seed())
-    assert abs(cot.custo_total - 34675.14) < 1.0
+    assert abs(cot.custo_total - 29640.53) < 1.0
 
 
 def test_caso_of_3399_inputs_refletem_o_orcamento_real():
