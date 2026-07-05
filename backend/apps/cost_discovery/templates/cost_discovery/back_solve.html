@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Calibração — Back-Solve{% endblock %}
 {% block content %}
 <div class="eyebrow">CADEIA DE CUSTOS · Calibração</div>
@@ -32,7 +33,7 @@
   <div class="g-section-body">
     <div class="stat-row">
       <div class="stat"><div class="lbl">Fator de MO encontrado</div><div class="val mono">{{ result.solved_fator_mo }}</div><div class="delta">aplicado ao tenant</div></div>
-      <div class="stat"><div class="lbl">Preço Reproduzido</div><div class="val mono">R$ {{ result.achieved_price|floatformat:0 }}</div><div class="delta">vs real R$ {{ result.reference_known_price|floatformat:0 }}</div></div>
+      <div class="stat"><div class="lbl">Preço Reproduzido</div><div class="val mono">R$ {{ result.achieved_price|brl:0 }}</div><div class="delta">vs real R$ {{ result.reference_known_price|brl:0 }}</div></div>
       <div class="stat"><div class="lbl">Erro</div><div class="val mono">{{ result.error_pct }}<span class="u">%</span></div><div class="delta">precisão da calibração</div></div>
       <div class="stat"><div class="lbl">Status</div><div class="val mono" style="font-size:16px">{% if result.error_pct|floatformat:0 == "0" %}CALIBRADO{% else %}AJUSTADO{% endif %}</div></div>
     </div>

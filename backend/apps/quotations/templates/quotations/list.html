@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Cotações{% endblock %}
 {% block content %}
 <div class="eyebrow">COT · Lista</div>
@@ -67,7 +68,7 @@
             <td>{{ row.obj.customer.company_name }}</td>
             <td>{{ row.obj.title }}</td>
             <td><span class="q-status {{ row.status_class }}">{{ row.status_label }}</span></td>
-            <td class="num">R$ {{ row.obj.preco_com_impostos|floatformat:2 }}</td>
+            <td class="num">R$ {{ row.obj.preco_com_impostos|brl }}</td>
             <td>{{ row.validity_display }}</td>
             <td>{{ row.created_by_display }}</td>
             <td>{{ row.obj.created_at|date:"d/m/Y" }}</td>

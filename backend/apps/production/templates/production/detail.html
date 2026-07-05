@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}{{ of.number }} — {{ of.title }}{% endblock %}
 {% block content %}
 <div class="eyebrow">OF · Detalhe</div>
@@ -6,8 +7,8 @@
 <p class="mono" style="color:var(--g-gray-1)">{{ of.customer_name }} · {{ of.get_status_display }}</p>
 
 <div class="stat-row" style="margin-top:12px">
-  <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ of.custo_total|floatformat:0 }}</div><div class="delta">mat {{ of.custo_material|floatformat:0 }} + MO {{ of.custo_mo|floatformat:0 }}</div></div>
-  <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ of.peso_bruto_kg|floatformat:0 }}<span class="u">kg</span></div></div>
+  <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ of.custo_total|brl:0 }}</div><div class="delta">mat {{ of.custo_material|brl:0 }} + MO {{ of.custo_mo|brl:0 }}</div></div>
+  <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ of.peso_bruto_kg|brl:0 }}<span class="u">kg</span></div></div>
   <div class="stat"><div class="lbl">Cotação</div><div class="val mono" style="font-size:14px">{{ of.quotation_number }} Rev.{{ of.quotation_revision }}</div></div>
   <div class="stat"><div class="lbl">Criada em</div><div class="val mono" style="font-size:14px">{{ of.created_at|date:"d/m/Y H:i" }}</div></div>
 </div>
@@ -60,8 +61,8 @@
         {% for it in itens %}{% for op in it.operacoes.all %}
         <tr>
           <td class="mono">{{ op.codigo_op }} · {{ op.descricao }}</td>
-          <td class="num mono">{{ op.custo|floatformat:2 }}</td>
-          <td class="num mono">{{ op.actual_hh|floatformat:2 }}</td>
+          <td class="num mono">{{ op.custo|brl }}</td>
+          <td class="num mono">{{ op.actual_hh|brl }}</td>
           <td class="num mono">—</td>
           {% if of.status == "liberada" or of.status == "em_producao" %}
           <td>
@@ -142,9 +143,9 @@
         {% for obs in of.observations.all %}
         <tr>
           <td class="mono">{{ obs.operacao }}</td>
-          <td class="num mono">{{ obs.estimated_custo|floatformat:2 }}</td>
-          <td class="num mono">{{ obs.actual_hh|floatformat:2 }}</td>
-          <td class="num mono">{{ obs.observed_rate|floatformat:2 }}</td>
+          <td class="num mono">{{ obs.estimated_custo|brl }}</td>
+          <td class="num mono">{{ obs.actual_hh|brl }}</td>
+          <td class="num mono">{{ obs.observed_rate|brl }}</td>
         </tr>
         {% empty %}
         <tr><td colspan="4" style="color:var(--g-gray-1)">Nenhuma operação apontada.</td></tr>
@@ -165,9 +166,9 @@
         <tr>
           <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
           <td>{{ it.descricao }}</td>
-          <td class="num">R$ {{ it.custo_material|floatformat:0 }}</td>
-          <td class="num">R$ {{ it.custo_mo|floatformat:0 }}</td>
-          <td class="num">R$ {{ it.custo_total|floatformat:0 }}</td>
+          <td class="num">R$ {{ it.custo_material|brl:0 }}</td>
+          <td class="num">R$ {{ it.custo_mo|brl:0 }}</td>
+          <td class="num">R$ {{ it.custo_total|brl:0 }}</td>
         </tr>
         {% endfor %}
       </tbody>

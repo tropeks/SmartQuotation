@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Dashboard — SmartQuotation{% endblock %}
 {% block content %}
 <div class="command-center-layout">
@@ -25,7 +26,7 @@
       </div>
       <div class="stat">
         <div class="lbl">Pipeline</div>
-        <div class="val mono">R$ {{ pipeline_total|floatformat:2 }}</div>
+        <div class="val mono">R$ {{ pipeline_total|brl }}</div>
         <div class="delta">preço com impostos</div>
       </div>
       <div class="stat">
@@ -46,7 +47,7 @@
         <p class="mono" style="margin-top:0;color:var(--g-gray-1)">DASH-01 · Command Center</p>
         <div class="price-line" style="margin-top:0">
           <span class="lbl">Pipeline</span>
-          <span class="val mono">R$ {{ pipeline_total|floatformat:2 }}</span>
+          <span class="val mono">R$ {{ pipeline_total|brl }}</span>
         </div>
       </div>
     </section>
@@ -59,7 +60,7 @@
             <div class="name">{{ quotation.title }}<small>{{ quotation.number }} · {{ quotation.customer.company_name }}</small></div>
             <div class="res">
               <div><div class="l">Status</div><div class="v">{{ quotation.get_status_display }}</div></div>
-              <div><div class="l">Preço</div><div class="v">R$ {{ quotation.preco_com_impostos|floatformat:2 }}</div></div>
+              <div><div class="l">Preço</div><div class="v">R$ {{ quotation.preco_com_impostos|brl }}</div></div>
             </div>
           </div>
         {% empty %}
@@ -82,7 +83,7 @@
               <td>{{ row.quotation.title }}</td>
               <td>{{ row.quotation.customer.company_name }}</td>
               <td>{% if row.has_approval %}Aprovada tecnicamente{% else %}{{ row.quotation.get_status_display }}{% endif %}</td>
-              <td class="num">R$ {{ row.margin|floatformat:2 }}</td>
+              <td class="num">R$ {{ row.margin|brl }}</td>
             </tr>
             {% empty %}
             <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação ainda.</td></tr>

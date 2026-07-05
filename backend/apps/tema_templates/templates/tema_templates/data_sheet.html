@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Data Sheet · Permutador Completo{% endblock %}
 {% block content %}
 <div class="eyebrow">TEMA · Permutador Completo</div>
@@ -34,7 +35,7 @@
 <section class="g-section" style="margin-top:12px;border-color:var(--g-green,#2e7d32)">
   <div class="g-section-body">
     ✅ Cotação <b>{{ cotacao.number }}</b> salva para <b>{{ cotacao.customer.company_name }}</b>
-    — proposta gerada (rascunho), preço R$ {{ cotacao.preco_com_impostos|floatformat:2 }}.
+    — proposta gerada (rascunho), preço R$ {{ cotacao.preco_com_impostos|brl }}.
   </div>
 </section>
 {% endif %}
@@ -76,23 +77,23 @@
 <section class="g-section" style="margin-top:12px">
   <div class="g-section-head" style="display:flex;align-items:center;gap:12px">
     <span>Custo · {{ custo.designacao_tema }}</span>
-    <span class="mono" style="font-size:1.3rem;font-weight:800;color:var(--g-orange)">R$ {{ custo.custo_total|floatformat:2 }}</span>
+    <span class="mono" style="font-size:1.3rem;font-weight:800;color:var(--g-orange)">R$ {{ custo.custo_total|brl }}</span>
   </div>
   <div class="g-section-body">
     <table class="g-table">
       <tbody>
-        <tr><td>Matéria-prima (recomputada da geometria)</td><td class="num mono">R$ {{ custo.custo_material|floatformat:2 }}</td></tr>
+        <tr><td>Matéria-prima (recomputada da geometria)</td><td class="num mono">R$ {{ custo.custo_material|brl }}</td></tr>
         <tr><td>Mão de obra (× F.C. {{ custo.fator_correcao_mo }})</td>
-          <td class="num mono">R$ {{ custo.custo_mao_obra|floatformat:2 }}</td></tr>
-        <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|floatformat:2 }}</td></tr>
-        <tr style="border-top:2px solid var(--g-ink,#111)"><td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|floatformat:2 }}</b></td></tr>
-        <tr><td>Preço de venda c/ impostos</td><td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|floatformat:2 }}</td></tr>
+          <td class="num mono">R$ {{ custo.custo_mao_obra|brl }}</td></tr>
+        <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|brl }}</td></tr>
+        <tr style="border-top:2px solid var(--g-ink,#111)"><td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|brl }}</b></td></tr>
+        <tr><td>Preço de venda c/ impostos</td><td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|brl }}</td></tr>
       </tbody>
     </table>
     <div class="eyebrow" style="margin-top:14px">Custo por driver físico</div>
     <table class="g-table" style="margin-top:4px"><tbody>
       {% for p, v in custo.custo_por_param.items %}
-      <tr><td>{{ p }}</td><td class="num mono">R$ {{ v|floatformat:2 }}</td></tr>
+      <tr><td>{{ p }}</td><td class="num mono">R$ {{ v|brl }}</td></tr>
       {% endfor %}
     </tbody></table>
 

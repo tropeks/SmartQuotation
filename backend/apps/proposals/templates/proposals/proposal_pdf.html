@@ -1,3 +1,4 @@
+{% load money %}
 <!doctype html>
 <html lang="pt-br"><head><meta charset="utf-8">
 <style>
@@ -45,15 +46,15 @@
     <tbody>
       {% for it in itens %}
       <tr><td>{{ it.codigo_item }}</td><td>{{ it.descricao }}</td>
-        <td class="num">R$ {{ it.custo_material|floatformat:2 }}</td>
-        <td class="num">R$ {{ it.custo_mo|floatformat:2 }}</td>
-        <td class="num">R$ {{ it.custo_total|floatformat:2 }}</td></tr>
+        <td class="num">R$ {{ it.custo_material|brl }}</td>
+        <td class="num">R$ {{ it.custo_mo|brl }}</td>
+        <td class="num">R$ {{ it.custo_total|brl }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 
   <div class="price"><span class="l">Preço de Venda</span>
-    <span class="v">R$ {{ q.preco_com_impostos|floatformat:2 }}</span></div>
+    <span class="v">R$ {{ q.preco_com_impostos|brl }}</span></div>
 
   {% if memorial %}
   <h2>Anexo — Memória de cálculo ASME</h2>
