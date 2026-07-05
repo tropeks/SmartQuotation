@@ -14,6 +14,9 @@
         <div class="status-block">
           <div class="q-status q-status--approved">Operação ativa</div>
           <div class="meta">Usuário {{ user.get_username }}</div>
+          <div class="q-actions" style="margin-top:8px;justify-content:flex-end">
+            <a class="q-btn primary" href="{% url 'quotations:new' %}">+ Nova Cotação</a>
+          </div>
         </div>
       </div>
     </header>
@@ -99,13 +102,6 @@
     <a href="#sec-pipeline" class="on">Pipeline<span class="n">§1</span></a>
     <a href="#sec-approvals">Aprovações<span class="n">§2</span></a>
     <a href="#sec-recents">Cotações<span class="n">§3</span></a>
-    <div class="div"></div>
-    <div class="progress">
-      <div class="lbl">Progresso do Dashboard</div>
-      <div class="val">100%</div>
-      <div class="bar"></div>
-      <div class="steps">3 de 3 blocos ativos</div>
-    </div>
   </aside>
 </div>
 {% endblock %}
