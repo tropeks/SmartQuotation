@@ -34,7 +34,7 @@ body {
 a { color:var(--g-orange); }
 
 /* ---- Rail + layout ---- */
-.g-rail { display:flex; align-items:center; gap:var(--s8); padding:var(--s6) var(--s12);
+.g-rail { display:flex; align-items:center; flex-wrap:wrap; gap:var(--s8); padding:var(--s6) var(--s12);
   background:var(--g-black); color:var(--g-paper); }
 .g-rail .brand { font-weight:800; text-transform:uppercase; letter-spacing:var(--ls-up); }
 .g-rail .brand b { color:var(--g-yellow); }
@@ -230,6 +230,12 @@ a { color:var(--g-orange); }
   .q-header .row1,
   .q-header .q-actions { flex-direction: column; align-items: flex-start; }
   .q-header .status-block { text-align: left; }
+  /* Formulário de 12 colunas colapsa em coluna única */
+  .g-form { grid-template-columns: 1fr; }
+  .g-form .field[class*="col-"] { grid-column: 1 / -1; }
+  /* Tabelas densas rolam dentro da seção em vez de estourar a página */
+  .g-section-body { overflow-x: auto; }
+  .price-line .val { font-size: 24px; }
 }
 
 /* ---- AsyncProgressBar (faixa de progresso assíncrono) ---- */
