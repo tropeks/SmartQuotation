@@ -3,8 +3,8 @@
 {% block title %}Cotações{% endblock %}
 {% block content %}
 <div class="eyebrow">COT · Lista</div>
-<div class="q-number" style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
-  <span>COTAÇÕES</span>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <h1 class="q-number">COTAÇÕES</h1>
   {% if can_create_quotation %}
     <a class="q-btn primary" href="{% url 'quotations:new' %}">+ Nova Cotação</a>
   {% endif %}
@@ -63,7 +63,7 @@
       <tbody>
         {% for row in quotations %}
           <tr onclick="location.href='{% url 'quotations:detail' row.obj.pk %}'" style="cursor:pointer{% if row.is_italic %};font-style: italic;{% endif %}">
-            <td class="mono" style="color:var(--g-orange)">{{ row.obj.number }}</td>
+            <td class="id"><a href="{% url 'quotations:detail' row.obj.pk %}">{{ row.obj.number }}</a></td>
             <td class="mono">{{ row.revision_label }}</td>
             <td>{{ row.obj.customer.company_name }}</td>
             <td>{{ row.obj.title }}</td>

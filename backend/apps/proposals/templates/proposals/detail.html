@@ -3,7 +3,7 @@
 {% block title %}{{ p.number }}{% endblock %}
 {% block content %}
 <div class="eyebrow">PROPOSTA · Detalhe</div>
-<div class="q-number">{{ p.number }}</div>
+<h1 class="q-number">{{ p.number }}</h1>
 <p class="mono" style="color:var(--g-gray-1)">Cotação {{ q.number }} · {{ q.customer.company_name }} ·
   {{ p.get_status_display }}{% if p.generated_at %} · gerada {{ p.generated_at|date:"d/m/Y H:i" }}{% endif %}</p>
 

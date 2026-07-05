@@ -3,7 +3,7 @@
 {% block title %}{{ p.number }} — Editar Proposta{% endblock %}
 {% block content %}
 <div class="eyebrow">PROPOSTA · Editar · {{ p.template.name }}</div>
-<div class="q-number">{{ p.number }}</div>
+<h1 class="q-number">{{ p.number }}</h1>
 <p class="mono" style="color:var(--g-gray-1)">Cotação {{ q.number }} · {{ q.customer.company_name }} ·
   Preço R$ {{ q.preco_com_impostos|brl }}</p>
 <p style="color:var(--g-gray-1);font-size:12px">

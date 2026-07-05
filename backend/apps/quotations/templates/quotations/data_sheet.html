@@ -2,7 +2,7 @@
 {% block title %}Nova Cotação — Feixe Tubular{% endblock %}
 {% block content %}
 <div class="eyebrow">COT · Novo · Feixe Tubular</div>
-<div class="q-number">NOVA COTAÇÃO <span class="rev">FEIXE</span></div>
+<h1 class="q-number">NOVA COTAÇÃO <span class="rev">FEIXE</span></h1>
 
 <form id="ds-form" hx-post="{% url 'quotations:recompute' %}" hx-target="#results"
       hx-trigger="change delay:250ms from:#ds-form, submit"

@@ -81,6 +81,8 @@ a:focus-visible, button:focus-visible, .q-btn:focus-visible,
 /* ---- Eyebrow + número ---- */
 .eyebrow { font-family:var(--font-mono); font-size:10px; letter-spacing:var(--ls-eyebrow);
   text-transform:uppercase; color:var(--g-gray-1); }
+/* h1/h2 de página são estilizados por classe; zera só a margem default do UA */
+h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
 .q-number { font-weight:800; font-size:28px; letter-spacing:-0.025em; text-transform:uppercase; }
 .q-number .rev { color:var(--g-orange); font-family:var(--font-mono); font-size:16px; }
 
