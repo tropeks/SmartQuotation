@@ -1,11 +1,11 @@
 {% load money %}
 {% if designacao %}
 <section class="g-section" style="margin-top:12px;
-    {% if bloqueado %}border-color:var(--g-red,#c0392b){% endif %}">
+    {% if bloqueado %}border-color:var(--g-red){% endif %}">
   <div class="g-section-head" style="display:flex;align-items:center;gap:12px">
     <span>Designação TEMA</span>
     <span class="mono" style="font-size:1.4rem;font-weight:800;color:var(--g-orange)">{{ designacao }}</span>
-    {% if bloqueado %}<span class="q-badge" style="background:var(--g-red,#c0392b);color:#fff">BLOQUEADO</span>{% endif %}
+    {% if bloqueado %}<span class="q-badge" style="background:var(--g-red);color:#fff">BLOQUEADO</span>{% endif %}
   </div>
   <div class="g-section-body">
     <div class="eyebrow">Blocos componentes</div>
@@ -15,17 +15,17 @@
       <div class="eyebrow">Compatibilidade · modo <b>{{ mode }}</b></div>
       {% for a in avisos %}
         <div class="g-note" style="margin-top:6px;padding:10px 12px;border-left:3px solid
-          {% if mode == 'block' %}var(--g-red,#c0392b){% elif mode == 'warn' %}var(--g-orange){% else %}var(--g-gray-1){% endif %}">
+          {% if mode == 'block' %}var(--g-red){% elif mode == 'warn' %}var(--g-orange){% else %}var(--g-gray-1){% endif %}">
           {% if mode == 'block' %}⛔{% elif mode == 'warn' %}⚠️{% else %}ℹ️{% endif %} {{ a }}
         </div>
       {% endfor %}
       {% if mode == 'block' %}
-        <p style="margin-top:12px;color:var(--g-red,#c0392b)">Combinação bloqueada pela política do tenant.</p>
+        <p style="margin-top:12px;color:var(--g-red)">Combinação bloqueada pela política do tenant.</p>
       {% elif mode == 'free' %}
         <p style="margin-top:12px;color:var(--g-gray-1)">Modo livre: avisos informativos, composição permitida.</p>
       {% endif %}
     {% else %}
-      <div class="g-note" style="padding:10px 12px;border-left:3px solid var(--g-green,#27ae60)">
+      <div class="g-note" style="padding:10px 12px;border-left:3px solid var(--g-green)">
         ✓ Combinação compatível.
       </div>
     {% endif %}
@@ -37,7 +37,7 @@
         <tr><td>Matéria-prima</td><td class="num mono">R$ {{ custo.custo_material|brl }}</td></tr>
         <tr><td>Mão de obra</td><td class="num mono">R$ {{ custo.custo_mao_obra|brl }}</td></tr>
         <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|brl }}</td></tr>
-        <tr style="border-top:2px solid var(--g-ink,#111)">
+        <tr style="border-top:2px solid var(--g-ink)">
           <td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|brl }}</b></td></tr>
         <tr><td>Preço de venda c/ impostos</td>
           <td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|brl }}</td></tr>

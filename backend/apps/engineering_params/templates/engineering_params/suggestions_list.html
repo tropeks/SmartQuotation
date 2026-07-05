@@ -1,82 +1,86 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Sugestões de Ajuste de Taxa{% endblock %}
 {% block content %}
+
 <div class="g-section">
-  <div class="g-section-header">
-    <h1 class="g-title">Sugestões de Ajuste de Taxa (H2.3)</h1>
-    <p class="g-subtitle">Motor de aprendizado — sugestões geradas quando N≥20 amostras e confiança&gt;70%.</p>
+  <header class="g-section-head">
+    <h3>Sugestões de Ajuste de Taxa</h3>
+    <form method="post" style="margin:0">
+      {% csrf_token %}
+      <button type="submit" name="refresh" value="1" class="q-btn mini">↻ Atualizar</button>
+    </form>
+  </header>
+  <div class="g-section-body">
+    <p class="g-note">Motor de aprendizado — sugestões geradas quando N ≥ 20 amostras e confiança &gt; 70%.</p>
   </div>
-
-  <form method="post" style="margin-bottom:1rem">
-    {% csrf_token %}
-    <button type="submit" name="refresh" value="1" class="g-btn">↻ Atualizar Sugestões</button>
-  </form>
-
-  <div class="g-card">
-    <div class="g-card-header"><h2 class="g-card-title">Sugestões Pendentes</h2></div>
-    <div class="g-card-body">
-      {% if pending %}
-      <table class="g-table">
-        <thead>
-          <tr>
-            <th>Operação</th><th>N</th><th>Confiança</th>
-            <th>Atual R$/h</th><th>Sugerido R$/h</th><th>Δ%</th><th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in pending %}
-          <tr>
-            <td><code>{{ s.operacao }}</code></td>
-            <td>{{ s.n_samples }}</td>
-            <td>{{ s.confidence|floatformat:1 }}%</td>
-            <td>R$ {{ s.current_rate_hh }}</td>
-            <td>R$ {{ s.actual_mean_rate }}</td>
-            <td style="color:{% if s.delta_pct > 0 %}var(--color-success,#22c55e){% else %}var(--color-danger,#ef4444){% endif %}; font-weight:600">
-              {% if s.delta_pct > 0 %}+{% endif %}{{ s.delta_pct }}%
-            </td>
-            <td style="display:flex;gap:.5rem">
-              <form method="post" action="{% url 'engineering_params:suggestion_apply' s.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="g-btn g-btn-primary" onclick="return confirm('Aplicar ajuste para {{ s.operacao }}?')">Aplicar</button>
-              </form>
-              <form method="post" action="{% url 'engineering_params:suggestion_dismiss' s.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="g-btn g-btn-danger">Descartar</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p class="g-muted">Nenhuma sugestão pendente — produção em dia ou N&lt;20 amostras.</p>
-      {% endif %}
-    </div>
-  </div>
-
-  {% if accepted %}
-  <div class="g-card" style="margin-top:1.5rem">
-    <div class="g-card-header"><h2 class="g-card-title">Últimas Aplicadas</h2></div>
-    <div class="g-card-body">
-      <table class="g-table">
-        <thead>
-          <tr><th>Operação</th><th>Anterior R$/h</th><th>Novo R$/h</th><th>Δ%</th><th>Por</th><th>Data</th></tr>
-        </thead>
-        <tbody>
-          {% for s in accepted %}
-          <tr>
-            <td><code>{{ s.operacao }}</code></td>
-            <td>R$ {{ s.current_rate_hh }}</td>
-            <td>R$ {{ s.actual_mean_rate }}</td>
-            <td>{% if s.delta_pct > 0 %}+{% endif %}{{ s.delta_pct }}%</td>
-            <td>{{ s.resolved_by.username|default:"—" }}</td>
-            <td>{{ s.resolved_at|date:"d/m/Y H:i" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
 </div>
+
+<div class="g-section">
+  <header class="g-section-head"><h3>Sugestões Pendentes</h3></header>
+  <div class="g-section-body">
+    {% if pending %}
+    <table class="g-table">
+      <thead>
+        <tr>
+          <th>Operação</th><th class="num">N</th><th class="num">Confiança</th>
+          <th class="num">Atual R$/h</th><th class="num">Sugerido R$/h</th><th class="num">Δ%</th><th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in pending %}
+        <tr>
+          <td class="id">{{ s.operacao }}</td>
+          <td class="num">{{ s.n_samples }}</td>
+          <td class="num">{{ s.confidence|floatformat:1 }}%</td>
+          <td class="num">R$ {{ s.current_rate_hh|brl }}</td>
+          <td class="num">R$ {{ s.actual_mean_rate|brl }}</td>
+          <td class="num" style="color:{% if s.delta_pct > 0 %}var(--g-green){% else %}var(--g-red){% endif %};font-weight:var(--w-bold)">
+            {% if s.delta_pct > 0 %}+{% endif %}{{ s.delta_pct }}%
+          </td>
+          <td style="display:flex;gap:var(--s4)">
+            <form method="post" action="{% url 'engineering_params:suggestion_apply' s.pk %}" style="margin:0">
+              {% csrf_token %}
+              <button type="submit" class="q-btn mini primary" onclick="return confirm('Aplicar ajuste para {{ s.operacao }}?')">Aplicar</button>
+            </form>
+            <form method="post" action="{% url 'engineering_params:suggestion_dismiss' s.pk %}" style="margin:0">
+              {% csrf_token %}
+              <button type="submit" class="q-btn mini ghost">Descartar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="g-note">Nenhuma sugestão pendente — produção em dia ou N &lt; 20 amostras.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if accepted %}
+<div class="g-section">
+  <header class="g-section-head"><h3>Últimas Aplicadas</h3></header>
+  <div class="g-section-body">
+    <table class="g-table">
+      <thead>
+        <tr><th>Operação</th><th class="num">Anterior R$/h</th><th class="num">Novo R$/h</th><th class="num">Δ%</th><th>Por</th><th>Data</th></tr>
+      </thead>
+      <tbody>
+        {% for s in accepted %}
+        <tr>
+          <td class="id">{{ s.operacao }}</td>
+          <td class="num">R$ {{ s.current_rate_hh|brl }}</td>
+          <td class="num">R$ {{ s.actual_mean_rate|brl }}</td>
+          <td class="num">{% if s.delta_pct > 0 %}+{% endif %}{{ s.delta_pct }}%</td>
+          <td>{{ s.resolved_by.username|default:"—" }}</td>
+          <td class="num">{{ s.resolved_at|date:"d/m/Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

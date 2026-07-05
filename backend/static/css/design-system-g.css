@@ -24,6 +24,8 @@
   --border-thin:1px solid var(--g-gray-2);
   --border-strong:1.5px solid var(--g-black);
   --radius:0;
+  /* Aliases p/ templates legados (tema/eng-params) — fonte única de verdade */
+  --g-ink:var(--g-black); --g-line:var(--g-gray-2);
 }
 * { box-sizing:border-box; }
 body {
@@ -32,6 +34,14 @@ body {
 }
 .mono { font-family:var(--font-mono); font-feature-settings:'tnum'; }
 a { color:var(--g-orange); }
+
+/* ---- Utilitários compartilhados (usados por eng-params/tema) ---- */
+.g-note { font-family:var(--font-mono); font-size:11px; color:var(--g-gray-1);
+  margin:var(--s2) 0; line-height:1.5; }
+.g-muted { color:var(--g-gray-1); }
+.q-badge { display:inline-flex; align-items:center; gap:var(--s2); padding:2px var(--s4);
+  font-family:var(--font-display); font-weight:var(--w-bold); font-size:10px;
+  letter-spacing:var(--ls-up); text-transform:uppercase; border:var(--border-strong); }
 
 /* Foco de teclado visível em toda a superfície interativa (não só inputs) */
 a:focus-visible, button:focus-visible, .q-btn:focus-visible,
