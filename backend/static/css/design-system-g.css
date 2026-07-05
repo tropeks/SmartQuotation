@@ -10,17 +10,22 @@
   --g-orange:#d94e1f; --g-yellow:#f5c542;
   /* Semânticos */
   --g-green:#2d6a3e; --g-red:#a23a2f; --g-blue:#2950b0; --g-amber:#b8851a;
+  /* Fundos de status (tints sobre paper) */
+  --g-bg-review:#f7edd4; --g-bg-approved:#e2ebe4; --g-bg-sent:#dfe6f5; --g-bg-lost:#f2ddd9;
   /* Cinzas/bordas */
   --g-gray-1:#888278; --g-gray-2:#e3dfd2; --g-gray-3:#c8c2b2;
   /* Tipografia */
   --font-display:'Archivo',system-ui,sans-serif;
   --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --w-semibold:600; --w-bold:700;
   --ls-up:0.10em; --ls-eyebrow:0.14em;
   /* Espaçamento (múltiplos de 2px) */
   --s2:4px; --s3:6px; --s4:8px; --s6:12px; --s8:16px; --s10:20px; --s12:24px; --s16:32px;
   --border-thin:1px solid var(--g-gray-2);
   --border-strong:1.5px solid var(--g-black);
   --radius:0;
+  /* Aliases p/ templates legados (tema/eng-params) — fonte única de verdade */
+  --g-ink:var(--g-black); --g-line:var(--g-gray-2);
 }
 * { box-sizing:border-box; }
 body {
@@ -30,8 +35,29 @@ body {
 .mono { font-family:var(--font-mono); font-feature-settings:'tnum'; }
 a { color:var(--g-orange); }
 
+/* ---- Utilitários compartilhados (usados por eng-params/tema) ---- */
+.g-note { font-family:var(--font-mono); font-size:11px; color:var(--g-gray-1);
+  margin:var(--s2) 0; line-height:1.5; }
+.g-muted { color:var(--g-gray-1); }
+.q-badge { display:inline-flex; align-items:center; gap:var(--s2); padding:2px var(--s4);
+  font-family:var(--font-display); font-weight:var(--w-bold); font-size:10px;
+  letter-spacing:var(--ls-up); text-transform:uppercase; border:var(--border-strong); }
+
+/* Foco de teclado visível em toda a superfície interativa (não só inputs) */
+a:focus-visible, button:focus-visible, .q-btn:focus-visible,
+[tabindex]:focus-visible, .g3-minimap a:focus-visible,
+[role="button"]:focus-visible {
+  outline:2px solid var(--g-orange); outline-offset:2px;
+}
+/* Skip link — some no foco, salta para o conteúdo */
+.skip-link { position:absolute; left:-9999px; top:0; z-index:1000;
+  background:var(--g-black); color:var(--g-paper); padding:var(--s4) var(--s8);
+  font-family:var(--font-display); font-weight:700; text-transform:uppercase;
+  letter-spacing:var(--ls-up); font-size:11px; }
+.skip-link:focus { left:var(--s6); top:var(--s6); }
+
 /* ---- Rail + layout ---- */
-.g-rail { display:flex; align-items:center; gap:var(--s8); padding:var(--s6) var(--s12);
+.g-rail { display:flex; align-items:center; flex-wrap:wrap; gap:var(--s8); padding:var(--s6) var(--s12);
   background:var(--g-black); color:var(--g-paper); }
 .g-rail .brand { font-weight:800; text-transform:uppercase; letter-spacing:var(--ls-up); }
 .g-rail .brand b { color:var(--g-yellow); }
@@ -55,6 +81,8 @@ a { color:var(--g-orange); }
 /* ---- Eyebrow + número ---- */
 .eyebrow { font-family:var(--font-mono); font-size:10px; letter-spacing:var(--ls-eyebrow);
   text-transform:uppercase; color:var(--g-gray-1); }
+/* h1/h2 de página são estilizados por classe; zera só a margem default do UA */
+h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
 .q-number { font-weight:800; font-size:28px; letter-spacing:-0.025em; text-transform:uppercase; }
 .q-number .rev { color:var(--g-orange); font-family:var(--font-mono); font-size:16px; }
 
@@ -227,6 +255,12 @@ a { color:var(--g-orange); }
   .q-header .row1,
   .q-header .q-actions { flex-direction: column; align-items: flex-start; }
   .q-header .status-block { text-align: left; }
+  /* Formulário de 12 colunas colapsa em coluna única */
+  .g-form { grid-template-columns: 1fr; }
+  .g-form .field[class*="col-"] { grid-column: 1 / -1; }
+  /* Tabelas densas rolam dentro da seção em vez de estourar a página */
+  .g-section-body { overflow-x: auto; }
+  .price-line .val { font-size: 24px; }
 }
 
 /* ---- AsyncProgressBar (faixa de progresso assíncrono) ---- */
@@ -248,6 +282,13 @@ a { color:var(--g-orange); }
 .g-table tbody td.id {
   font-family: var(--font-mono); font-weight: var(--w-semibold); color: var(--g-orange);
   font-size: 11px; }
+
+/* ---- Alvos de toque (>=44px) só em telas de toque, sem afetar densidade desktop ---- */
+@media (pointer: coarse) {
+  .q-btn, .g-rail a, .g-rail button { min-height: 44px; display: inline-flex; align-items: center; }
+  .g3-minimap a { padding-top: var(--s6); padding-bottom: var(--s6); }
+  .g-table tbody td.id a, .g-table tbody td a { display: inline-block; padding: var(--s3) 0; }
+}
 
 /* ---- Login (no DNA G) ---- */
 .login-wrap { max-width:380px; margin:72px auto; }

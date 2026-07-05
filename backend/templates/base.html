@@ -12,20 +12,23 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body>
-  <div class="g-rail">
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="g-rail">
     <span class="brand" aria-label="SMARTQUOTATION">SMART<b>QUOTATION</b></span>
     <span class="spacer"></span>
     {% if user.is_authenticated %}
       <span class="tenant">{{ request.tenant.name|default:"—" }}</span>
-      <a class="q-btn" href="{% url 'quotations:list' %}">Cotações</a>
-      <a class="q-btn" href="{% url 'production:list' %}">OFs</a>
-      <a class="q-btn" href="{% url 'cost_discovery:home' %}">Custos</a>
-      <a class="q-btn" href="{% url 'tema_templates:catalog' %}">TEMA</a>
-      <a class="q-btn" href="{% url 'tema_templates:data_sheet' %}">Permutador</a>
+      <nav aria-label="Navegação principal" style="display:contents">
+        <a class="q-btn" href="{% url 'quotations:list' %}">Cotações</a>
+        <a class="q-btn" href="{% url 'production:list' %}">OFs</a>
+        <a class="q-btn" href="{% url 'cost_discovery:home' %}">Custos</a>
+        <a class="q-btn" href="{% url 'tema_templates:catalog' %}">TEMA</a>
+        <a class="q-btn" href="{% url 'tema_templates:data_sheet' %}">Permutador</a>
+      </nav>
       <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}
         <button class="q-btn">Sair</button></form>
     {% endif %}
-  </div>
-  <main class="g-main">{% block content %}{% endblock %}</main>
+  </header>
+  <main id="conteudo" class="g-main">{% block content %}{% endblock %}</main>
 </body>
 </html>

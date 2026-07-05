@@ -3,6 +3,7 @@ from django_tenants.test.cases import TenantTestCase
 
 from apps.quotations.models import CalculationSnapshot, Quotation, Customer
 from apps.quotations.services import create_feixe_quotation
+from apps.quotations.templatetags.money import brl
 
 class FeatureViewsTests(TenantTestCase):
     def setUp(self):
@@ -24,7 +25,7 @@ class FeatureViewsTests(TenantTestCase):
         self.assertContains(resp, "Cliente Teste")
         self.assertContains(resp, q.number)
         self.assertContains(resp, "Enviada")
-        self.assertContains(resp, str(round(q.preco_com_impostos, 2)).replace(".", ","))
+        self.assertContains(resp, brl(q.preco_com_impostos))  # pt-BR: separador de milhar
         
     def test_quotation_detail(self):
         q = create_feixe_quotation(self.customer, "Feixe A")

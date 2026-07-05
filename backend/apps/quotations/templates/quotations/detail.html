@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}{{ q.number }} — {{ q.title }}{% endblock %}
 {% block content %}
 <div class="command-center-layout">
@@ -7,7 +8,7 @@
       <div class="row1">
         <div class="id-block">
           <div class="breadcrumb-q">COT-03 · Detalhe</div>
-          <div class="number">{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></div>
+          <h1 class="number">{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></h1>
           <div class="subtitle"><b>{{ q.customer.company_name }}</b> · {{ q.title }}<span class="equip">{{ q.get_scope_display }} · {{ q.get_status_display }}</span></div>
         </div>
         <div class="status-block">
@@ -30,9 +31,9 @@
     </header>
 
     <div class="stat-row" style="margin-top:12px">
-      <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ q.custo_total|floatformat:0 }}</div><div class="delta">mat {{ q.custo_material|floatformat:0 }} + MO {{ q.custo_mo|floatformat:0 }}</div></div>
-      <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ q.peso_bruto_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">base de custo</div></div>
-      <div class="stat"><div class="lbl">Refugo</div><div class="val mono">{{ q.perda_kg|floatformat:0 }}<span class="u">kg</span></div><div class="delta">bruto − líquido</div></div>
+      <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ q.custo_total|brl:0 }}</div><div class="delta">mat {{ q.custo_material|brl:0 }} + MO {{ q.custo_mo|brl:0 }}</div></div>
+      <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ q.peso_bruto_kg|brl:0 }}<span class="u">kg</span></div><div class="delta">base de custo</div></div>
+      <div class="stat"><div class="lbl">Refugo</div><div class="val mono">{{ q.perda_kg|brl:0 }}<span class="u">kg</span></div><div class="delta">bruto − líquido</div></div>
       <div class="stat"><div class="lbl">Propostas</div><div class="val mono">{{ q.proposals.count }}</div><div class="delta">OFs {{ q.ordens_fabricacao.count }}</div></div>
     </div>
 
@@ -58,9 +59,9 @@
             <tr>
               <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
               <td>{{ it.descricao }}</td>
-              <td class="num">R$ {{ it.custo_material|floatformat:0 }}</td>
-              <td class="num">R$ {{ it.custo_mo|floatformat:0 }}</td>
-              <td class="num">R$ {{ it.custo_total|floatformat:0 }}</td>
+              <td class="num">R$ {{ it.custo_material|brl:0 }}</td>
+              <td class="num">R$ {{ it.custo_mo|brl:0 }}</td>
+              <td class="num">R$ {{ it.custo_total|brl:0 }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -73,10 +74,10 @@
       <div class="g-section-body">
         <div class="price-line" style="margin-top:0">
           <span class="lbl">Preço de Venda</span>
-          <span class="val mono">R$ {{ q.preco_com_impostos|floatformat:2 }}</span>
+          <span class="val mono">R$ {{ q.preco_com_impostos|brl }}</span>
         </div>
         <div class="price-sub">
-          <span>Sem impostos: R$ {{ q.preco_sem_impostos|floatformat:2 }}</span>
+          <span>Sem impostos: R$ {{ q.preco_sem_impostos|brl }}</span>
           <span>Markup: {{ q.fator_preco }}</span>
           <span>Impostos: {{ q.impostos_pct }}%</span>
         </div>

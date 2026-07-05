@@ -229,7 +229,7 @@ class ShellSmokeTests(TestCase):
         self.assertContains(resp, "Cotações Ativas")
         self.assertContains(resp, "2")
         self.assertContains(resp, "Pipeline")
-        self.assertContains(resp, "R$ 223000,00")
+        self.assertContains(resp, "R$ 223.000,00")  # pt-BR: separador de milhar (filtro brl)
         self.assertContains(resp, "Ganhas")
         self.assertContains(resp, "1")
         self.assertContains(resp, "Em Revisão")
