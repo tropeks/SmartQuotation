@@ -17,10 +17,14 @@
         </div>
       </div>
       <div class="q-actions">
+        {% if q.scope == "complete" %}
         <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline; margin: 0;">
           {% csrf_token %}
           <button type="submit" class="q-btn">Revisar</button>
         </form>
+        {% else %}
+        <a class="q-btn" href="{% url 'quotations:edit' q.pk %}">Revisar</a>
+        {% endif %}
         <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">Gerar Proposta</a>
         {% if not has_active_of %}
         <form method="post" action="{% url 'production:convert' q.pk %}" style="display:inline">{% csrf_token %}

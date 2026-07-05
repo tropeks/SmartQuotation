@@ -43,6 +43,14 @@ class FeixeDataSheetForm(forms.Form):
         "tirante_qty", "teste_hidrostatico", "tratamento_termico", "inspecao_q",
     )
 
+    @classmethod
+    def initial_from_quotation(cls, quotation) -> dict:
+        """Pré-preenche o form com os inputs de uma cotação existente (edição/revisão)."""
+        data = dict(quotation.inputs or {})
+        data["title"] = quotation.title
+        data["customer_name"] = quotation.customer.company_name if quotation.customer_id else ""
+        return data
+
     def to_inputs_dict(self) -> dict:
         cd = self.cleaned_data
         d = {k: cd[k] for k in self._INPUT_KEYS if k in cd}

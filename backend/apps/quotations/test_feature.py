@@ -15,6 +15,37 @@ class FeatureViewsTests(TenantTestCase):
         self.client.force_login(self.user)
         self.customer = Customer.objects.create(company_name="Cliente Teste")
 
+    def test_edit_opens_prefilled_and_creates_revision_with_changed_inputs(self):
+        """Tier A: 'Revisar' abre form editável pré-preenchido; salvar cria nova
+        revisão com os inputs alterados e recalcula a EAP."""
+        from django.urls import reverse
+        from apps.quotations.forms import FeixeDataSheetForm
+        q = create_feixe_quotation(self.customer, "Feixe Edit", created_by=self.user)
+        orig_tubos = int((q.inputs or {}).get("n_tubos", 136))
+
+        # GET: form de edição pré-preenchido com os inputs da cotação
+        resp = self.client.get(reverse("quotations:edit", args=[q.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Feixe Edit")
+        self.assertContains(resp, str(orig_tubos))
+
+        # POST: muda nº de tubos → nova revisão recalculada
+        data = FeixeDataSheetForm.initial_from_quotation(q)
+        data = {k: ("" if v is None else v) for k, v in data.items()}
+        data["n_tubos"] = orig_tubos + 10
+        n_before = Quotation.objects.count()
+        self.client.post(reverse("quotations:edit", args=[q.pk]), data)
+
+        self.assertEqual(Quotation.objects.count(), n_before + 1)
+        new = Quotation.objects.exclude(pk=q.pk).order_by("-id").first()
+        self.assertEqual(new.revision, q.revision + 1)
+        self.assertEqual(int(new.inputs["n_tubos"]), orig_tubos + 10)
+        self.assertTrue(new.itens.exists())          # motor recalculou a EAP
+        self.assertNotEqual(new.custo_total, 0)
+        # original permanece intacto
+        q.refresh_from_db()
+        self.assertEqual(int(q.inputs["n_tubos"]), orig_tubos)
+
     def test_list_quotations(self):
         q = create_feixe_quotation(self.customer, "Feixe A")
         q.status = "sent"

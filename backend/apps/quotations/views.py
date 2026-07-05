@@ -201,6 +201,47 @@ def create_quotation(request):
     return redirect("quotations:detail", pk=q.pk)
 
 
+@require_role(*_WRITE_ROLES)
+def quotation_edit(request, pk):
+    """Tier A: edita os inputs de uma cotação de FEIXE, agrupados por componente,
+    e salva o resultado como uma NOVA revisão (recalculada pelo motor). O motor
+    deriva a EAP dos inputs, então toda edição vai pra Quotation.inputs, não pras
+    linhas da EAP (que o recompute regenera)."""
+    orig = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
+    if orig.scope == "complete":
+        # Permutador tem fluxo de dados próprio; edição fora do Tier A.
+        return redirect("quotations:detail", pk=orig.pk)
+
+    if request.method == "POST":
+        form = FeixeDataSheetForm(request.POST)
+        if form.is_valid():
+            from apps.quotations.services import next_number, create_calculation_snapshot
+            from apps.quotations.adapter import recompute
+            customer, _ = Customer.objects.get_or_create(company_name=form.cleaned_data["customer_name"])
+            q = Quotation.objects.create(
+                number=next_number(),
+                revision=orig.revision + 1,
+                customer=customer,
+                title=form.cleaned_data["title"],
+                scope=orig.scope,
+                status="draft",
+                inputs=form.to_inputs_dict(),
+                fator_preco=orig.fator_preco,
+                impostos_pct=orig.impostos_pct,
+                created_by=request.user,
+            )
+            recompute(q)
+            create_calculation_snapshot(q)
+            return redirect("quotations:detail", pk=q.pk)
+        # inválido → re-render com erros (preview cai nos inputs originais)
+        results = _preview(dict(orig.inputs or {}))
+        return render(request, "quotations/edit.html", {"form": form, "results": results, "orig": orig})
+
+    form = FeixeDataSheetForm(initial=FeixeDataSheetForm.initial_from_quotation(orig))
+    results = _preview(dict(orig.inputs or {}))
+    return render(request, "quotations/edit.html", {"form": form, "results": results, "orig": orig})
+
+
 @login_required
 def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)

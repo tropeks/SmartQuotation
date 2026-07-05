@@ -15,6 +15,7 @@ urlpatterns = [
     path("cotacoes/recompute/", views.recompute_preview, name="recompute"),
     path("cotacoes/criar/", views.create_quotation, name="create"),
     path("cotacoes/<int:pk>/", views.quotation_detail, name="detail"),
+    path("cotacoes/<int:pk>/editar/", views.quotation_edit, name="edit"),
     path("cotacoes/<int:pk>/revisar/", views.quotation_revise, name="revise"),
     # API endpoints (DRF)
     path("api/", include(router.urls)),
