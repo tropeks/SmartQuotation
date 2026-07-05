@@ -10,11 +10,14 @@
   --g-orange:#d94e1f; --g-yellow:#f5c542;
   /* Semânticos */
   --g-green:#2d6a3e; --g-red:#a23a2f; --g-blue:#2950b0; --g-amber:#b8851a;
+  /* Fundos de status (tints sobre paper) */
+  --g-bg-review:#f7edd4; --g-bg-approved:#e2ebe4; --g-bg-sent:#dfe6f5; --g-bg-lost:#f2ddd9;
   /* Cinzas/bordas */
   --g-gray-1:#888278; --g-gray-2:#e3dfd2; --g-gray-3:#c8c2b2;
   /* Tipografia */
   --font-display:'Archivo',system-ui,sans-serif;
   --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --w-semibold:600; --w-bold:700;
   --ls-up:0.10em; --ls-eyebrow:0.14em;
   /* Espaçamento (múltiplos de 2px) */
   --s2:4px; --s3:6px; --s4:8px; --s6:12px; --s8:16px; --s10:20px; --s12:24px; --s16:32px;
