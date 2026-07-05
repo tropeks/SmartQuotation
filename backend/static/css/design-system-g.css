@@ -33,6 +33,19 @@ body {
 .mono { font-family:var(--font-mono); font-feature-settings:'tnum'; }
 a { color:var(--g-orange); }
 
+/* Foco de teclado visível em toda a superfície interativa (não só inputs) */
+a:focus-visible, button:focus-visible, .q-btn:focus-visible,
+[tabindex]:focus-visible, .g3-minimap a:focus-visible,
+[role="button"]:focus-visible {
+  outline:2px solid var(--g-orange); outline-offset:2px;
+}
+/* Skip link — some no foco, salta para o conteúdo */
+.skip-link { position:absolute; left:-9999px; top:0; z-index:1000;
+  background:var(--g-black); color:var(--g-paper); padding:var(--s4) var(--s8);
+  font-family:var(--font-display); font-weight:700; text-transform:uppercase;
+  letter-spacing:var(--ls-up); font-size:11px; }
+.skip-link:focus { left:var(--s6); top:var(--s6); }
+
 /* ---- Rail + layout ---- */
 .g-rail { display:flex; align-items:center; flex-wrap:wrap; gap:var(--s8); padding:var(--s6) var(--s12);
   background:var(--g-black); color:var(--g-paper); }
@@ -257,6 +270,13 @@ a { color:var(--g-orange); }
 .g-table tbody td.id {
   font-family: var(--font-mono); font-weight: var(--w-semibold); color: var(--g-orange);
   font-size: 11px; }
+
+/* ---- Alvos de toque (>=44px) só em telas de toque, sem afetar densidade desktop ---- */
+@media (pointer: coarse) {
+  .q-btn, .g-rail a, .g-rail button { min-height: 44px; display: inline-flex; align-items: center; }
+  .g3-minimap a { padding-top: var(--s6); padding-bottom: var(--s6); }
+  .g-table tbody td.id a, .g-table tbody td a { display: inline-block; padding: var(--s3) 0; }
+}
 
 /* ---- Login (no DNA G) ---- */
 .login-wrap { max-width:380px; margin:72px auto; }
