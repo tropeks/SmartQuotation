@@ -10,7 +10,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Count, Q, Sum
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts.forms import LoginForm
@@ -49,6 +51,12 @@ def login_view(request):
         # Mesma mensagem genérica para não revelar se o usuário existe noutro tenant.
         if user is not None and user.is_active and has_tenant_membership(user):
             login(request, user)
+            # Sob HTMX o 302 seria seguido pela XHR e o dashboard cairia dentro do
+            # #login-form. HX-Redirect faz o htmx navegar a página de verdade.
+            if _is_htmx(request):
+                resp = HttpResponse(status=204)
+                resp["HX-Redirect"] = reverse("dashboard")
+                return resp
             return redirect("dashboard")
         form.add_error(None, "Credenciais inválidas.")
 

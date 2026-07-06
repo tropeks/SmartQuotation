@@ -5,32 +5,83 @@
 <h1 class="q-number">NOVA COTAÇÃO</h1>
 <p style="color:var(--g-gray-1)">Preencha os dados da cotação. Você poderá revisar e recalcular nas etapas seguintes.</p>
 
-<form method="post">
+<form method="post" class="form-narrow">
   {% csrf_token %}
 
   {% if form.non_field_errors %}
-    <section class="g-section">
-      <div class="g-section-body">
-        {% for error in form.non_field_errors %}
-          <div class="error">{{ error }}</div>
-        {% endfor %}
-      </div>
-    </section>
+    <div class="errbox" role="alert" style="margin-bottom:16px">
+      <div>{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
+    </div>
   {% endif %}
 
   <section class="g-section">
     <header class="g-section-head"><h3>Identificação</h3></header>
     <div class="g-section-body">
       <div class="g-form">
+        {# Cliente + botão de cadastro rápido (modal) #}
+        <div class="field col-12" x-data="customerModal('{% url 'quotations:customer_quick_create' %}')">
+          <span class="req">{{ form.customer.label }}</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">{{ form.customer }}</div>
+            <button type="button" class="q-btn" @click="openModal()">+ Novo</button>
+          </div>
+          {% for error in form.customer.errors %}<span class="inline-err">{{ error }}</span>{% endfor %}
+
+          {# Modal sobreposto (backdrop-blur) — teleportado pro body #}
+          <template x-teleport="body">
+            <div class="modal-backdrop" x-show="open" x-cloak
+                 @keydown.escape.window="open = false" @click.self="open = false">
+              <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="qc-title">
+                <div class="modal-head">
+                  <h3 id="qc-title">Cadastro rápido de cliente</h3>
+                  <button type="button" class="modal-close" @click="open = false" aria-label="Fechar">×</button>
+                </div>
+                <div class="modal-body">
+                  <div class="field">
+                    <label class="req" for="qc-company">Razão Social</label>
+                    <input id="qc-company" type="text" x-model="f.company_name" :class="{ 'is-invalid': errs.company_name }">
+                    <template x-for="e in errs.company_name"><span class="inline-err" x-text="e"></span></template>
+                  </div>
+                  <div class="grid-2">
+                    <div class="field">
+                      <label for="qc-cnpj">CNPJ</label>
+                      <input id="qc-cnpj" type="text" inputmode="numeric" placeholder="00.000.000/0000-00"
+                             x-model="f.cnpj" @input="f.cnpj = maskCNPJ(f.cnpj)" :class="{ 'is-invalid': errs.cnpj }">
+                      <template x-for="e in errs.cnpj"><span class="inline-err" x-text="e"></span></template>
+                    </div>
+                    <div class="field">
+                      <label for="qc-phone">Telefone</label>
+                      <input id="qc-phone" type="text" inputmode="numeric" placeholder="(00) 00000-0000"
+                             x-model="f.phone" @input="f.phone = maskPhone(f.phone)" :class="{ 'is-invalid': errs.phone }">
+                      <template x-for="e in errs.phone"><span class="inline-err" x-text="e"></span></template>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="req" for="qc-contact">Contato</label>
+                    <input id="qc-contact" type="text" x-model="f.contact_name" :class="{ 'is-invalid': errs.contact_name }">
+                    <template x-for="e in errs.contact_name"><span class="inline-err" x-text="e"></span></template>
+                  </div>
+                  <div class="field">
+                    <label class="req" for="qc-email">E-mail</label>
+                    <input id="qc-email" type="email" x-model="f.email" :class="{ 'is-invalid': errs.email }">
+                    <template x-for="e in errs.email"><span class="inline-err" x-text="e"></span></template>
+                  </div>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" class="q-btn ghost" @click="open = false" :disabled="saving">Cancelar</button>
+                  <button type="button" class="q-btn primary" @click="submit()" :disabled="saving">
+                    <span x-text="saving ? 'Salvando…' : 'Salvar cliente'"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
         <label class="field col-12">
-          <span>{{ form.customer.label }}</span>
-          {{ form.customer }}
-          {% for error in form.customer.errors %}<span class="error">{{ error }}</span>{% endfor %}
-        </label>
-        <label class="field col-12">
-          <span>{{ form.title.label }}</span>
+          <span class="req">{{ form.title.label }}</span>
           {{ form.title }}
-          {% for error in form.title.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          {% for error in form.title.errors %}<span class="inline-err">{{ error }}</span>{% endfor %}
         </label>
       </div>
     </div>
@@ -43,22 +94,29 @@
         <label class="field col-12">
           <span>{{ form.description.label }}</span>
           {{ form.description }}
-          {% for error in form.description.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          {% for error in form.description.errors %}<span class="inline-err">{{ error }}</span>{% endfor %}
         </label>
-        <label class="field col-12">
-          <span>{{ form.valid_until.label }}</span>
-          {{ form.valid_until }}
-          {% for error in form.valid_until.errors %}<span class="error">{{ error }}</span>{% endfor %}
-        </label>
-        <label class="field col-12">
-          <span>{{ form.delivery_weeks.label }}</span>
-          {{ form.delivery_weeks }}
-          {% for error in form.delivery_weeks.errors %}<span class="error">{{ error }}</span>{% endfor %}
-        </label>
+        <div class="field col-12">
+          <div class="grid-2">
+            <label class="field">
+              <span>{{ form.valid_until.label }}</span>
+              {{ form.valid_until }}
+              {% for error in form.valid_until.errors %}<span class="inline-err">{{ error }}</span>{% endfor %}
+            </label>
+            <label class="field">
+              <span>{{ form.delivery_weeks.label }}</span>
+              <span class="suffix-wrap">
+                {{ form.delivery_weeks }}
+                <span class="suffix">semanas</span>
+              </span>
+              {% for error in form.delivery_weeks.errors %}<span class="inline-err">{{ error }}</span>{% endfor %}
+            </label>
+          </div>
+        </div>
         <label class="field col-12">
           <span>{{ form.payment_terms.label }}</span>
           {{ form.payment_terms }}
-          {% for error in form.payment_terms.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          {% for error in form.payment_terms.errors %}<span class="inline-err">{{ error }}</span>{% endfor %}
         </label>
       </div>
     </div>
@@ -71,7 +129,7 @@
         <label class="field col-12">
           <span>{{ form.engineer_responsavel.label }}</span>
           {{ form.engineer_responsavel }}
-          {% for error in form.engineer_responsavel.errors %}<span class="error">{{ error }}</span>{% endfor %}
+          {% for error in form.engineer_responsavel.errors %}<span class="inline-err">{{ error }}</span>{% endfor %}
         </label>
       </div>
     </div>
@@ -84,4 +142,67 @@
     </div>
   </section>
 </form>
+
+<script>
+function customerModal(url) {
+  return {
+    url,
+    open: false,
+    saving: false,
+    f: { company_name: '', cnpj: '', contact_name: '', email: '', phone: '' },
+    errs: {},
+    openModal() { this.errs = {}; this.open = true; },
+    maskCNPJ(v) {
+      v = (v || '').replace(/\D/g, '').slice(0, 14);
+      return v
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+    },
+    maskPhone(v) {
+      v = (v || '').replace(/\D/g, '').slice(0, 11);
+      if (v.length <= 10) {
+        return v.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2');
+      }
+      return v.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
+    },
+    csrf() {
+      const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+      return m ? m[1] : '';
+    },
+    async submit() {
+      this.saving = true;
+      this.errs = {};
+      const body = new FormData();
+      Object.entries(this.f).forEach(([k, v]) => body.append(k, v));
+      try {
+        const resp = await fetch(this.url, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': this.csrf(), 'X-Requested-With': 'XMLHttpRequest' },
+          body,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.ok) {
+          const sel = this.$root.querySelector('select[name=customer]');
+          const opt = new Option(data.company_name, data.id, true, true);
+          sel.add(opt);
+          sel.value = data.id;
+          sel.dispatchEvent(new Event('change'));
+          this.open = false;
+          this.f = { company_name: '', cnpj: '', contact_name: '', email: '', phone: '' };
+          window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Cliente cadastrado.', type: 'ok' } }));
+        } else {
+          this.errs = data.errors || {};
+          window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Corrija os campos destacados.', type: 'err' } }));
+        }
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Falha ao salvar cliente.', type: 'err' } }));
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
 {% endblock %}

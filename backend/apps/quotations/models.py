@@ -19,6 +19,7 @@ class Customer(models.Model):
     cnpj = models.CharField(max_length=18, blank=True)
     contact_name = models.CharField(max_length=255, blank=True)
     email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=32, blank=True)
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=2, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
