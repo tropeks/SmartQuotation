@@ -99,3 +99,31 @@ class QuotationEntryForm(forms.Form):
             if engineer_queryset is not None
             else UserProfile.objects.filter(role=UserProfile.ROLE_ENGENHEIRO, is_active=True).select_related("user")
         )
+
+
+class CustomerQuickForm(forms.ModelForm):
+    """Cadastro rápido de cliente (modal na tela de Nova Cotação).
+
+    Campos essenciais do brief: Razão Social + Contato + E-mail obrigatórios;
+    CNPJ e Telefone opcionais (com máscara no front). A obrigatoriedade de
+    contact_name/email é imposta aqui (no model são blank=True para dados legados).
+    """
+
+    class Meta:
+        model = Customer
+        fields = ["company_name", "cnpj", "contact_name", "email", "phone"]
+        labels = {
+            "company_name": "Razão Social",
+            "cnpj": "CNPJ",
+            "contact_name": "Contato",
+            "email": "E-mail",
+            "phone": "Telefone",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["company_name"].required = True
+        self.fields["contact_name"].required = True
+        self.fields["email"].required = True
+        self.fields["cnpj"].required = False
+        self.fields["phone"].required = False

@@ -415,3 +415,50 @@ class PermutadorQuotationTests(TenantTestCase):
         ctx = build_context(q)
         self.assertEqual(ctx["preco_com_impostos"], q.preco_com_impostos)
         self.assertEqual(ctx["cliente"], "ACME")
+
+
+class CustomerQuickCreateTests(TenantTestCase):
+    """Endpoint JSON do modal de cadastro rápido de cliente (Nova Cotação)."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.user = User.objects.create_user(username="orc2", password="senha-forte-123")
+        UserProfile.objects.create(user=self.user, full_name="Orc2", role=UserProfile.ROLE_ORCAMENTISTA)
+        self.client.force_login(self.user)
+        self.url = "/cotacoes/clientes/criar/"
+
+    def test_cria_cliente_e_retorna_json(self):
+        resp = self.client.post(self.url, {
+            "company_name": "Nova Petro S.A.", "cnpj": "12.345.678/0001-90",
+            "contact_name": "Fulano", "email": "fulano@nova.com", "phone": "(11) 98888-7777",
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["ok"])
+        c = Customer.objects.get(pk=data["id"])
+        self.assertEqual(c.company_name, "Nova Petro S.A.")
+        self.assertEqual(c.phone, "(11) 98888-7777")
+        self.assertEqual(data["company_name"], "Nova Petro S.A.")
+
+    def test_campos_obrigatorios_faltando_retorna_400(self):
+        resp = self.client.post(self.url, {"cnpj": "", "phone": ""})
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data["ok"])
+        self.assertIn("company_name", data["errors"])
+        self.assertIn("contact_name", data["errors"])
+        self.assertIn("email", data["errors"])
+        self.assertEqual(Customer.objects.count(), 0)
+
+    def test_cnpj_e_telefone_sao_opcionais(self):
+        resp = self.client.post(self.url, {
+            "company_name": "Sem CNPJ Ltda", "contact_name": "Beltrano", "email": "b@x.com",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["ok"])
+
+    def test_get_nao_permitido(self):
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 405)

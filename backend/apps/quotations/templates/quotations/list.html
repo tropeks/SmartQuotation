@@ -10,22 +10,40 @@
   {% endif %}
 </div>
 
-<section class="g-section" style="margin-top:8px">
-  <header class="g-section-head"><h3>Filtros</h3></header>
-  <div class="g-section-body">
+<section class="g-section filter-accordion" style="margin-top:8px"
+         x-data="{ open: window.innerWidth >= 768 }" :data-open="open.toString()">
+  <header class="g-section-head" role="button" tabindex="0"
+          @click="open = !open" @keydown.enter="open = !open" @keydown.space.prevent="open = !open"
+          :aria-expanded="open.toString()" aria-controls="filtros-body">
+    <h3>Filtros</h3>
+    <span class="acc-chevron" aria-hidden="true">▾</span>
+  </header>
+  <div class="g-section-body" id="filtros-body" x-show="open" x-cloak>
     <form method="get" class="g-form">
       <label class="field col-4">
         <span>Busca</span>
         <input type="text" name="q" value="{{ search }}" placeholder="Número, título ou cliente">
       </label>
-      <label class="field col-4">
+      <div class="field col-4">
         <span>Status</span>
-        <select name="status" multiple size="6">
-          {% for status_key, status_label in status_choices %}
-            <option value="{{ status_key }}" {% if status_key in selected_statuses %}selected{% endif %}>{{ status_label }}</option>
-          {% endfor %}
-        </select>
-      </label>
+        <div class="ms" x-data="{ open: false, count: {{ selected_statuses|length }} }"
+             @click.outside="open = false">
+          <button type="button" class="ms-btn" @click="open = !open" :aria-expanded="open.toString()">
+            <span x-text="count ? count + ' selecionado(s)' : 'Todos os status'"></span>
+            <span class="caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="ms-panel" x-show="open" x-cloak>
+            {% for status_key, status_label in status_choices %}
+              <label class="ms-opt">
+                <input type="checkbox" name="status" value="{{ status_key }}"
+                       {% if status_key in selected_statuses %}checked{% endif %}
+                       @change="count = $root.querySelectorAll('input[name=status]:checked').length">
+                {{ status_label }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
       <label class="field col-4">
         <span>Cliente</span>
         <select name="customer">
@@ -45,42 +63,65 @@
 
 <section class="g-section" style="margin-top:8px">
   <div class="g-section-body" style="padding:0">
-    <table class="g-table">
-      <thead>
-        <tr>
-          <th>Número</th>
-          <th>Revisão</th>
-          <th>Cliente</th>
-          <th>Título</th>
-          <th>Status</th>
-          <th class="num">Valor Total R$</th>
-          <th>Validade</th>
-          <th>Criado por</th>
-          <th>Data</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in quotations %}
-          <tr onclick="location.href='{% url 'quotations:detail' row.obj.pk %}'" style="cursor:pointer{% if row.is_italic %};font-style: italic;{% endif %}">
-            <td class="id"><a href="{% url 'quotations:detail' row.obj.pk %}">{{ row.obj.number }}</a></td>
-            <td class="mono">{{ row.revision_label }}</td>
-            <td>{{ row.obj.customer.company_name }}</td>
-            <td>{{ row.obj.title }}</td>
-            <td><span class="q-status {{ row.status_class }}">{{ row.status_label }}</span></td>
-            <td class="num">R$ {{ row.obj.preco_com_impostos|brl }}</td>
-            <td>{{ row.validity_display }}</td>
-            <td>{{ row.created_by_display }}</td>
-            <td>{{ row.obj.created_at|date:"d/m/Y" }}</td>
-            <td><a href="{% url 'quotations:detail' row.obj.pk %}">Detalhe</a></td>
-          </tr>
-        {% empty %}
+    {# Desktop/tablet: tabela densa (rola horizontalmente se estourar) #}
+    <div class="list-table-wrap table-scroll">
+      <table class="g-table">
+        <thead>
           <tr>
-            <td colspan="10" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação encontrada.</td>
+            <th>Número</th>
+            <th>Revisão</th>
+            <th>Cliente</th>
+            <th>Título</th>
+            <th>Status</th>
+            <th class="num">Valor Total R$</th>
+            <th>Validade</th>
+            <th>Criado por</th>
+            <th>Data</th>
+            <th>Ações</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for row in quotations %}
+            <tr onclick="location.href='{% url 'quotations:detail' row.obj.pk %}'" style="cursor:pointer{% if row.is_italic %};font-style: italic;{% endif %}">
+              <td class="id"><a href="{% url 'quotations:detail' row.obj.pk %}">{{ row.obj.number }}</a></td>
+              <td class="mono">{{ row.revision_label }}</td>
+              <td>{{ row.obj.customer.company_name }}</td>
+              <td>{{ row.obj.title }}</td>
+              <td><span class="q-status {{ row.status_class }}">{{ row.status_label }}</span></td>
+              <td class="num">R$ {{ row.obj.preco_com_impostos|brl }}</td>
+              <td>{{ row.validity_display }}</td>
+              <td>{{ row.created_by_display }}</td>
+              <td>{{ row.obj.created_at|date:"d/m/Y" }}</td>
+              <td><a href="{% url 'quotations:detail' row.obj.pk %}">Detalhe</a></td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="10" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação encontrada.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Mobile: cartões clicáveis (área de toque >=48px) #}
+    <div class="q-cards" style="padding:12px">
+      {% for row in quotations %}
+        <a class="q-card" href="{% url 'quotations:detail' row.obj.pk %}">
+          <div class="r1">
+            <span class="num">{{ row.obj.number }}</span>
+            <span class="q-status {{ row.status_class }}">{{ row.status_label }}</span>
+          </div>
+          <div class="r2">{{ row.obj.title }}</div>
+          <div class="r3">
+            <span>{{ row.obj.customer.company_name }}</span>
+            <span>{{ row.validity_display }}</span>
+          </div>
+          <div class="r4">R$ {{ row.obj.preco_com_impostos|brl }}</div>
+        </a>
+      {% empty %}
+        <p style="text-align:center;color:var(--g-gray-1);padding:12px">Nenhuma cotação encontrada.</p>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
@@ -100,5 +141,9 @@
     </div>
   </div>
 </section>
+{% endif %}
+
+{% if can_create_quotation %}
+  <a class="fab" href="{% url 'quotations:new' %}" aria-label="Nova cotação" title="Nova cotação">+</a>
 {% endif %}
 {% endblock %}

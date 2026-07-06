@@ -6,12 +6,13 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
 from apps.quotations.models import Quotation, Customer
-from apps.quotations.forms import FeixeDataSheetForm, QuotationEntryForm
+from apps.quotations.forms import FeixeDataSheetForm, QuotationEntryForm, CustomerQuickForm
 from apps.quotations.adapter import default_inputs, to_feixe_inputs
 from apps.quotations.services import create_feixe_quotation
 
@@ -167,6 +168,23 @@ def quotation_new(request):
             "form": form,
         },
     )
+
+
+@require_POST
+@require_role(*_ENTRY_ROLES)
+def customer_quick_create(request):
+    """Cadastro rápido de cliente (modal da Nova Cotação). Retorna JSON.
+
+    Sucesso: {"ok": true, "id": <pk>, "company_name": "..."} para o front injetar
+    a nova opção no <select> de Cliente e selecioná-la. Erro: {"ok": false, "errors": {...}} 400.
+    """
+    form = CustomerQuickForm(request.POST)
+    if form.is_valid():
+        customer = form.save()
+        return JsonResponse(
+            {"ok": True, "id": customer.pk, "company_name": customer.company_name}
+        )
+    return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
 
 @require_role(*_WRITE_ROLES)

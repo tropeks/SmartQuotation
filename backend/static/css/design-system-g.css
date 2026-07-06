@@ -301,3 +301,145 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
 .login-wrap .errors { list-style:none; margin:0; padding:var(--s4) var(--s6);
   background:var(--g-paper-2); border-left:3px solid var(--g-red); color:var(--g-red); font-size:12px; }
 .error { color:var(--g-red); font-size:12px; }
+
+/* ============================================================
+   WELL — Refino de UI/UX (telas 01–04)
+   ============================================================ */
+[x-cloak] { display:none !important; }
+
+/* ---- [01] Login: ergonomia do card + estados de input ---- */
+/* Radius suave só no login, a pedido do PE (resto do sistema segue zero-radius). */
+.login-wrap .g-section { border-radius:8px; overflow:hidden; }
+.login-wrap .g-section-body { padding:var(--s16) var(--s12) var(--s16); gap:var(--s10); }
+.login-wrap .field input {
+  border:1.5px solid var(--g-gray-3); border-radius:6px; padding:var(--s6) var(--s8);
+  font-family:var(--font-mono); font-size:13px; background:var(--g-white); color:var(--g-black);
+  transition:border-color .12s ease, box-shadow .12s ease;
+}
+.login-wrap .field input:hover { border-color:var(--g-gray-1); }
+.login-wrap .field input:focus { outline:none; border-color:var(--g-orange);
+  box-shadow:0 0 0 3px rgba(217,78,31,0.18); }
+.login-wrap .field input:disabled { background:var(--g-paper-2); color:var(--g-gray-1); cursor:not-allowed; }
+.login-wrap .q-btn { border-radius:6px; }
+/* Input de senha com botão de olho embutido */
+.pw-wrap { position:relative; display:flex; }
+.pw-wrap input { flex:1; padding-right:40px !important; }
+.pw-toggle { position:absolute; right:0; top:0; height:100%; width:38px; display:flex;
+  align-items:center; justify-content:center; background:none; border:none; cursor:pointer;
+  color:var(--g-gray-1); padding:0; }
+.pw-toggle:hover { color:var(--g-black); }
+.pw-toggle svg { width:18px; height:18px; }
+/* Linha "Esqueci minha senha" alinhada à direita */
+.forgot-row { display:block; text-align:right; margin-top:var(--s2); }
+.forgot-row a { font-family:var(--font-mono); font-size:11px; }
+.forgot-hint { background:var(--g-bg-sent); border-left:3px solid var(--g-blue); color:var(--g-blue);
+  font-family:var(--font-mono); font-size:11px; padding:var(--s4) var(--s6); border-radius:4px; margin-top:var(--s4); }
+/* Caixa de erro: fundo vermelho claro, texto vermelho escuro, ícone de aviso */
+.errbox { display:flex; gap:var(--s4); align-items:flex-start; list-style:none; margin:0;
+  padding:var(--s6) var(--s8); background:var(--g-bg-lost); border:1px solid var(--g-red);
+  border-radius:6px; color:var(--g-red); font-size:12px; }
+.errbox::before { content:'⚠'; font-weight:700; line-height:1.2; }
+/* Botão em loading (HTMX): spinner + trava clique */
+.btn-spin { display:none; width:14px; height:14px; margin-left:var(--s4);
+  border:2px solid currentColor; border-right-color:transparent; border-radius:50%;
+  vertical-align:middle; animation:spin .6s linear infinite; }
+.htmx-request .btn-spin, .btn-spin.htmx-request { display:inline-block; }
+.htmx-request.q-btn, .q-btn.htmx-request { opacity:.7; pointer-events:none; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ---- [02] Navbar responsiva (hambúrguer <768px) ---- */
+.g-rail .brand { text-decoration:none; color:inherit; }
+.g-rail .brand:hover b { color:var(--g-orange); }
+.nav-toggle { display:none; background:none; border:1.5px solid var(--g-gray-3); color:var(--g-paper);
+  font-size:18px; line-height:1; padding:var(--s3) var(--s6); cursor:pointer; border-radius:4px; }
+.g-nav { display:flex; align-items:center; gap:var(--s8); }
+@media (max-width:768px) {
+  .nav-toggle { display:inline-flex; align-items:center; }
+  .g-nav { display:none; flex-basis:100%; width:100%; flex-direction:column; align-items:stretch;
+    gap:var(--s4); padding-top:var(--s6); }
+  .g-nav.open { display:flex; }
+  .g-nav .q-btn { width:100%; text-align:center; }
+  .g-nav form { width:100%; }
+  .g-nav form .q-btn { width:100%; }
+}
+/* Wrapper de rolagem horizontal para tabelas densas */
+.table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+@media (max-width:640px) {
+  .g-table tbody td.num, .g-table thead th.num { font-size:0.92rem; }
+}
+
+/* ---- [03] Lista: filtros colapsáveis, cards mobile, FAB ---- */
+.filter-accordion .g-section-head { cursor:pointer; user-select:none; }
+.filter-accordion .acc-chevron { font-family:var(--font-mono); font-size:12px; transition:transform .15s ease; }
+.filter-accordion[data-open="false"] .acc-chevron { transform:rotate(-90deg); }
+/* Multi-select compacto (dropdown de checkboxes) */
+.ms { position:relative; }
+.ms-btn { display:flex; align-items:center; justify-content:space-between; gap:var(--s4); width:100%;
+  border:var(--border-thin); background:var(--g-paper-2); padding:var(--s4) var(--s6);
+  font-family:var(--font-mono); font-size:13px; cursor:pointer; color:var(--g-black); text-align:left; }
+.ms-btn .caret { color:var(--g-gray-1); }
+.ms-panel { position:absolute; z-index:50; top:calc(100% + 2px); left:0; right:0; background:var(--g-white);
+  border:var(--border-strong); padding:var(--s4); max-height:240px; overflow-y:auto; }
+.ms-opt { display:flex; align-items:center; gap:var(--s4); padding:var(--s3) var(--s4);
+  font-family:var(--font-display); font-size:12px; cursor:pointer; text-transform:none; letter-spacing:0; }
+.ms-opt:hover { background:var(--g-paper-2); }
+.ms-opt input { width:auto; }
+/* Lista de cards mobile (some no desktop) */
+.q-cards { display:none; }
+.q-card { display:block; border:var(--border-thin); border-left:4px solid var(--g-orange);
+  background:var(--g-white); padding:var(--s8); margin-bottom:var(--s6); text-decoration:none;
+  color:var(--g-black); min-height:48px; }
+.q-card .r1 { display:flex; justify-content:space-between; align-items:center; gap:var(--s6); }
+.q-card .r1 .num { font-family:var(--font-mono); font-weight:700; color:var(--g-orange); font-size:13px; }
+.q-card .r2 { font-weight:700; font-size:14px; margin-top:var(--s4); }
+.q-card .r3 { display:flex; justify-content:space-between; gap:var(--s6); color:var(--g-gray-1);
+  font-family:var(--font-mono); font-size:11px; margin-top:var(--s3); }
+.q-card .r4 { text-align:right; font-family:var(--font-mono); font-weight:700; font-size:15px; margin-top:var(--s4); }
+/* Botão de ação flutuante (FAB) — só mobile */
+.fab { display:none; }
+@media (max-width:768px) {
+  .list-table-wrap { display:none; }
+  .q-cards { display:block; }
+  .fab { display:flex; align-items:center; justify-content:center; position:fixed; z-index:200;
+    right:var(--s12); bottom:var(--s12); width:56px; height:56px; border-radius:50%;
+    background:var(--g-black); color:var(--g-yellow); font-size:28px; line-height:1; font-weight:400;
+    border:2px solid var(--g-black); text-decoration:none; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+  .fab:hover { background:var(--g-orange); border-color:var(--g-orange); color:var(--g-white); }
+}
+
+/* ---- [04] Nova cotação: ergonomia + modal cliente ---- */
+.form-narrow { max-width:56rem; }
+.req::after { content:' *'; color:var(--g-red); font-weight:700; }
+.field .inline-err { color:var(--g-red); font-size:11px; font-family:var(--font-mono); }
+.field input.is-invalid, .field select.is-invalid { border-color:var(--g-red); }
+/* Grid 2 colunas para campos curtos lado a lado (desktop) */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:var(--s8); }
+@media (max-width:640px) { .grid-2 { grid-template-columns:1fr; } }
+/* Sufixo fixo dentro do input (ex.: "semanas") */
+.suffix-wrap { position:relative; display:flex; }
+.suffix-wrap input { flex:1; padding-right:72px !important; }
+.suffix-wrap .suffix { position:absolute; right:var(--s6); top:50%; transform:translateY(-50%);
+  font-family:var(--font-mono); font-size:11px; color:var(--g-gray-1); pointer-events:none; }
+/* Modal genérico (backdrop-blur) */
+.modal-backdrop { position:fixed; inset:0; z-index:500; display:flex; align-items:flex-start;
+  justify-content:center; padding:var(--s16) var(--s8); background:rgba(22,21,26,.45);
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); overflow-y:auto; }
+.modal-card { width:100%; max-width:440px; background:var(--g-white); border:var(--border-strong);
+  margin-top:6vh; }
+.modal-head { display:flex; align-items:center; justify-content:space-between;
+  border-bottom:var(--border-strong); padding:var(--s6) var(--s10); }
+.modal-head h3 { margin:0; font-weight:700; font-size:13px; letter-spacing:var(--ls-up); text-transform:uppercase; }
+.modal-close { background:none; border:none; font-size:20px; line-height:1; cursor:pointer; color:var(--g-gray-1); }
+.modal-close:hover { color:var(--g-black); }
+.modal-body { padding:var(--s10); display:flex; flex-direction:column; gap:var(--s8); }
+.modal-foot { display:flex; justify-content:flex-end; gap:var(--s6); padding:var(--s6) var(--s10);
+  border-top:var(--border-thin); }
+.modal-body .field input { width:100%; box-sizing:border-box; }
+
+/* ---- Toast (feedback de sucesso/erro) ---- */
+.toast-host { position:fixed; z-index:600; right:var(--s12); bottom:var(--s12);
+  display:flex; flex-direction:column; gap:var(--s4); }
+.toast { display:flex; align-items:center; gap:var(--s4); background:var(--g-black); color:var(--g-paper);
+  padding:var(--s6) var(--s10); border-left:4px solid var(--g-green); font-size:12px;
+  font-family:var(--font-mono); box-shadow:0 2px 8px rgba(0,0,0,.25); }
+.toast--err { border-left-color:var(--g-red); }

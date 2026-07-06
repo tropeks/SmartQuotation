@@ -13,22 +13,47 @@
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
-  <header class="g-rail">
-    <span class="brand" aria-label="SMARTQUOTATION">SMART<b>QUOTATION</b></span>
+  <header class="g-rail" x-data="{ navOpen: false }">
+    <a class="brand" href="/" aria-label="SMARTQUOTATION — página inicial">SMART<b>QUOTATION</b></a>
     <span class="spacer"></span>
     {% if user.is_authenticated %}
       <span class="tenant">{{ request.tenant.name|default:"—" }}</span>
-      <nav aria-label="Navegação principal" style="display:contents">
+      <button type="button" class="nav-toggle" @click="navOpen = !navOpen"
+              :aria-expanded="navOpen.toString()" aria-controls="main-nav" aria-label="Abrir menu de navegação">☰</button>
+      <nav id="main-nav" class="g-nav" :class="{ open: navOpen }" aria-label="Navegação principal">
         <a class="q-btn" href="{% url 'quotations:list' %}">Cotações</a>
         <a class="q-btn" href="{% url 'production:list' %}">OFs</a>
         <a class="q-btn" href="{% url 'cost_discovery:home' %}">Custos</a>
         <a class="q-btn" href="{% url 'tema_templates:catalog' %}">TEMA</a>
         <a class="q-btn" href="{% url 'tema_templates:data_sheet' %}">Permutador</a>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+          <button class="q-btn">Sair</button></form>
       </nav>
-      <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}
-        <button class="q-btn">Sair</button></form>
     {% endif %}
   </header>
   <main id="conteudo" class="g-main">{% block content %}{% endblock %}</main>
+
+  {# Host global de toasts — disparado por window event 'toast' {detail:{msg,type}} #}
+  <div class="toast-host" x-data="{
+        toasts: [],
+        add(e){ const id = (this.toasts.at(-1)?.id || 0) + 1;
+          this.toasts.push({ id, msg: e.detail.msg, type: e.detail.type || 'ok' });
+          setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3500); }
+      }" @toast.window="add($event)" aria-live="polite" aria-atomic="true">
+    <template x-for="t in toasts" :key="t.id">
+      <div class="toast" :class="{ 'toast--err': t.type === 'err' }" x-text="t.msg"></div>
+    </template>
+  </div>
+
+  {% comment %}HTMX 2.x não faz swap de respostas 4xx por padrão. Validação de
+  formulário (ex.: login) volta 400 com o parcial re-renderizado — permitimos o swap.{% endcomment %}
+  <script>
+    document.addEventListener('htmx:beforeSwap', function (e) {
+      if (e.detail.xhr && e.detail.xhr.status === 400) {
+        e.detail.shouldSwap = true;
+        e.detail.isError = false;
+      }
+    });
+  </script>
 </body>
 </html>
