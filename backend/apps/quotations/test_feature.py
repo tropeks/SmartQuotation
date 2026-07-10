@@ -247,6 +247,18 @@ class FeatureViewsTests(TenantTestCase):
         self.assertIsNotNone(item, "cotação de feixe deve ter item com operação")
         return item
 
+    def _item_with_horas_operation(self, q):
+        """Item com operação derivada de horas (custo_direto=False)."""
+        item = q.itens.filter(operacoes__custo_direto=False).first()
+        self.assertIsNotNone(item, "cotação de feixe deve ter operação baseada em horas")
+        return item
+
+    def _item_with_direct_operation(self, q):
+        """Item com operação de custo direto (sem base horária, ex.: transporte)."""
+        item = q.itens.filter(operacoes__custo_direto=True).first()
+        self.assertIsNotNone(item, "cotação de feixe deve ter operação de custo direto")
+        return item
+
     def test_detail_eap_rows_are_clickable_drawer_triggers(self):
         """Linhas da §2 EAP viram gatilhos do drawer (clicáveis + endpoint drawer)."""
         from django.urls import reverse
@@ -314,13 +326,14 @@ class FeatureViewsTests(TenantTestCase):
 
     def test_eap_item_save_updates_rendered_total_when_operation_cost_changes(self):
         """O parcial re-renderizado precisa refletir o novo total também quando o
-        override vem de mão de obra, não só de material."""
+        override vem de mão de obra, não só de material — para operações de
+        CUSTO DIRETO (sem base horária, ex.: transporte)."""
         from decimal import Decimal
         from django.urls import reverse
         q = create_feixe_quotation(self.customer, "Feixe Save OP", created_by=self.user)
-        item = self._item_with_operation(q)
-        op = item.operacoes.first()
-        self.assertIsNotNone(op, "cotação de feixe deve ter operação")
+        item = self._item_with_direct_operation(q)
+        op = item.operacoes.filter(custo_direto=True).first()
+        self.assertIsNotNone(op, "item deve ter operação de custo direto")
 
         novo_custo = op.custo + Decimal("250.00")
         resp = self.client.post(
@@ -338,6 +351,73 @@ class FeatureViewsTests(TenantTestCase):
         )
         self.assertContains(resp, brl(item.custo_mo))
         self.assertContains(resp, brl(item.custo_total))
+
+    def test_eap_item_drawer_shows_hours_inputs_for_horas_based_operation(self):
+        """O drawer precisa oferecer campos de HORAS (HH/HM) para operações
+        derivadas de horas — não só o custo direto em R$."""
+        from django.urls import reverse
+        q = create_feixe_quotation(self.customer, "Feixe Drawer Horas", created_by=self.user)
+        item = self._item_with_horas_operation(q)
+        op = item.operacoes.filter(custo_direto=False).first()
+
+        resp = self.client.get(reverse("quotations:eap_item_drawer", args=[item.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f"op_horas_hh_{op.pk}")
+        self.assertContains(resp, f"op_horas_hm_{op.pk}")
+
+    def test_eap_item_save_persists_hours_and_derives_cost(self):
+        """POST de HORAS numa operação derivada recalcula o custo on-the-fly
+        (horas × taxa) e persiste tanto as horas quanto o custo derivado."""
+        from decimal import Decimal
+        from django.urls import reverse
+        q = create_feixe_quotation(self.customer, "Feixe Save Horas", created_by=self.user)
+        item = self._item_with_horas_operation(q)
+        op = item.operacoes.filter(custo_direto=False).first()
+        self.assertGreater(op.taxa_hora, Decimal("0"))
+
+        nova_hh = op.horas_hh + Decimal("5.00")
+        resp = self.client.post(
+            reverse("quotations:eap_item_save", args=[item.pk]),
+            {f"op_horas_hh_{op.pk}": str(nova_hh), f"op_horas_hm_{op.pk}": str(op.horas_hm)},
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        op.refresh_from_db()
+        item.refresh_from_db()
+        self.assertEqual(op.horas_hh, nova_hh)
+        custo_esperado = (op.horas_hh * op.taxa_hora) + (op.horas_hm * op.taxa_hora_hm)
+        self.assertEqual(op.custo, custo_esperado)
+        self.assertEqual(
+            item.custo_mo,
+            sum((o.custo for o in item.operacoes.all() if o.aplicavel), Decimal("0")),
+        )
+        self.assertContains(resp, brl(item.custo_mo))
+
+    def test_eap_item_save_logs_audit_trail_for_operation_hours_edit(self):
+        """Override manual de horas grava trilha de auditoria (quem/quando/campo/
+        valor anterior), reusando o app `audit`."""
+        from decimal import Decimal
+        from django.urls import reverse
+        from apps.audit.models import AccessLog
+        q = create_feixe_quotation(self.customer, "Feixe Audit Horas", created_by=self.user)
+        item = self._item_with_horas_operation(q)
+        op = item.operacoes.filter(custo_direto=False).first()
+        valor_anterior = op.horas_hh
+        nova_hh = valor_anterior + Decimal("3.00")
+
+        n_before = AccessLog.objects.count()
+        self.client.post(
+            reverse("quotations:eap_item_save", args=[item.pk]),
+            {f"op_horas_hh_{op.pk}": str(nova_hh), f"op_horas_hm_{op.pk}": str(op.horas_hm)},
+        )
+
+        self.assertGreater(AccessLog.objects.count(), n_before)
+        log = AccessLog.objects.filter(action="edit", resource_type="ItemOperation", resource_id=str(op.pk)).first()
+        self.assertIsNotNone(log, "override de horas deve gravar AccessLog action=edit")
+        self.assertEqual(log.user, self.user)
+        self.assertEqual(log.metadata.get("field"), "horas_hh")
+        self.assertEqual(Decimal(str(log.metadata.get("before"))), valor_anterior)
+        self.assertEqual(Decimal(str(log.metadata.get("after"))), nova_hh)
 
     def test_eap_item_drawer_denies_user_without_role(self):
         """Guardrail RBAC: usuário sem papel no tenant é barrado no drawer (leitura)."""
