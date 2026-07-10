@@ -1,0 +1,73 @@
+{% load money %}
+{# Tela 05 item 4 (parte B): conteúdo do DRAWER de uma linha da EAP.
+   Parcial HTMX: o form salva via hx-post e re-renderiza a si mesmo (outerHTML)
+   com os roll-ups atualizados. Override MANUAL — NÃO dispara o motor. #}
+<form id="eap-drawer-form"
+      hx-post="{% url 'quotations:eap_item_save' item.pk %}"
+      hx-target="#eap-drawer-form"
+      hx-swap="outerHTML">
+  {% csrf_token %}
+  <div class="drawer-item-head">
+    <div class="drawer-code mono">{{ item.codigo_item }}</div>
+    <h4>{{ item.descricao }}</h4>
+    {% if saved %}<div class="drawer-saved g-muted" role="status">Override salvo · roll-up atualizado.</div>{% endif %}
+  </div>
+
+  <div class="drawer-rollup">
+    <div><span class="lbl">Material</span> <span class="val mono num{% if not item.custo_material %} g-muted{% endif %}">R$ {{ item.custo_material|brl }}</span></div>
+    <div><span class="lbl">Mão de obra</span> <span class="val mono num{% if not item.custo_mo %} g-muted{% endif %}">R$ {{ item.custo_mo|brl }}</span></div>
+    <div><span class="lbl">Total</span> <span class="val mono num{% if not item.custo_total %} g-muted{% endif %}">R$ {{ item.custo_total|brl }}</span></div>
+  </div>
+
+  <section class="drawer-block">
+    <h5>Matéria-prima</h5>
+    {% if item.materiais.all %}
+    <table class="g-table drawer-table">
+      <thead><tr><th>Código</th><th>Descrição</th><th class="num">Peso (kg)</th><th class="num">Custo (R$)</th></tr></thead>
+      <tbody>
+        {% for mp in item.materiais.all %}
+        <tr>
+          <td class="mono">{{ mp.codigo_mp }}</td>
+          <td>{{ mp.descricao }}</td>
+          <td class="num"><input class="g-input drawer-num" type="text" inputmode="decimal"
+                 name="material_peso_{{ mp.pk }}" value="{{ mp.peso_bruto_kg }}"
+                 aria-label="Peso bruto de {{ mp.descricao }}"></td>
+          <td class="num"><input class="g-input drawer-num{% if not mp.custo %} g-muted{% endif %}" type="text" inputmode="decimal"
+                 name="material_custo_{{ mp.pk }}" value="{{ mp.custo }}"
+                 aria-label="Custo de {{ mp.descricao }}"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="g-muted">Sem matéria-prima neste item.</p>
+    {% endif %}
+  </section>
+
+  <section class="drawer-block">
+    <h5>Mão de obra</h5>
+    {% if item.operacoes.all %}
+    <table class="g-table drawer-table">
+      <thead><tr><th>Operação</th><th>Descrição</th><th>Método</th><th class="num">Custo (R$)</th></tr></thead>
+      <tbody>
+        {% for op in item.operacoes.all %}
+        <tr>
+          <td class="mono">{{ op.codigo_op }}</td>
+          <td>{{ op.descricao }}</td>
+          <td class="g-muted">{{ op.metodo|default:"—" }}</td>
+          <td class="num"><input class="g-input drawer-num{% if not op.custo %} g-muted{% endif %}" type="text" inputmode="decimal"
+                 name="op_custo_{{ op.pk }}" value="{{ op.custo }}"
+                 aria-label="Custo da operação {{ op.descricao }}"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="g-muted">Sem operações neste item.</p>
+    {% endif %}
+  </section>
+
+  <div class="drawer-actions">
+    <button type="submit" class="q-btn primary">Salvar overrides</button>
+  </div>
+</form>

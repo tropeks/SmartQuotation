@@ -31,7 +31,16 @@
       </nav>
     {% endif %}
   </header>
-  <main id="conteudo" class="g-main">{% block content %}{% endblock %}</main>
+  <main id="conteudo" class="g-main">
+    {% if messages %}
+      <section style="display:grid;gap:8px;margin-bottom:16px">
+        {% for message in messages %}
+          <div class="toast {% if message.tags == 'error' %}toast--err{% endif %}" role="status">{{ message }}</div>
+        {% endfor %}
+      </section>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
 
   {# Host global de toasts — disparado por window event 'toast' {detail:{msg,type}} #}
   <div class="toast-host" x-data="{

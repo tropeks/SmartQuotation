@@ -280,6 +280,57 @@ class QuotationRBACTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
 
 
+class QuotationSetStatusTests(TenantTestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="Status Cliente")
+        self.quotation = create_feixe_quotation(self.customer, "Feixe Status")
+        self.user_autorizado = User.objects.create_user(username="status-orc", password="x123456789")
+        UserProfile.objects.create(
+            user=self.user_autorizado,
+            full_name="Status Orc",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+        )
+        self.user_sem_papel = User.objects.create_superuser(
+            username="status-ops",
+            password="x123456789",
+            email="status-ops@example.com",
+        )
+        self.url = f"/cotacoes/{self.quotation.pk}/status/"
+
+    def test_post_valido_muda_status_e_persiste(self):
+        self.client.force_login(self.user_autorizado)
+
+        resp = self.client.post(self.url, {"status": "approved"})
+
+        self.assertEqual(resp.status_code, 200)
+        self.quotation.refresh_from_db()
+        self.assertEqual(self.quotation.status, "approved")
+        self.assertContains(resp, "Aprovada")
+        self.assertContains(resp, "q-status--approved")
+
+    def test_status_invalido_retorna_400_e_nao_persiste(self):
+        self.client.force_login(self.user_autorizado)
+
+        resp = self.client.post(self.url, {"status": "cancelled"})
+
+        self.assertEqual(resp.status_code, 400)
+        self.quotation.refresh_from_db()
+        self.assertEqual(self.quotation.status, "draft")
+
+    def test_sem_permissao_bloqueado(self):
+        self.client.force_login(self.user_sem_papel)
+
+        resp = self.client.post(self.url, {"status": "approved"})
+
+        self.assertEqual(resp.status_code, 403)
+        self.quotation.refresh_from_db()
+        self.assertEqual(self.quotation.status, "draft")
+
+
 class QuotationEntryFlowTests(TenantTestCase):
     def setUp(self):
         from django.contrib.auth.models import User

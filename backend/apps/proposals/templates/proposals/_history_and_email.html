@@ -1,0 +1,61 @@
+<section class="g-section" style="margin-top:16px" x-data="{ emailOpen: false }">
+  <header class="g-section-head" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <h3>Historico de versoes</h3>
+    <button type="button" class="q-btn primary" @click="emailOpen = true">Enviar por E-mail</button>
+  </header>
+  <div class="g-section-body">
+    {% if versions %}
+      <div style="overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="text-align:left;border-bottom:var(--border-thin)">
+              <th style="padding:8px">Versao</th>
+              <th style="padding:8px">Numero</th>
+              <th style="padding:8px">Gerada em</th>
+              <th style="padding:8px">Enviada</th>
+              <th style="padding:8px">PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for version in versions %}
+              <tr style="border-bottom:var(--border-thin)">
+                <td style="padding:8px">v{{ version.version_number }}</td>
+                <td style="padding:8px" class="mono">{{ version.number }}</td>
+                <td style="padding:8px">{{ version.generated_at|date:"d/m/Y H:i" }}{% if version.generated_by %} · {{ version.generated_by.username }}{% endif %}</td>
+                <td style="padding:8px">{% if version.emailed_at %}{{ version.emailed_at|date:"d/m/Y H:i" }} · {{ version.email_to }}{% else %}—{% endif %}</td>
+                <td style="padding:8px">{% if version.pdf_path %}<a href="{% url 'proposals:download' p.pk 'pdf' %}">Baixar atual</a>{% else %}—{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color:var(--g-gray-1)">Nenhuma versao gerada ainda.</p>
+    {% endif %}
+  </div>
+
+  <div x-show="emailOpen" x-cloak
+      style="position:fixed;inset:0;background:rgba(22,21,26,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50"
+      @click.self="emailOpen = false" @keydown.escape.window="emailOpen = false">
+    <div style="width:min(680px,100%);background:#fff;border:var(--border-thin);padding:16px;box-shadow:var(--shadow-card)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
+        <h3 style="margin:0">Enviar por E-mail</h3>
+        <button type="button" class="q-btn" @click="emailOpen = false">Fechar</button>
+      </div>
+      <form method="post" action="{% url 'proposals:send_email' p.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <label style="display:block;font-size:12px;margin-bottom:6px">Destinatario</label>
+        <input type="email" name="to_email" value="{{ q.customer.email }}" required
+            style="width:100%;border:var(--border-thin);padding:8px;margin-bottom:12px">
+        <label style="display:block;font-size:12px;margin-bottom:6px">Mensagem</label>
+        <textarea name="body" rows="8" style="width:100%;border:var(--border-thin);padding:8px;font-family:var(--font-mono)">{{ email_default_body }}</textarea>
+        <p style="color:var(--g-gray-1);font-size:12px;margin:12px 0 0">O PDF atual da proposta sera anexado automaticamente.</p>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <button type="button" class="q-btn" @click="emailOpen = false">Cancelar</button>
+          <button type="submit" class="q-btn primary">Enviar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>

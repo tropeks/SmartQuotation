@@ -16,8 +16,12 @@ urlpatterns = [
     path("cotacoes/recompute/", views.recompute_preview, name="recompute"),
     path("cotacoes/criar/", views.create_quotation, name="create"),
     path("cotacoes/<int:pk>/", views.quotation_detail, name="detail"),
+    path("cotacoes/eap/item/<int:pk>/drawer/", views.eap_item_drawer, name="eap_item_drawer"),
+    path("cotacoes/eap/item/<int:pk>/salvar/", views.eap_item_save, name="eap_item_save"),
+    path("cotacoes/<int:pk>/status/", views.quotation_set_status, name="set_status"),
     path("cotacoes/<int:pk>/editar/", views.quotation_edit, name="edit"),
     path("cotacoes/<int:pk>/revisar/", views.quotation_revise, name="revise"),
+    path("cotacoes/<int:pk>/meta/", views.quotation_update_meta, name="update_meta"),
     # API endpoints (DRF)
     path("api/", include(router.urls)),
     path("api/permutador/estimate/", api.PermutadorEstimateView.as_view(), name="api_permutador_estimate"),

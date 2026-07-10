@@ -27,4 +27,17 @@
     {% endif %}
   </div>
 </section>
+
+{% include "proposals/_history_and_email.html" %}
+
+{% if p.pdf_path %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Preview do PDF</h3></header>
+  <div class="g-section-body">
+    <iframe src="{% url 'proposals:preview' p.pk %}?v={{ p.pdf_sha256|slice:':12' }}"
+        style="width:100%;height:70vh;border:var(--border-thin);display:block"
+        title="Preview da proposta {{ p.number }}"></iframe>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

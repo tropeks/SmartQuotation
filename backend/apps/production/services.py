@@ -55,6 +55,19 @@ def _assert_convertible(quotation):
     return snapshot
 
 
+def is_convertible(quotation) -> bool:
+    """True sse a conversão em OF passaria — MESMA regra do POST.
+
+    Reusa `_assert_convertible` (a checagem real feita em `convert_quotation_to_of`)
+    para o front não divergir da trava do backend. Retorna False em vez de levantar.
+    """
+    try:
+        _assert_convertible(quotation)
+    except ValidationError:
+        return False
+    return True
+
+
 @transaction.atomic
 def convert_quotation_to_of(quotation, created_by=None, request=None) -> OrdemFabricacao:
     """Converte uma cotação aprovada em Ordem de Fabricação (deep-copy da EAP)."""

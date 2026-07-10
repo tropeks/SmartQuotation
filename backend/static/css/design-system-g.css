@@ -45,7 +45,7 @@ a { color:var(--g-orange); }
 
 /* Foco de teclado visível em toda a superfície interativa (não só inputs) */
 a:focus-visible, button:focus-visible, .q-btn:focus-visible,
-[tabindex]:focus-visible, .g3-minimap a:focus-visible,
+[tabindex]:focus-visible, .g3-minimap a:focus-visible, [role="tab"]:focus-visible,
 [role="button"]:focus-visible {
   outline:2px solid var(--g-orange); outline-offset:2px;
 }
@@ -67,6 +67,30 @@ a:focus-visible, button:focus-visible, .q-btn:focus-visible,
 .g-main { max-width:1180px; margin:0 auto; padding:var(--s12); }
 .command-center-layout { display:grid; grid-template-columns:minmax(0, 1fr) 220px; gap:var(--s12); align-items:start; }
 .command-center-main { min-width:0; }
+
+/* ---- Breadcrumb ---- */
+.g-breadcrumb { font-family:var(--font-mono); font-size:11px; letter-spacing:var(--ls-eyebrow);
+  text-transform:uppercase; color:var(--g-gray-1); margin-bottom:var(--s8); }
+.g-breadcrumb a { color:var(--g-gray-1); text-decoration:none; }
+.g-breadcrumb a:hover { color:var(--g-orange); }
+.g-breadcrumb .sep { margin:0 var(--s3); color:var(--g-gray-2); }
+.g-breadcrumb .current { color:var(--g-black); font-weight:700; }
+
+/* ---- Botão voltar (ao lado do título) ---- */
+.q-back { display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; margin-right:var(--s4); border:var(--border-strong);
+  color:var(--g-black); text-decoration:none; font-size:16px; vertical-align:middle; }
+.q-back:hover { background:var(--g-black); color:var(--g-paper); }
+
+/* ---- Tabs (navegação em abas superiores) ---- */
+.g-tabs { display:flex; gap:var(--s6); border-bottom:var(--border-strong); margin-bottom:var(--s8); }
+.g-tab { background:none; border:none; cursor:pointer; padding:var(--s6) var(--s4);
+  font-family:var(--font-display); font-weight:700; font-size:11px; letter-spacing:var(--ls-up);
+  text-transform:uppercase; color:var(--g-gray-1); border-bottom:3px solid transparent;
+  margin-bottom:-1.5px; }
+.g-tab:hover { color:var(--g-black); }
+.g-tab.active { color:var(--g-black); border-bottom-color:var(--g-orange); }
+[role="tabpanel"] { min-width:0; }
 
 /* ---- Section (cabeçalho preto + faixa laranja) ---- */
 .g-section { background:var(--g-white); border:var(--border-thin); margin-bottom:var(--s8); }
@@ -160,6 +184,19 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
 .q-status--won { color: var(--g-paper); background: var(--g-green); border-color: var(--g-green); }
 .q-status--won::before { background: var(--g-yellow); }
 .q-status--lost { color: var(--g-red); border-color: var(--g-red); background: var(--g-bg-lost); }
+.status-dropdown { position: relative; display: inline-flex; justify-content: flex-end; }
+.status-dropdown__button { cursor: pointer; background: var(--g-white); }
+.status-dropdown__panel {
+  position: absolute; z-index: 160; top: calc(100% + var(--s3)); right: 0;
+  min-width: 170px; padding: var(--s3); background: var(--g-white);
+  border: var(--border-strong); box-shadow: 0 10px 20px rgba(0,0,0,.12);
+}
+.status-dropdown__option {
+  display: flex; width: 100%; padding: var(--s3); border: 0; background: transparent;
+  cursor: pointer; text-align: left;
+}
+.status-dropdown__option:hover, .status-dropdown__option.active { background: var(--g-paper-2); }
+.status-dropdown__option .q-status { width: 100%; justify-content: flex-start; }
 /* Variante compacta para tabelas */
 .comp-status { display: inline-flex; align-items: center; gap: 2px; padding: 2px var(--s4);
   font-family: var(--font-display); font-weight: var(--w-bold); font-size: 10px;
@@ -287,6 +324,7 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
 @media (pointer: coarse) {
   .q-btn, .g-rail a, .g-rail button { min-height: 44px; display: inline-flex; align-items: center; }
   .g3-minimap a { padding-top: var(--s6); padding-bottom: var(--s6); }
+  .g-tab { min-height: 44px; }
   .g-table tbody td.id a, .g-table tbody td a { display: inline-block; padding: var(--s3) 0; }
 }
 
@@ -443,3 +481,39 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
   padding:var(--s6) var(--s10); border-left:4px solid var(--g-green); font-size:12px;
   font-family:var(--font-mono); box-shadow:0 2px 8px rgba(0,0,0,.25); }
 .toast--err { border-left-color:var(--g-red); }
+
+/* ---- Drawer / slide-over lateral (detalhe da linha da EAP — Tela 05 item 4 parte B) ---- */
+.eap-row { cursor:pointer; }
+.eap-row:focus-visible { outline:2px solid var(--g-orange); outline-offset:-2px; }
+.drawer { position:fixed; inset:0; z-index:500; pointer-events:none; visibility:hidden; }
+.drawer--open { pointer-events:auto; visibility:visible; }
+.drawer-scrim { position:absolute; inset:0; background:rgba(0,0,0,.35);
+  opacity:0; transition:opacity .2s ease; }
+.drawer--open .drawer-scrim { opacity:1; }
+.drawer-panel { position:absolute; top:0; right:0; height:100%; width:min(560px,92vw);
+  background:var(--g-white); border-left:3px solid var(--g-orange);
+  box-shadow:-4px 0 16px rgba(0,0,0,.18); display:flex; flex-direction:column;
+  transform:translateX(100%); transition:transform .25s ease; }
+.drawer--open .drawer-panel { transform:translateX(0); }
+.drawer-panel-head { display:flex; align-items:center; justify-content:space-between;
+  padding:var(--s8) var(--s10); border-bottom:var(--border-thin); background:var(--g-paper-2); }
+.drawer-panel-head h3 { margin:0; font-size:14px; }
+.drawer-close { background:none; border:none; font-size:22px; line-height:1; cursor:pointer;
+  color:var(--g-gray-1); }
+.drawer-close:hover { color:var(--g-black); }
+.drawer-panel-body { padding:var(--s10); overflow-y:auto; flex:1; }
+.drawer-item-head { margin-bottom:var(--s8); }
+.drawer-item-head h4 { margin:var(--s2) 0 0; font-size:15px; }
+.drawer-code { color:var(--g-orange); font-size:12px; }
+.drawer-saved { font-size:11px; margin-top:var(--s4); color:var(--g-green); }
+.drawer-rollup { display:flex; gap:var(--s10); flex-wrap:wrap; padding:var(--s6) 0;
+  border-top:var(--border-thin); border-bottom:var(--border-thin); margin-bottom:var(--s8); }
+.drawer-rollup .lbl { color:var(--g-gray-1); font-size:11px; text-transform:uppercase;
+  letter-spacing:.04em; margin-right:var(--s4); }
+.drawer-rollup .val { font-size:13px; }
+.drawer-block { margin-bottom:var(--s10); }
+.drawer-block h5 { margin:0 0 var(--s4); font-size:12px; text-transform:uppercase;
+  letter-spacing:.04em; color:var(--g-gray-1); }
+.drawer-table input.drawer-num { width:100%; box-sizing:border-box; text-align:right;
+  font-family:var(--font-mono); font-size:12px; }
+.drawer-actions { display:flex; justify-content:flex-end; margin-top:var(--s10); }

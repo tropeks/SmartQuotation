@@ -28,6 +28,7 @@ urlpatterns = [
     path("admin/sap-b1/health/", admin.site.admin_view(_sap_b1_admin_healthcheck), name="sap-b1-admin-health"),
     path("admin/", admin.site.urls),
     path("", include("apps.accounts.urls")),         # login/logout/dashboard
+    path("", include("apps.audit.urls")),            # aprovações técnicas / gate
     path("", include("apps.quotations.urls")),       # cotações + data sheet do feixe
     path("", include("apps.proposals.urls")),        # propostas DOCX/PDF
     path("", include("apps.production.urls")),       # ordens de fabricação

@@ -11,7 +11,9 @@ A tabela de itens (EAP) e o preço NÃO são texto livre: vêm da cotação (com
 Geração: PDF (HTML design G -> chrome --print-to-pdf) + DOCX (python-docx). Hash SHA-256.
 """
 import hashlib
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class ProposalTemplate(models.Model):
@@ -31,6 +33,14 @@ class ProposalTemplate(models.Model):
         default="Prazo de entrega: {{ delivery_weeks }} semanas. "
                 "Validade da proposta: {{ validity_days }} dias. "
                 "Condições de pagamento: {{ payment_terms }}.")
+    # §4 Objeto da Proposta / §5 Exclusões do Fornecimento (modelos-default do tenant)
+    object_template = models.TextField(
+        default="Fornecimento de {{ titulo }} para {{ cliente }}, conforme especificações "
+                "técnicas, memorial de cálculo e composição de preço a seguir.")
+    exclusions_template = models.TextField(
+        default="Não estão incluídos no fornecimento: frete e transporte, montagem em campo, "
+                "obras civis, isolamento térmico, pintura externa e testes não destrutivos "
+                "além dos especificados — salvo indicação expressa em contrário.")
     closing_template = models.TextField(
         default="Permanecemos à disposição para esclarecimentos.\nAtenciosamente,\n{{ empresa }}.")
 
@@ -62,6 +72,9 @@ class Proposal(models.Model):
     intro_text = models.TextField(blank=True)
     scope_text = models.TextField(blank=True)
     terms_text = models.TextField(blank=True)
+    # §4 Objeto da Proposta / §5 Exclusões do Fornecimento (snapshot do template, editáveis)
+    object_text = models.TextField(blank=True)
+    exclusions_text = models.TextField(blank=True)
     closing_text = models.TextField(blank=True)
 
     # arquivos gerados (caminho relativo em MEDIA) + integridade
@@ -87,3 +100,36 @@ class Proposal(models.Model):
             for chunk in iter(lambda: fp.read(8192), b""):
                 h.update(chunk)
         return h.hexdigest()
+
+
+class ProposalVersion(models.Model):
+    proposal = models.ForeignKey("proposals.Proposal", on_delete=models.CASCADE, related_name="versions")
+    version_number = models.PositiveIntegerField()
+    number = models.CharField(max_length=100)
+    pdf_path = models.CharField(max_length=500)
+    generated_at = models.DateTimeField(default=timezone.now)
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="generated_proposal_versions",
+    )
+    emailed_at = models.DateTimeField(null=True, blank=True)
+    emailed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="emailed_proposal_versions",
+    )
+    email_to = models.EmailField(blank=True)
+
+    class Meta:
+        ordering = ["-version_number", "-generated_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["proposal", "version_number"], name="uniq_proposal_version_number"),
+        ]
+
+    def __str__(self):
+        return f"{self.number} v{self.version_number}"

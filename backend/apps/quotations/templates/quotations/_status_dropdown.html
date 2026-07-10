@@ -1,0 +1,29 @@
+<form id="quotation-status-control"
+      class="status-dropdown"
+      x-data="{ open: false }"
+      @click.outside="open = false"
+      hx-target="#quotation-status-control"
+      hx-swap="outerHTML"
+      hx-indicator="#status-spin-{{ q.pk }}"
+      hx-on::after-request="if (event.detail.successful) { open = false; window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Status atualizado', type: 'ok' } })); }">
+  {% csrf_token %}
+  <button type="button"
+          class="q-status {{ status_class }} status-dropdown__button"
+          @click="open = !open"
+          :aria-expanded="open.toString()"
+          aria-haspopup="menu">
+    {{ q.get_status_display }}<span id="status-spin-{{ q.pk }}" class="btn-spin" aria-hidden="true"></span>
+  </button>
+  <div class="status-dropdown__panel" x-show="open" x-cloak role="menu">
+    {% for option in status_options %}
+      <button type="submit"
+              class="status-dropdown__option {% if option.value == q.status %}active{% endif %}"
+              name="status"
+              value="{{ option.value }}"
+              role="menuitem"
+              hx-post="{% url 'quotations:set_status' q.pk %}">
+        <span class="q-status {{ option.class }}">{{ option.label }}</span>
+      </button>
+    {% endfor %}
+  </div>
+</form>

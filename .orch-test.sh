@@ -4,7 +4,7 @@ set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT/backend"
 
-PYTHON_BIN="python"
+PYTHON_BIN="$(command -v python || command -v python3)"
 if [ -x ".venv/bin/python" ]; then
   PYTHON_BIN=".venv/bin/python"
 fi

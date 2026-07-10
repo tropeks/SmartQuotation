@@ -8,19 +8,22 @@ Fluxo:
   generate(proposal)                -> escreve DOCX + PDF em MEDIA, grava hashes
 """
 import hashlib
+import mimetypes
 import os
 import shutil
 import subprocess
 import tempfile
 from datetime import date
 from django.conf import settings
+from django.core.mail import EmailMessage
 from django.core.files.storage import default_storage
 from django.db import connection
 from django.template import engines
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from apps.proposals.models import Proposal, ProposalTemplate
+from apps.proposals.models import Proposal, ProposalTemplate, ProposalVersion
+from apps.proposals.richtext import normalize_rich_text
 
 _django_engine = engines["django"]
 
@@ -61,6 +64,8 @@ def render_template_texts(tpl: ProposalTemplate, ctx: dict) -> dict:
         "intro_text": _render(tpl.intro_template, ctx),
         "scope_text": _render(tpl.scope_template, ctx),
         "terms_text": _render(tpl.terms_template, ctx),
+        "object_text": _render(tpl.object_template, ctx),
+        "exclusions_text": _render(tpl.exclusions_template, ctx),
         "closing_text": _render(tpl.closing_template, ctx),
     }
 
@@ -228,7 +233,7 @@ def generate_docx(proposal: Proposal) -> str:
             os.unlink(tmp_path)
 
 
-def generate(proposal: Proposal) -> Proposal:
+def generate(proposal: Proposal, generated_by=None) -> Proposal:
     """Gera DOCX + PDF via default_storage, grava storage names + hashes, marca como pronta."""
     docx_name = generate_docx(proposal)
     pdf_name = generate_pdf(proposal)
@@ -239,7 +244,54 @@ def generate(proposal: Proposal) -> Proposal:
     proposal.status = "ready"
     proposal.generated_at = timezone.now()
     proposal.save()
+    ProposalVersion.objects.create(
+        proposal=proposal,
+        version_number=proposal.versions.count() + 1,
+        number=proposal.number,
+        pdf_path=proposal.pdf_path,
+        generated_by=generated_by,
+    )
     return proposal
+
+
+def default_email_body(proposal: Proposal) -> str:
+    return (
+        f"Prezados,\n\n"
+        f"Segue em anexo a proposta comercial {proposal.number}, referente a cotacao "
+        f"{proposal.quotation.number}.\n\n"
+        f"Fico a disposicao para esclarecimentos.\n"
+    )
+
+
+def send_email(proposal: Proposal, to_email: str, body: str, sent_by=None) -> ProposalVersion:
+    if not proposal.pdf_path:
+        raise ValueError("A proposta ainda nao possui PDF gerado.")
+    if not default_storage.exists(proposal.pdf_path):
+        raise FileNotFoundError("O PDF da proposta nao foi encontrado no storage.")
+
+    subject = f"Proposta Comercial {proposal.number}"
+    filename = f"{proposal.number}.pdf"
+    content_type = mimetypes.guess_type(filename)[0] or "application/pdf"
+
+    with default_storage.open(proposal.pdf_path, "rb") as fp:
+        message = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+            to=[to_email],
+        )
+        message.attach(filename, fp.read(), content_type)
+        message.send(fail_silently=False)
+
+    proposal.status = "sent"
+    proposal.save(update_fields=["status", "updated_at"])
+    version = proposal.versions.order_by("-version_number", "-generated_at", "-id").first()
+    if version is not None:
+        version.emailed_at = timezone.now()
+        version.emailed_by = sent_by
+        version.email_to = to_email
+        version.save(update_fields=["emailed_at", "emailed_by", "email_to"])
+    return version
 
 
 def proposal_memorial(quotation):

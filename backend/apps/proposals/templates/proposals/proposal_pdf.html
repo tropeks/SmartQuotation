@@ -1,4 +1,4 @@
-{% load money %}
+{% load money proposal_richtext %}
 <!doctype html>
 <html lang="pt-br"><head><meta charset="utf-8">
 <style>
@@ -14,6 +14,9 @@
     border-left:4px solid #d94e1f; padding-left:8px; }
   .meta b { display:inline-block; min-width:90px; }
   p { margin:6px 0; white-space:pre-line; }
+  .richtext p { margin:6px 0; white-space:normal; }
+  .richtext ul, .richtext ol { margin:6px 0 6px 20px; padding:0; }
+  .richtext li { margin:2px 0; }
   table { width:100%; border-collapse:collapse; margin-top:6px; font-size:10pt; }
   thead th { background:#16151a; color:#f4f1ea; text-align:left; padding:5px 8px;
     text-transform:uppercase; font-size:8.5pt; letter-spacing:0.06em; }
@@ -72,6 +75,16 @@
   </table>
   <p style="font-size:8pt;color:#666">Anexo de apoio à certificação — não substitui o memorial do
     engenheiro responsável. Itens de estimativa estão marcados.</p>
+  {% endif %}
+
+  {% if p.object_text %}
+  <h2>§4 Objeto da Proposta</h2>
+  <div class="richtext">{{ p.object_text|proposal_richtext }}</div>
+  {% endif %}
+
+  {% if p.exclusions_text %}
+  <h2>§5 Exclusões do Fornecimento</h2>
+  <div class="richtext">{{ p.exclusions_text|proposal_richtext }}</div>
   {% endif %}
 
   <h2>Condições</h2>

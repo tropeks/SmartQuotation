@@ -2,38 +2,121 @@
 {% load money %}
 {% block title %}{{ q.number }} — {{ q.title }}{% endblock %}
 {% block content %}
-<div class="command-center-layout">
-  <div class="command-center-main">
-    <header class="q-header">
-      <div class="row1">
-        <div class="id-block">
-          <div class="breadcrumb-q">COT-03 · Detalhe</div>
-          <h1 class="number">{{ q.number }} <span class="rev">Rev. {{ q.revision }}</span></h1>
-          <div class="subtitle"><b>{{ q.customer.company_name }}</b> · {{ q.title }}<span class="equip">{{ q.get_scope_display }} · {{ q.get_status_display }}</span></div>
-        </div>
-        <div class="status-block">
-          <div class="q-status q-status--{% if q.status == 'approved' %}approved{% elif q.status == 'in_review' %}review{% elif q.status == 'sent' %}sent{% elif q.status == 'won' %}won{% elif q.status == 'lost' %}lost{% else %}draft{% endif %}">{{ q.get_status_display }}</div>
-          <div class="meta">Command Center<br>Computado {{ q.computed_at|date:"d/m/Y H:i" }}</div>
-        </div>
-      </div>
-      <div class="q-actions">
-        {% if q.scope == "complete" %}
-        <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline; margin: 0;">
-          {% csrf_token %}
-          <button type="submit" class="q-btn">Revisar</button>
-        </form>
-        {% else %}
-        <a class="q-btn" href="{% url 'quotations:edit' q.pk %}">Revisar</a>
-        {% endif %}
-        <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">Gerar Proposta</a>
-        {% if not has_active_of %}
-        <form method="post" action="{% url 'production:convert' q.pk %}" style="display:inline">{% csrf_token %}
-          <button type="submit" class="q-btn primary">Converter em OF</button>
-        </form>
-        {% endif %}
-      </div>
-    </header>
+{# Tela 05 item 4: `isEditing` = modo de edição INLINE de metadados comerciais.
+   NÃO é o fluxo de nova-revisão (motor/recompute) — esse continua no botão "Nova Revisão". #}
+<div x-data="{
+       tab: 'resumo',
+       isEditing: false,
+       eapDrawerOpen: false,
+       approvalModalOpen: false,
+       confirmOpen: false,
+       saving: false,
+       toast: '',
+       form: { title: '{{ q.title|escapejs }}' },
+       orig: { title: '{{ q.title|escapejs }}' },
+       startEdit() { this.form.title = this.orig.title; this.confirmOpen = false; this.isEditing = true; },
+       cancelEdit() { this.form.title = this.orig.title; this.isEditing = false; },
+       async saveMeta() {
+         this.saving = true;
+         try {
+           const resp = await fetch('{% url 'quotations:update_meta' q.pk %}', {
+             method: 'POST',
+             headers: { 'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/x-www-form-urlencoded' },
+             body: new URLSearchParams({ title: this.form.title })
+           });
+           if (resp.ok) {
+             this.orig.title = this.form.title;
+             this.isEditing = false;
+             this.toast = 'Alterações salvas.';
+             setTimeout(() => { this.toast = ''; }, 3000);
+           } else {
+             this.toast = 'Erro ao salvar as alterações.';
+             setTimeout(() => { this.toast = ''; }, 4000);
+           }
+         } finally { this.saving = false; }
+       }
+     }">
+  <nav class="g-breadcrumb" aria-label="Trilha de navegação">
+    <a href="{% url 'dashboard' %}">Home</a>
+    <span class="sep">/</span>
+    <a href="{% url 'quotations:list' %}">Cotações</a>
+    <span class="sep">/</span>
+    <span class="current">{{ q.number }}</span>
+  </nav>
 
+  <header class="q-header">
+    <div class="row1">
+      <div class="id-block">
+        <div class="breadcrumb-q">COT-03 · Detalhe</div>
+        <h1 class="number">
+          <a href="{% url 'quotations:list' %}" class="q-back" aria-label="Voltar para lista de cotações">←</a>
+          {{ q.number }} <span class="rev">Rev. {{ q.revision }}</span>
+        </h1>
+        <div class="subtitle"><b>{{ q.customer.company_name }}</b> · {{ q.title }}<span class="equip">{{ q.get_scope_display }} · {{ q.get_status_display }}</span></div>
+      </div>
+      <div class="status-block">
+        {% include "quotations/_status_dropdown.html" %}
+        <div class="meta">Computado {{ q.computed_at|date:"d/m/Y H:i" }}</div>
+      </div>
+    </div>
+    {# Ações normais (fora do modo edição). "Revisar" = edição inline de metadados
+       (este item). "Nova Revisão" = fluxo antigo do motor (recompute + nova revisão). #}
+    <div class="q-actions" x-show="!isEditing">
+      <button type="button" class="q-btn" @click="confirmOpen = true">Revisar</button>
+      {% if q.scope == "complete" %}
+      <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline; margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="q-btn">Nova Revisão</button>
+      </form>
+      {% else %}
+      <a class="q-btn" href="{% url 'quotations:edit' q.pk %}">Nova Revisão</a>
+      {% endif %}
+      <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">Gerar Proposta</a>
+      <div id="convertibility-panel"
+           hx-get="{% url 'audit:convertibility_panel' q.pk %}"
+           hx-trigger="load, every 5s"
+           hx-swap="innerHTML"
+           style="display:inline-block">
+        {% include "quotations/_convert_action.html" %}
+      </div>
+    </div>
+    {# Ações do modo edição inline. #}
+    <div class="q-actions" x-show="isEditing" x-cloak>
+      <button type="button" class="q-btn primary" @click="saveMeta()" :disabled="saving"
+              x-text="saving ? 'Salvando…' : 'Salvar Alterações'">Salvar Alterações</button>
+      <button type="button" class="q-btn" @click="cancelEdit()">Cancelar Revisão</button>
+    </div>
+  </header>
+
+  {# Modal de confirmação para entrar em modo de revisão/edição. #}
+  <div x-show="confirmOpen" x-cloak class="q-modal-overlay"
+       style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50"
+       @click.self="confirmOpen = false" @keydown.escape.window="confirmOpen = false">
+    <div class="q-modal g-section" role="dialog" aria-modal="true" aria-label="Confirmar modo de revisão"
+         style="max-width:420px;width:90%;background:var(--g-bg,#fff);padding:20px;border-radius:8px">
+      <h3 style="margin-top:0">Entrar em modo de revisão?</h3>
+      <p>Deseja entrar em modo de revisão/edição dos metadados desta cotação?</p>
+      <div class="q-modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button type="button" class="q-btn" @click="confirmOpen = false">Cancelar</button>
+        <button type="button" class="q-btn primary" @click="startEdit()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  {# Toast de sucesso/erro. #}
+  <div x-show="toast" x-cloak class="q-toast" x-text="toast"
+       style="position:fixed;bottom:24px;right:24px;background:var(--g-ink,#222);color:#fff;padding:12px 18px;border-radius:6px;z-index:60"></div>
+
+  <div class="g-tabs" role="tablist" aria-label="Seções da cotação">
+    <button type="button" role="tab" class="g-tab" :class="{ active: tab === 'resumo' }" :aria-selected="tab === 'resumo'" @click="tab = 'resumo'">Resumo</button>
+    <button type="button" role="tab" class="g-tab" :class="{ active: tab === 'eap' }" :aria-selected="tab === 'eap'" @click="tab = 'eap'">EAP</button>
+    <button type="button" role="tab" class="g-tab" :class="{ active: tab === 'preco' }" :aria-selected="tab === 'preco'" @click="tab = 'preco'">Preço</button>
+    <button type="button" role="tab" class="g-tab" :class="{ active: tab === 'aprovacoes' }" :aria-selected="tab === 'aprovacoes'" @click="tab = 'aprovacoes'">Aprovações</button>
+    <button type="button" role="tab" class="g-tab" :class="{ active: tab === 'documentos' }" :aria-selected="tab === 'documentos'" @click="tab = 'documentos'">Documentos</button>
+  </div>
+
+  <div role="tabpanel" x-show="tab === 'resumo'">
     <div class="stat-row" style="margin-top:12px">
       <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ q.custo_total|brl:0 }}</div><div class="delta">mat {{ q.custo_material|brl:0 }} + MO {{ q.custo_mo|brl:0 }}</div></div>
       <div class="stat"><div class="lbl">Peso Bruto</div><div class="val mono">{{ q.peso_bruto_kg|brl:0 }}<span class="u">kg</span></div><div class="delta">base de custo</div></div>
@@ -45,6 +128,13 @@
       <header class="g-section-head"><h3>§1 Resumo</h3></header>
       <div class="g-section-body">
         <div class="param-grid">
+          {# Título = metadado comercial editável inline (não toca no cálculo/EAP). #}
+          <div class="param">
+            <div class="lbl">Título</div>
+            <div class="val" x-show="!isEditing">{{ q.title }}</div>
+            <input type="text" class="g-input" x-show="isEditing" x-cloak x-model="form.title"
+                   aria-label="Título da cotação" style="width:100%">
+          </div>
           <div class="param"><div class="lbl">Escopo</div><div class="val">{{ q.get_scope_display }}</div></div>
           <div class="param"><div class="lbl">Status</div><div class="val">{{ q.get_status_display }}</div></div>
           <div class="param"><div class="lbl">Revisão</div><div class="val mono">{{ q.revision }}</div></div>
@@ -52,28 +142,39 @@
         </div>
       </div>
     </section>
+  </div>
 
-    <section id="sec-eap" class="g-section">
+  <div role="tabpanel" x-show="tab === 'eap'">
+    <section id="sec-eap" class="g-section" style="margin-top:16px">
       <header class="g-section-head"><h3>§2 Estrutura Analítica</h3></header>
       <div class="g-section-body" style="padding:0">
+        {# Linhas clicáveis: abrem o drawer com os materiais/MO (N2) daquele item.
+           hx-get injeta o parcial no corpo do drawer; @click abre o slide-over. #}
         <table class="g-table">
           <thead><tr><th>Código</th><th>Item</th><th class="num">Material</th><th class="num">Mão de Obra</th><th class="num">Total</th></tr></thead>
           <tbody>
             {% for it in itens %}
-            <tr>
+            <tr class="eap-row" tabindex="0" role="button"
+                aria-label="Abrir detalhe de {{ it.descricao }}"
+                hx-get="{% url 'quotations:eap_item_drawer' it.pk %}"
+                hx-target="#eap-drawer-body" hx-swap="innerHTML"
+                @click="eapDrawerOpen = true"
+                @keydown.enter="eapDrawerOpen = true">
               <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
               <td>{{ it.descricao }}</td>
-              <td class="num">R$ {{ it.custo_material|brl:0 }}</td>
-              <td class="num">R$ {{ it.custo_mo|brl:0 }}</td>
-              <td class="num">R$ {{ it.custo_total|brl:0 }}</td>
+              <td class="num{% if not it.custo_material %} g-muted{% endif %}">R$ {{ it.custo_material|brl:0 }}</td>
+              <td class="num{% if not it.custo_mo %} g-muted{% endif %}">R$ {{ it.custo_mo|brl:0 }}</td>
+              <td class="num{% if not it.custo_total %} g-muted{% endif %}">R$ {{ it.custo_total|brl:0 }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </section>
+  </div>
 
-    <section id="sec-preco" class="g-section">
+  <div role="tabpanel" x-show="tab === 'preco'">
+    <section id="sec-preco" class="g-section" style="margin-top:16px">
       <header class="g-section-head"><h3>§3 Formação de Preço</h3></header>
       <div class="g-section-body">
         <div class="price-line" style="margin-top:0">
@@ -87,8 +188,10 @@
         </div>
       </div>
     </section>
+  </div>
 
-    <section id="sec-aprovacao" class="g-section">
+  <div role="tabpanel" x-show="tab === 'aprovacoes'">
+    <section id="sec-aprovacao" class="g-section" style="margin-top:16px">
       <header class="g-section-head"><h3>§4 Aprovação Técnica</h3></header>
       <div class="g-section-body">
         {% with approval=q.technical_approvals.first %}
@@ -98,6 +201,7 @@
               <div class="check">✓</div>
               <div>
                 <strong>Aprovação técnica ativa</strong>
+                <span class="approval-state approval-state--ok" style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-left:6px;background:var(--g-green,#1b7a43);color:#fff">Aprovada</span>
                 <div class="meta">{{ approval.approved_by.full_name }} · CREA {{ approval.crea_state }}/{{ approval.crea_number }} · {{ approval.approved_at|date:"d/m/Y H:i" }}</div>
               </div>
             </div>
@@ -109,16 +213,65 @@
               <div class="check">!</div>
               <div>
                 <strong>Aprovação pendente</strong>
-                <div class="meta">Ainda não existe aprovação técnica ativa para esta cotação.</div>
+                <span class="approval-state approval-state--pending" style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-left:6px;background:var(--g-orange,#c85a1e);color:#fff">Pendente</span>
+                <div class="meta">Ainda não existe aprovação técnica ativa para esta cotação. Converter em OF fica bloqueado até a aprovação.</div>
               </div>
             </div>
           </div>
           {% endif %}
         {% endwith %}
+        {% if pending_remote_request %}
+        <p style="margin-top:12px;color:var(--g-gray-1)">
+          Solicitação remota pendente desde {{ pending_remote_request.created_at|date:"d/m/Y H:i" }}.
+        </p>
+        {% endif %}
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <form method="post" action="{% url 'audit:request_remote' q.pk %}" style="margin:0">
+            {% csrf_token %}
+            <input type="hidden" name="notes" value="Solicitado pela tela da cotação.">
+            <button type="submit" class="q-btn">Solicitar Aprovação (Remoto)</button>
+          </form>
+          <button type="button" class="q-btn primary" @click="approvalModalOpen = true">
+            Aprovar Agora (Presencial)
+          </button>
+        </div>
       </div>
     </section>
+  </div>
 
-    <section id="sec-proposta" class="g-section">
+  <div x-show="approvalModalOpen" x-cloak class="q-modal-overlay"
+       style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50"
+       @click.self="approvalModalOpen = false" @keydown.escape.window="approvalModalOpen = false">
+    <div class="q-modal g-section" role="dialog" aria-modal="true" aria-label="Aprovação presencial"
+         style="max-width:420px;width:90%;background:var(--g-bg,#fff);padding:20px;border-radius:8px">
+      <h3 style="margin-top:0">Aprovação presencial</h3>
+      <form method="post" action="{% url 'audit:approve_presencial' q.pk %}"
+            hx-post="{% url 'audit:approve_presencial' q.pk %}"
+            hx-target="#approval-presencial-feedback"
+            hx-swap="innerHTML"
+            hx-on::after-request="if (event.detail.successful) { approvalModalOpen = false; htmx.ajax('GET', '{% url 'audit:convertibility_panel' q.pk %}', '#convertibility-panel'); }">
+        <div id="approval-presencial-feedback" style="min-height:20px;margin-bottom:8px;color:var(--g-orange,#c85a1e)"></div>
+        {% csrf_token %}
+        <label for="approved_by" style="display:block;margin-bottom:6px">Engenheiro responsável</label>
+        <select id="approved_by" name="approved_by" class="g-input" style="width:100%;margin-bottom:12px" required>
+          {% for engineer in approval_engineers %}
+          <option value="{{ engineer.pk }}">{{ engineer.full_name }} · CREA {{ engineer.crea_state }}/{{ engineer.crea_number }}</option>
+          {% endfor %}
+        </select>
+        <label for="approval-password" style="display:block;margin-bottom:6px">Senha de acesso</label>
+        <input id="approval-password" type="password" name="password" class="g-input" style="width:100%;margin-bottom:12px" required
+               autocomplete="current-password">
+        <input type="hidden" name="notes" value="Aprovação presencial registrada pela UI da cotação.">
+        <div class="q-modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button type="button" class="q-btn" @click="approvalModalOpen = false">Cancelar</button>
+          <button type="submit" class="q-btn primary">Confirmar Aprovação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div role="tabpanel" x-show="tab === 'documentos'">
+    <section id="sec-proposta" class="g-section" style="margin-top:16px">
       <header class="g-section-head"><h3>§5 Proposta Comercial</h3></header>
       <div class="g-section-body">
         {% for p in q.proposals.all %}
@@ -145,21 +298,22 @@
     </section>
   </div>
 
-  <aside class="g3-minimap">
-    <h4>Command Center</h4>
-    <a href="#sec-resumo" class="on">Resumo<span class="n">§1</span></a>
-    <a href="#sec-eap">EAP<span class="n">§2</span></a>
-    <a href="#sec-preco">Preço<span class="n">§3</span></a>
-    <a href="#sec-aprovacao">Aprovação<span class="n">§4</span></a>
-    <a href="#sec-proposta">Proposta<span class="n">§5</span></a>
-    <a href="#sec-of">OF<span class="n">§6</span></a>
-    <div class="div"></div>
-    <div class="progress">
-      <div class="lbl">Progresso da Cotação</div>
-      <div class="val">100%</div>
-      <div class="bar"></div>
-      <div class="steps">6 de 6 blocos visíveis</div>
-    </div>
-  </aside>
+  {# Slide-over lateral (drawer) da EAP: sempre no DOM, animado por classe.
+     O corpo é preenchido via HTMX ao clicar numa linha da §2. #}
+  <div class="drawer" :class="{ 'drawer--open': eapDrawerOpen }"
+       @keydown.escape.window="eapDrawerOpen = false">
+    <div class="drawer-scrim" @click="eapDrawerOpen = false" aria-hidden="true"></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true"
+           aria-label="Detalhe da linha da EAP">
+      <header class="drawer-panel-head">
+        <h3>Detalhe do item · EAP</h3>
+        <button type="button" class="drawer-close" @click="eapDrawerOpen = false"
+                aria-label="Fechar detalhe">×</button>
+      </header>
+      <div id="eap-drawer-body" class="drawer-panel-body">
+        <p class="g-muted">Selecione uma linha da EAP para ver materiais e mão de obra.</p>
+      </div>
+    </aside>
+  </div>
 </div>
 {% endblock %}

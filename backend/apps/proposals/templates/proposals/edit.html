@@ -21,6 +21,66 @@
     <header class="g-section-head"><h3>Escopo</h3></header>
     <div class="g-section-body"><textarea name="scope_text" rows="3" style="width:100%;font-family:var(--font-mono);border:var(--border-thin);padding:8px">{{ p.scope_text }}</textarea></div>
   </section>
+  <section class="g-section"
+      x-data="{ tpl: '{{ object_template|escapejs }}',
+                exec(cmd, arg=null){ document.execCommand(cmd, false, arg); this.sync() },
+                escapeHtml(text){ const el=document.createElement('div'); el.textContent=text||''; return el.innerHTML },
+                plainTextToHtml(text){ return this.escapeHtml(text).replace(/\n/g, '<br>') },
+                inputToEditorHtml(text){ return /<\s*[a-z!/]/i.test(text||'') ? (text||'') : this.plainTextToHtml(text||'') },
+                fit(el){ el.style.height=''; el.style.height=el.scrollHeight+'px' },
+                sync(){ $refs.ta.value=$refs.editor.innerHTML.trim(); this.fit($refs.editor) },
+                init(){ $refs.editor.innerHTML=this.inputToEditorHtml($refs.ta.value); this.sync() },
+                load(){ if(!$refs.ta.value.trim() || confirm('Substituir o texto do Objeto pelo modelo padrão do tenant?')){ $refs.editor.innerHTML=this.plainTextToHtml(this.tpl); this.sync() } } }">
+    <header class="g-section-head" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <h3>§4 Objeto da Proposta</h3>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            data-rich-action="bold" @click="exec('bold')" title="Negrito"><b>B</b></button>
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            data-rich-action="italic" @click="exec('italic')" title="Itálico"><i>I</i></button>
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            data-rich-action="insertUnorderedList" @click="exec('insertUnorderedList')" title="Lista">• Lista</button>
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            @click="load()" :disabled="!tpl" title="Preenche com a cláusula-modelo do tenant">⚡ Carregar modelo padrão</button>
+      </div>
+    </header>
+    <div class="g-section-body">
+      <textarea name="object_text" x-ref="ta" hidden>{{ p.object_text }}</textarea>
+      <div x-ref="editor" data-rich-text="object_text" contenteditable="true"
+          x-init="init()" @input="sync()"
+          style="width:100%;min-height:88px;overflow:hidden;resize:vertical;font-family:var(--font-mono);border:var(--border-thin);padding:8px"></div>
+    </div>
+  </section>
+  <section class="g-section"
+      x-data="{ tpl: '{{ exclusions_template|escapejs }}',
+                exec(cmd, arg=null){ document.execCommand(cmd, false, arg); this.sync() },
+                escapeHtml(text){ const el=document.createElement('div'); el.textContent=text||''; return el.innerHTML },
+                plainTextToHtml(text){ return this.escapeHtml(text).replace(/\n/g, '<br>') },
+                inputToEditorHtml(text){ return /<\s*[a-z!/]/i.test(text||'') ? (text||'') : this.plainTextToHtml(text||'') },
+                fit(el){ el.style.height=''; el.style.height=el.scrollHeight+'px' },
+                sync(){ $refs.ta.value=$refs.editor.innerHTML.trim(); this.fit($refs.editor) },
+                init(){ $refs.editor.innerHTML=this.inputToEditorHtml($refs.ta.value); this.sync() },
+                load(){ if(!$refs.ta.value.trim() || confirm('Substituir o texto das Exclusões pelo modelo padrão do tenant?')){ $refs.editor.innerHTML=this.plainTextToHtml(this.tpl); this.sync() } } }">
+    <header class="g-section-head" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <h3>§5 Exclusões do Fornecimento</h3>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            data-rich-action="bold" @click="exec('bold')" title="Negrito"><b>B</b></button>
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            data-rich-action="italic" @click="exec('italic')" title="Itálico"><i>I</i></button>
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            data-rich-action="insertUnorderedList" @click="exec('insertUnorderedList')" title="Lista">• Lista</button>
+        <button type="button" class="q-btn" style="font-size:11px;padding:2px 8px"
+            @click="load()" :disabled="!tpl" title="Preenche com a cláusula-modelo do tenant (frete, montagem, obras civis…)">⚡ Carregar modelo padrão</button>
+      </div>
+    </header>
+    <div class="g-section-body">
+      <textarea name="exclusions_text" x-ref="ta" hidden>{{ p.exclusions_text }}</textarea>
+      <div x-ref="editor" data-rich-text="exclusions_text" contenteditable="true"
+          x-init="init()" @input="sync()"
+          style="width:100%;min-height:88px;overflow:hidden;resize:vertical;font-family:var(--font-mono);border:var(--border-thin);padding:8px"></div>
+    </div>
+  </section>
   <section class="g-section">
     <header class="g-section-head"><h3>Condições</h3></header>
     <div class="g-section-body"><textarea name="terms_text" rows="3" style="width:100%;font-family:var(--font-mono);border:var(--border-thin);padding:8px">{{ p.terms_text }}</textarea></div>
@@ -31,7 +91,20 @@
   </section>
   <div style="display:flex;gap:8px;margin-top:8px">
     <button class="q-btn" name="save" value="1">Salvar Rascunho</button>
-    <button class="q-btn primary" name="generate" value="1">Salvar e Gerar DOCX + PDF</button>
+    <button class="q-btn primary" name="generate" value="1">GERAR E VISUALIZAR PDF</button>
   </div>
 </form>
+
+{% include "proposals/_history_and_email.html" %}
+
+{% if p.pdf_path %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Preview do PDF</h3></header>
+  <div class="g-section-body">
+    <iframe src="{% url 'proposals:preview' p.pk %}?v={{ p.pdf_sha256|slice:':12' }}"
+        style="width:100%;height:70vh;border:var(--border-thin);display:block"
+        title="Preview da proposta {{ p.number }}"></iframe>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

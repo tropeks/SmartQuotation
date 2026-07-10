@@ -6,11 +6,12 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
+from apps.audit.models import ApprovalRequest
 from apps.quotations.models import Quotation, Customer
 from apps.quotations.forms import FeixeDataSheetForm, QuotationEntryForm, CustomerQuickForm
 from apps.quotations.adapter import default_inputs, to_feixe_inputs
@@ -35,6 +36,16 @@ _WRITE_ROLES = (
 _ENTRY_ROLES = (
     UserProfile.ROLE_ORCAMENTISTA,
     UserProfile.ROLE_ENGENHEIRO,
+    UserProfile.ROLE_ADMIN,
+)
+
+# Papéis com permissão de LEITURA de cotações (ver detalhe/EAP/drawer). Todos os
+# papéis do tenant leem; o guardrail real é ser MEMBRO (ter profile.role), que barra
+# o usuário de outro tenant / sem papel (403 pelo @require_role).
+_READ_ROLES = (
+    UserProfile.ROLE_ORCAMENTISTA,
+    UserProfile.ROLE_ENGENHEIRO,
+    UserProfile.ROLE_GESTOR_COMERCIAL,
     UserProfile.ROLE_ADMIN,
 )
 
@@ -63,6 +74,25 @@ def _revision_label(revision: int) -> str:
 
 def _status_class(status: str) -> str:
     return _STATUS_PILL_CLASSES.get(status, "q-status--draft")
+
+
+def _status_options():
+    return [
+        {"value": value, "label": label, "class": _status_class(value)}
+        for value, label in Quotation.STATUS
+    ]
+
+
+def _render_status_control(request, quotation):
+    return render(
+        request,
+        "quotations/_status_dropdown.html",
+        {
+            "q": quotation,
+            "status_options": _status_options(),
+            "status_class": _status_class(quotation.status),
+        },
+    )
 
 
 def _list_context(request):
@@ -265,8 +295,164 @@ def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
     itens = (q.itens.prefetch_related("materiais", "operacoes")).all()
     has_active_of = q.ordens_fabricacao.exclude(status="cancelada").exists()
+    approval_engineers = UserProfile.objects.filter(
+        role=UserProfile.ROLE_ENGENHEIRO,
+        is_active=True,
+    ).exclude(crea_number="").select_related("user")
+    pending_remote_request = q.approval_requests.filter(status=ApprovalRequest.STATUS_PENDING).first()
+    from apps.production.services import is_convertible
     return render(request, "quotations/detail.html",
-                  {"q": q, "itens": itens, "has_active_of": has_active_of})
+                  {
+                      "q": q,
+                      "itens": itens,
+                      "has_active_of": has_active_of,
+                      "is_convertible": is_convertible(q),
+                      "approval_engineers": approval_engineers,
+                      "pending_remote_request": pending_remote_request,
+                      "status_options": _status_options(),
+                      "status_class": _status_class(q.status),
+                  })
+
+
+from apps.quotations.models import QuotationItem
+
+
+@require_role(*_READ_ROLES)
+def eap_item_drawer(request, pk):
+    """Tela 05 item 4 (parte B): parcial HTMX do DRAWER de uma linha da EAP (N1).
+
+    Devolve os materiais (ItemMaterial) e a mão-de-obra (ItemOperation) do
+    QuotationItem `pk`, com campos editáveis. Só LEITURA (monta o parcial); a
+    persistência é no POST `eap_item_save`. Leitura liberada a qualquer MEMBRO
+    do tenant (@require_role), como o detalhe.
+    """
+    item = get_object_or_404(
+        QuotationItem.objects.select_related("quotation").prefetch_related("materiais", "operacoes"),
+        pk=pk,
+    )
+    return render(request, "quotations/_eap_item_drawer.html", {"item": item})
+
+
+def _parse_decimal(raw, fallback):
+    """Converte um valor do form (pt-BR ou plain) em Decimal; mantém o valor atual
+    se vazio/ inválido. Aceita '1234.56' e '1.234,56'."""
+    from decimal import Decimal, InvalidOperation
+    s = (raw or "").strip()
+    if not s:
+        return fallback
+    # normaliza pt-BR: remove separador de milhar '.', vírgula decimal -> ponto
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    try:
+        return Decimal(s)
+    except (InvalidOperation, ValueError):
+        return fallback
+
+
+@require_role(*_WRITE_ROLES)
+@require_POST
+def eap_item_save(request, pk):
+    """Tela 05 item 4 (parte B): persiste OVERRIDES MANUAIS nas rows ItemMaterial/
+    ItemOperation da revisão CORRENTE e recalcula APENAS os roll-ups (item + cotação)
+    por SOMA.
+
+    GUARDRAIL ARQUITETURAL: a EAP normalmente é DERIVADA dos inputs pelo motor
+    (adapter.recompute regenera TODA a EAP). Aqui é o oposto: edição no drawer é um
+    override manual gravado DIRETO nas linhas — por isso NÃO chamamos o motor
+    (recompute apagaria o override) e NÃO criamos nova revisão. Só somamos os custos
+    já persistidos para atualizar item.custo_material/mo e os totais da cotação.
+    """
+    item = get_object_or_404(
+        QuotationItem.objects.select_related("quotation").prefetch_related("materiais", "operacoes"),
+        pk=pk,
+    )
+    from decimal import Decimal
+
+    for mat in item.materiais.all():
+        campos = []
+        peso_key = f"material_peso_{mat.pk}"
+        custo_key = f"material_custo_{mat.pk}"
+        if peso_key in request.POST:
+            mat.peso_bruto_kg = _parse_decimal(request.POST.get(peso_key), mat.peso_bruto_kg)
+            campos.append("peso_bruto_kg")
+        if custo_key in request.POST:
+            mat.custo = _parse_decimal(request.POST.get(custo_key), mat.custo)
+            campos.append("custo")
+        if campos:
+            mat.save(update_fields=campos)
+
+    for op in item.operacoes.all():
+        custo_key = f"op_custo_{op.pk}"
+        if custo_key in request.POST:
+            op.custo = _parse_decimal(request.POST.get(custo_key), op.custo)
+            op.save(update_fields=["custo"])
+
+    # Roll-up SOMENTE por soma (SEM motor): item = soma das rows; cotação = soma dos itens.
+    item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
+    item.custo_mo = sum((o.custo for o in item.operacoes.all() if o.aplicavel), Decimal("0"))
+    item.save(update_fields=["custo_material", "custo_mo"])
+
+    q = item.quotation
+    q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
+    q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
+    q.custo_total = q.custo_material + q.custo_mo
+    # computed_at NÃO é tocado de propósito: sinaliza que o motor não rodou.
+    q.save(update_fields=["custo_material", "custo_mo", "custo_total", "updated_at"])
+
+    # Recarrega o item persistido antes do re-render para o drawer refletir o
+    # estado canônico do banco, sem depender de caches/instâncias mutadas.
+    item.refresh_from_db()
+
+    return render(request, "quotations/_eap_item_drawer.html", {"item": item, "saved": True})
+
+
+@require_role(*_WRITE_ROLES)
+@require_POST
+def quotation_set_status(request, pk):
+    q = get_object_or_404(Quotation, pk=pk)
+    status = request.POST.get("status", "")
+    valid_statuses = dict(Quotation.STATUS)
+    if status not in valid_statuses:
+        return HttpResponseBadRequest("Status inválido.")
+
+    q.status = status
+    q.save(update_fields=["status", "updated_at"])
+    return _render_status_control(request, q)
+
+
+# Allowlist de metadados comerciais editáveis INLINE (Tela 05 item 4).
+# Só `title` existe hoje no model; os demais entram no allowlist para o dia em que
+# o model (ou um related) ganhar description/valid_until/delivery_weeks/payment_terms
+# — o loop de update_meta ignora silenciosamente os que não existem (hasattr).
+_META_FIELDS = ("title", "description", "valid_until", "delivery_weeks", "payment_terms")
+
+
+@require_role(*_WRITE_ROLES)
+@require_POST
+def quotation_update_meta(request, pk):
+    """Tela 05 item 4: edição INLINE de METADADOS comerciais da cotação ATUAL.
+
+    NÃO confundir com o fluxo de NOVA REVISÃO (quotation_edit / quotation_revise),
+    que recalcula pela pricing_engine e cria uma revisão nova. Aqui NÃO se chama o
+    motor e NÃO se cria revisão: apenas persiste campos comerciais leves (title, …)
+    na própria cotação. Retorna JSON para o front sair do modo edição e mostrar toast.
+    """
+    q = get_object_or_404(Quotation, pk=pk)
+    updated = []
+    for field in _META_FIELDS:
+        if not hasattr(q, field) or field not in request.POST:
+            continue
+        value = (request.POST.get(field) or "").strip()
+        if field == "title" and not value:
+            return JsonResponse(
+                {"ok": False, "errors": {"title": "Título é obrigatório."}}, status=400
+            )
+        setattr(q, field, value)
+        updated.append(field)
+    if updated:
+        # update_fields explícito: garante que só metadados são tocados (nunca a EAP/custos).
+        q.save(update_fields=[*updated, "updated_at"])
+    return JsonResponse({"ok": True, "title": q.title, "updated": updated})
 
 
 @require_role(*_WRITE_ROLES)

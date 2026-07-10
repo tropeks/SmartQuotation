@@ -52,6 +52,42 @@ class TechnicalApproval(models.Model):
         super().save(*args, **kwargs)
 
 
+class ApprovalRequest(models.Model):
+    """Solicitação de aprovação técnica ainda não atendida."""
+
+    TYPE_REMOTE = "remote"
+    TYPE_PRESENTIAL = "presential"
+    TYPE_CHOICES = [
+        (TYPE_REMOTE, "Remota"),
+        (TYPE_PRESENTIAL, "Presencial"),
+    ]
+
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pendente"),
+        (STATUS_APPROVED, "Aprovada"),
+        (STATUS_CANCELLED, "Cancelada"),
+    ]
+
+    quotation = models.ForeignKey(
+        "quotations.Quotation", on_delete=models.CASCADE, related_name="approval_requests")
+    requested_by = models.ForeignKey(
+        "accounts.UserProfile", on_delete=models.PROTECT, related_name="approval_requests")
+    request_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_REMOTE)
+    snapshot_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    notified_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["quotation", "status", "created_at"])]
+
+
 class AccessLog(models.Model):
     """Log append-only de ações sensíveis. H1 não implementa hash-chain."""
 
