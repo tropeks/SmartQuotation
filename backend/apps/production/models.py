@@ -1,4 +1,6 @@
 """Modelos de Ordem de Fabricação (H2.1)."""
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -114,8 +116,22 @@ class OFOperation(models.Model):
     descricao = models.CharField(max_length=255)
     metodo = models.CharField(max_length=20, blank=True)
     custo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    horas_hh = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    horas_hm = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0"))
+    taxa_hora = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    taxa_hora_hm = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    custo_direto = models.BooleanField(default=True)
     aplicavel = models.BooleanField(default=True)
     sequence = models.PositiveSmallIntegerField(default=0)
+
+    def recalc_custo(self):
+        if self.custo_direto:
+            return self.custo
+
+        self.custo = (self.horas_hh * self.taxa_hora) + (self.horas_hm * self.taxa_hora_hm)
+        if self.pk:
+            self.save(update_fields=["custo"])
+        return self.custo
 
     @property
     def actual_hh(self):

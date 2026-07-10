@@ -1,0 +1,21 @@
+TEST_CMD: bash .orch-test.sh
+
+1) Comandos de teste rodados + resumo da saída
+- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.quotations.tests.FeixeQuotationTests apps.quotations.tests.ItemOperationMigrationTests --noinput -v 1`
+  Resumo: 17 testes executados em 31.224s; resultado `OK`.
+- `bash .orch-test.sh`
+  Resumo: `manage.py check` sem issues; `makemigrations --check --dry-run` sem mudanças; suíte dos apps tocados executou 193 testes em 447.283s; resultado `OK`.
+
+2) PASS/FAIL de cada comando
+- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.quotations.tests.FeixeQuotationTests apps.quotations.tests.ItemOperationMigrationTests --noinput -v 1` => PASS
+- `bash .orch-test.sh` => PASS
+
+3) Resumo do diff
+- `backend/apps/quotations/models.py`: adicionados em `ItemOperation` os campos `horas_hh`, `horas_hm`, `taxa_hora`, `taxa_hora_hm`, `custo_direto` e o método `recalc_custo()` para persistir/retornar custo derivado quando não direto.
+- `backend/apps/production/models.py`: adicionados em `OFOperation` os mesmos campos e o método `recalc_custo()` com a mesma semântica.
+- `backend/apps/quotations/migrations/0004_itemoperation_custo_direto_itemoperation_horas_hh_and_more.py`: migration com `AddField` dos 5 campos e `RunPython` de backfill reversível (reverse no-op) preservando `custo`.
+- `backend/apps/production/migrations/0007_ofoperation_custo_direto_ofoperation_horas_hh_and_more.py`: migration com `AddField` dos 5 campos e `RunPython` de backfill reversível (reverse no-op) preservando `custo`.
+- `backend/apps/quotations/tests.py`: testes TDD para `ItemOperation.recalc_custo()` em modo derivado e direto; teste de migration/backfill; base transacional de tenant para rodar `MigrationExecutor` sem erro de trigger pendente no Postgres.
+
+4) Veredito da tarefa
+- Tarefa concluída porque os dois modelos receberam os campos e `recalc_custo()` pedidos, as duas migrations fazem backfill reversível preservando `custo`, os testes novos foram escritos primeiro e a suíte exigida `bash .orch-test.sh` terminou verde.
