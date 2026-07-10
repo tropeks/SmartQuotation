@@ -151,12 +151,7 @@ class FeixeQuotationTests(TenantTestCase):
         n2 = QuotationItem.objects.filter(quotation=q).count()
         self.assertEqual(n1, n2)                          # snapshot substituído, não duplicado
 
-    def test_recompute_persiste_campos_editaveis_sem_mudar_totais(self):
-        from copy import deepcopy
-        from unittest.mock import patch
-        from pricing_engine.feixe_quote import quote_feixe
-        from pricing_engine.operations import mandrilar_horas_hh, mandrilar_horas_hm
-
+    def test_recompute_persiste_campos_editaveis_sem_mudar_totais_no_fluxo_real(self):
         baseline = create_feixe_quotation(self.customer, "Feixe baseline", inputs=default_inputs())
         q = Quotation.objects.create(
             number=next_number(),
@@ -165,22 +160,7 @@ class FeixeQuotationTests(TenantTestCase):
             scope="tube_bundle",
             inputs=default_inputs(),
         )
-        inp = to_feixe_inputs(q)
-        cot = deepcopy(quote_feixe(inp, cost_chain=build_cost_chain(q)))
-        mandrilar = next(
-            op
-            for item in cot.itens
-            for op in item.operacoes
-            if op.codigo_op == "OP-MANDRILAR"
-        )
-        mandrilar.horas_hh = mandrilar_horas_hh(inp.num_furos)
-        mandrilar.horas_hm = mandrilar_horas_hm(mandrilar.horas_hh)
-        mandrilar.rate_hh = 120.0
-        mandrilar.rate_hm = 80.0
-        mandrilar.custo_fixo = 0.0
-
-        with patch("apps.quotations.adapter.quote_feixe", return_value=cot):
-            recompute(q)
+        recompute(q)
 
         hourly = ItemOperation.objects.get(item__quotation=q, codigo_op="OP-MANDRILAR")
         fixed = ItemOperation.objects.get(item__quotation=q, codigo_op="OP-TRANSP-ENT")
