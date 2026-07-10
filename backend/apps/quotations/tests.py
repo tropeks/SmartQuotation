@@ -12,7 +12,7 @@ from django_tenants.test.cases import TenantTestCase
 from django_tenants.utils import get_public_schema_name, get_tenant_domain_model, get_tenant_model
 
 from apps.quotations.models import CalculationSnapshot, Quotation, Customer, QuotationItem, ItemMaterial, ItemOperation
-from apps.quotations.adapter import recompute, default_inputs, to_feixe_inputs
+from apps.quotations.adapter import build_cost_chain, recompute, default_inputs, to_feixe_inputs
 from apps.quotations.services import create_feixe_quotation, next_number
 
 
@@ -150,6 +150,55 @@ class FeixeQuotationTests(TenantTestCase):
         recompute(q)                                     # recomputa
         n2 = QuotationItem.objects.filter(quotation=q).count()
         self.assertEqual(n1, n2)                          # snapshot substituído, não duplicado
+
+    def test_recompute_persiste_campos_editaveis_sem_mudar_totais(self):
+        from copy import deepcopy
+        from unittest.mock import patch
+        from pricing_engine.feixe_quote import quote_feixe
+        from pricing_engine.operations import mandrilar_horas_hh, mandrilar_horas_hm
+
+        baseline = create_feixe_quotation(self.customer, "Feixe baseline", inputs=default_inputs())
+        q = Quotation.objects.create(
+            number=next_number(),
+            customer=self.customer,
+            title="Feixe editable ops",
+            scope="tube_bundle",
+            inputs=default_inputs(),
+        )
+        inp = to_feixe_inputs(q)
+        cot = deepcopy(quote_feixe(inp, cost_chain=build_cost_chain(q)))
+        mandrilar = next(
+            op
+            for item in cot.itens
+            for op in item.operacoes
+            if op.codigo_op == "OP-MANDRILAR"
+        )
+        mandrilar.horas_hh = mandrilar_horas_hh(inp.num_furos)
+        mandrilar.horas_hm = mandrilar_horas_hm(mandrilar.horas_hh)
+        mandrilar.rate_hh = 120.0
+        mandrilar.rate_hm = 80.0
+        mandrilar.custo_fixo = 0.0
+
+        with patch("apps.quotations.adapter.quote_feixe", return_value=cot):
+            recompute(q)
+
+        hourly = ItemOperation.objects.get(item__quotation=q, codigo_op="OP-MANDRILAR")
+        fixed = ItemOperation.objects.get(item__quotation=q, codigo_op="OP-TRANSP-ENT")
+        q.refresh_from_db()
+        baseline.refresh_from_db()
+
+        self.assertGreater(hourly.horas_hh, Decimal("0"))
+        self.assertGreater(hourly.taxa_hora, Decimal("0"))
+        self.assertFalse(hourly.custo_direto)
+        self.assertAlmostEqual(
+            float(hourly.custo),
+            float((hourly.horas_hh * hourly.taxa_hora) + (hourly.horas_hm * hourly.taxa_hora_hm)),
+            delta=0.01,
+        )
+        self.assertTrue(fixed.custo_direto)
+        self.assertEqual(fixed.horas_hh, Decimal("0.00"))
+        self.assertEqual(q.custo_mo, baseline.custo_mo)
+        self.assertEqual(q.custo_total, baseline.custo_total)
 
     def test_numeracao_sequencial(self):
         q1 = create_feixe_quotation(self.customer, "A")
