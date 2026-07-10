@@ -2,6 +2,7 @@
 import sys
 import types
 from unittest import mock
+from decimal import Decimal
 
 from django.contrib import admin
 from django.contrib.auth.models import User
@@ -25,7 +26,7 @@ from apps.production.models import (
 from apps.production import services
 from apps.production.admin import OrdemFabricacaoAdmin
 from apps.quotations.adapter import recompute
-from apps.quotations.models import CalculationSnapshot, Customer
+from apps.quotations.models import CalculationSnapshot, Customer, ItemOperation
 from apps.quotations.services import create_calculation_snapshot, create_feixe_quotation
 
 
@@ -63,6 +64,28 @@ class OrdemFabricacaoTests(TenantTestCase):
         of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
         self.assertEqual(of.snapshot_hash, snapshot.snapshot_hash)
         self.assertEqual(of.calculation_snapshot_id, snapshot.pk)
+
+    def test_convert_copia_campos_editaveis_da_operacao(self):
+        op = ItemOperation.objects.filter(item__quotation=self.quotation).order_by("id").first()
+        op.horas_hh = Decimal("3.50")
+        op.horas_hm = Decimal("1.25")
+        op.taxa_hora = Decimal("120.00")
+        op.taxa_hora_hm = Decimal("80.00")
+        op.custo_direto = False
+        op.save(
+            update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "custo_direto"]
+        )
+        create_calculation_snapshot(self.quotation)
+        approve_quotation(self.quotation, self.engineer)
+
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+        of_op = OFOperation.objects.get(item__ordem=of, codigo_op=op.codigo_op)
+
+        self.assertEqual(of_op.horas_hh, op.horas_hh)
+        self.assertEqual(of_op.horas_hm, op.horas_hm)
+        self.assertEqual(of_op.taxa_hora, op.taxa_hora)
+        self.assertEqual(of_op.taxa_hora_hm, op.taxa_hora_hm)
+        self.assertEqual(of_op.custo_direto, op.custo_direto)
 
     def test_of_numbering_sequential(self):
         of1 = services.convert_quotation_to_of(self.quotation, created_by=self.user)
@@ -610,6 +633,39 @@ class ApontamentoViewTests(TenantTestCase):
         )
         self.assertEqual(resp.status_code, 403)
         self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+
+class OrdemFabricacaoDetailViewTests(TenantTestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_detail", password="x")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng Detail", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-77", crea_state="SP",
+        )
+        self.q = create_feixe_quotation(self.customer, "Feixe Detail")
+        op = ItemOperation.objects.filter(item__quotation=self.q).order_by("id").first()
+        op.horas_hh = Decimal("3.50")
+        op.horas_hm = Decimal("1.25")
+        op.taxa_hora = Decimal("120.00")
+        op.taxa_hora_hm = Decimal("80.00")
+        op.custo_direto = False
+        op.save(
+            update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "custo_direto"]
+        )
+        create_calculation_snapshot(self.q)
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+
+    def test_detail_renderiza_horas_estimadas_da_operacao(self):
+        self.client.force_login(self.user)
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Horas est.")
+        self.assertContains(response, "HH 3,50")
+        self.assertContains(response, "HM 1,25")
 
 
 class ITPServiceTests(TenantTestCase):

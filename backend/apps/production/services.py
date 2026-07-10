@@ -127,6 +127,11 @@ def convert_quotation_to_of(quotation, created_by=None, request=None) -> OrdemFa
                 descricao=op.descricao,
                 metodo=op.metodo,
                 custo=op.custo,
+                horas_hh=op.horas_hh,
+                horas_hm=op.horas_hm,
+                taxa_hora=op.taxa_hora,
+                taxa_hora_hm=op.taxa_hora_hm,
+                custo_direto=op.custo_direto,
                 aplicavel=op.aplicavel,
                 sequence=seq,
             )

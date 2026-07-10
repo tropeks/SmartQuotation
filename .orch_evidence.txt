@@ -1,0 +1,19 @@
+TEST_CMD: ./.orch-test.sh
+(1) Comandos de teste rodados + resumo da saída
+- `cd /tmp/orch-wt-review-f-hegafkqn/backend && POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.quotations.tests.FeixeQuotationTests.test_recompute_persiste_campos_editaveis_sem_mudar_totais_no_fluxo_real -v 2 --noinput`
+  Resumo: antes da correção, o teste falhou em `self.assertGreater(hourly.horas_hh, Decimal("0"))` porque `OP-MANDRILAR` continuava com `horas_hh=0.00`; depois da correção, o mesmo teste passou.
+- `./.orch-test.sh`
+  Resumo: `manage.py check` ok, `makemigrations --check --dry-run` ok, suíte dos apps tocados encerrou com `Ran 196 tests ... OK`.
+
+(2) PASS/FAIL de cada comando
+- `cd /tmp/orch-wt-review-f-hegafkqn/backend && POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.quotations.tests.FeixeQuotationTests.test_recompute_persiste_campos_editaveis_sem_mudar_totais_no_fluxo_real -v 2 --noinput`
+  FAIL antes da implementação; PASS após a implementação.
+- `./.orch-test.sh`
+  PASS.
+
+(3) Resumo do diff
+- `backend/apps/quotations/tests.py`: o teste de recomputação deixou de mockar `quote_feixe` e passou a validar o fluxo real, exigindo que `OP-MANDRILAR` persista horas/taxas e que `OP-TRANSP-ENT` continue como custo direto, sem alterar os totais.
+- `pricing_engine/feixe_quote.py`: o motor passou a construir `OperacaoExecutada` com breakdown horário real para operações baseadas em taxa, incluindo HH/HM explícitos para `OP-MANDRILAR`, e reservou `custo_fixo` apenas para serviços de custo direto.
+
+(4) Conclusão
+- Tarefa concluída porque o fluxo real de `recompute()` agora grava operações com horas/taxas separadas quando aplicável, o teste sem mock captura esse comportamento, e a suíte canônica da sprint permaneceu verde.

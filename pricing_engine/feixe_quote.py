@@ -58,6 +58,73 @@ _RATE_OVERRIDE = {
     "OP-CURVAR-U": ("CURVAR_TUBO_U", 160),
 }
 
+_DIRECT_COST_CODES = {
+    "OP-LP-RAIZ",
+    "OP-LP-ACAB",
+    "OP-TT-U",
+    "OP-LP-CURVAS-U",
+    "OP-LP-ALCA",
+    "OP-TT-EQUIP",
+    "OP-LP-EQUIP",
+    "OP-DUREZA",
+    "OP-PMI",
+    "OP-HIDRO",
+    "OP-TRANSP-PREP",
+    "OP-TRANSP-ENT",
+    "OP-PROJETO",
+    "OP-PIT",
+    "OP-PS",
+    "OP-DATABOOK",
+    "OP-INSP-Q",
+    "OP-FERRAMENTAS",
+    "OP-EXPANDIDORES",
+}
+
+_DEFAULT_HH_RATE = {
+    "OP-ESP-TRACAR-FUROS": lambda inp: 80,
+    "OP-ESP-FURAR": lambda inp: 110,
+    "OP-ESP-ESCAREAR": lambda inp: 110,
+    "OP-ESP-ALARGAR": lambda inp: 110,
+    "OP-ESP-GROOVES": lambda inp: 110,
+    "OP-ESP-FUROS-TIR": lambda inp: 110,
+    "OP-ESP-TRACAR-RASGOS": lambda inp: 80,
+    "OP-ESP-ACABAMENTO": lambda inp: 40,
+    "OP-CHI-TRACAR-REC": lambda inp: 90,
+    "OP-CHI-TRACAR-FUROS": lambda inp: 80,
+    "OP-CHI-FORMAR-PACOTE": lambda inp: 120,
+    "OP-CHI-FURAR": lambda inp: 110,
+    "OP-CHI-PREP-USINAR": lambda inp: 120,
+    "OP-CHI-ESCAREAR": lambda inp: 110,
+    "OP-CHI-RECORTAR-ACAB": lambda inp: 130,
+    "OP-CHI-INSPECIONAR": lambda inp: 110,
+    "OP-PREP-TIRANTES": lambda inp: 120,
+    "OP-PREP-ESPACADORES": lambda inp: 150,
+    "OP-MON-ESTRUTURA": lambda inp: 160,
+    "OP-QUEBRA-JATO": lambda inp: 90,
+    "OP-MON-ESP-FLUT": lambda inp: 160,
+    "OP-MON-TUBOS": lambda inp: 40,
+    "OP-REBAIXAR": lambda inp: 60,
+    "OP-SOLDAR-RAIZ": lambda inp: 90,
+    "OP-SOLDAR-ACAB": lambda inp: 90,
+    "OP-INSP-TUBOS": lambda inp: 110,
+    "OP-MON-BARRAS": lambda inp: 170,
+    "OP-SOLDAR-BARRAS": lambda inp: 90,
+    "OP-ACAB-BARRAS": lambda inp: 40,
+    "OP-INSP-BARRAS": lambda inp: 110,
+    "OP-MON-ALCA": lambda inp: 90,
+    "OP-SOLDAR-ALCA": lambda inp: 90,
+    "OP-ACAB-ALCA": lambda inp: 40,
+    "OP-INSP-ALCA": lambda inp: 110,
+    "OP-INSP-DIMENSIONAL": lambda inp: 600,
+    "OP-ESP-USINAR": lambda inp: 200 if inp.espelho_od_mm > 1100 else 150,
+    "OP-ESP-USINAR-RASGOS": lambda inp: 200 if inp.espelho_od_mm > 1000 else 150,
+    "OP-CHI-USINAR": lambda inp: 200 if inp.esp_pacote_chicanas_mm > 1100 else 150,
+    "OP-INTRODUZIR-TUBOS": lambda inp: 200 if inp.is_u else 40,
+    "OP-GABARITAR": lambda inp: 160 if inp.is_u else 40,
+    "OP-CURVAR-U": lambda inp: 160,
+    "OP-PREP-U-TT": lambda inp: 160,
+}
+
 
 def _apply_rate_override(op, custo: float, cost_chain) -> float:
     if cost_chain is None or not custo:
@@ -78,6 +145,51 @@ def _mandrilar_custo(inp: FeixeInputs, cost_chain) -> float | None:
     hh = math.ceil(pp.get("MANDRILAR", pp.MANUAL) * inp.num_furos / 60 / 2) * inp.fator_correcao_mo
     hm = hh * pp.get("MANDRILAR_HM_FATOR", pp.MANUAL)
     return hh * cost_chain.hh("MANDRILAR", 120) + hm * cost_chain.hm("MANDRILAR", 80)
+
+
+def _hourly_rate(op_code: str, inp: FeixeInputs, cost_chain) -> float:
+    resolver = _DEFAULT_HH_RATE.get(op_code)
+    if resolver is None:
+        return 0.0
+    default_rate = resolver(inp)
+    spec = _RATE_OVERRIDE.get(op_code)
+    if cost_chain is None or spec is None:
+        return default_rate
+    key, _ = spec
+    return cost_chain.hh(key, default_rate)
+
+
+def _build_operation(op, inp: FeixeInputs, cost_chain, custo: float, aplic: bool) -> OperacaoExecutada:
+    if not aplic or not custo:
+        return OperacaoExecutada(op.code, op.label, aplicavel=aplic)
+
+    if op.code == "OP-MANDRILAR":
+        hh = math.ceil(pp.get("MANDRILAR", pp.MANUAL) * inp.num_furos / 60 / 2) * inp.fator_correcao_mo
+        hm = hh * pp.get("MANDRILAR_HM_FATOR", pp.MANUAL)
+        rate_hh = cost_chain.hh("MANDRILAR", 120) if cost_chain is not None else 120
+        rate_hm = cost_chain.hm("MANDRILAR", 80) if cost_chain is not None else 80
+        return OperacaoExecutada(
+            op.code, op.label,
+            horas_hh=hh,
+            horas_hm=hm,
+            rate_hh=rate_hh,
+            rate_hm=rate_hm,
+            aplicavel=aplic,
+        )
+
+    if op.code in _DIRECT_COST_CODES:
+        return OperacaoExecutada(op.code, op.label, aplicavel=aplic, custo_fixo=custo)
+
+    rate_hh = _hourly_rate(op.code, inp, cost_chain)
+    if rate_hh > 0:
+        return OperacaoExecutada(
+            op.code, op.label,
+            horas_hh=(custo / rate_hh),
+            rate_hh=rate_hh,
+            aplicavel=aplic,
+        )
+
+    return OperacaoExecutada(op.code, op.label, aplicavel=aplic, custo_fixo=custo)
 
 
 def quote_feixe(inp: FeixeInputs, cost_chain=None,
@@ -139,7 +251,7 @@ def quote_feixe(inp: FeixeInputs, cost_chain=None,
             except Exception as exc:
                 raise RuntimeError(f"Erro calculando operação {op.code} ({op.label})") from exc
             it = itens.get(op.item, itens["MON-01"])
-            oe = OperacaoExecutada(op.code, op.label, aplicavel=aplic, custo_fixo=custo)
+            oe = _build_operation(op, inp, cost_chain, custo, aplic)
             if op.group in ("engenharia",):
                 it.ensaios.append(oe)
             else:

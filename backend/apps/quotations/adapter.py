@@ -118,7 +118,11 @@ def recompute(quotation) -> None:
             if op.custo:
                 ItemOperation.objects.create(
                     item=qi, codigo_op=op.codigo_op, descricao=op.descricao,
-                    metodo=op.metodo, custo=D(op.custo), aplicavel=op.aplicavel)
+                    metodo=op.metodo, custo=D(op.custo),
+                    horas_hh=D(op.horas_hh), horas_hm=D(op.horas_hm),
+                    taxa_hora=D(op.rate_hh), taxa_hora_hm=D(op.rate_hm),
+                    custo_direto=(op.horas_hh == 0 and op.horas_hm == 0),
+                    aplicavel=op.aplicavel)
         custo_material += D(it.custo_material)
         custo_mo += D(it.custo_mo)
 

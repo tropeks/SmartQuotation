@@ -3,17 +3,100 @@ Testes do app quotations + adapter pricing_engine.
 Teste-chave: uma cotação persistida reproduz o gabarito ENGEMATEX (caso 136 tubos).
 """
 from decimal import Decimal
+from django.conf import settings
+from django.core.management import call_command
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TransactionTestCase
 from django_tenants.test.cases import TenantTestCase
+from django_tenants.utils import get_public_schema_name, get_tenant_domain_model, get_tenant_model
 
 from apps.quotations.models import CalculationSnapshot, Quotation, Customer, QuotationItem, ItemMaterial, ItemOperation
-from apps.quotations.adapter import recompute, default_inputs, to_feixe_inputs
+from apps.quotations.adapter import build_cost_chain, recompute, default_inputs, to_feixe_inputs
 from apps.quotations.services import create_feixe_quotation, next_number
+
+
+class TenantMigrationTestCase(TransactionTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        call_command("migrate_schemas", schema_name=get_public_schema_name(), interactive=False, verbosity=0)
+
+        tenant_domain = cls.get_test_tenant_domain()
+        if tenant_domain not in settings.ALLOWED_HOSTS:
+            settings.ALLOWED_HOSTS += [tenant_domain]
+
+        cls.tenant = get_tenant_model()(schema_name=cls.get_test_schema_name())
+        cls.tenant.save(verbosity=0)
+        cls.domain = get_tenant_domain_model()(tenant=cls.tenant, domain=tenant_domain)
+        cls.domain.save()
+        connection.set_tenant(cls.tenant)
+
+    @classmethod
+    def tearDownClass(cls):
+        connection.set_schema_to_public()
+        cls.domain.delete()
+        cls.tenant.delete(force_drop=True)
+
+        tenant_domain = cls.get_test_tenant_domain()
+        if tenant_domain in settings.ALLOWED_HOSTS:
+            settings.ALLOWED_HOSTS.remove(tenant_domain)
+        super().tearDownClass()
+
+    @classmethod
+    def get_test_tenant_domain(cls):
+        return "tenant.test.com"
+
+    @classmethod
+    def get_test_schema_name(cls):
+        return "test"
 
 
 class FeixeQuotationTests(TenantTestCase):
     def setUp(self):
         self.customer = Customer.objects.create(company_name="Petrobras RPBC")
 
+    def test_item_operation_recalc_custo_derivado(self):
+        q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
+        item = QuotationItem.objects.filter(quotation=q).first()
+        op = ItemOperation.objects.create(
+            item=item,
+            codigo_op="OP-TEST-HH",
+            descricao="Operacao derivada",
+            custo_direto=False,
+            horas_hh=Decimal("10.00"),
+            horas_hm=Decimal("0.00"),
+            taxa_hora=Decimal("110.00"),
+            taxa_hora_hm=Decimal("0.00"),
+            custo=Decimal("0.00"),
+        )
+
+        returned = op.recalc_custo()
+        op.refresh_from_db()
+
+        self.assertEqual(returned, Decimal("1100.00"))
+        self.assertEqual(op.custo, Decimal("1100.00"))
+
+    def test_item_operation_recalc_custo_direto_preserva_valor(self):
+        q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
+        item = QuotationItem.objects.filter(quotation=q).first()
+        op = ItemOperation.objects.create(
+            item=item,
+            codigo_op="OP-TEST-DIR",
+            descricao="Operacao direta",
+            custo_direto=True,
+            horas_hh=Decimal("0.00"),
+            horas_hm=Decimal("0.00"),
+            taxa_hora=Decimal("0.00"),
+            taxa_hora_hm=Decimal("0.00"),
+            custo=Decimal("200.00"),
+        )
+
+        returned = op.recalc_custo()
+        op.refresh_from_db()
+
+        self.assertEqual(returned, Decimal("200.00"))
+        self.assertEqual(op.custo, Decimal("200.00"))
     def test_cotacao_persistida_reproduz_gabarito(self):
         q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
         # gabarito real ENGEMATEX: custo 35.353, preço c/imp 44.192 (gate ±10%)
@@ -67,6 +150,35 @@ class FeixeQuotationTests(TenantTestCase):
         recompute(q)                                     # recomputa
         n2 = QuotationItem.objects.filter(quotation=q).count()
         self.assertEqual(n1, n2)                          # snapshot substituído, não duplicado
+
+    def test_recompute_persiste_campos_editaveis_sem_mudar_totais_no_fluxo_real(self):
+        baseline = create_feixe_quotation(self.customer, "Feixe baseline", inputs=default_inputs())
+        q = Quotation.objects.create(
+            number=next_number(),
+            customer=self.customer,
+            title="Feixe editable ops",
+            scope="tube_bundle",
+            inputs=default_inputs(),
+        )
+        recompute(q)
+
+        hourly = ItemOperation.objects.get(item__quotation=q, codigo_op="OP-MANDRILAR")
+        fixed = ItemOperation.objects.get(item__quotation=q, codigo_op="OP-TRANSP-ENT")
+        q.refresh_from_db()
+        baseline.refresh_from_db()
+
+        self.assertGreater(hourly.horas_hh, Decimal("0"))
+        self.assertGreater(hourly.taxa_hora, Decimal("0"))
+        self.assertFalse(hourly.custo_direto)
+        self.assertAlmostEqual(
+            float(hourly.custo),
+            float((hourly.horas_hh * hourly.taxa_hora) + (hourly.horas_hm * hourly.taxa_hora_hm)),
+            delta=0.01,
+        )
+        self.assertTrue(fixed.custo_direto)
+        self.assertEqual(fixed.horas_hh, Decimal("0.00"))
+        self.assertEqual(q.custo_mo, baseline.custo_mo)
+        self.assertEqual(q.custo_total, baseline.custo_total)
 
     def test_numeracao_sequencial(self):
         q1 = create_feixe_quotation(self.customer, "A")
@@ -140,6 +252,61 @@ class FeixeQuotationTests(TenantTestCase):
         inp = to_feixe_inputs(q)
         self.assertEqual(inp.n_tubos, 99)
         self.assertEqual(inp.tubo_material, "SA-179")    # default preservado
+
+
+class ItemOperationMigrationTests(TenantMigrationTestCase):
+    migrate_from = ("quotations", "0003_customer_phone")
+    migrate_to = ("quotations", "0004_itemoperation_custo_direto_itemoperation_horas_hh_and_more")
+
+    def setUp(self):
+        super().setUp()
+        self.executor = MigrationExecutor(connection)
+        self.executor.loader.build_graph()
+        self.executor.migrate([self.migrate_from])
+
+        old_apps = self.executor.loader.project_state([self.migrate_from]).apps
+        customer = old_apps.get_model("quotations", "Customer").objects.create(
+            company_name="Cliente legado"
+        )
+        quotation = old_apps.get_model("quotations", "Quotation").objects.create(
+            number="COT-LEGACY-0001",
+            customer=customer,
+            title="Cotacao legado",
+        )
+        item = old_apps.get_model("quotations", "QuotationItem").objects.create(
+            quotation=quotation,
+            codigo_item="ITEM-LEGACY",
+            descricao="Item legado",
+        )
+        old_apps.get_model("quotations", "ItemOperation").objects.create(
+            item=item,
+            codigo_op="OP-LEGACY",
+            descricao="Operacao legado",
+            custo=Decimal("321.00"),
+        )
+
+        self.executor = MigrationExecutor(connection)
+        self.executor.loader.build_graph()
+        self.executor.migrate([self.migrate_to])
+        self.apps = self.executor.loader.project_state([self.migrate_to]).apps
+
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_to])
+        super().tearDown()
+
+    def test_migration_backfill_define_campos_editaveis(self):
+        operation = self.apps.get_model("quotations", "ItemOperation").objects.get(
+            codigo_op="OP-LEGACY"
+        )
+
+        self.assertTrue(operation.custo_direto)
+        self.assertEqual(operation.horas_hh, Decimal("0.00"))
+        self.assertEqual(operation.horas_hm, Decimal("0.00"))
+        self.assertEqual(operation.taxa_hora, Decimal("0.00"))
+        self.assertEqual(operation.taxa_hora_hm, Decimal("0.00"))
+        self.assertEqual(operation.custo, Decimal("321.00"))
 
 
 class DataSheetViewTests(TenantTestCase):
