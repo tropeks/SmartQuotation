@@ -56,11 +56,12 @@
   <header class="g-section-head"><h3>Roteiro & Apontamento</h3></header>
   <div class="g-section-body" style="padding:0">
     <table class="g-table">
-      <thead><tr><th>Operação</th><th class="num">Custo est. (R$)</th><th class="num">Horas reais</th><th class="num">R$/h obs.</th>{% if of.status == "liberada" or of.status == "em_producao" %}<th>Apontar</th>{% endif %}</tr></thead>
+      <thead><tr><th>Operação</th><th class="num">Horas est.</th><th class="num">Custo est. (R$)</th><th class="num">Horas reais</th><th class="num">R$/h obs.</th>{% if of.status == "liberada" or of.status == "em_producao" %}<th>Apontar</th>{% endif %}</tr></thead>
       <tbody>
         {% for it in itens %}{% for op in it.operacoes.all %}
         <tr>
           <td class="mono">{{ op.codigo_op }} · {{ op.descricao }}</td>
+          <td class="num mono">HH {{ op.horas_hh|brl }}{% if op.horas_hm > 0 %}<br>HM {{ op.horas_hm|brl }}{% endif %}</td>
           <td class="num mono">{{ op.custo|brl }}</td>
           <td class="num mono">{{ op.actual_hh|brl }}</td>
           <td class="num mono">—</td>
