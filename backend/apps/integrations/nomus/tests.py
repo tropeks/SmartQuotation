@@ -6,6 +6,15 @@ from unittest import mock
 from django.db import connection
 from django.test import SimpleTestCase
 from django_tenants.test.cases import TenantTestCase
+from django_tenants.utils import schema_context
+
+from django.contrib.auth.models import User
+
+from apps.accounts.models import UserProfile
+from apps.audit.services import approve_quotation
+from apps.production import services as production_services
+from apps.quotations.models import Customer
+from apps.quotations.services import create_feixe_quotation
 
 
 class NomusHttpClientTests(SimpleTestCase):
@@ -159,3 +168,114 @@ class NomusIntegrationModelsTests(TenantTestCase):
         from apps.integrations.routing import get_active_erp
 
         self.assertEqual(get_active_erp(), "none")
+
+
+class NomusServicesTests(TenantTestCase):
+    def setUp(self):
+        from apps.integrations.nomus.models import NomusIntegrationConfig
+
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_nomus")
+        self.engineer = UserProfile.objects.create(
+            user=self.user,
+            full_name="Eng Nomus",
+            role="engenheiro",
+            crea_number="CREA-901",
+            crea_state="SP",
+        )
+        self.quotation = create_feixe_quotation(self.customer, "Feixe Nomus")
+        approve_quotation(self.quotation, self.engineer)
+        self.of = production_services.convert_quotation_to_of(self.quotation, created_by=self.user)
+        production_services.liberar(self.of, by=self.user)
+        self.config = NomusIntegrationConfig.objects.create(enabled=True, base_url="", access_key="")
+
+    def test_process_sync_run_exports_of_and_creates_export_log(self):
+        from apps.integrations.nomus.fake import MemoryNomusClient
+        from apps.integrations.nomus.models import NomusExportLog, NomusSyncRun
+        from apps.integrations.nomus import services
+
+        run = services.maybe_enqueue_export(self.of, trigger="manual")
+        self.assertIsNotNone(run)
+
+        services.process_sync_run(run, client=MemoryNomusClient())
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, NomusSyncRun.STATUS_SUCCESS)
+        log = NomusExportLog.objects.get(sync_run=run)
+        self.assertEqual(log.status, NomusExportLog.STATUS_EXPORTED)
+        self.assertEqual(log.remote_id, self.of.number)
+        self.assertFalse(log.conflict)
+
+    def test_reexport_of_already_exported_marks_conflict(self):
+        from apps.integrations.nomus.fake import MemoryNomusClient
+        from apps.integrations.nomus.models import NomusExportLog
+        from apps.integrations.nomus import services
+
+        client = MemoryNomusClient()
+        run1 = services.maybe_enqueue_export(self.of, trigger="manual")
+        services.process_sync_run(run1, client=client)
+
+        run2 = services.maybe_enqueue_export(self.of, trigger="manual")
+        services.process_sync_run(run2, client=client)
+
+        log2 = NomusExportLog.objects.get(sync_run=run2)
+        self.assertTrue(log2.conflict)
+        self.assertIn("exportada", log2.conflict_reason)
+
+    def test_erp_unavailable_marks_run_failed_and_retryable(self):
+        from apps.integrations.nomus.client import HttpNomusTransientError
+        from apps.integrations.nomus.models import NomusExportLog, NomusSyncRun
+        from apps.integrations.nomus import services
+
+        class FailingClient:
+            def upsert_production_order(self, payload):
+                raise HttpNomusTransientError("ERP offline")
+
+        run = services.maybe_enqueue_export(self.of, trigger="manual")
+
+        with self.assertRaises(HttpNomusTransientError):
+            services.process_sync_run(run, client=FailingClient())
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, NomusSyncRun.STATUS_FAILED)
+        log = NomusExportLog.objects.get(sync_run=run)
+        self.assertEqual(log.status, NomusExportLog.STATUS_ERROR)
+        self.assertTrue(log.retry)
+        self.assertEqual(log.attempts, 1)
+        self.assertIn("ERP offline", log.error_message)
+
+
+class NomusTasksTests(TenantTestCase):
+    def setUp(self):
+        from apps.integrations.nomus.models import NomusIntegrationConfig
+
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_nomus_task")
+        self.engineer = UserProfile.objects.create(
+            user=self.user,
+            full_name="Eng Nomus Task",
+            role="engenheiro",
+            crea_number="CREA-902",
+            crea_state="SP",
+        )
+        quotation = create_feixe_quotation(self.customer, "Feixe Nomus Task")
+        approve_quotation(quotation, self.engineer)
+        self.of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
+        production_services.liberar(self.of, by=self.user)
+        self.config = NomusIntegrationConfig.objects.create(enabled=True, base_url="", access_key="")
+
+    @mock.patch("apps.integrations.nomus.tasks.process_sync_run")
+    def test_process_sync_run_task_uses_tenant_schema(self, process_sync_run):
+        from apps.integrations.nomus.models import NomusSyncRun
+        from apps.integrations.nomus import services
+        from apps.integrations.nomus.tasks import process_nomus_sync_run
+
+        run = services.maybe_enqueue_export(self.of, trigger="manual")
+        process_sync_run.side_effect = lambda run, client=None: run
+
+        result = process_nomus_sync_run(schema_name=connection.schema_name, run_id=run.pk)
+
+        process_sync_run.assert_called_once()
+        self.assertEqual(result["run_id"], run.pk)
+        with schema_context(connection.schema_name):
+            self.assertTrue(NomusSyncRun.objects.filter(pk=run.pk, status=NomusSyncRun.STATUS_PENDING).exists())
