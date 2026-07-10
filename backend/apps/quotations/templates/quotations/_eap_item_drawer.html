@@ -1,7 +1,7 @@
 {% load money %}
-{# Tela 05 item 4 (parte B): conteúdo do DRAWER de uma linha da EAP.
+{% comment %}Tela 05 item 4 (parte B): conteúdo do DRAWER de uma linha da EAP.
    Parcial HTMX: o form salva via hx-post e re-renderiza a si mesmo (outerHTML)
-   com os roll-ups atualizados. Override MANUAL — NÃO dispara o motor. #}
+   com os roll-ups atualizados. Override MANUAL — NÃO dispara o motor.{% endcomment %}
 <form id="eap-drawer-form"
       hx-post="{% url 'quotations:eap_item_save' item.pk %}"
       hx-target="#eap-drawer-form"

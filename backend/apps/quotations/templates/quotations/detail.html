@@ -2,8 +2,8 @@
 {% load money %}
 {% block title %}{{ q.number }} — {{ q.title }}{% endblock %}
 {% block content %}
-{# Tela 05 item 4: `isEditing` = modo de edição INLINE de metadados comerciais.
-   NÃO é o fluxo de nova-revisão (motor/recompute) — esse continua no botão "Nova Revisão". #}
+{% comment %}Tela 05 item 4: `isEditing` = modo de edição INLINE de metadados comerciais.
+   NÃO é o fluxo de nova-revisão (motor/recompute) — esse continua no botão "Nova Revisão".{% endcomment %}
 <div x-data="{
        tab: 'resumo',
        isEditing: false,
@@ -60,8 +60,8 @@
         <div class="meta">Computado {{ q.computed_at|date:"d/m/Y H:i" }}</div>
       </div>
     </div>
-    {# Ações normais (fora do modo edição). "Revisar" = edição inline de metadados
-       (este item). "Nova Revisão" = fluxo antigo do motor (recompute + nova revisão). #}
+    {% comment %}Ações normais (fora do modo edição). "Revisar" = edição inline de metadados
+       (este item). "Nova Revisão" = fluxo antigo do motor (recompute + nova revisão).{% endcomment %}
     <div class="q-actions" x-show="!isEditing">
       <button type="button" class="q-btn" @click="confirmOpen = true">Revisar</button>
       {% if q.scope == "complete" %}
@@ -148,8 +148,8 @@
     <section id="sec-eap" class="g-section" style="margin-top:16px">
       <header class="g-section-head"><h3>§2 Estrutura Analítica</h3></header>
       <div class="g-section-body" style="padding:0">
-        {# Linhas clicáveis: abrem o drawer com os materiais/MO (N2) daquele item.
-           hx-get injeta o parcial no corpo do drawer; @click abre o slide-over. #}
+        {% comment %}Linhas clicáveis: abrem o drawer com os materiais/MO (N2) daquele item.
+           hx-get injeta o parcial no corpo do drawer; @click abre o slide-over.{% endcomment %}
         <table class="g-table">
           <thead><tr><th>Código</th><th>Item</th><th class="num">Material</th><th class="num">Mão de Obra</th><th class="num">Total</th></tr></thead>
           <tbody>
@@ -298,8 +298,8 @@
     </section>
   </div>
 
-  {# Slide-over lateral (drawer) da EAP: sempre no DOM, animado por classe.
-     O corpo é preenchido via HTMX ao clicar numa linha da §2. #}
+  {% comment %}Slide-over lateral (drawer) da EAP: sempre no DOM, animado por classe.
+     O corpo é preenchido via HTMX ao clicar numa linha da §2.{% endcomment %}
   <div class="drawer" :class="{ 'drawer--open': eapDrawerOpen }"
        @keydown.escape.window="eapDrawerOpen = false">
     <div class="drawer-scrim" @click="eapDrawerOpen = false" aria-hidden="true"></div>
