@@ -12,6 +12,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
 from apps.audit.models import ApprovalRequest
+from apps.audit.services import log_access
 from apps.quotations.models import Quotation, Customer
 from apps.quotations.forms import FeixeDataSheetForm, QuotationEntryForm, CustomerQuickForm
 from apps.quotations.adapter import default_inputs, to_feixe_inputs
@@ -349,6 +350,14 @@ def _parse_decimal(raw, fallback):
         return fallback
 
 
+def _log_field_edit(request, resource, field, before, after):
+    """Trilha de auditoria (quem/quando/campo/valor-anterior) de um override manual
+    do drawer EAP — reusa o AccessLog do app `audit` (action='edit')."""
+    if before == after:
+        return
+    log_access(request, "edit", resource, {"field": field, "before": str(before), "after": str(after)})
+
+
 @require_role(*_WRITE_ROLES)
 @require_POST
 def eap_item_save(request, pk):
@@ -361,6 +370,11 @@ def eap_item_save(request, pk):
     override manual gravado DIRETO nas linhas — por isso NÃO chamamos o motor
     (recompute apagaria o override) e NÃO criamos nova revisão. Só somamos os custos
     já persistidos para atualizar item.custo_material/mo e os totais da cotação.
+
+    Operação (ItemOperation): `custo_direto=True` edita custo em R$ direto (ex.:
+    serviço de terceiro a preço fechado); `custo_direto=False` edita HORAS
+    (horas_hh/horas_hm) e o custo é DERIVADO on-the-fly (horas × taxa_hora) via
+    `ItemOperation.recalc_custo()` — não é mais um campo editável nesse caso.
     """
     item = get_object_or_404(
         QuotationItem.objects.select_related("quotation").prefetch_related("materiais", "operacoes"),
@@ -373,19 +387,37 @@ def eap_item_save(request, pk):
         peso_key = f"material_peso_{mat.pk}"
         custo_key = f"material_custo_{mat.pk}"
         if peso_key in request.POST:
+            antes = mat.peso_bruto_kg
             mat.peso_bruto_kg = _parse_decimal(request.POST.get(peso_key), mat.peso_bruto_kg)
             campos.append("peso_bruto_kg")
+            _log_field_edit(request, mat, "peso_bruto_kg", antes, mat.peso_bruto_kg)
         if custo_key in request.POST:
+            antes = mat.custo
             mat.custo = _parse_decimal(request.POST.get(custo_key), mat.custo)
             campos.append("custo")
+            _log_field_edit(request, mat, "custo", antes, mat.custo)
         if campos:
             mat.save(update_fields=campos)
 
     for op in item.operacoes.all():
-        custo_key = f"op_custo_{op.pk}"
-        if custo_key in request.POST:
-            op.custo = _parse_decimal(request.POST.get(custo_key), op.custo)
-            op.save(update_fields=["custo"])
+        if op.custo_direto:
+            custo_key = f"op_custo_{op.pk}"
+            if custo_key in request.POST:
+                antes = op.custo
+                op.custo = _parse_decimal(request.POST.get(custo_key), op.custo)
+                op.save(update_fields=["custo"])
+                _log_field_edit(request, op, "custo", antes, op.custo)
+        else:
+            hh_key = f"op_horas_hh_{op.pk}"
+            hm_key = f"op_horas_hm_{op.pk}"
+            if hh_key in request.POST or hm_key in request.POST:
+                antes_hh, antes_hm = op.horas_hh, op.horas_hm
+                op.horas_hh = _parse_decimal(request.POST.get(hh_key), op.horas_hh)
+                op.horas_hm = _parse_decimal(request.POST.get(hm_key), op.horas_hm)
+                op.save(update_fields=["horas_hh", "horas_hm"])
+                op.recalc_custo()
+                _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh)
+                _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm)
 
     # Roll-up SOMENTE por soma (SEM motor): item = soma das rows; cotação = soma dos itens.
     item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
