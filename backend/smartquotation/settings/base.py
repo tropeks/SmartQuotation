@@ -46,6 +46,7 @@ TENANT_APPS = [
     "apps.audit",
     "apps.integrations.protheus.apps.ProtheusConfig",
     "apps.integrations.omie.apps.OmieConfig",
+    "apps.integrations.nomus.apps.NomusConfig",
     "apps.integrations.sap_b1.apps.SAPB1Config",
     "apps.integrations.bling.apps.BlingConfig",
     "apps.materials",

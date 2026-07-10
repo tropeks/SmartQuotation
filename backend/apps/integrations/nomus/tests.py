@@ -3,7 +3,9 @@ from __future__ import annotations
 from base64 import b64encode
 from unittest import mock
 
+from django.db import connection
 from django.test import SimpleTestCase
+from django_tenants.test.cases import TenantTestCase
 
 
 class NomusHttpClientTests(SimpleTestCase):
@@ -91,3 +93,69 @@ class NomusMemoryClientTests(SimpleTestCase):
         self.assertEqual(summary["boms"], 1)
         self.assertEqual(summary["routings"], 1)
         self.assertEqual(summary["healthchecks"], 1)
+
+
+class NomusIntegrationModelsTests(TenantTestCase):
+    def test_integration_config_encrypts_access_key_at_rest(self):
+        from apps.integrations.nomus.models import NomusIntegrationConfig
+
+        config = NomusIntegrationConfig.objects.create(
+            base_url="https://nomus.example",
+            access_key="super-secret-key",
+        )
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"SELECT access_key FROM {config._meta.db_table} WHERE id = %s",
+                [config.pk],
+            )
+            stored_value = cursor.fetchone()[0]
+
+        self.assertNotEqual(stored_value, "super-secret-key")
+        self.assertEqual(
+            NomusIntegrationConfig.objects.get(pk=config.pk).access_key,
+            "super-secret-key",
+        )
+
+    def test_export_log_accepts_conflict_reason(self):
+        from apps.integrations.nomus.models import NomusExportLog
+
+        log = NomusExportLog.objects.create(
+            remote_id="OP-001",
+            conflict=True,
+            conflict_reason="Remote order already exists",
+        )
+
+        self.assertTrue(log.conflict)
+        self.assertEqual(log.conflict_reason, "Remote order already exists")
+
+    def test_get_active_erp_returns_nomus_when_only_nomus_enabled(self):
+        from apps.integrations.nomus.models import NomusIntegrationConfig
+        from apps.integrations.routing import get_active_erp
+
+        NomusIntegrationConfig.objects.create(
+            base_url="https://nomus.example",
+            access_key="token",
+            enabled=True,
+        )
+
+        self.assertEqual(get_active_erp(), "nomus")
+
+    def test_get_active_erp_returns_sap_b1_when_only_sap_b1_enabled(self):
+        from apps.integrations.routing import get_active_erp
+        from apps.integrations.sap_b1.models import SapB1IntegrationConfig
+
+        SapB1IntegrationConfig.objects.create(
+            enabled=True,
+            base_url="https://sap.example",
+            company_db="SBODEMO",
+            username="manager",
+            password="secret",
+        )
+
+        self.assertEqual(get_active_erp(), "sap_b1")
+
+    def test_get_active_erp_returns_none_when_no_erp_enabled(self):
+        from apps.integrations.routing import get_active_erp
+
+        self.assertEqual(get_active_erp(), "none")

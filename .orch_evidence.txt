@@ -1,24 +1,21 @@
-1) Testes rodados
-- `python backend/manage.py test apps.integrations.nomus.tests -v 1 --noinput`
-  - Resumo: 4 testes executados; OK.
-  - PASS
-- `bash .orch-test.sh`
-  - Resumo: Django system check OK, makemigrations --check OK, suite geral com 199 testes OK.
-  - PASS
+TEST_CMD: POSTGRES_PORT=5436 bash .orch-test.sh
 
-2) PASS/FAIL por comando
-- `python backend/manage.py test apps.integrations.nomus.tests -v 1 --noinput`: PASS
-- `bash .orch-test.sh`: PASS
+1) Comandos de teste rodados + resumo da saída
+- `POSTGRES_PORT=5436 python backend/manage.py test apps.integrations.nomus -v 2 --noinput`
+  Resumo: criou o banco de teste, aplicou migrations incluindo `integrations_nomus.0001_initial`, executou 9 testes de `apps.integrations.nomus` e todos passaram.
+- `POSTGRES_PORT=5436 bash .orch-test.sh`
+  Resumo: `manage.py check` passou sem issues; `manage.py makemigrations --check --dry-run` retornou `No changes detected`; a suíte do harness executou 199 testes e terminou com `OK`.
 
-3) Diff resumido
-- `docs/integrations_nomus_api.md`: novo documento de design com o que foi confirmado na documentacao publica, o que ficou assumido, credenciais, endpoints/payloads propostos, erros/conflitos e referencias.
-- `backend/apps/integrations/nomus/__init__.py`: novo pacote com `default_app_config`.
-- `backend/apps/integrations/nomus/apps.py`: novo `AppConfig` neutro, sem wiring.
-- `backend/apps/integrations/nomus/client.py`: novo `BaseNomusClient`, `HttpNomusClient`, erros HTTP e helper `payload_digest`.
-- `backend/apps/integrations/nomus/fake.py`: novo `MemoryNomusClient` em memoria, espelhando o padrao do SAP B1.
-- `backend/apps/integrations/nomus/tests.py`: novos testes cobrindo client HTTP, fake e healthcheck.
+2) PASS/FAIL de cada comando
+- `POSTGRES_PORT=5436 python backend/manage.py test apps.integrations.nomus -v 2 --noinput` => PASS
+- `POSTGRES_PORT=5436 bash .orch-test.sh` => PASS
 
-4) Conclusao
-- A tarefa foi concluida porque o design da integracao Nomus foi documentado, o esqueleto do client/fake foi implementado e ambos os testes focados e o gate global permaneceram verdes.
+3) Resumo do diff
+- `backend/apps/integrations/nomus/models.py`: adiciona `NomusIntegrationConfig`, `NomusSyncRun` e `NomusExportLog` com segredos criptografados, status/choices e log de conflito/retry.
+- `backend/apps/integrations/nomus/migrations/0001_initial.py`: migration inicial do app `integrations_nomus`.
+- `backend/apps/integrations/nomus/tests.py`: adiciona testes `TenantTestCase` para criptografia em repouso, `NomusExportLog` com conflito e selector de ERP ativo.
+- `backend/apps/integrations/routing.py`: adiciona `get_active_erp()` para resolver `nomus | sap_b1 | none` por tenant.
+- `backend/smartquotation/settings/base.py`: registra `apps.integrations.nomus.apps.NomusConfig` em `TENANT_APPS`.
 
-TEST_CMD: bash .orch-test.sh
+4) Conclusão
+- Tarefa concluída porque os modelos e a migration de `nomus` foram criados, o selector de ERP ativo por tenant foi implementado sem quebrar `sap_b1`, os testes novos passaram e o gate `bash .orch-test.sh` ficou verde.
