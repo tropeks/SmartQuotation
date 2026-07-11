@@ -6,4 +6,5 @@ app_name = "materials"
 
 urlpatterns = [
     path("materiais/", views.list_materials, name="list"),
+    path("materiais/<int:pk>/", views.detail_material, name="detail"),
 ]

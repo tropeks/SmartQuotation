@@ -13,8 +13,8 @@
         </thead>
         <tbody>
           {% for row in materials %}
-            <tr>
-              <td class="id">{{ row.obj.sigla }}</td>
+          <tr>
+              <td class="id"><a href="{% url 'materials:detail' row.obj.pk %}">{{ row.obj.sigla }}</a></td>
               <td>{{ row.obj.tipo|default:"—" }}</td>
               <td>{{ row.obj.norma|default:"—" }}</td>
               <td>{{ row.obj.forma_padrao|default:"—" }}</td>

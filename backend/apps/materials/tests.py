@@ -64,6 +64,12 @@ class MaterialListViewTests(TenantTestCase):
             norma="NORMA-X",
             forma_padrao="chapa",
         )
+        self.empty_material = Material.objects.create(
+            sigla="MAT-VAZIO",
+            tipo="Material Sem Preco",
+            norma="NORMA-Y",
+            forma_padrao="barra",
+        )
 
         today = timezone.localdate()
         MaterialPrice.objects.create(
@@ -117,3 +123,47 @@ class MaterialListViewTests(TenantTestCase):
         self.client.force_login(outsider)
         resp = self.client.get("/materiais/")
         self.assertIn(resp.status_code, {302, 403})
+
+    def test_detalhe_renderiza_precos_vigentes_por_forma(self):
+        today = timezone.localdate()
+        MaterialPrice.objects.create(
+            material=self.material,
+            forma="tubo",
+            preco_brl_kg="20.00",
+            fornecedor="Fornecedor Tubo",
+            valid_from=today,
+            valid_until=None,
+        )
+        MaterialPrice.objects.create(
+            material=self.material,
+            forma="barra",
+            preco_brl_kg="30.00",
+            fornecedor="Fornecedor Barra",
+            valid_from=today,
+            valid_until=None,
+        )
+
+        self.client.force_login(self.user)
+        resp = self.client.get(f"/materiais/{self.material.pk}/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "SA-179")
+        self.assertContains(resp, "Preços vigentes por forma")
+        self.assertContains(resp, "Chapa")
+        self.assertContains(resp, "Tubo")
+        self.assertContains(resp, "Barra")
+        self.assertContains(resp, "R$ 12.34")
+        self.assertContains(resp, "Fornecedor Atual")
+        self.assertContains(resp, "R$ 20.00")
+        self.assertContains(resp, "Fornecedor Tubo")
+        self.assertContains(resp, "R$ 30.00")
+        self.assertContains(resp, "Fornecedor Barra")
+        self.assertContains(resp, "Vigente desde")
+
+    def test_detalhe_material_sem_preco_mostra_estado_vazio(self):
+        self.client.force_login(self.user)
+        resp = self.client.get(f"/materiais/{self.empty_material.pk}/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "MAT-VAZIO")
+        self.assertContains(resp, "Sem preço vigente")

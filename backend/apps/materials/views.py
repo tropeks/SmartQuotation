@@ -1,5 +1,5 @@
 from django.db.models import Prefetch, Q
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
 from apps.accounts.models import UserProfile
@@ -73,8 +73,37 @@ def _materials_context(request):
     }
 
 
+def _material_detail_context(material):
+    today = timezone.localdate()
+    prices = _current_prices(material.precos.all(), today)
+    return {
+        "material": material,
+        "prices": [
+            {
+                "forma": forma,
+                "label": _FORMA_LABELS[forma],
+                "preco": prices[forma].preco_brl_kg,
+                "fornecedor": prices[forma].fornecedor or "—",
+                "valid_from": prices[forma].valid_from,
+                "valid_until": prices[forma].valid_until,
+            }
+            for forma, _ in MaterialPrice.FORMA
+            if forma in prices
+        ],
+    }
+
+
 @require_role(*_READ_ROLES)
 def list_materials(request):
     context = _materials_context(request)
     template = "materials/_results.html" if request.headers.get("HX-Request") == "true" else "materials/list.html"
+    return render(request, template, context)
+
+
+@require_role(*_READ_ROLES)
+def detail_material(request, pk):
+    price_qs = MaterialPrice.objects.order_by("forma", "-valid_from", "-created_at")
+    material = get_object_or_404(Material.objects.prefetch_related(Prefetch("precos", queryset=price_qs)), pk=pk)
+    context = _material_detail_context(material)
+    template = "materials/_detail.html" if request.headers.get("HX-Request") == "true" else "materials/detail.html"
     return render(request, template, context)

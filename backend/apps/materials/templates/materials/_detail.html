@@ -1,0 +1,66 @@
+<div class="eyebrow">MAT · Detalhe</div>
+<nav class="g-breadcrumb" aria-label="Trilha de navegação" style="margin-top:8px">
+  <a href="{% url 'materials:list' %}">Materiais</a>
+  <span class="sep">/</span>
+  <span class="current">{{ material.sigla }}</span>
+</nav>
+
+<header style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:8px">
+  <div>
+    <h1 class="q-number">{{ material.sigla }}</h1>
+    <p class="mono" style="color:var(--g-gray-1);margin:4px 0 0">
+      {{ material.tipo|default:"—" }} · {{ material.norma|default:"—" }} · {% if material.forma_padrao %}{{ material.forma_padrao }}{% else %}Sem forma padrão{% endif %}
+    </p>
+  </div>
+</header>
+
+<div class="stat-row" style="margin-top:12px">
+  <div class="stat">
+    <div class="lbl">Forma padrão</div>
+    <div class="val">{{ material.forma_padrao|default:"—" }}</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Situação</div>
+    <div class="val">{% if material.is_active %}Ativo{% else %}Inativo{% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Preços vigentes</div>
+    <div class="val mono">{{ prices|length }}</div>
+  </div>
+</div>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head">
+    <h3>Preços vigentes por forma</h3>
+  </header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead>
+        <tr>
+          <th>Forma</th>
+          <th>Preço</th>
+          <th>Fornecedor</th>
+          <th>Vigente desde</th>
+          <th>Vigente até</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for price in prices %}
+          <tr>
+            <td>{{ price.label }}</td>
+            <td class="mono">R$ {{ price.preco }}</td>
+            <td>{{ price.fornecedor }}</td>
+            <td class="mono">{{ price.valid_from|date:"d/m/Y" }}</td>
+            <td class="mono">{% if price.valid_until %}{{ price.valid_until|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">
+              Sem preço vigente.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
