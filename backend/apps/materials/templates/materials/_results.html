@@ -1,0 +1,46 @@
+<section class="g-section" style="margin-top:8px">
+  <div class="g-section-body" style="padding:0">
+    <div class="list-table-wrap table-scroll">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th>Sigla</th>
+            <th>Tipo</th>
+            <th>Norma</th>
+            <th>Forma padrão</th>
+            <th>Preços vigentes por forma</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in materials %}
+            <tr>
+              <td class="id">{{ row.obj.sigla }}</td>
+              <td>{{ row.obj.tipo|default:"—" }}</td>
+              <td>{{ row.obj.norma|default:"—" }}</td>
+              <td>{{ row.obj.forma_padrao|default:"—" }}</td>
+              <td>
+                {% if row.prices %}
+                  <div style="display:flex;flex-wrap:wrap;gap:var(--s4)">
+                    {% for price in row.prices %}
+                      <span class="q-badge" title="Vigente desde {{ price.valid_from|date:'d/m/Y' }}{% if price.valid_until %} até {{ price.valid_until|date:'d/m/Y' }}{% endif %}">
+                        {{ price.label }} R$ {{ price.preco }} · {{ price.fornecedor }}
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <span class="g-muted">Sem preço vigente</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">
+                Nenhum material encontrado.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

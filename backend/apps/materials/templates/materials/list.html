@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Materiais e Preços{% endblock %}
+{% block content %}
+<div class="eyebrow">MAT · Lista</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <h1 class="q-number">MATERIAIS E PREÇOS</h1>
+</div>
+
+<section class="g-section filter-accordion" style="margin-top:8px"
+         x-data="{ open: window.innerWidth >= 768 }" :data-open="open.toString()">
+  <header class="g-section-head" role="button" tabindex="0"
+          @click="open = !open" @keydown.enter="open = !open" @keydown.space.prevent="open = !open"
+          :aria-expanded="open.toString()" aria-controls="materials-filters">
+    <h3>Filtros</h3>
+    <span class="acc-chevron" aria-hidden="true">▾</span>
+  </header>
+  <div class="g-section-body" id="materials-filters" x-show="open" x-cloak>
+    <form method="get" class="g-form"
+          hx-get="{% url 'materials:list' %}"
+          hx-target="#materials-results"
+          hx-swap="innerHTML"
+          hx-trigger="keyup changed delay:300ms from:#materials-search, submit">
+      <label class="field col-6">
+        <span>Busca por sigla ou tipo</span>
+        <input id="materials-search" type="text" name="q" value="{{ search }}" placeholder="SA-179, aço carbono...">
+      </label>
+      <div class="field col-6" style="justify-content:flex-end;align-items:flex-start">
+        <button class="q-btn primary" type="submit">Aplicar</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div id="materials-results">
+  {% include "materials/_results.html" %}
+</div>
+{% endblock %}
