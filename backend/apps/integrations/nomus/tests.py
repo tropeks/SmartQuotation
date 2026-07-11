@@ -279,3 +279,80 @@ class NomusTasksTests(TenantTestCase):
         self.assertEqual(result["run_id"], run.pk)
         with schema_context(connection.schema_name):
             self.assertTrue(NomusSyncRun.objects.filter(pk=run.pk, status=NomusSyncRun.STATUS_PENDING).exists())
+
+
+class NomusExportPanelViewTests(TenantTestCase):
+    def setUp(self):
+        from apps.integrations.nomus.fake import MemoryNomusClient
+        from apps.integrations.nomus.models import NomusExportLog, NomusIntegrationConfig
+        from apps.integrations.nomus import services as nomus_services
+
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+        self.customer = Customer.objects.create(company_name="ACME Panel")
+        self.user = User.objects.create_user(username="eng_panel", password="x123456789")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng Panel", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-950", crea_state="SP",
+        )
+        self.viewer_user = User.objects.create_user(username="orc_panel", password="x123456789")
+        UserProfile.objects.create(
+            user=self.viewer_user, full_name="Orc Panel", role=UserProfile.ROLE_ORCAMENTISTA,
+        )
+
+        quotation = create_feixe_quotation(self.customer, "Feixe Panel")
+        approve_quotation(quotation, self.engineer)
+        self.of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
+
+        self.config = NomusIntegrationConfig.objects.create(enabled=False, base_url="", access_key="")
+        production_services.liberar(self.of, by=self.user)
+        self.config.enabled = True
+        self.config.save(update_fields=["enabled"])
+
+        mem_client = MemoryNomusClient()
+        run1 = nomus_services.maybe_enqueue_export(self.of, trigger="manual")
+        nomus_services.process_sync_run(run1, client=mem_client)
+        run2 = nomus_services.maybe_enqueue_export(self.of, trigger="manual")
+        nomus_services.process_sync_run(run2, client=mem_client)
+        self.conflicted_log = NomusExportLog.objects.get(sync_run=run2)
+
+    def _panel_url(self):
+        return f"/ofs/{self.of.pk}/nomus/painel/"
+
+    def _reexport_url(self):
+        return f"/ofs/{self.of.pk}/nomus/reexport/"
+
+    def test_painel_get_mostra_status_export_e_conflito(self):
+        self.client.force_login(self.viewer_user)
+
+        resp = self.client.get(self._panel_url())
+
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+        self.assertIn("Success", content)
+        self.assertIn(self.conflicted_log.conflict_reason, content)
+
+    @mock.patch("apps.integrations.nomus.services.enqueue_sync_run_async")
+    def test_reexport_por_papel_autorizado_cria_novo_run(self, enqueue_sync_run_async):
+        from apps.integrations.nomus.models import NomusSyncRun
+
+        before = NomusSyncRun.objects.count()
+        self.client.force_login(self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            resp = self.client.post(self._reexport_url())
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(NomusSyncRun.objects.count(), before + 1)
+        enqueue_sync_run_async.assert_called_once()
+
+    def test_reexport_por_papel_sem_permissao_retorna_403(self):
+        from apps.integrations.nomus.models import NomusSyncRun
+
+        before = NomusSyncRun.objects.count()
+        self.client.force_login(self.viewer_user)
+
+        resp = self.client.post(self._reexport_url())
+
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(NomusSyncRun.objects.count(), before)

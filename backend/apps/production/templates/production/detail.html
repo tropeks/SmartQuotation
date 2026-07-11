@@ -157,6 +157,20 @@
 </section>
 {% endif %}
 
+{% if of.status == "liberada" or of.status == "em_producao" or of.status == "concluida" %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Exportação Nomus</h3></header>
+  <div class="g-section-body" style="padding:12px">
+    <div id="nomus-export-panel"
+         hx-get="{% url 'nomus:export_panel' of.pk %}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      Carregando…
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>Estrutura Analítica (EAP)</h3></header>
   <div class="g-section-body" style="padding:0">

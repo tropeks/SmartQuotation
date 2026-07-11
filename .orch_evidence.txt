@@ -1,26 +1,38 @@
-EPICO 2, task 4/6 — roteamento do export Nomus na liberação da OF + reexport manual
+EPICO 2, task 5/6 — painel de log de export Nomus na UI + reexport manual
 
 ## Comandos rodados
 
-1) TDD red phase (antes da implementação):
-   cd backend && .venv/bin/python manage.py test apps.production -v 2 --noinput
-   Resultado: 63 testes, 2 falhas (as novas: test_liberar_enfileira_export_nomus_quando_ativo
-   -> NomusSyncRun.DoesNotExist; test_reexport_manual_nomus_cria_novo_run -> AssertionError
-   0 != 1, services.reexport_nomus ainda não existia). Confirma que os testes realmente
-   cobrem o comportamento novo antes de implementar.
+1) TDD red phase (antes da implementação — views.py/urls.py de nomus ainda não existiam):
+   cd backend && .venv/bin/python manage.py test apps.integrations.nomus.tests.NomusExportPanelViewTests -v 2 --noinput
+   Resultado: Ran 3 tests ... FAILED (failures=3). Os 3 testes novos batiam 404 (rotas
+   'nomus:export_panel' / 'nomus:reexport' inexistentes), confirmando que cobrem
+   comportamento ainda não implementado.
 
-2) TDD green phase (depois da implementação):
-   cd backend && .venv/bin/python manage.py test apps.production -v 1 --noinput
-   Resultado: Ran 63 tests in 167.3s — OK (todos passando, incluindo os 3 novos + os
-   pré-existentes de sap_b1/protheus/omie, que continuam verdes).
+2) TDD green phase (depois de views.py + urls.py + template + include no urlconf raiz):
+   cd backend && .venv/bin/python manage.py test apps.integrations.nomus.tests.NomusExportPanelViewTests -v 2 --noinput --keepdb
+   Resultado: Ran 3 tests in 16.3s — OK.
 
-3) Gate oficial da tarefa:
+   Nota de processo: a primeira versão do parcial usava um comentário multi-linha citando o
+   próprio texto do GOTCHA ("... só com {% comment %}/{% endcomment %} ...") dentro de um bloco
+   {% comment %}...{% endcomment %}. O parser do Django tokeniza o arquivo inteiro antes de
+   interpretar tags, então o {% endcomment %} citado como texto dentro do comentário foi
+   consumido como o fechamento real, sobrando um {% endcomment %} solto -> TemplateSyntaxError
+   "Invalid block tag on line 4: 'endcomment'". Corrigido removendo o bloco {% comment %} e
+   deixando um comentário de uma linha com {# ... #} (sem sintaxe de tag citada dentro).
+   Reproduz na prática o gotcha citado na tarefa.
+
+3) Regressão da suíte de integração Nomus + produção (sem mocks pulados):
+   cd backend && .venv/bin/python manage.py test apps.integrations.nomus apps.production -v 1 --noinput --keepdb
+   Resultado: Ran 79 tests in 215.0s — OK.
+
+4) Gate oficial da tarefa:
    bash .orch-test.sh
    Resultado:
    [1/3] Django system check -> OK (0 issues)
-   [2/3] makemigrations --check --dry-run -> "No changes detected" (nenhuma migration pendente)
+   [2/3] makemigrations --check --dry-run -> "No changes detected" (nenhuma migration pendente
+        — não criei/alterei nenhum model)
    [3/3] manage.py test apps.quotations apps.proposals apps.production apps.audit apps.accounts
-        -> Ran 202 tests in 489.4s — OK
+        -> Ran 202 tests in 475.6s — OK
    "=== ALL TESTS PASSED ✓ ==="
 
 TEST_CMD: bash .orch-test.sh
@@ -28,57 +40,78 @@ TEST_CMD: bash .orch-test.sh
 ## PASS/FAIL
 
 - Django check: PASS
-- makemigrations --check: PASS (sem migrations pendentes — não criei/alterei models)
-- Suite apps.production (63 testes): PASS
-- Suite completa do gate (202 testes, apps.quotations/proposals/production/audit/accounts): PASS
-- pricing_engine: intocado (nenhum arquivo sob pricing_engine/ no diff); os gates do motor não
-  são invocados pelo .orch-test.sh deste repo (escopo é apps.production/quotations/proposals/
-  audit/accounts), e não foram tocados.
+- makemigrations --check: PASS (sem migrations pendentes — não toquei em models)
+- Suite dedicada apps.integrations.nomus.tests.NomusExportPanelViewTests (3 testes novos): PASS
+- Suite apps.integrations.nomus + apps.production (79 testes, sem regressão): PASS
+- Gate oficial `.orch-test.sh` (202 testes, apps.quotations/proposals/production/audit/accounts): PASS
+- pricing_engine: intocado (nenhum arquivo sob pricing_engine/ no diff); gates do motor
+  (validate_feixe_completo / validate_permutador_completo) não tocados nem invocados por esta
+  tarefa, escopo é backend Django.
 
 ## Resumo do diff
 
-Arquivos tocados (só backend/apps/production/, nada em pricing_engine nem em
-apps/integrations/nomus — que já existia das tasks 2-3):
+Arquivos tocados (nenhum em pricing_engine):
 
-1) backend/apps/production/services.py
-   - transition(): quando new_status == STATUS_LIBERADA, além de _schedule_protheus_export
-     (inalterado, sempre chamado), agora consulta apps.integrations.routing.get_active_erp()
-     e roteia: 'nomus' -> _schedule_nomus_export(of); 'sap_b1' -> _schedule_sap_b1_export(of)
-     (comportamento antigo preservado, só passou a ser condicional ao ERP ativo); 'none' ->
-     no-op (nenhum export de ERP mutuamente-exclusivo é agendado). Comentário no código
-     registra a decisão de manter o disparo na LIBERAÇÃO (não na conversão), com nota de que
-     é um ajuste de 1 linha se o dono do produto quiser mudar para o evento de conversão.
-   - Nova função _schedule_nomus_export(of, trigger="release"): mesmo padrão de
-     _schedule_sap_b1_export/_schedule_protheus_export — chama
-     nomus.services.maybe_enqueue_export(of, trigger=...) e, se criar run, agenda
-     nomus.services.enqueue_sync_run_async via transaction.on_commit (import local, para não
-     acoplar o app production a integrations no import-time e permitir mock/patch nos testes,
-     igual ao padrão já usado para sap_b1/protheus).
-   - Nova função pública reexport_nomus(of, by=None, request=None): reexport MANUAL — chama
-     _schedule_nomus_export(of, trigger="manual") e grava AccessLog (action="nomus_reexport")
-     quando request é passado. Será chamada por uma view/botão na task 6 (UI); esta task só
-     expõe o service.
+1) backend/apps/integrations/nomus/views.py (NOVO)
+   - `_sync_runs_for_of(of)`: filtra NomusSyncRun por entity_type=production_order e
+     payload__source_snapshot__of_id=of.pk (correlação OF <-> runs via o campo já gravado por
+     serialize_production_order_from_of na task 2/3), com select_related("export_log") para
+     evitar N+1 no template.
+   - `export_panel(request, of_pk)`: view GET, @login_required (leitura liberada a qualquer
+     membro autenticado do tenant), renderiza o parcial "nomus/_export_panel.html" com os
+     sync runs + export logs da OF e a flag can_reexport (calculada via
+     apps.accounts.rbac.user_role).
+   - `reexport(request, of_pk)`: view POST, @require_role(engenheiro, gestor_comercial, admin)
+     + @require_POST — chama apps.production.services.reexport_nomus (já existente da task 4)
+     e re-renderiza o mesmo parcial (HTMX re-swap do painel), permitindo reexport sem reload de
+     página. Usuário autenticado sem um desses papéis recebe 403 (PermissionDenied do próprio
+     decorator require_role).
 
-2) backend/apps/production/tests.py
-   - Import de NomusIntegrationConfig/NomusSyncRun.
-   - 3 testes novos em OrdemFabricacaoTests:
-     a) test_liberar_enfileira_export_nomus_quando_ativo: com NomusIntegrationConfig(enabled=True)
-        e nenhum SAP B1, liberar a OF cria um NomusSyncRun (entity_type=production_order,
-        payload.order_number == of.number) e agenda enqueue_sync_run_async uma vez com o run
-        correto (patch de apps.integrations.nomus.services.enqueue_sync_run_async).
-     b) test_liberar_com_sap_b1_ativo_usa_sap_b1_e_nao_dispara_nomus: com SAP B1 habilitado
-        (Nomus não configurado -> get_active_erp()=='sap_b1'), liberar cria SapB1SyncRun e
-        NÃO cria nenhum NomusSyncRun; enqueue do nomus não é chamado.
-     c) test_reexport_manual_nomus_cria_novo_run: libera a OF (1º run automático), depois
-        chama services.reexport_nomus(of, by=..., request=...) e confere que um 2º
-        NomusSyncRun é criado, o enqueue é chamado 2x no total, e um AccessLog
-        action="nomus_reexport" é gravado.
+2) backend/apps/integrations/nomus/urls.py (NOVO)
+   - app_name="nomus"; rotas
+     ofs/<int:of_pk>/nomus/painel/ -> export_panel (name="export_panel")
+     ofs/<int:of_pk>/nomus/reexport/ -> reexport (name="reexport")
+
+3) backend/apps/integrations/nomus/templates/nomus/_export_panel.html (NOVO)
+   - Tabela Design System G (classe g-table) com Status/Remote ID/Conflito(+motivo)/
+     Tentativas/Data por sync run; motivo de conflito em destaque com var(--g-orange);
+     estado vazio ("Nenhum export Nomus registrado para esta OF."); form de reexport (só
+     renderizado quando can_reexport) com hx-post + hx-target="#nomus-export-panel" +
+     hx-swap="innerHTML" para re-swap HTMX puro, sem SPA.
+
+4) backend/apps/production/templates/production/detail.html
+   - Nova seção "Exportação Nomus" (g-section), visível apenas quando a OF já foi liberada
+     (status liberada/em_producao/concluida — antes disso não há o que exportar), com
+     div#nomus-export-panel carregando o parcial via hx-get + hx-trigger="load" (mesmo padrão
+     já usado no convertibility-panel de quotations/detail.html).
+
+5) backend/smartquotation/urls.py
+   - include("apps.integrations.nomus.urls") no urlconf de tenant, ao lado dos demais apps.
+
+6) backend/apps/integrations/nomus/tests.py
+   - Nova classe NomusExportPanelViewTests(TenantTestCase): setUp cria customer/quotation
+     aprovada, OF liberada com NomusIntegrationConfig inicialmente desabilitado (evita run
+     automático de liberação poluir a contagem), habilita o config depois, e cria 2 sync runs
+     manuais via services.maybe_enqueue_export + process_sync_run (2º em conflito, mesmo padrão
+     do teste test_reexport_of_already_exported_marks_conflict já existente) para ter dado real
+     de conflito a exibir.
+     a) test_painel_get_mostra_status_export_e_conflito: GET do painel por usuário orcamentista
+        (papel de leitura) retorna 200 e o HTML contém "Success" e o texto exato do
+        conflict_reason gravado pelo service.
+     b) test_reexport_por_papel_autorizado_cria_novo_run: POST por usuário engenheiro (mock de
+        enqueue_sync_run_async para não depender de Celery) retorna 200, cria +1 NomusSyncRun e
+        chama o enqueue uma vez.
+     c) test_reexport_por_papel_sem_permissao_retorna_403: POST pelo mesmo usuário orcamentista
+        (papel sem permissão de escrita para este recurso) retorna 403 e não cria nenhum
+        NomusSyncRun novo.
 
 ## Conclusão
 
-Tarefa concluída: o roteamento do export Nomus na liberação da OF está implementado e
-coberto por testes (TDD: testes escritos primeiro, vermelhos, depois implementação, verdes),
-o SAP B1 continua funcional e testado sem regressão (test_liberar_enfileira_export_sap_b1_*
-e test_liberar_nao_enfileira_sap_b1_* seguem passando), o Protheus não foi alterado, o reexport
-manual está exposto como função de serviço pronta para a UI da task 6, e o gate
-`bash .orch-test.sh` passa integralmente (202 testes) sem tocar em pricing_engine.
+Tarefa concluída: o log de export/sync Nomus (status, remote_id, conflito+motivo, tentativas,
+data) ficou visível na UI da OF via painel HTMX (GET, liberado a qualquer membro do tenant) e
+o reexport manual foi exposto como botão que chama o service já existente da task 4
+(production.services.reexport_nomus), restrito por RBAC aos papéis de escrita
+(engenheiro/gestor_comercial/admin) — usuário sem esses papéis recebe 403. Implementado em TDD
+(3 testes escritos e vermelhos antes, verdes depois), sem regressão na suíte de nomus/production
+(79 testes) nem no gate oficial do sprint (202 testes), sem tocar em pricing_engine nem em
+migrations.
