@@ -33,6 +33,7 @@ urlpatterns = [
     path("", include("apps.proposals.urls")),        # propostas DOCX/PDF
     path("", include("apps.production.urls")),       # ordens de fabricação
     path("", include("apps.engineering_params.urls")),  # learning engine: sugestões de rate
+    path("", include("apps.materials.urls")),        # catálogo e preços de materiais
     path("", include("apps.cost_discovery.urls")),   # wizard de cadeia de custos
     path("", include("apps.tema_templates.urls")),   # catálogo TEMA + composição
     path("", include("apps.integrations.nomus.urls")),  # painel de export + reexport manual

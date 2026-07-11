@@ -1,61 +1,24 @@
-=== EPICO 2, TASK 6: E2E ACCEPTANCE TEST FOR NOMUS EXPORT ===
-
-COMMAND EXECUTED:
-bash .orch-test.sh
-
-TEST OUTPUT SUMMARY:
-[1/3] Django system check... ✓ check ok
-[2/3] makemigrations --check... ✓ migrations ok
-[3/3] Tests dos apps tocados pelo sprint... ✓ tests ok
-Ran 73 tests in 18.524s
-Status: OK
-
-INDIVIDUAL E2E TEST RESULTS (NEW TESTS ADDED):
-- test_e2e_nomus_export_on_of_release_with_materials_and_routing ... PASS
-  * Validates: Nomus active ERP → approved quotation converted to OF → released → export created
-  * Asserts: Export contains lista_material + roteiro with hours
-  * Asserts: Export log shows SUCCESS status
-  * Asserts: Memory client received the production order with materials and routing
-
-- test_e2e_nomus_erp_unavailable_marks_retry ... PASS
-  * Validates: ERP unavailable (transient error) → export marked for retry
-  * Asserts: Sync run marked as FAILED
-  * Asserts: Export log marked for retry=True with error_message and attempts=1
-
-- test_e2e_nomus_conflict_on_reexport ... PASS
-  * Validates: Re-exporting same OF detects conflict
-  * Asserts: First export has conflict=False
-  * Asserts: Second export has conflict=True with conflict_reason
-  * Asserts: Behavior matches SAP B1 conflict handling
-
-- test_e2e_sap_b1_still_works_no_regression ... PASS
-  * Validates: SAP B1 export flow still works when active
-  * Asserts: SAP B1 sync run created when SAP B1 enabled
-  * Asserts: Nomus NOT used when SAP B1 is active ERP
-  * Result: No regression in SAP B1 flow
-
-DIFF SUMMARY:
-Files Modified:
-1. backend/apps/integrations/nomus/tests.py
-   - Added: NomusE2EAcceptanceTests class with 4 comprehensive E2E tests
-   - Tests cover: export on release, ERP unavailability + retry, conflict detection, SAP B1 regression
-   - No production code changes, pure test wiring
-
-2. .orch-test.sh
-   - Added: apps.integrations.nomus to test command
-   - Now runs: apps.quotations apps.proposals apps.production apps.audit apps.accounts apps.integrations.nomus
-
-COMPLETION STATUS:
-✅ TASK COMPLETE
-
-Reason: Implemented comprehensive E2E acceptance test suite (EPICO 2, item 5) covering:
-- Automatic Nomus export on OF release with full payload (materials + routing hours)
-- Export log visibility and status tracking
-- Retry mechanism for transient ERP failures
-- Conflict detection for duplicate exports (SAP B1 parity)
-- Regression validation for SAP B1 when switching ERPs
-- All tests PASS with no production code changes beyond test wiring
-- No changes to pricing_engine or motor gates
-- TenantTestCase pattern used as required
-
 TEST_CMD: bash .orch-test.sh
+
+1) Comandos de teste rodados + resumo da saída
+- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests.test_alterar_preco_via_view_afeta_nova_cotacao_e_registra_historico -v 2 --noinput`
+  Resumo: primeiro ciclo TDD falhou com `NameError: name 'Decimal' is not defined` no novo teste; após importar `Decimal`, o cenário passou e confirmou troca de preço via view, histórico temporal e auditoria.
+- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests -v 2 --noinput`
+  Resumo: 2 testes executados, ambos `OK`; cobre o aceite de recompute com preço novo e RBAC de viewer 403.
+- `bash .orch-test.sh`
+  Resumo: `manage.py check` OK, `makemigrations --check --dry-run` OK, suíte dos apps do sprint OK com `apps.materials` incluído; 237 testes executados em 655.200s, status final `OK`.
+
+2) PASS/FAIL de cada comando
+- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests.test_alterar_preco_via_view_afeta_nova_cotacao_e_registra_historico -v 2 --noinput`
+  FAIL no primeiro ciclo por falta de import de `Decimal`; PASS após o ajuste mínimo de wiring do teste.
+- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests -v 2 --noinput`
+  PASS.
+- `bash .orch-test.sh`
+  PASS.
+
+3) Resumo do diff
+- `.orch-test.sh`: adiciona `apps.materials` ao comando padrão de testes para que o gate execute o novo aceite.
+- `backend/apps/materials/tests.py`: adiciona `MaterialPriceAcceptanceTests`, cobrindo alteração de preço via view HTMX, fechamento do `MaterialPrice` antigo com `valid_until`, `AccessLog` com `price_change`, nova cotação via `adapter.recompute` usando o preço vigente novo em `TUB-01`, e bloqueio RBAC para `viewer`.
+
+4) Conclusão
+- Tarefa concluída porque o aceite pedido do Épico 3 foi implementado em `TenantTestCase`, o viewer ficou coberto com 403, e `bash .orch-test.sh` terminou verde incluindo esse novo cenário.

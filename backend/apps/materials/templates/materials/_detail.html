@@ -1,0 +1,127 @@
+<div id="material-detail">
+<div class="eyebrow">MAT · Detalhe</div>
+<nav class="g-breadcrumb" aria-label="Trilha de navegação" style="margin-top:8px">
+  <a href="{% url 'materials:list' %}">Materiais</a>
+  <span class="sep">/</span>
+  <span class="current">{{ material.sigla }}</span>
+</nav>
+
+<header style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:8px">
+  <div>
+    <h1 class="q-number">{{ material.sigla }}</h1>
+    <p class="mono" style="color:var(--g-gray-1);margin:4px 0 0">
+      {{ material.tipo|default:"—" }} · {{ material.norma|default:"—" }} · {% if material.forma_padrao %}{{ material.forma_padrao }}{% else %}Sem forma padrão{% endif %}
+    </p>
+  </div>
+</header>
+
+<div class="stat-row" style="margin-top:12px">
+  <div class="stat">
+    <div class="lbl">Forma padrão</div>
+    <div class="val">{{ material.forma_padrao|default:"—" }}</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Situação</div>
+    <div class="val">{% if material.is_active %}Ativo{% else %}Inativo{% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="lbl">Preços vigentes</div>
+    <div class="val mono">{{ prices|length }}</div>
+  </div>
+</div>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head">
+    <h3>Preços vigentes por forma</h3>
+  </header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead>
+        <tr>
+          <th>Forma</th>
+          <th>Preço</th>
+          <th>Fornecedor</th>
+          <th>Última cotação</th>
+          <th>Vigente desde</th>
+          <th>Vigente até</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for price in prices %}
+          <tr>
+            <td>{{ price.label }}</td>
+            <td class="mono">R$ {{ price.preco }}</td>
+            <td>{{ price.fornecedor }}</td>
+            <td>
+              {% if price.last_quote %}
+                <div class="mono">Preço usado na última cotação {{ price.last_quote.number }}</div>
+                <div class="mono" style="color:var(--g-gray-1)">R$ {{ price.last_quote.preco_kgf }}</div>
+              {% endif %}
+            </td>
+            <td class="mono">{{ price.valid_from|date:"d/m/Y" }}</td>
+            <td class="mono">{% if price.valid_until %}{{ price.valid_until|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">
+              Sem preço vigente.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if can_edit_prices %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head">
+    <h3>Editar preço por forma</h3>
+  </header>
+  <div class="g-section-body">
+    <div class="list-table-wrap table-scroll">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th>Forma</th>
+            <th>Preço vigente</th>
+            <th>Fornecedor vigente</th>
+            <th>Novo preço</th>
+            <th>Novo fornecedor</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in all_formas %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td class="mono">{% if row.current %}R$ {{ row.current.preco_brl_kg }}{% else %}—{% endif %}</td>
+            <td>{% if row.current %}{{ row.current.fornecedor|default:"—" }}{% else %}—{% endif %}</td>
+            <td colspan="3">
+              <form method="post"
+                    class="g-form"
+                    hx-post="{% url 'materials:save_price' material.pk row.forma %}"
+                    hx-target="#material-detail"
+                    hx-swap="outerHTML"
+                    style="display:grid;grid-template-columns:minmax(160px,1fr) minmax(180px,1fr) auto;gap:12px;align-items:end">
+                {% csrf_token %}
+                <label class="field" style="margin:0">
+                  <span>Preço R$/kg</span>
+                  <input type="text" name="preco_brl_kg" value="{% if row.current %}{{ row.current.preco_brl_kg }}{% endif %}" inputmode="decimal" required>
+                </label>
+                <label class="field" style="margin:0">
+                  <span>Fornecedor</span>
+                  <input type="text" name="fornecedor" value="{% if row.current %}{{ row.current.fornecedor }}{% endif %}" maxlength="255">
+                </label>
+                <button class="q-btn primary" type="submit">Salvar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+</div>

@@ -5,7 +5,9 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT/backend"
 
 PYTHON_BIN="$(command -v python || command -v python3)"
-if [ -x ".venv/bin/python" ]; then
+if [ -x "$ROOT/.venv/bin/python" ]; then
+  PYTHON_BIN="$ROOT/.venv/bin/python"
+elif [ -x ".venv/bin/python" ]; then
   PYTHON_BIN=".venv/bin/python"
 fi
 
@@ -29,7 +31,7 @@ echo "✓ migrations ok"
 echo ""
 
 echo "[3/3] Tests dos apps tocados pelo sprint..."
-"$PYTHON_BIN" manage.py test apps.quotations apps.proposals apps.production apps.audit apps.accounts apps.integrations.nomus -v 1 --noinput
+"$PYTHON_BIN" manage.py test apps.materials apps.quotations apps.proposals apps.production apps.audit apps.accounts apps.integrations.nomus -v 1 --noinput
 echo "✓ tests ok"
 echo ""
 
