@@ -401,11 +401,17 @@ class NomusE2EAcceptanceTests(TenantTestCase):
         approve_quotation(quotation, self.engineer)
         of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
 
+        from apps.integrations.nomus.tasks import process_nomus_sync_run
+
         # Mock the client for this test to avoid async tasks
         mem_client = MemoryNomusClient()
         with mock.patch(
             "apps.integrations.nomus.services._build_client",
             return_value=mem_client,
+        ), mock.patch.object(
+            process_nomus_sync_run,
+            "delay",
+            side_effect=lambda **kwargs: process_nomus_sync_run(**kwargs),
         ):
             with self.captureOnCommitCallbacks(execute=True):
                 production_services.liberar(of, by=self.user)
@@ -477,10 +483,22 @@ class NomusE2EAcceptanceTests(TenantTestCase):
             def upsert_production_order(self, payload):
                 raise HttpNomusTransientError("ERP offline - retry later")
 
+        from apps.integrations.nomus.tasks import process_nomus_sync_run
+
+        def _delay_eager(**kwargs):
+            # Chamado diretamente (fora do worker), o autoretry re-levanta o
+            # HttpNomusTransientError; aqui só interessa o estado persistido.
+            try:
+                process_nomus_sync_run(**kwargs)
+            except HttpNomusTransientError:
+                pass
+
         failing_client = FailingClient()
         with mock.patch(
             "apps.integrations.nomus.services._build_client",
             return_value=failing_client,
+        ), mock.patch.object(
+            process_nomus_sync_run, "delay", side_effect=_delay_eager
         ):
             with self.captureOnCommitCallbacks(execute=True):
                 production_services.liberar(of, by=self.user)
@@ -525,12 +543,18 @@ class NomusE2EAcceptanceTests(TenantTestCase):
         approve_quotation(quotation, self.engineer)
         of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
 
+        from apps.integrations.nomus.tasks import process_nomus_sync_run
+
         mem_client = MemoryNomusClient()
 
         # First export (successful)
         with mock.patch(
             "apps.integrations.nomus.services._build_client",
             return_value=mem_client,
+        ), mock.patch.object(
+            process_nomus_sync_run,
+            "delay",
+            side_effect=lambda **kwargs: process_nomus_sync_run(**kwargs),
         ):
             with self.captureOnCommitCallbacks(execute=True):
                 production_services.liberar(of, by=self.user)
