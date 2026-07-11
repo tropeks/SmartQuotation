@@ -1,19 +1,84 @@
-TEST_CMD: bash -lc 'bash .orch-test.sh && cd backend && POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.integrations.nomus.tests.NomusServicesTests apps.integrations.nomus.tests.NomusTasksTests --noinput --keepdb'
+EPICO 2, task 4/6 — roteamento do export Nomus na liberação da OF + reexport manual
 
-Comandos de teste executados + resumo da saida:
-1. `cd backend && POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.integrations.nomus.tests.NomusServicesTests apps.integrations.nomus.tests.NomusTasksTests --noinput --keepdb`
-Resumo: usou a base de teste existente, encontrou 4 testes, executou os cenarios de exportacao, conflito, falha retryable e task por schema; resultado `Ran 4 tests ... OK`.
-2. `bash -lc 'bash .orch-test.sh && cd backend && POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.integrations.nomus.tests.NomusServicesTests apps.integrations.nomus.tests.NomusTasksTests --noinput --keepdb'`
-Resumo: `.orch-test.sh` passou com `Ran 199 tests ... OK` e sem migrations pendentes; em seguida a suite Nomus dedicada rodou `Ran 4 tests ... OK`.
+## Comandos rodados
 
-PASS/FAIL de cada comando:
-1. PASS
-2. PASS
+1) TDD red phase (antes da implementação):
+   cd backend && .venv/bin/python manage.py test apps.production -v 2 --noinput
+   Resultado: 63 testes, 2 falhas (as novas: test_liberar_enfileira_export_nomus_quando_ativo
+   -> NomusSyncRun.DoesNotExist; test_reexport_manual_nomus_cria_novo_run -> AssertionError
+   0 != 1, services.reexport_nomus ainda não existia). Confirma que os testes realmente
+   cobrem o comportamento novo antes de implementar.
 
-Resumo do diff:
-- `backend/apps/integrations/nomus/services.py`: adiciona serializacao deterministica de OF para payload Nomus com `lista_material` e `roteiro`, criacao de `NomusSyncRun`, fallback para `MemoryNomusClient`, processamento de exportacao, gravacao de `NomusExportLog`, retry flag em falhas transientes e marcacao de conflito em reexport.
-- `backend/apps/integrations/nomus/tasks.py`: adiciona task Celery `process_nomus_sync_run` com `autoretry_for(HttpNomusTransientError)` e wrapper por tenant schema.
-- `backend/apps/integrations/nomus/tests.py`: adiciona testes TenantTestCase para exportacao bem-sucedida, reexport com conflito, falha do ERP com retry e task executando no schema correto.
+2) TDD green phase (depois da implementação):
+   cd backend && .venv/bin/python manage.py test apps.production -v 1 --noinput
+   Resultado: Ran 63 tests in 167.3s — OK (todos passando, incluindo os 3 novos + os
+   pré-existentes de sap_b1/protheus/omie, que continuam verdes).
 
-Conclusao:
-Tarefa concluida porque o fluxo Nomus de servico/task foi implementado em TDD, os cenarios exigidos passaram na suite dedicada e o gate `bash .orch-test.sh` ficou verde.
+3) Gate oficial da tarefa:
+   bash .orch-test.sh
+   Resultado:
+   [1/3] Django system check -> OK (0 issues)
+   [2/3] makemigrations --check --dry-run -> "No changes detected" (nenhuma migration pendente)
+   [3/3] manage.py test apps.quotations apps.proposals apps.production apps.audit apps.accounts
+        -> Ran 202 tests in 489.4s — OK
+   "=== ALL TESTS PASSED ✓ ==="
+
+TEST_CMD: bash .orch-test.sh
+
+## PASS/FAIL
+
+- Django check: PASS
+- makemigrations --check: PASS (sem migrations pendentes — não criei/alterei models)
+- Suite apps.production (63 testes): PASS
+- Suite completa do gate (202 testes, apps.quotations/proposals/production/audit/accounts): PASS
+- pricing_engine: intocado (nenhum arquivo sob pricing_engine/ no diff); os gates do motor não
+  são invocados pelo .orch-test.sh deste repo (escopo é apps.production/quotations/proposals/
+  audit/accounts), e não foram tocados.
+
+## Resumo do diff
+
+Arquivos tocados (só backend/apps/production/, nada em pricing_engine nem em
+apps/integrations/nomus — que já existia das tasks 2-3):
+
+1) backend/apps/production/services.py
+   - transition(): quando new_status == STATUS_LIBERADA, além de _schedule_protheus_export
+     (inalterado, sempre chamado), agora consulta apps.integrations.routing.get_active_erp()
+     e roteia: 'nomus' -> _schedule_nomus_export(of); 'sap_b1' -> _schedule_sap_b1_export(of)
+     (comportamento antigo preservado, só passou a ser condicional ao ERP ativo); 'none' ->
+     no-op (nenhum export de ERP mutuamente-exclusivo é agendado). Comentário no código
+     registra a decisão de manter o disparo na LIBERAÇÃO (não na conversão), com nota de que
+     é um ajuste de 1 linha se o dono do produto quiser mudar para o evento de conversão.
+   - Nova função _schedule_nomus_export(of, trigger="release"): mesmo padrão de
+     _schedule_sap_b1_export/_schedule_protheus_export — chama
+     nomus.services.maybe_enqueue_export(of, trigger=...) e, se criar run, agenda
+     nomus.services.enqueue_sync_run_async via transaction.on_commit (import local, para não
+     acoplar o app production a integrations no import-time e permitir mock/patch nos testes,
+     igual ao padrão já usado para sap_b1/protheus).
+   - Nova função pública reexport_nomus(of, by=None, request=None): reexport MANUAL — chama
+     _schedule_nomus_export(of, trigger="manual") e grava AccessLog (action="nomus_reexport")
+     quando request é passado. Será chamada por uma view/botão na task 6 (UI); esta task só
+     expõe o service.
+
+2) backend/apps/production/tests.py
+   - Import de NomusIntegrationConfig/NomusSyncRun.
+   - 3 testes novos em OrdemFabricacaoTests:
+     a) test_liberar_enfileira_export_nomus_quando_ativo: com NomusIntegrationConfig(enabled=True)
+        e nenhum SAP B1, liberar a OF cria um NomusSyncRun (entity_type=production_order,
+        payload.order_number == of.number) e agenda enqueue_sync_run_async uma vez com o run
+        correto (patch de apps.integrations.nomus.services.enqueue_sync_run_async).
+     b) test_liberar_com_sap_b1_ativo_usa_sap_b1_e_nao_dispara_nomus: com SAP B1 habilitado
+        (Nomus não configurado -> get_active_erp()=='sap_b1'), liberar cria SapB1SyncRun e
+        NÃO cria nenhum NomusSyncRun; enqueue do nomus não é chamado.
+     c) test_reexport_manual_nomus_cria_novo_run: libera a OF (1º run automático), depois
+        chama services.reexport_nomus(of, by=..., request=...) e confere que um 2º
+        NomusSyncRun é criado, o enqueue é chamado 2x no total, e um AccessLog
+        action="nomus_reexport" é gravado.
+
+## Conclusão
+
+Tarefa concluída: o roteamento do export Nomus na liberação da OF está implementado e
+coberto por testes (TDD: testes escritos primeiro, vermelhos, depois implementação, verdes),
+o SAP B1 continua funcional e testado sem regressão (test_liberar_enfileira_export_sap_b1_*
+e test_liberar_nao_enfileira_sap_b1_* seguem passando), o Protheus não foi alterado, o reexport
+manual está exposto como função de serviço pronta para a UI da task 6, e o gate
+`bash .orch-test.sh` passa integralmente (202 testes) sem tocar em pricing_engine.
