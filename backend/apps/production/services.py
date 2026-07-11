@@ -187,7 +187,17 @@ def transition(of: OrdemFabricacao, new_status: str, by=None, request=None) -> O
 
     if new_status == STATUS_LIBERADA:
         _schedule_protheus_export(of)
-        _schedule_sap_b1_export(of)
+        # A SPEC pede export no evento de "conversão"; seguimos a convenção já
+        # existente (disparo na liberação) para consistência com sap_b1/protheus.
+        # Se o dono do produto quiser mover para a conversão (STATUS_ABERTA), é
+        # um ajuste de 1 linha aqui.
+        from apps.integrations.routing import get_active_erp
+
+        active_erp = get_active_erp()
+        if active_erp == "nomus":
+            _schedule_nomus_export(of)
+        elif active_erp == "sap_b1":
+            _schedule_sap_b1_export(of)
 
     if new_status == STATUS_CONCLUIDA:
         _close_out_observations(of)
@@ -248,6 +258,30 @@ def _schedule_sap_b1_export(of):
         )
 
     return so_run, bom_run
+
+
+def _schedule_nomus_export(of, trigger="release"):
+    from apps.integrations.nomus import services as nomus_services
+
+    run = nomus_services.maybe_enqueue_export(of, trigger=trigger)
+    if run is None:
+        return None
+    schema_name = connection.schema_name
+    transaction.on_commit(
+        lambda: nomus_services.enqueue_sync_run_async(run, schema_name=schema_name)
+    )
+    return run
+
+
+def reexport_nomus(of, by=None, request=None):
+    """Reexport manual da OF para o Nomus (botão da UI — task 6)."""
+    run = _schedule_nomus_export(of, trigger="manual")
+    if request is not None:
+        log_access(request, "nomus_reexport", of, {
+            "of_number": of.number,
+            "run_id": getattr(run, "pk", None),
+        })
+    return run
 
 
 def _schedule_omie_nfe_issue(of):
