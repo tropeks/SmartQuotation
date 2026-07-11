@@ -12,6 +12,7 @@ from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
 from apps.audit.services import log_access
 from apps.materials.models import Material, MaterialPrice
+from apps.quotations.models import ItemMaterial
 
 _READ_ROLES = (
     UserProfile.ROLE_ORCAMENTISTA,
@@ -46,6 +47,21 @@ def _current_prices(prices, today):
         if price.valid_from == existing.valid_from and price.created_at > existing.created_at:
             current[price.forma] = price
     return current
+
+
+def _latest_quotation_usage(material_sigla, forma):
+    item_material = (
+        ItemMaterial.objects.select_related("item__quotation")
+        .filter(material=material_sigla, forma=forma)
+        .order_by("-item__quotation__created_at", "-pk")
+        .first()
+    )
+    if item_material is None:
+        return None
+    return {
+        "number": item_material.item.quotation.number,
+        "preco_kgf": str(item_material.preco_kgf),
+    }
 
 
 def _materials_context(request):
@@ -98,6 +114,7 @@ def _material_detail_context(material):
                 "fornecedor": prices[forma].fornecedor or "—",
                 "valid_from": prices[forma].valid_from,
                 "valid_until": prices[forma].valid_until,
+                "last_quote": _latest_quotation_usage(material.sigla, forma),
             }
             for forma, _ in MaterialPrice.FORMA
             if forma in prices
@@ -107,6 +124,7 @@ def _material_detail_context(material):
                 "forma": forma,
                 "label": label,
                 "current": prices.get(forma),
+                "last_quote": _latest_quotation_usage(material.sigla, forma),
             }
             for forma, label in MaterialPrice.FORMA
         ],

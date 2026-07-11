@@ -41,6 +41,7 @@
           <th>Forma</th>
           <th>Preço</th>
           <th>Fornecedor</th>
+          <th>Última cotação</th>
           <th>Vigente desde</th>
           <th>Vigente até</th>
         </tr>
@@ -51,12 +52,18 @@
             <td>{{ price.label }}</td>
             <td class="mono">R$ {{ price.preco }}</td>
             <td>{{ price.fornecedor }}</td>
+            <td>
+              {% if price.last_quote %}
+                <div class="mono">Preço usado na última cotação {{ price.last_quote.number }}</div>
+                <div class="mono" style="color:var(--g-gray-1)">R$ {{ price.last_quote.preco_kgf }}</div>
+              {% endif %}
+            </td>
             <td class="mono">{{ price.valid_from|date:"d/m/Y" }}</td>
             <td class="mono">{% if price.valid_until %}{{ price.valid_until|date:"d/m/Y" }}{% else %}—{% endif %}</td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">
+            <td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">
               Sem preço vigente.
             </td>
           </tr>

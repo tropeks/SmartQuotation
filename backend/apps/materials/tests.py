@@ -14,6 +14,7 @@ from django_tenants.test.cases import TenantTestCase
 from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog
 from apps.materials.models import Material, MaterialPrice, LigaMetalurgica
+from apps.quotations.models import Customer, ItemMaterial, Quotation, QuotationItem
 
 
 class SeedLigasFromDbTest(TenantTestCase):
@@ -168,6 +169,68 @@ class MaterialListViewTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "MAT-VAZIO")
         self.assertContains(resp, "Sem preço vigente")
+
+    def test_detalhe_mostra_preco_da_ultima_cotacao_por_forma(self):
+        customer = Customer.objects.create(company_name="Cliente Teste")
+        older = Quotation.objects.create(
+            number="COT-0001",
+            customer=customer,
+            title="Cotação Antiga",
+        )
+        newer = Quotation.objects.create(
+            number="COT-0002",
+            customer=customer,
+            title="Cotação Nova",
+        )
+        older_item = QuotationItem.objects.create(
+            quotation=older,
+            codigo_item="IT-001",
+            descricao="Item Antigo",
+        )
+        newer_item = QuotationItem.objects.create(
+            quotation=newer,
+            codigo_item="IT-002",
+            descricao="Item Novo",
+        )
+        ItemMaterial.objects.create(
+            item=older_item,
+            codigo_mp="MP-001",
+            descricao="Material Antigo",
+            material=self.material.sigla,
+            forma="chapa",
+            peso_bruto_kg="1.000",
+            peso_liquido_kg="1.000",
+            preco_kgf="7.5000",
+            custo="7.50",
+        )
+        ItemMaterial.objects.create(
+            item=newer_item,
+            codigo_mp="MP-002",
+            descricao="Material Novo",
+            material=self.material.sigla,
+            forma="chapa",
+            peso_bruto_kg="1.000",
+            peso_liquido_kg="1.000",
+            preco_kgf="9.8700",
+            custo="9.87",
+        )
+
+        self.client.force_login(self.user)
+        resp = self.client.get(f"/materiais/{self.material.pk}/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Última cotação")
+        self.assertContains(resp, "COT-0002")
+        self.assertContains(resp, "R$ 9.8700")
+
+    def test_detalhe_sem_uso_na_ultima_cotacao_fica_vazio(self):
+        self.client.force_login(self.user)
+        resp = self.client.get(f"/materiais/{self.other_material.pk}/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "MAT-EXTRA")
+        self.assertNotContains(resp, "COT-")
+        self.assertNotContains(resp, "R$ 9.8700")
 
 
 class MaterialPriceEditViewTests(TenantTestCase):

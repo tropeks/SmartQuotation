@@ -1,20 +1,17 @@
 TEST_CMD: bash .orch-test.sh
 
-(1) Comandos de teste rodados + resumo da saída
-- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation .venv/bin/python backend/manage.py test apps.materials.tests.MaterialPriceEditViewTests -v 2 --noinput`
-  Resumo: criou banco de teste tenantizado, executou 2 testes da nova feature, ambos `OK`.
-- `bash .orch-test.sh`
-  Resumo: `manage.py check` OK, `makemigrations --check --dry-run` sem mudanças, suíte dos apps do gate executou 222 testes e terminou `OK`.
+1. `python3 backend/manage.py test apps.materials.tests.MaterialListViewTests.test_detalhe_mostra_preco_da_ultima_cotacao_por_forma apps.materials.tests.MaterialListViewTests.test_detalhe_sem_uso_na_ultima_cotacao_fica_vazio -v 2 --noinput`
+   - FAIL: environment missing Django (`ModuleNotFoundError: No module named 'django'`).
+2. `.venv/bin/python backend/manage.py test apps.materials.tests.MaterialListViewTests.test_detalhe_mostra_preco_da_ultima_cotacao_por_forma apps.materials.tests.MaterialListViewTests.test_detalhe_sem_uso_na_ultima_cotacao_fica_vazio -v 2 --noinput`
+   - FAIL: test database connection tried port 5432 and was refused (`OperationalError`).
+3. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation .venv/bin/python backend/manage.py test apps.materials.tests.MaterialListViewTests.test_detalhe_mostra_preco_da_ultima_cotacao_por_forma apps.materials.tests.MaterialListViewTests.test_detalhe_sem_uso_na_ultima_cotacao_fica_vazio -v 1 --noinput`
+   - PASS: 2 tests executed, migrations applied, both assertions passed.
+4. `bash .orch-test.sh`
+   - PASS: `manage.py check` ok, `makemigrations --check` ok, and 222 tests passed.
 
-(2) PASS/FAIL de cada comando
-- PASS — `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation .venv/bin/python backend/manage.py test apps.materials.tests.MaterialPriceEditViewTests -v 2 --noinput`
-- PASS — `bash .orch-test.sh`
+Diff summary:
+- `backend/apps/materials/views.py`: added a read-only helper that fetches the latest `ItemMaterial` usage by `material` and `forma`, then exposed it in the material detail context.
+- `backend/apps/materials/templates/materials/_detail.html`: added an "Última cotação" column showing the latest quotation number and the `preco_kgf`, or leaving the cell empty when there is no usage.
+- `backend/apps/materials/tests.py`: added tenant tests covering the latest-quotation indicator and the empty state when a material/forma has no prior quotation usage.
 
-(3) Resumo do diff
-- `backend/apps/materials/tests.py`: adicionados testes TDD para POST autorizado criar histórico temporal + `AccessLog` `price_change`, e para POST sem permissão retornar 403 sem alterar preços.
-- `backend/apps/materials/views.py`: adicionado endpoint POST HTMX com RBAC de escrita (`engenheiro`, `gestor_comercial`, `admin`), fechamento do `MaterialPrice` vigente com `valid_until = hoje - 1`, criação do novo preço com `valid_from = hoje`, e auditoria via `log_access`.
-- `backend/apps/materials/urls.py`: adicionada rota `materiais/<pk>/precos/<forma>/`.
-- `backend/apps/materials/templates/materials/_detail.html`: adicionada UI Design System G para editar preço por forma no detalhe, com swap HTMX do bloco inteiro.
-
-(4) Conclusão
-- Tarefa concluída porque a edição temporal de preço por forma foi implementada com histórico e auditoria, o RBAC de leitura/escrita foi respeitado, os testes específicos da feature passaram e o gate `bash .orch-test.sh` permaneceu verde.
+Task completed: yes. The material detail screen now shows the latest quotation number and price for each material/forma, with empty output when no usage exists, and the full sprint gate passed.
