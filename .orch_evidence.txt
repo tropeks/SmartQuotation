@@ -1,22 +1,20 @@
 TEST_CMD: bash .orch-test.sh
 
-1) Test commands run
-- `.venv/bin/python backend/manage.py test backend.apps.materials.tests.MaterialListViewTests.test_detalhe_renderiza_precos_vigentes_por_forma backend.apps.materials.tests.MaterialListViewTests.test_detalhe_material_sem_preco_mostra_estado_vazio -v 2 --noinput`
-  - Resumo: criou o banco de teste, aplicou migrations do tenant e executou 2 testes do app `materials`.
+(1) Comandos de teste rodados + resumo da saída
+- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation .venv/bin/python backend/manage.py test apps.materials.tests.MaterialPriceEditViewTests -v 2 --noinput`
+  Resumo: criou banco de teste tenantizado, executou 2 testes da nova feature, ambos `OK`.
 - `bash .orch-test.sh`
-  - Resumo: `manage.py check` OK, `makemigrations --check` sem pendências, suíte dos apps do sprint executou 222 testes e passou.
+  Resumo: `manage.py check` OK, `makemigrations --check --dry-run` sem mudanças, suíte dos apps do gate executou 222 testes e terminou `OK`.
 
-2) PASS/FAIL
-- Testes direcionados de `materials`: PASS
-- Gate `.orch-test.sh`: PASS
+(2) PASS/FAIL de cada comando
+- PASS — `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation .venv/bin/python backend/manage.py test apps.materials.tests.MaterialPriceEditViewTests -v 2 --noinput`
+- PASS — `bash .orch-test.sh`
 
-3) Diff summary
-- `backend/apps/materials/tests.py`: adicionados testes de detalhe com preços vigentes por forma e estado vazio; criado material sem preço para cobertura.
-- `backend/apps/materials/views.py`: adicionada view de detalhe, contexto reutilizando a seleção do preço vigente e suporte a resposta HTMX parcial.
-- `backend/apps/materials/urls.py`: adicionada rota `materiais/<int:pk>/`.
-- `backend/apps/materials/templates/materials/_results.html`: sigla da listagem virou link para o detalhe.
-- `backend/apps/materials/templates/materials/_detail.html`: novo parcial de detalhe com cabeçalho, resumo e tabela de preços vigentes.
-- `backend/apps/materials/templates/materials/detail.html`: nova página completa de detalhe.
+(3) Resumo do diff
+- `backend/apps/materials/tests.py`: adicionados testes TDD para POST autorizado criar histórico temporal + `AccessLog` `price_change`, e para POST sem permissão retornar 403 sem alterar preços.
+- `backend/apps/materials/views.py`: adicionado endpoint POST HTMX com RBAC de escrita (`engenheiro`, `gestor_comercial`, `admin`), fechamento do `MaterialPrice` vigente com `valid_until = hoje - 1`, criação do novo preço com `valid_from = hoje`, e auditoria via `log_access`.
+- `backend/apps/materials/urls.py`: adicionada rota `materiais/<pk>/precos/<forma>/`.
+- `backend/apps/materials/templates/materials/_detail.html`: adicionada UI Design System G para editar preço por forma no detalhe, com swap HTMX do bloco inteiro.
 
-4) Conclusão
-- Tarefa concluída porque a tela de detalhe de material agora renderiza os preços vigentes por forma, mostra estado vazio quando não há preço e o gate obrigatório ficou verde sem tocar em `pricing_engine`.
+(4) Conclusão
+- Tarefa concluída porque a edição temporal de preço por forma foi implementada com histórico e auditoria, o RBAC de leitura/escrita foi respeitado, os testes específicos da feature passaram e o gate `bash .orch-test.sh` permaneceu verde.

@@ -3,7 +3,7 @@ Testes do app materials.
 seed_ligas_from_db: importa a base ASME II-D 2025 (chapas) como ligas INATIVAS de catálogo,
 sem poluir o dropdown (ativas continuam as do seed_ligas) e escolhendo a linha CONSERVADORA.
 """
-from datetime import date
+from datetime import date, timedelta
 from io import StringIO
 
 from django.contrib.auth.models import User
@@ -12,6 +12,7 @@ from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.accounts.models import UserProfile
+from apps.audit.models import AccessLog
 from apps.materials.models import Material, MaterialPrice, LigaMetalurgica
 
 
@@ -167,3 +168,81 @@ class MaterialListViewTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "MAT-VAZIO")
         self.assertContains(resp, "Sem preço vigente")
+
+
+class MaterialPriceEditViewTests(TenantTestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        call_command("seed_materials")
+        self.today = timezone.localdate()
+        self.material = Material.objects.get(sigla="SA-179")
+        self.current_price = MaterialPrice.objects.create(
+            material=self.material,
+            forma="chapa",
+            preco_brl_kg="12.34",
+            fornecedor="Fornecedor Atual",
+            valid_from=self.today - timedelta(days=15),
+            valid_until=None,
+        )
+        self.editor = User.objects.create_user(username="gestor", password="senha-forte-123")
+        UserProfile.objects.create(
+            user=self.editor,
+            full_name="Gestor",
+            role=UserProfile.ROLE_GESTOR_COMERCIAL,
+        )
+        self.viewer = User.objects.create_user(username="viewer", password="senha-forte-123")
+        UserProfile.objects.create(
+            user=self.viewer,
+            full_name="Viewer",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+        )
+
+    def test_post_novo_preco_fecha_vigente_cria_historico_e_audita(self):
+        self.client.force_login(self.editor)
+
+        resp = self.client.post(
+            f"/materiais/{self.material.pk}/precos/chapa/",
+            {
+                "preco_brl_kg": "15.99",
+                "fornecedor": "Fornecedor Novo",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.current_price.refresh_from_db()
+        self.assertEqual(self.current_price.valid_until, self.today - timedelta(days=1))
+
+        prices = list(MaterialPrice.objects.filter(material=self.material, forma="chapa").order_by("valid_from"))
+        self.assertEqual(len(prices), 2)
+        novo = prices[-1]
+        self.assertEqual(novo.preco_brl_kg, "15.99")
+        self.assertEqual(novo.fornecedor, "Fornecedor Novo")
+        self.assertEqual(novo.valid_from, self.today)
+        self.assertIsNone(novo.valid_until)
+
+        log = AccessLog.objects.get(action="price_change")
+        self.assertEqual(log.user, self.editor)
+        self.assertEqual(log.resource_type, "MaterialPrice")
+        self.assertEqual(log.resource_id, str(novo.pk))
+        self.assertEqual(log.metadata["forma"], "chapa")
+        self.assertEqual(log.metadata["anterior"], "12.34")
+        self.assertEqual(log.metadata["novo"], "15.99")
+
+    def test_post_sem_permissao_retorna_403_e_nao_altera_precos(self):
+        self.client.force_login(self.viewer)
+
+        resp = self.client.post(
+            f"/materiais/{self.material.pk}/precos/chapa/",
+            {
+                "preco_brl_kg": "15.99",
+                "fornecedor": "Fornecedor Novo",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(resp.status_code, 403)
+        self.current_price.refresh_from_db()
+        self.assertIsNone(self.current_price.valid_until)
+        self.assertEqual(MaterialPrice.objects.filter(material=self.material, forma="chapa").count(), 1)
+        self.assertFalse(AccessLog.objects.filter(action="price_change").exists())

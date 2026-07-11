@@ -1,3 +1,4 @@
+<div id="material-detail">
 <div class="eyebrow">MAT · Detalhe</div>
 <nav class="g-breadcrumb" aria-label="Trilha de navegação" style="margin-top:8px">
   <a href="{% url 'materials:list' %}">Materiais</a>
@@ -64,3 +65,56 @@
     </table>
   </div>
 </section>
+
+{% if can_edit_prices %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head">
+    <h3>Editar preço por forma</h3>
+  </header>
+  <div class="g-section-body">
+    <div class="list-table-wrap table-scroll">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th>Forma</th>
+            <th>Preço vigente</th>
+            <th>Fornecedor vigente</th>
+            <th>Novo preço</th>
+            <th>Novo fornecedor</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in all_formas %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td class="mono">{% if row.current %}R$ {{ row.current.preco_brl_kg }}{% else %}—{% endif %}</td>
+            <td>{% if row.current %}{{ row.current.fornecedor|default:"—" }}{% else %}—{% endif %}</td>
+            <td colspan="3">
+              <form method="post"
+                    class="g-form"
+                    hx-post="{% url 'materials:save_price' material.pk row.forma %}"
+                    hx-target="#material-detail"
+                    hx-swap="outerHTML"
+                    style="display:grid;grid-template-columns:minmax(160px,1fr) minmax(180px,1fr) auto;gap:12px;align-items:end">
+                {% csrf_token %}
+                <label class="field" style="margin:0">
+                  <span>Preço R$/kg</span>
+                  <input type="text" name="preco_brl_kg" value="{% if row.current %}{{ row.current.preco_brl_kg }}{% endif %}" inputmode="decimal" required>
+                </label>
+                <label class="field" style="margin:0">
+                  <span>Fornecedor</span>
+                  <input type="text" name="fornecedor" value="{% if row.current %}{{ row.current.fornecedor }}{% endif %}" maxlength="255">
+                </label>
+                <button class="q-btn primary" type="submit">Salvar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+</div>
