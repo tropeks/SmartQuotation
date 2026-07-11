@@ -557,9 +557,11 @@ class NomusE2EAcceptanceTests(TenantTestCase):
         REGRESSION TEST: With SAP B1 enabled instead of Nomus,
         the SAP B1 export flow should still work.
         """
+        from apps.integrations.nomus.models import NomusIntegrationConfig
         from apps.integrations.sap_b1.fake import MemorySapB1Client
         from apps.integrations.sap_b1.models import (
             SapB1IntegrationConfig,
+            SapB1SyncBinding,
             SapB1SyncRun,
         )
         from apps.integrations.sap_b1 import services as sap_services
@@ -583,17 +585,23 @@ class NomusE2EAcceptanceTests(TenantTestCase):
         of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
 
         # Mock SAP B1 client
+        from apps.integrations.sap_b1.tasks import process_sap_b1_sync_run
+
         sap_client = MemorySapB1Client()
         with mock.patch(
-            "apps.integrations.sap_b1.services._build_client",
+            "apps.integrations.sap_b1.services.build_sap_b1_client",
             return_value=sap_client,
+        ), mock.patch.object(
+            process_sap_b1_sync_run,
+            "delay",
+            side_effect=lambda **kwargs: process_sap_b1_sync_run(**kwargs),
         ):
             with self.captureOnCommitCallbacks(execute=True):
                 production_services.liberar(of, by=self.user)
 
         # Assert: SAP B1 sync run was created (not Nomus)
         sap_run = SapB1SyncRun.objects.filter(
-            entity_type=SapB1SyncRun.ENTITY_SALES_ORDER
+            entity_type=SapB1SyncBinding.ENTITY_SALES_ORDER
         ).first()
         self.assertIsNotNone(sap_run, "SAP B1 sync run should be created")
         self.assertEqual(
