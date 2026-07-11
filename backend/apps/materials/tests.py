@@ -4,6 +4,7 @@ seed_ligas_from_db: importa a base ASME II-D 2025 (chapas) como ligas INATIVAS d
 sem poluir o dropdown (ativas continuam as do seed_ligas) e escolhendo a linha CONSERVADORA.
 """
 from datetime import date, timedelta
+from decimal import Decimal
 from io import StringIO
 
 from django.contrib.auth.models import User
@@ -15,6 +16,8 @@ from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog
 from apps.materials.models import Material, MaterialPrice, LigaMetalurgica
 from apps.quotations.models import Customer, ItemMaterial, Quotation, QuotationItem
+from apps.quotations.adapter import default_inputs, recompute
+from apps.quotations.services import next_number
 
 
 class SeedLigasFromDbTest(TenantTestCase):
@@ -308,4 +311,101 @@ class MaterialPriceEditViewTests(TenantTestCase):
         self.current_price.refresh_from_db()
         self.assertIsNone(self.current_price.valid_until)
         self.assertEqual(MaterialPrice.objects.filter(material=self.material, forma="chapa").count(), 1)
+        self.assertFalse(AccessLog.objects.filter(action="price_change").exists())
+
+
+class MaterialPriceAcceptanceTests(TenantTestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        call_command("seed_materials")
+        self.today = timezone.localdate()
+        self.material = Material.objects.get(sigla="SA-179")
+        self.current_price = MaterialPrice.objects.create(
+            material=self.material,
+            forma="tubo",
+            preco_brl_kg="12.34",
+            fornecedor="Fornecedor Atual",
+            valid_from=self.today - timedelta(days=30),
+            valid_until=None,
+        )
+        self.editor = User.objects.create_user(username="gestor-accept", password="senha-forte-123")
+        UserProfile.objects.create(
+            user=self.editor,
+            full_name="Gestor Aceite",
+            role=UserProfile.ROLE_GESTOR_COMERCIAL,
+        )
+        self.viewer = User.objects.create_user(username="viewer-accept", password="senha-forte-123")
+        UserProfile.objects.create(
+            user=self.viewer,
+            full_name="Viewer Aceite",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+        )
+        self.customer = Customer.objects.create(company_name="Cliente Aceite")
+
+    def _recompute_new_quotation(self, title):
+        quotation = Quotation.objects.create(
+            number=next_number(),
+            customer=self.customer,
+            title=title,
+            scope="tube_bundle",
+            inputs=default_inputs(),
+        )
+        recompute(quotation)
+        return quotation
+
+    def test_alterar_preco_via_view_afeta_nova_cotacao_e_registra_historico(self):
+        baseline = self._recompute_new_quotation("Feixe preço antigo")
+        baseline_tube = ItemMaterial.objects.get(item__quotation=baseline, codigo_mp="TUB-01")
+        self.assertEqual(baseline_tube.material, "SA-179")
+        self.assertEqual(baseline_tube.forma, "tubo")
+        self.assertEqual(baseline_tube.preco_kgf, Decimal("12.3400"))
+
+        self.client.force_login(self.editor)
+        resp = self.client.post(
+            f"/materiais/{self.material.pk}/precos/tubo/",
+            {
+                "preco_brl_kg": "15.99",
+                "fornecedor": "Fornecedor Novo",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.current_price.refresh_from_db()
+        self.assertEqual(self.current_price.valid_until, self.today - timedelta(days=1))
+
+        prices = list(MaterialPrice.objects.filter(material=self.material, forma="tubo").order_by("valid_from", "id"))
+        self.assertEqual(len(prices), 2)
+        current = prices[-1]
+        self.assertEqual(current.preco_brl_kg, "15.99")
+        self.assertEqual(current.valid_from, self.today)
+        self.assertIsNone(current.valid_until)
+
+        log = AccessLog.objects.get(action="price_change")
+        self.assertEqual(log.user, self.editor)
+        self.assertEqual(log.metadata["forma"], "tubo")
+        self.assertEqual(log.metadata["anterior"], "12.34")
+        self.assertEqual(log.metadata["novo"], "15.99")
+
+        revised = self._recompute_new_quotation("Feixe preço novo")
+        revised_tube = ItemMaterial.objects.get(item__quotation=revised, codigo_mp="TUB-01")
+        self.assertEqual(revised_tube.preco_kgf, Decimal("15.9900"))
+        self.assertGreater(revised_tube.custo, baseline_tube.custo)
+
+    def test_viewer_nao_consegue_alterar_preco(self):
+        self.client.force_login(self.viewer)
+
+        resp = self.client.post(
+            f"/materiais/{self.material.pk}/precos/tubo/",
+            {
+                "preco_brl_kg": "15.99",
+                "fornecedor": "Fornecedor Novo",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(resp.status_code, 403)
+        self.current_price.refresh_from_db()
+        self.assertIsNone(self.current_price.valid_until)
+        self.assertEqual(MaterialPrice.objects.filter(material=self.material, forma="tubo").count(), 1)
         self.assertFalse(AccessLog.objects.filter(action="price_change").exists())
