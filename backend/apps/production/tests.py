@@ -15,6 +15,7 @@ from django_tenants.test.cases import TenantTestCase
 from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog
 from apps.audit.services import approve_quotation, revoke_approval
+from apps.integrations.nomus.models import NomusIntegrationConfig, NomusSyncRun
 from apps.integrations.protheus.models import ProtheusIntegrationConfig, ProtheusSyncRun
 from apps.integrations.sap_b1.models import SapB1IntegrationConfig, SapB1SyncRun
 from apps.production.models import (
@@ -311,6 +312,60 @@ class OrdemFabricacaoTests(TenantTestCase):
 
         self.assertFalse(SapB1SyncRun.objects.exists())
         enqueue_sync_run_async.assert_not_called()
+
+    @mock.patch("apps.integrations.nomus.services.enqueue_sync_run_async")
+    def test_liberar_enfileira_export_nomus_quando_ativo(self, enqueue_sync_run_async):
+        NomusIntegrationConfig.objects.create(enabled=True, base_url="", access_key="")
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            services.liberar(of, by=self.user)
+
+        run = NomusSyncRun.objects.get(entity_type=NomusSyncRun.ENTITY_PRODUCTION_ORDER)
+        self.assertEqual(run.payload.get("order_number"), of.number)
+        enqueue_sync_run_async.assert_called_once()
+        self.assertEqual(enqueue_sync_run_async.call_args.args[0].pk, run.pk)
+
+    @mock.patch("apps.integrations.nomus.services.enqueue_sync_run_async")
+    @mock.patch("apps.integrations.sap_b1.services.enqueue_sync_run_async")
+    def test_liberar_com_sap_b1_ativo_usa_sap_b1_e_nao_dispara_nomus(
+        self, sap_b1_enqueue_sync_run_async, nomus_enqueue_sync_run_async
+    ):
+        SapB1IntegrationConfig.objects.create(
+            enabled=True,
+            base_url="https://sap.example/b1s/v2",
+            company_db="ENGEMATEX",
+            sync_sales_orders_enabled=True,
+            sync_boms_enabled=True,
+        )
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            services.liberar(of, by=self.user)
+
+        self.assertTrue(SapB1SyncRun.objects.filter(local_id=str(of.pk)).exists())
+        self.assertFalse(NomusSyncRun.objects.exists())
+        sap_b1_enqueue_sync_run_async.assert_called()
+        nomus_enqueue_sync_run_async.assert_not_called()
+
+    @mock.patch("apps.integrations.nomus.services.enqueue_sync_run_async")
+    def test_reexport_manual_nomus_cria_novo_run(self, enqueue_sync_run_async):
+        NomusIntegrationConfig.objects.create(enabled=True, base_url="", access_key="")
+        of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            services.liberar(of, by=self.user)
+        self.assertEqual(NomusSyncRun.objects.count(), 1)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            new_run = services.reexport_nomus(of, by=self.user, request=self._request())
+
+        self.assertEqual(NomusSyncRun.objects.count(), 2)
+        self.assertIsNotNone(new_run)
+        self.assertEqual(enqueue_sync_run_async.call_count, 2)
+        self.assertTrue(
+            AccessLog.objects.filter(action="nomus_reexport", resource_id=str(of.pk)).exists()
+        )
 
     def _fake_sap_b1_services(self, run=None, enqueue_ok=True):
         sap_b1_pkg = types.ModuleType("apps.integrations.sap_b1")

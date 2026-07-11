@@ -29,7 +29,7 @@ echo "✓ migrations ok"
 echo ""
 
 echo "[3/3] Tests dos apps tocados pelo sprint..."
-"$PYTHON_BIN" manage.py test apps.quotations apps.proposals apps.production apps.audit apps.accounts -v 1 --noinput
+"$PYTHON_BIN" manage.py test apps.quotations apps.proposals apps.production apps.audit apps.accounts apps.integrations.nomus -v 1 --noinput
 echo "✓ tests ok"
 echo ""
 
