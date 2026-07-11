@@ -356,3 +356,259 @@ class NomusExportPanelViewTests(TenantTestCase):
 
         self.assertEqual(resp.status_code, 403)
         self.assertEqual(NomusSyncRun.objects.count(), before)
+
+
+class NomusE2EAcceptanceTests(TenantTestCase):
+    """EPICO 2, Task 6: E2E acceptance test for Nomus export flow."""
+
+    def setUp(self):
+        from apps.integrations.nomus.models import NomusIntegrationConfig
+
+        self.customer = Customer.objects.create(company_name="ACME E2E Nomus")
+        self.user = User.objects.create_user(username="eng_e2e_nomus")
+        self.engineer = UserProfile.objects.create(
+            user=self.user,
+            full_name="Eng E2E Nomus",
+            role="engenheiro",
+            crea_number="CREA-991",
+            crea_state="SP",
+        )
+
+    def test_e2e_nomus_export_on_of_release_with_materials_and_routing(self):
+        """
+        Given: Nomus is active ERP
+        When: approved quotation is converted to OF and released
+        Then: export Nomus is created with lista_material + roteiro (hours)
+        And: export log is visible with SUCCESS status
+        """
+        from apps.integrations.nomus.fake import MemoryNomusClient
+        from apps.integrations.nomus.models import (
+            NomusExportLog,
+            NomusIntegrationConfig,
+            NomusSyncRun,
+        )
+        from apps.integrations.nomus import services as nomus_services
+
+        # Setup: Enable Nomus as active ERP
+        config = NomusIntegrationConfig.objects.create(
+            enabled=True,
+            base_url="",
+            access_key="",
+        )
+
+        # Create, approve, convert to OF, and release
+        quotation = create_feixe_quotation(self.customer, "Feixe E2E Nomus")
+        approve_quotation(quotation, self.engineer)
+        of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
+
+        # Mock the client for this test to avoid async tasks
+        mem_client = MemoryNomusClient()
+        with mock.patch(
+            "apps.integrations.nomus.services._build_client",
+            return_value=mem_client,
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                production_services.liberar(of, by=self.user)
+
+        # Assert: Sync run was created and processed
+        run = NomusSyncRun.objects.filter(
+            entity_type=NomusSyncRun.ENTITY_PRODUCTION_ORDER
+        ).first()
+        self.assertIsNotNone(run, "NomusSyncRun should be created on OF release")
+        self.assertEqual(run.status, NomusSyncRun.STATUS_SUCCESS)
+
+        # Assert: Export log exists and is exported
+        log = NomusExportLog.objects.get(sync_run=run)
+        self.assertEqual(log.status, NomusExportLog.STATUS_EXPORTED)
+        self.assertFalse(log.conflict)
+
+        # Assert: Payload contains lista_material and roteiro
+        payload = run.payload
+        self.assertIn("lista_material", payload)
+        self.assertIn("roteiro", payload)
+        self.assertGreater(len(payload["lista_material"]), 0)
+        self.assertGreater(len(payload["roteiro"]), 0)
+
+        # Assert: Materials contain expected fields
+        material = payload["lista_material"][0]
+        self.assertIn("item_code", material)
+        self.assertIn("codigo_mp", material)
+        self.assertIn("peso_bruto_kg", material)
+
+        # Assert: Routing contains hours
+        operation = payload["roteiro"][0]
+        self.assertIn("item_code", operation)
+        self.assertIn("codigo_op", operation)
+        self.assertIn("horas_hh", operation)
+        self.assertIn("horas_hm", operation)
+
+        # Assert: Memory client received the export
+        self.assertIn(of.number, mem_client.production_orders)
+        exported_po = mem_client.production_orders[of.number]
+        self.assertIn("lista_material", exported_po)
+        self.assertIn("roteiro", exported_po)
+
+    def test_e2e_nomus_erp_unavailable_marks_retry(self):
+        """
+        Given: Nomus is active ERP
+        When: OF is released but ERP is unavailable (transient error)
+        Then: export is marked for retry with error logged
+        """
+        from apps.integrations.nomus.client import HttpNomusTransientError
+        from apps.integrations.nomus.models import (
+            NomusExportLog,
+            NomusIntegrationConfig,
+            NomusSyncRun,
+        )
+
+        # Setup: Enable Nomus
+        NomusIntegrationConfig.objects.create(
+            enabled=True,
+            base_url="",
+            access_key="",
+        )
+
+        quotation = create_feixe_quotation(self.customer, "Feixe E2E Retry")
+        approve_quotation(quotation, self.engineer)
+        of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
+
+        # Mock client to fail with transient error
+        class FailingClient:
+            def upsert_production_order(self, payload):
+                raise HttpNomusTransientError("ERP offline - retry later")
+
+        failing_client = FailingClient()
+        with mock.patch(
+            "apps.integrations.nomus.services._build_client",
+            return_value=failing_client,
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                production_services.liberar(of, by=self.user)
+
+        # Assert: Sync run marked as failed
+        run = NomusSyncRun.objects.filter(
+            entity_type=NomusSyncRun.ENTITY_PRODUCTION_ORDER
+        ).first()
+        self.assertIsNotNone(run)
+        self.assertEqual(run.status, NomusSyncRun.STATUS_FAILED)
+
+        # Assert: Export log marked for retry
+        log = NomusExportLog.objects.get(sync_run=run)
+        self.assertEqual(log.status, NomusExportLog.STATUS_ERROR)
+        self.assertTrue(log.retry, "Should be marked for retry on transient error")
+        self.assertEqual(log.attempts, 1)
+        self.assertIn("ERP offline", log.error_message)
+
+    def test_e2e_nomus_conflict_on_reexport(self):
+        """
+        Given: OF was already exported to Nomus
+        When: OF is exported again
+        Then: conflict is marked as True (like SAP B1)
+        And: conflict_reason explains the issue
+        """
+        from apps.integrations.nomus.fake import MemoryNomusClient
+        from apps.integrations.nomus.models import (
+            NomusExportLog,
+            NomusIntegrationConfig,
+            NomusSyncRun,
+        )
+        from apps.integrations.nomus import services as nomus_services
+
+        # Setup: Enable Nomus
+        NomusIntegrationConfig.objects.create(
+            enabled=True,
+            base_url="",
+            access_key="",
+        )
+
+        quotation = create_feixe_quotation(self.customer, "Feixe E2E Conflict")
+        approve_quotation(quotation, self.engineer)
+        of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
+
+        mem_client = MemoryNomusClient()
+
+        # First export (successful)
+        with mock.patch(
+            "apps.integrations.nomus.services._build_client",
+            return_value=mem_client,
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                production_services.liberar(of, by=self.user)
+
+        run1 = NomusSyncRun.objects.filter(
+            entity_type=NomusSyncRun.ENTITY_PRODUCTION_ORDER
+        ).first()
+        self.assertEqual(run1.status, NomusSyncRun.STATUS_SUCCESS)
+
+        log1 = NomusExportLog.objects.get(sync_run=run1)
+        self.assertFalse(log1.conflict, "First export should not have conflict")
+
+        # Second export (same OF) - should detect conflict
+        run2 = nomus_services.maybe_enqueue_export(of, trigger="manual")
+        self.assertIsNotNone(run2)
+        nomus_services.process_sync_run(run2, client=mem_client)
+
+        log2 = NomusExportLog.objects.get(sync_run=run2)
+        self.assertTrue(log2.conflict, "Second export of same OF should mark conflict")
+        self.assertIn("ja exportada", log2.conflict_reason)
+
+    def test_e2e_sap_b1_still_works_no_regression(self):
+        """
+        REGRESSION TEST: With SAP B1 enabled instead of Nomus,
+        the SAP B1 export flow should still work.
+        """
+        from apps.integrations.sap_b1.fake import MemorySapB1Client
+        from apps.integrations.sap_b1.models import (
+            SapB1IntegrationConfig,
+            SapB1SyncRun,
+        )
+        from apps.integrations.sap_b1 import services as sap_services
+
+        # Setup: Enable SAP B1 (disable Nomus)
+        NomusIntegrationConfig.objects.create(
+            enabled=False,
+            base_url="",
+            access_key="",
+        )
+        SapB1IntegrationConfig.objects.create(
+            enabled=True,
+            base_url="https://sapb1.example/api",
+            company_db="SBODEMO",
+            username="manager",
+            password="secret",
+        )
+
+        quotation = create_feixe_quotation(self.customer, "Feixe E2E SAP B1")
+        approve_quotation(quotation, self.engineer)
+        of = production_services.convert_quotation_to_of(quotation, created_by=self.user)
+
+        # Mock SAP B1 client
+        sap_client = MemorySapB1Client()
+        with mock.patch(
+            "apps.integrations.sap_b1.services._build_client",
+            return_value=sap_client,
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                production_services.liberar(of, by=self.user)
+
+        # Assert: SAP B1 sync run was created (not Nomus)
+        sap_run = SapB1SyncRun.objects.filter(
+            entity_type=SapB1SyncRun.ENTITY_SALES_ORDER
+        ).first()
+        self.assertIsNotNone(sap_run, "SAP B1 sync run should be created")
+        self.assertEqual(
+            sap_run.status,
+            SapB1SyncRun.STATUS_SUCCESS,
+            "SAP B1 export should succeed",
+        )
+
+        # Verify Nomus was NOT used
+        from apps.integrations.nomus.models import NomusSyncRun
+
+        nomus_run = NomusSyncRun.objects.filter(
+            entity_type=NomusSyncRun.ENTITY_PRODUCTION_ORDER
+        ).first()
+        self.assertIsNone(
+            nomus_run,
+            "Nomus export should NOT be created when SAP B1 is active",
+        )
