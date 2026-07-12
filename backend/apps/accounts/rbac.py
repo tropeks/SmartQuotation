@@ -53,11 +53,14 @@ def has_tenant_membership(user):
     return UserProfile.objects.filter(user=user, is_active=True).exists()
 
 
-def require_role(*roles):
+def require_role(*roles, allow_platform_staff=False):
     """
     Decorator de view: exige usuário autenticado E com profile.role em `roles`.
     - Não autenticado -> redireciona para login.
     - Autenticado sem role permitido -> PermissionDenied (HTTP 403).
+    - allow_platform_staff=True: is_staff/is_superuser passam mesmo sem
+      UserProfile (mesmo atalho de has_tenant_membership) — usar só em views de
+      LEITURA, onde um operador de plataforma sempre pôde ver o recurso.
     """
     allowed = set(roles)
 
@@ -67,6 +70,8 @@ def require_role(*roles):
             user = getattr(request, "user", None)
             if user is None or not user.is_authenticated:
                 return redirect("login")
+            if allow_platform_staff and (user.is_superuser or user.is_staff):
+                return view_func(request, *args, **kwargs)
             if user_role(user) not in allowed:
                 raise PermissionDenied("Papel sem permissão para este recurso.")
             return view_func(request, *args, **kwargs)

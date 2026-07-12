@@ -288,7 +288,7 @@ def quotation_edit(request, pk):
     return render(request, "quotations/edit.html", {"form": form, "results": results, "orig": orig})
 
 
-@require_role(*_READ_ROLES)
+@require_role(*_READ_ROLES, allow_platform_staff=True)
 def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
     itens = (q.itens.prefetch_related("materiais", "operacoes")).all()
