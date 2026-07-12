@@ -49,7 +49,14 @@ class MustChangePasswordMiddleware:
 
     def __call__(self, request):
         user = getattr(request, "user", None)
-        if user is not None and user.is_authenticated:
+        # UserProfile vive em TENANT_APPS: no schema public a tabela não existe, então
+        # consultar user.profile ali quebra o /admin/ público. Pula o public, igual ao
+        # TenantMembershipMiddleware acima.
+        if (
+            user is not None
+            and user.is_authenticated
+            and connection.schema_name != get_public_schema_name()
+        ):
             profile = getattr(user, "profile", None)
             if profile is not None and profile.must_change_password:
                 exempt_paths = {reverse(name) for name in self.EXEMPT_URL_NAMES}
