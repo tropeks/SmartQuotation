@@ -1,0 +1,49 @@
+<section class="g-section">
+  <header class="g-section-head">
+    <h3>Lista de membros</h3>
+    <span class="g-muted">{{ members|length }} registro{{ members|length|pluralize }}</span>
+  </header>
+  <div class="g-section-body table-scroll">
+    <table class="g-table">
+      <thead>
+        <tr>
+          <th>Membro</th>
+          <th>Contato</th>
+          <th>Papel</th>
+          <th>Status</th>
+          <th>CREA</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+          <tr>
+            <td>
+              <strong>{{ member.full_name }}</strong><br>
+              <span class="g-muted">{{ member.user.username }}</span>
+            </td>
+            <td>{{ member.user.email|default:"—" }}</td>
+            <td>{{ member.get_role_display }}</td>
+            <td>
+              {% if member.is_active %}
+                <span class="q-badge" style="border-color:var(--g-green);color:var(--g-green)">Ativo</span>
+              {% else %}
+                <span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">Inativo</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if member.crea_number %}
+                {{ member.crea_number }}{% if member.crea_state %}/{{ member.crea_state }}{% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5">Nenhum membro encontrado para este tenant.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

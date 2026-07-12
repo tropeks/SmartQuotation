@@ -237,6 +237,61 @@ class ShellSmokeTests(TestCase):
         self.assertContains(resp, "Cliente Dashboard")
 
 
+class TenantMembersViewTests(TestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+        self.admin_user = User.objects.create_user(username="tenant-admin", password="segredo123")
+        UserProfile.objects.create(
+            user=self.admin_user,
+            full_name="Alice Admin",
+            role=UserProfile.ROLE_ADMIN,
+            is_active=True,
+        )
+
+        self.engineer_user = User.objects.create_user(username="eng-tenant", password="segredo123")
+        UserProfile.objects.create(
+            user=self.engineer_user,
+            full_name="Bruno Eng",
+            role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-12345",
+            crea_state="SP",
+            is_active=True,
+        )
+
+        self.viewer_user = User.objects.create_user(username="orc-tenant", password="segredo123")
+        UserProfile.objects.create(
+            user=self.viewer_user,
+            full_name="Caio Orc",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+            is_active=False,
+        )
+
+    def test_get_members_as_admin_returns_200_with_tenant_members(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get("/members/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "MEMBROS DO TENANT")
+        self.assertContains(response, "Alice Admin")
+        self.assertContains(response, "Bruno Eng")
+        self.assertContains(response, "Caio Orc")
+        self.assertContains(response, "Admin")
+        self.assertContains(response, "Engenheiro")
+        self.assertContains(response, "Orçamentista")
+        self.assertContains(response, "Ativo")
+        self.assertContains(response, "Inativo")
+        self.assertContains(response, "CREA-12345")
+
+    def test_get_members_as_non_admin_returns_403(self):
+        self.client.force_login(self.engineer_user)
+
+        response = self.client.get("/members/")
+
+        self.assertEqual(response.status_code, 403)
+
+
 class RbacTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()

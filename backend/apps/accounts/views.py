@@ -16,6 +16,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts.forms import LoginForm
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import require_role
 from apps.accounts.rbac import has_tenant_membership
 from apps.audit.models import TechnicalApproval
 from apps.quotations.models import Quotation
@@ -115,3 +117,26 @@ def dashboard_view(request):
             "recent_rows": recent_rows,
         },
     )
+
+
+@require_role(UserProfile.ROLE_ADMIN)
+def members_view(request):
+    query = (request.GET.get("q") or "").strip()
+    members = UserProfile.objects.select_related("user").order_by("full_name")
+    if query:
+        members = members.filter(
+            Q(full_name__icontains=query)
+            | Q(user__username__icontains=query)
+            | Q(user__email__icontains=query)
+            | Q(crea_number__icontains=query)
+        )
+
+    context = {
+        "members": members,
+        "search": query,
+        "active_members": members.filter(is_active=True).count(),
+        "inactive_members": members.filter(is_active=False).count(),
+        "engineers": members.filter(role=UserProfile.ROLE_ENGENHEIRO).count(),
+    }
+    template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
+    return render(request, template, context)
