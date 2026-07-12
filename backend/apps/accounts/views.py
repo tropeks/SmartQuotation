@@ -5,19 +5,26 @@ Views de sessão (session auth, sem JWT).
 - dashboard_view: dashboard executivo protegido por login.
 """
 from decimal import Decimal
+import secrets
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
-from apps.accounts.forms import LoginForm
+from apps.accounts.forms import LoginForm, MemberInviteForm, MemberRoleChangeForm
+from apps.accounts.models import UserProfile
+from apps.accounts.rbac import ensure_groups, require_role
 from apps.accounts.rbac import has_tenant_membership
 from apps.audit.models import TechnicalApproval
+from apps.audit.services import log_access
 from apps.quotations.models import Quotation
 
 
@@ -73,6 +80,23 @@ def logout_view(request):
 
 
 @login_required
+def change_password_view(request):
+    """Troca de senha obrigatória no primeiro login (membro convidado). Ao salvar
+    com sucesso, limpa UserProfile.must_change_password e libera o acesso."""
+    form = SetPasswordForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        update_session_auth_hash(request, request.user)
+        profile = getattr(request.user, "profile", None)
+        if profile is not None and profile.must_change_password:
+            profile.must_change_password = False
+            profile.save(update_fields=["must_change_password"])
+        return redirect("dashboard")
+
+    return render(request, "accounts/change_password.html", {"form": form})
+
+
+@login_required
 def dashboard_view(request):
     """DASH-01: dashboard principal com KPIs reais de cotações."""
     quotations = Quotation.objects.select_related("customer").order_by("-created_at")
@@ -115,3 +139,149 @@ def dashboard_view(request):
             "recent_rows": recent_rows,
         },
     )
+
+
+def _members_context(request):
+    query = (request.GET.get("q") or "").strip()
+    members = UserProfile.objects.select_related("user").order_by("full_name")
+    if query:
+        members = members.filter(
+            Q(full_name__icontains=query)
+            | Q(user__username__icontains=query)
+            | Q(user__email__icontains=query)
+            | Q(crea_number__icontains=query)
+        )
+
+    return {
+        "members": members,
+        "search": query,
+        "active_members": members.filter(is_active=True).count(),
+        "inactive_members": members.filter(is_active=False).count(),
+        "engineers": members.filter(role=UserProfile.ROLE_ENGENHEIRO).count(),
+        "invite_form": MemberInviteForm(),
+        "invitation_result": None,
+        "role_choices": UserProfile.ROLE,
+    }
+
+
+@require_role(UserProfile.ROLE_ADMIN)
+def members_view(request):
+    context = _members_context(request)
+    template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
+    return render(request, template, context)
+
+
+@require_POST
+@require_role(UserProfile.ROLE_ADMIN)
+def change_member_role_view(request, pk):
+    profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=pk)
+    form = MemberRoleChangeForm(request.POST)
+    template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
+
+    if not form.is_valid():
+        context = _members_context(request)
+        context["role_change_error"] = "Papel inválido."
+        return render(request, template, context, status=400)
+
+    old_role = profile.role
+    new_role = form.cleaned_data["role"]
+    profile.role = new_role
+    if new_role == UserProfile.ROLE_ENGENHEIRO:
+        profile.crea_number = form.cleaned_data.get("crea_number") or profile.crea_number
+        profile.crea_state = (form.cleaned_data.get("crea_state") or profile.crea_state or "").upper()
+
+    try:
+        profile.full_clean(exclude=["user"])
+    except ValidationError as exc:
+        context = _members_context(request)
+        context["role_change_error"] = " ".join(
+            message for messages in exc.message_dict.values() for message in messages
+        )
+        return render(request, template, context, status=400)
+
+    profile.save()
+    role_group = ensure_groups()[new_role]
+    profile.user.groups.set([role_group])
+    log_access(request, "role_change", profile, {"old_role": old_role, "new_role": new_role})
+
+    return render(request, template, _members_context(request))
+
+
+@require_POST
+@require_role(UserProfile.ROLE_ADMIN)
+def deactivate_member_view(request, pk):
+    profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=pk)
+    template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
+
+    if profile.user_id == request.user.pk:
+        context = _members_context(request)
+        context["deactivate_error"] = "Admin não pode desativar a si mesmo."
+        return render(request, template, context, status=400)
+
+    profile.is_active = False
+    profile.save(update_fields=["is_active"])
+    log_access(request, "member_deactivate", profile, {})
+
+    return render(request, template, _members_context(request))
+
+
+@require_POST
+@require_role(UserProfile.ROLE_ADMIN)
+def invite_member_view(request):
+    form = MemberInviteForm(request.POST)
+    if not form.is_valid():
+        return render(
+            request,
+            "accounts/_member_invite_form.html",
+            {"invite_form": form, "invitation_result": None},
+            status=400,
+        )
+
+    ensure_groups()
+    temporary_password = secrets.token_urlsafe(12)
+
+    with transaction.atomic():
+        user = User.objects.create_user(
+            username=form.cleaned_data["email"],
+            email=form.cleaned_data["email"],
+            password=temporary_password,
+        )
+        profile = UserProfile(
+            user=user,
+            full_name=form.cleaned_data["full_name"],
+            role=form.cleaned_data["role"],
+            crea_number=form.cleaned_data.get("crea_number", ""),
+            crea_state=(form.cleaned_data.get("crea_state", "") or "").upper(),
+            phone=form.cleaned_data.get("phone", ""),
+            is_active=True,
+            must_change_password=True,
+        )
+        try:
+            profile.full_clean()
+        except ValidationError as exc:
+            transaction.set_rollback(True)
+            user.delete()
+            for field, messages in exc.message_dict.items():
+                for message in messages:
+                    form.add_error(field, message)
+            return render(
+                request,
+                "accounts/_member_invite_form.html",
+                {"invite_form": form, "invitation_result": None},
+                status=400,
+            )
+        profile.save()
+        role_group = ensure_groups()[profile.role]
+        user.groups.set([role_group])
+
+    context = {
+        "invite_form": MemberInviteForm(),
+        "invitation_result": {
+            "email": user.email,
+            "temporary_password": temporary_password,
+            "login_url": reverse("login"),
+            "full_name": profile.full_name,
+            "role_label": profile.get_role_display(),
+        },
+    }
+    return render(request, "accounts/_member_invite_form.html", context)

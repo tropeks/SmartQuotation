@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Membros do Tenant{% endblock %}
+{% block content %}
+<div class="eyebrow">ADM · Tenant</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <div>
+    <h1 class="q-number">MEMBROS DO TENANT</h1>
+    <p style="max-width:72ch;color:var(--g-gray-1);margin:8px 0 0">
+      Visão administrativa dos perfis ativos no schema corrente, com papel, status e dados de CREA.
+    </p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="q-badge">{{ active_members }} ativos</span>
+    <span class="q-badge">{{ inactive_members }} inativos</span>
+    <span class="q-badge">{{ engineers }} engenheiros</span>
+  </div>
+</div>
+
+<section class="g-section filter-accordion" style="margin-top:16px"
+         x-data="{ open: window.innerWidth >= 768 }" :data-open="open.toString()">
+  <header class="g-section-head" role="button" tabindex="0"
+          @click="open = !open" @keydown.enter="open = !open" @keydown.space.prevent="open = !open"
+          :aria-expanded="open.toString()" aria-controls="members-filters">
+    <h3>Busca</h3>
+    <span class="acc-chevron" aria-hidden="true">▾</span>
+  </header>
+  <div class="g-section-body" id="members-filters" x-show="open" x-cloak>
+    <form method="get" class="g-form"
+          hx-get="/members/"
+          hx-target="#members-results"
+          hx-swap="innerHTML"
+          hx-trigger="keyup changed delay:300ms from:#members-search, submit">
+      <label class="field col-8">
+        <span>Nome, usuário, e-mail ou CREA</span>
+        <input id="members-search" type="text" name="q" value="{{ search }}" placeholder="Alice, alice@tenant.com, CREA-12345">
+      </label>
+      <div class="field col-4" style="justify-content:flex-end;align-items:flex-start">
+        <button class="q-btn primary" type="submit">Filtrar</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div id="member-invite-panel" style="margin-top:16px">
+  {% include "accounts/_member_invite_form.html" %}
+</div>
+
+<div id="members-results">
+  {% include "accounts/_members_table.html" %}
+</div>
+{% endblock %}

@@ -11,11 +11,13 @@ from django.db.models import Q
 
 
 class UserProfile(models.Model):
+    ROLE_VIEWER = "viewer"
     ROLE_ORCAMENTISTA = "orcamentista"
     ROLE_ENGENHEIRO = "engenheiro"
     ROLE_GESTOR_COMERCIAL = "gestor_comercial"
     ROLE_ADMIN = "admin"
     ROLE = [
+        (ROLE_VIEWER, "Viewer"),
         (ROLE_ORCAMENTISTA, "Orçamentista"),
         (ROLE_ENGENHEIRO, "Engenheiro"),
         (ROLE_GESTOR_COMERCIAL, "Gestor Comercial"),
@@ -29,6 +31,7 @@ class UserProfile(models.Model):
     crea_state = models.CharField(max_length=2, blank=True)         # UF do registro (ex: SP)
     phone = models.CharField(max_length=30, blank=True)
     is_active = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

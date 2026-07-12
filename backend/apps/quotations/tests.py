@@ -441,6 +441,16 @@ class QuotationRBACTests(TenantTestCase):
         resp = self.client.post("/cotacoes/criar/", self._form_data())
         self.assertEqual(resp.status_code, 302)
 
+    def test_detalhe_permitido_para_operador_staff_sem_perfil(self):
+        # Operador de plataforma (is_superuser, sem UserProfile) passa o
+        # TenantMembershipMiddleware pelo atalho de has_tenant_membership; o
+        # detalhe (LEITURA) deve continuar acessível a ele, como antes de
+        # quotation_detail trocar @login_required por @require_role(*_READ_ROLES).
+        q = create_feixe_quotation(self.customer, "Feixe RBAC Detalhe")
+        self.client.force_login(self.user_sem_papel)
+        resp = self.client.get(f"/cotacoes/{q.pk}/")
+        self.assertEqual(resp.status_code, 200)
+
     def test_recompute_permitido_para_papel_autorizado(self):
         self.client.force_login(self.user_autorizado)
         resp = self.client.post("/cotacoes/recompute/", self._form_data())

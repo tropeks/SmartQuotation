@@ -105,6 +105,8 @@ class AccessLog(models.Model):
         ("edit", "Edit"),
         ("rate_change", "Rate Change"),
         ("param_change", "Param Change"),
+        ("role_change", "Role Change"),
+        ("member_deactivate", "Member Deactivate"),
     ]
 
     user = models.ForeignKey(

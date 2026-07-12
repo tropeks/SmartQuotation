@@ -1,24 +1,34 @@
-TEST_CMD: bash .orch-test.sh
+TEST_CMD: POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py test apps.accounts apps.quotations -v 1 --noinput
 
-1) Comandos de teste rodados + resumo da saída
-- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests.test_alterar_preco_via_view_afeta_nova_cotacao_e_registra_historico -v 2 --noinput`
-  Resumo: primeiro ciclo TDD falhou com `NameError: name 'Decimal' is not defined` no novo teste; após importar `Decimal`, o cenário passou e confirmou troca de preço via view, histórico temporal e auditoria.
-- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests -v 2 --noinput`
-  Resumo: 2 testes executados, ambos `OK`; cobre o aceite de recompute com preço novo e RBAC de viewer 403.
-- `bash .orch-test.sh`
-  Resumo: `manage.py check` OK, `makemigrations --check --dry-run` OK, suíte dos apps do sprint OK com `apps.materials` incluído; 237 testes executados em 655.200s, status final `OK`.
+Comandos de teste/verificação executados + resumo:
+1. `pytest -q backend/apps/accounts/test_epic5_e2e_acceptance.py -k viewer`
+Resumo: falhou na coleta com `ModuleNotFoundError: No module named 'django'`, mostrando que esse comando isolado não usava o ambiente Django do projeto.
 
-2) PASS/FAIL de cada comando
-- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests.test_alterar_preco_via_view_afeta_nova_cotacao_e_registra_historico -v 2 --noinput`
-  FAIL no primeiro ciclo por falta de import de `Decimal`; PASS após o ajuste mínimo de wiring do teste.
-- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation ../.venv/bin/python manage.py test apps.materials.tests.MaterialPriceAcceptanceTests -v 2 --noinput`
-  PASS.
-- `bash .orch-test.sh`
-  PASS.
+2. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py test apps.accounts.test_epic5_e2e_acceptance.Epic5E2EAcceptanceTests -v 2 --noinput`
+Resumo: criou o banco de teste, aplicou migrations, executou 2 testes E2E do Epic 5 e ambos passaram (`OK`).
 
-3) Resumo do diff
-- `.orch-test.sh`: adiciona `apps.materials` ao comando padrão de testes para que o gate execute o novo aceite.
-- `backend/apps/materials/tests.py`: adiciona `MaterialPriceAcceptanceTests`, cobrindo alteração de preço via view HTMX, fechamento do `MaterialPrice` antigo com `valid_until`, `AccessLog` com `price_change`, nova cotação via `adapter.recompute` usando o preço vigente novo em `TUB-01`, e bloqueio RBAC para `viewer`.
+3. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py check`
+Resumo: `System check identified no issues (0 silenced).`
 
-4) Conclusão
-- Tarefa concluída porque o aceite pedido do Épico 3 foi implementado em `TenantTestCase`, o viewer ficou coberto com 403, e `bash .orch-test.sh` terminou verde incluindo esse novo cenário.
+4. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py makemigrations --check --dry-run`
+Resumo: `No changes detected`.
+
+5. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py test apps.accounts apps.quotations -v 1 --noinput`
+Resumo: executou 117 testes dos apps afetados em 350.024s; resultado final `OK`.
+
+PASS/FAIL de cada comando:
+1. FAIL - ambiente Python incorreto para rodar o teste diretamente com `pytest`.
+2. PASS - 2 testes E2E passaram.
+3. PASS - checagem do Django sem erros.
+4. PASS - nenhuma migration pendente após a implementação.
+5. PASS - 117 testes de `accounts` e `quotations` passaram.
+
+Resumo do diff:
+- `backend/apps/accounts/test_epic5_e2e_acceptance.py`: remove a racionalização que ignorava viewer e adiciona o fluxo E2E real onde admin convida viewer, viewer troca senha, lê cotação existente e recebe 403 ao tentar editar.
+- `backend/apps/accounts/models.py`: adiciona o papel `viewer` aos papéis válidos do `UserProfile`.
+- `backend/apps/accounts/rbac.py`: adiciona o group RBAC `Viewer`.
+- `backend/apps/quotations/views.py`: mantém viewer fora das rotas de escrita, inclui viewer nas permissões de leitura e protege o detalhe com `require_role(*_READ_ROLES)`.
+- `backend/apps/accounts/migrations/0003_alter_userprofile_role.py`: migration para refletir a nova choice `viewer` no campo `role`.
+
+Conclusão da tarefa:
+Tarefa concluída porque o requisito explícito "viewer não edita" agora existe no domínio, está coberto por teste E2E real contra a rota de edição de cotação e a suíte relevante passou após a mudança.

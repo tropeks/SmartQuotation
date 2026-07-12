@@ -1,0 +1,82 @@
+<section class="g-section">
+  <header class="g-section-head">
+    <h3>Lista de membros</h3>
+    <span class="g-muted">{{ members|length }} registro{{ members|length|pluralize }}</span>
+  </header>
+  <div class="g-section-body">
+    {% if role_change_error %}
+      <div style="margin-bottom:16px;color:var(--g-red)">{{ role_change_error }}</div>
+    {% endif %}
+    {% if deactivate_error %}
+      <div style="margin-bottom:16px;color:var(--g-red)">{{ deactivate_error }}</div>
+    {% endif %}
+  </div>
+  <div class="g-section-body table-scroll">
+    <table class="g-table">
+      <thead>
+        <tr>
+          <th>Membro</th>
+          <th>Contato</th>
+          <th>Papel</th>
+          <th>Status</th>
+          <th>CREA</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+          <tr>
+            <td>
+              <strong>{{ member.full_name }}</strong><br>
+              <span class="g-muted">{{ member.user.username }}</span>
+            </td>
+            <td>{{ member.user.email|default:"—" }}</td>
+            <td>{{ member.get_role_display }}</td>
+            <td>
+              {% if member.is_active %}
+                <span class="q-badge" style="border-color:var(--g-green);color:var(--g-green)">Ativo</span>
+              {% else %}
+                <span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">Inativo</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if member.crea_number %}
+                {{ member.crea_number }}{% if member.crea_state %}/{{ member.crea_state }}{% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" class="g-form" style="gap:4px"
+                    hx-post="/members/{{ member.pk }}/role/"
+                    hx-target="#members-results"
+                    hx-swap="innerHTML">
+                {% csrf_token %}
+                <select name="role" style="min-width:140px">
+                  {% for value, label in role_choices %}
+                    <option value="{{ value }}" {% if value == member.role %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <input type="text" name="crea_number" placeholder="CREA" value="{{ member.crea_number }}" style="width:90px">
+                <input type="text" name="crea_state" placeholder="UF" value="{{ member.crea_state }}" style="width:48px">
+                <button class="q-btn" type="submit">Salvar papel</button>
+              </form>
+              <form method="post" style="margin-top:4px"
+                    hx-post="/members/{{ member.pk }}/deactivate/"
+                    hx-target="#members-results"
+                    hx-swap="innerHTML"
+                    hx-confirm="Desativar {{ member.full_name }}?">
+                {% csrf_token %}
+                <button class="q-btn" type="submit" {% if not member.is_active %}disabled{% endif %}>Desativar</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">Nenhum membro encontrado para este tenant.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
