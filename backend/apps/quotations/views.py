@@ -23,10 +23,7 @@ from pricing_engine.feixe_quote import quote_feixe
 
 
 # Papéis com permissão de ESCRITA em cotações (criar/recomputar/precificar/revisar).
-# Espelha o padrão require_role de apps/production e apps/engineering_params: os papéis
-# que editam engineering_params/production (engenheiro, gestor_comercial, admin) escrevem,
-# e o orçamentista é o autor das cotações (papel default). Ver/listar fica liberado a
-# qualquer membro autenticado do tenant.
+# Viewer é somente-leitura e fica explicitamente fora deste conjunto.
 _WRITE_ROLES = (
     UserProfile.ROLE_ORCAMENTISTA,
     UserProfile.ROLE_ENGENHEIRO,
@@ -40,10 +37,10 @@ _ENTRY_ROLES = (
     UserProfile.ROLE_ADMIN,
 )
 
-# Papéis com permissão de LEITURA de cotações (ver detalhe/EAP/drawer). Todos os
-# papéis do tenant leem; o guardrail real é ser MEMBRO (ter profile.role), que barra
-# o usuário de outro tenant / sem papel (403 pelo @require_role).
+# Papéis com permissão de LEITURA de cotações (ver detalhe/EAP/drawer). Inclui o
+# viewer, que é o papel dedicado de somente-leitura.
 _READ_ROLES = (
+    UserProfile.ROLE_VIEWER,
     UserProfile.ROLE_ORCAMENTISTA,
     UserProfile.ROLE_ENGENHEIRO,
     UserProfile.ROLE_GESTOR_COMERCIAL,
@@ -291,7 +288,7 @@ def quotation_edit(request, pk):
     return render(request, "quotations/edit.html", {"form": form, "results": results, "orig": orig})
 
 
-@login_required
+@require_role(*_READ_ROLES)
 def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
     itens = (q.itens.prefetch_related("materiais", "operacoes")).all()

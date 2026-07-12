@@ -1,60 +1,34 @@
-EPICO 5, task 4/5 — Forçar troca de senha no primeiro login (must_change_password)
+TEST_CMD: POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py test apps.accounts apps.quotations -v 1 --noinput
 
-(1) Comandos de teste rodados
+Comandos de teste/verificação executados + resumo:
+1. `pytest -q backend/apps/accounts/test_epic5_e2e_acceptance.py -k viewer`
+Resumo: falhou na coleta com `ModuleNotFoundError: No module named 'django'`, mostrando que esse comando isolado não usava o ambiente Django do projeto.
 
-  a) Foco (TDD, testes novos escritos e rodados primeiro para confirmar falha, depois sucesso):
-     cd backend && python manage.py test apps.accounts.tests.MustChangePasswordTests -v 2 --noinput
-     - Antes da implementação (só os testes, sem middleware/view/url): 4 de 6 testes FALHAVAM
-       (200/404 em vez dos 302/200 esperados) — confirmando que o gate ainda não existia.
-     - Depois da implementação (middleware + view + form + url + template): 6/6 PASS.
+2. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py test apps.accounts.test_epic5_e2e_acceptance.Epic5E2EAcceptanceTests -v 2 --noinput`
+Resumo: criou o banco de teste, aplicou migrations, executou 2 testes E2E do Epic 5 e ambos passaram (`OK`).
 
-  b) Gate completo do sprint (obrigatório, verificador re-roda este comando):
-     bash .orch-test.sh
-     - [1/3] django check: OK (0 issues)
-     - [2/3] makemigrations --check --dry-run: OK (nenhuma migration pendente)
-     - [3/3] manage.py test apps.materials apps.quotations apps.proposals apps.production
-             apps.audit apps.accounts apps.integrations.nomus -v 1 --noinput
-             Ran 259 tests in 685.618s -> OK
-     - Saída final: "=== ALL TESTS PASSED ✓ ==="
+3. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py check`
+Resumo: `System check identified no issues (0 silenced).`
 
-TEST_CMD: bash .orch-test.sh
+4. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py makemigrations --check --dry-run`
+Resumo: `No changes detected`.
 
-(2) PASS/FAIL
+5. `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python3 backend/manage.py test apps.accounts apps.quotations -v 1 --noinput`
+Resumo: executou 117 testes dos apps afetados em 350.024s; resultado final `OK`.
 
-  - MustChangePasswordTests (6 testes novos, apps/accounts/tests.py): PASS
-    - test_membro_com_flag_e_redirecionado_para_troca_de_senha_ao_acessar_qualquer_pagina: PASS
-    - test_membro_com_flag_pode_acessar_a_propria_pagina_de_troca: PASS
-    - test_membro_com_flag_pode_fazer_logout: PASS
-    - test_trocar_senha_com_sucesso_limpa_flag_e_libera_acesso: PASS
-    - test_trocar_senha_com_confirmacao_diferente_nao_limpa_flag: PASS
-    - test_usuario_normal_nao_e_afetado: PASS
-  - Suíte completa (.orch-test.sh, 259 testes incluindo os 6 novos + os já existentes de
-    accounts/materials/quotations/proposals/production/audit/nomus): PASS (0 falhas, 0 erros)
+PASS/FAIL de cada comando:
+1. FAIL - ambiente Python incorreto para rodar o teste diretamente com `pytest`.
+2. PASS - 2 testes E2E passaram.
+3. PASS - checagem do Django sem erros.
+4. PASS - nenhuma migration pendente após a implementação.
+5. PASS - 117 testes de `accounts` e `quotations` passaram.
 
-(3) Resumo do diff
+Resumo do diff:
+- `backend/apps/accounts/test_epic5_e2e_acceptance.py`: remove a racionalização que ignorava viewer e adiciona o fluxo E2E real onde admin convida viewer, viewer troca senha, lê cotação existente e recebe 403 ao tentar editar.
+- `backend/apps/accounts/models.py`: adiciona o papel `viewer` aos papéis válidos do `UserProfile`.
+- `backend/apps/accounts/rbac.py`: adiciona o group RBAC `Viewer`.
+- `backend/apps/quotations/views.py`: mantém viewer fora das rotas de escrita, inclui viewer nas permissões de leitura e protege o detalhe com `require_role(*_READ_ROLES)`.
+- `backend/apps/accounts/migrations/0003_alter_userprofile_role.py`: migration para refletir a nova choice `viewer` no campo `role`.
 
-  - backend/apps/accounts/middleware.py: nova classe MustChangePasswordMiddleware. Para usuário
-    autenticado com profile.must_change_password=True, redireciona qualquer rota (exceto
-    'change_password' e 'logout') para a página de troca de senha.
-  - backend/smartquotation/settings/base.py: registra MustChangePasswordMiddleware em MIDDLEWARE,
-    logo após TenantMembershipMiddleware (já resolvido request.user + profile do tenant naquele
-    ponto da cadeia).
-  - backend/apps/accounts/views.py: nova view change_password_view (login_required), usa
-    django.contrib.auth.forms.SetPasswordForm (hashing padrão do Django), chama
-    update_session_auth_hash para não derrubar a sessão após a troca, e limpa
-    UserProfile.must_change_password ao salvar com sucesso; redireciona para 'dashboard'.
-  - backend/apps/accounts/urls.py: nova rota path("change-password/", ..., name="change_password").
-  - backend/apps/accounts/templates/accounts/change_password.html (novo): página com Design
-    System G (g-section, field, q-btn — mesma estrutura visual de login.html/_login_form.html).
-    Sem comentários {# #} multi-linha (gotcha do projeto respeitado).
-  - backend/apps/accounts/tests.py: nova classe MustChangePasswordTests com os 6 testes descritos
-    acima (TenantTestCase + client, seguindo o padrão já usado no arquivo).
-  - pricing_engine/: NÃO tocado (confirmado via `git diff --stat`, só backend/apps/accounts/* +
-    backend/smartquotation/settings/base.py foram alterados).
-
-(4) Conclusão
-
-  Tarefa concluída: TDD seguido (testes escritos primeiro e vistos falhando antes da implementação),
-  o middleware força a troca de senha para qualquer rota exceto troca/logout, a troca limpa o flag
-  e libera o acesso, usuários normais (must_change_password=False) não são afetados, e o gate
-  completo `bash .orch-test.sh` passa 100% (259/259 testes) sem tocar em pricing_engine.
+Conclusão da tarefa:
+Tarefa concluída porque o requisito explícito "viewer não edita" agora existe no domínio, está coberto por teste E2E real contra a rota de edição de cotação e a suíte relevante passou após a mudança.

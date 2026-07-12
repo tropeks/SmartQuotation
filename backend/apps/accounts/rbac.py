@@ -14,6 +14,7 @@ from apps.accounts.models import UserProfile
 
 # Mapa role -> nome do Group (1:1 com os choices de UserProfile.ROLE).
 ROLE_GROUPS = {
+    UserProfile.ROLE_VIEWER: "Viewer",
     UserProfile.ROLE_ORCAMENTISTA: "Orçamentista",
     UserProfile.ROLE_ENGENHEIRO: "Engenheiro",
     UserProfile.ROLE_GESTOR_COMERCIAL: "Gestor Comercial",

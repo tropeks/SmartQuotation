@@ -11,11 +11,13 @@ from django.db.models import Q
 
 
 class UserProfile(models.Model):
+    ROLE_VIEWER = "viewer"
     ROLE_ORCAMENTISTA = "orcamentista"
     ROLE_ENGENHEIRO = "engenheiro"
     ROLE_GESTOR_COMERCIAL = "gestor_comercial"
     ROLE_ADMIN = "admin"
     ROLE = [
+        (ROLE_VIEWER, "Viewer"),
         (ROLE_ORCAMENTISTA, "Orçamentista"),
         (ROLE_ENGENHEIRO, "Engenheiro"),
         (ROLE_GESTOR_COMERCIAL, "Gestor Comercial"),
