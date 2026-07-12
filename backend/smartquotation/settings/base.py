@@ -78,6 +78,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "axes.middleware.AxesMiddleware",  # deve vir após AuthenticationMiddleware
     "apps.accounts.middleware.TenantMembershipMiddleware",  # barra user sem profile no schema ativo
+    "apps.accounts.middleware.MustChangePasswordMiddleware",  # força troca de senha provisória
     "django.middleware.locale.LocaleMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

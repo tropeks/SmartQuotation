@@ -7,8 +7,9 @@ Views de sessão (session auth, sem JWT).
 from decimal import Decimal
 import secrets
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -76,6 +77,23 @@ def logout_view(request):
     """Encerra a sessão e redireciona para o login."""
     logout(request)
     return redirect("login")
+
+
+@login_required
+def change_password_view(request):
+    """Troca de senha obrigatória no primeiro login (membro convidado). Ao salvar
+    com sucesso, limpa UserProfile.must_change_password e libera o acesso."""
+    form = SetPasswordForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        update_session_auth_hash(request, request.user)
+        profile = getattr(request.user, "profile", None)
+        if profile is not None and profile.must_change_password:
+            profile.must_change_password = False
+            profile.save(update_fields=["must_change_password"])
+        return redirect("dashboard")
+
+    return render(request, "accounts/change_password.html", {"form": form})
 
 
 @login_required

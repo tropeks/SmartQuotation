@@ -515,6 +515,97 @@ class TenantMemberRoleChangeTests(TestCase):
         self.assertEqual(self.member_profile.role, UserProfile.ROLE_ORCAMENTISTA)
 
 
+class MustChangePasswordTests(TestCase):
+    """
+    Épico 5, task 4: primeiro login de membro convidado (must_change_password=True)
+    força a troca de senha antes de acessar o resto do produto.
+    """
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+        self.invited_user = User.objects.create_user(username="convidado", password="senha-temp-123")
+        self.invited_profile = UserProfile.objects.create(
+            user=self.invited_user,
+            full_name="Convidado Novo",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+            is_active=True,
+            must_change_password=True,
+        )
+
+        self.normal_user = User.objects.create_user(username="normal", password="senha-forte-123")
+        UserProfile.objects.create(
+            user=self.normal_user,
+            full_name="Usuário Normal",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+            is_active=True,
+            must_change_password=False,
+        )
+
+    def test_membro_com_flag_e_redirecionado_para_troca_de_senha_ao_acessar_qualquer_pagina(self):
+        self.client.force_login(self.invited_user)
+
+        resp = self.client.get("/")
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, "/change-password/")
+
+    def test_membro_com_flag_pode_acessar_a_propria_pagina_de_troca(self):
+        self.client.force_login(self.invited_user)
+
+        resp = self.client.get("/change-password/")
+
+        self.assertEqual(resp.status_code, 200)
+
+    def test_membro_com_flag_pode_fazer_logout(self):
+        self.client.force_login(self.invited_user)
+
+        resp = self.client.post("/logout/")
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, "/login/")
+
+    def test_trocar_senha_com_sucesso_limpa_flag_e_libera_acesso(self):
+        self.client.force_login(self.invited_user)
+
+        resp = self.client.post(
+            "/change-password/",
+            {"new_password1": "senha-nova-super-forte", "new_password2": "senha-nova-super-forte"},
+        )
+
+        self.assertEqual(resp.status_code, 302)
+        self.invited_profile.refresh_from_db()
+        self.assertFalse(self.invited_profile.must_change_password)
+
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+
+        self.client.logout()
+        relogin = self.client.post(
+            "/login/", {"identifier": "convidado", "password": "senha-nova-super-forte"}
+        )
+        self.assertEqual(relogin.status_code, 302)
+
+    def test_trocar_senha_com_confirmacao_diferente_nao_limpa_flag(self):
+        self.client.force_login(self.invited_user)
+
+        resp = self.client.post(
+            "/change-password/",
+            {"new_password1": "senha-nova-super-forte", "new_password2": "outra-coisa-qualquer"},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.invited_profile.refresh_from_db()
+        self.assertTrue(self.invited_profile.must_change_password)
+
+    def test_usuario_normal_nao_e_afetado(self):
+        self.client.force_login(self.normal_user)
+
+        resp = self.client.get("/")
+
+        self.assertEqual(resp.status_code, 200)
+
+
 class TenantMemberDeactivationTests(TestCase):
     def setUp(self):
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
