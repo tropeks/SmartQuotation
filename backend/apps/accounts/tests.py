@@ -292,6 +292,102 @@ class TenantMembersViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
 
+class TenantMemberInvitationTests(TestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+        self.admin_user = User.objects.create_user(
+            username="tenant-admin",
+            email="admin@tenant.com",
+            password="segredo123",
+        )
+        UserProfile.objects.create(
+            user=self.admin_user,
+            full_name="Alice Admin",
+            role=UserProfile.ROLE_ADMIN,
+            is_active=True,
+        )
+
+        self.non_admin_user = User.objects.create_user(
+            username="tenant-orc",
+            email="orc@tenant.com",
+            password="segredo123",
+        )
+        UserProfile.objects.create(
+            user=self.non_admin_user,
+            full_name="Olivia Orc",
+            role=UserProfile.ROLE_ORCAMENTISTA,
+            is_active=True,
+        )
+
+    def test_admin_can_invite_orcamentista_with_temporary_password(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/members/invite/",
+            {
+                "email": "novo.orc@tenant.com",
+                "full_name": "Novo Orc",
+                "role": UserProfile.ROLE_ORCAMENTISTA,
+                "phone": "11999999999",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        invited_user = User.objects.get(username="novo.orc@tenant.com")
+        invited_profile = UserProfile.objects.get(user=invited_user)
+        self.assertEqual(invited_user.email, "novo.orc@tenant.com")
+        self.assertEqual(invited_profile.full_name, "Novo Orc")
+        self.assertEqual(invited_profile.role, UserProfile.ROLE_ORCAMENTISTA)
+        self.assertTrue(invited_profile.must_change_password)
+        self.assertEqual(
+            list(invited_user.groups.values_list("name", flat=True)),
+            [ROLE_GROUPS[UserProfile.ROLE_ORCAMENTISTA]],
+        )
+
+        provisional_password = response.context["invitation_result"]["temporary_password"]
+        self.assertTrue(invited_user.check_password(provisional_password))
+        self.assertContains(response, "novo.orc@tenant.com")
+        self.assertContains(response, provisional_password)
+        self.assertContains(response, "/login/")
+
+    def test_inviting_engenheiro_without_crea_shows_validation_error(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            "/members/invite/",
+            {
+                "email": "novo.eng@tenant.com",
+                "full_name": "Novo Eng",
+                "role": UserProfile.ROLE_ENGENHEIRO,
+                "phone": "11999999999",
+                "crea_number": "",
+                "crea_state": "SP",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(User.objects.filter(username="novo.eng@tenant.com").exists())
+        self.assertContains(response, "Engenheiro requer n", status_code=400)
+
+    def test_non_admin_cannot_invite_member(self):
+        self.client.force_login(self.non_admin_user)
+
+        response = self.client.post(
+            "/members/invite/",
+            {
+                "email": "bloqueado@tenant.com",
+                "full_name": "Usuário Bloqueado",
+                "role": UserProfile.ROLE_ORCAMENTISTA,
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(User.objects.filter(username="bloqueado@tenant.com").exists())
+
+
 class RbacTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()

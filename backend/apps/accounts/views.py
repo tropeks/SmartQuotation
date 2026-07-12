@@ -5,19 +5,22 @@ Views de sessão (session auth, sem JWT).
 - dashboard_view: dashboard executivo protegido por login.
 """
 from decimal import Decimal
+import secrets
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
-from apps.accounts.forms import LoginForm
+from apps.accounts.forms import LoginForm, MemberInviteForm
 from apps.accounts.models import UserProfile
-from apps.accounts.rbac import require_role
+from apps.accounts.rbac import ensure_groups, require_role
 from apps.accounts.rbac import has_tenant_membership
 from apps.audit.models import TechnicalApproval
 from apps.quotations.models import Quotation
@@ -137,6 +140,70 @@ def members_view(request):
         "active_members": members.filter(is_active=True).count(),
         "inactive_members": members.filter(is_active=False).count(),
         "engineers": members.filter(role=UserProfile.ROLE_ENGENHEIRO).count(),
+        "invite_form": MemberInviteForm(),
+        "invitation_result": None,
     }
     template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
     return render(request, template, context)
+
+
+@require_POST
+@require_role(UserProfile.ROLE_ADMIN)
+def invite_member_view(request):
+    form = MemberInviteForm(request.POST)
+    if not form.is_valid():
+        return render(
+            request,
+            "accounts/_member_invite_form.html",
+            {"invite_form": form, "invitation_result": None},
+            status=400,
+        )
+
+    ensure_groups()
+    temporary_password = secrets.token_urlsafe(12)
+
+    with transaction.atomic():
+        user = User.objects.create_user(
+            username=form.cleaned_data["email"],
+            email=form.cleaned_data["email"],
+            password=temporary_password,
+        )
+        profile = UserProfile(
+            user=user,
+            full_name=form.cleaned_data["full_name"],
+            role=form.cleaned_data["role"],
+            crea_number=form.cleaned_data.get("crea_number", ""),
+            crea_state=(form.cleaned_data.get("crea_state", "") or "").upper(),
+            phone=form.cleaned_data.get("phone", ""),
+            is_active=True,
+            must_change_password=True,
+        )
+        try:
+            profile.full_clean()
+        except ValidationError as exc:
+            transaction.set_rollback(True)
+            user.delete()
+            for field, messages in exc.message_dict.items():
+                for message in messages:
+                    form.add_error(field, message)
+            return render(
+                request,
+                "accounts/_member_invite_form.html",
+                {"invite_form": form, "invitation_result": None},
+                status=400,
+            )
+        profile.save()
+        role_group = ensure_groups()[profile.role]
+        user.groups.set([role_group])
+
+    context = {
+        "invite_form": MemberInviteForm(),
+        "invitation_result": {
+            "email": user.email,
+            "temporary_password": temporary_password,
+            "login_url": reverse("login"),
+            "full_name": profile.full_name,
+            "role_label": profile.get_role_display(),
+        },
+    }
+    return render(request, "accounts/_member_invite_form.html", context)

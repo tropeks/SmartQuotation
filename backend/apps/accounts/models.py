@@ -29,6 +29,7 @@ class UserProfile(models.Model):
     crea_state = models.CharField(max_length=2, blank=True)         # UF do registro (ex: SP)
     phone = models.CharField(max_length=30, blank=True)
     is_active = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

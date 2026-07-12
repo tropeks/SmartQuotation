@@ -1,23 +1,24 @@
 TEST_CMD: bash .orch-test.sh
+[1] Command: export POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation; PYTHON_BIN="$(command -v python || command -v python3)"; if [ -x ../.venv/bin/python ]; then PYTHON_BIN=../.venv/bin/python; fi; "$PYTHON_BIN" manage.py test apps.accounts.tests.TenantMemberInvitationTests apps.accounts.tests.TenantMembersViewTests -v 1 --noinput
+Summary: executou 5 testes de membros/convite; todos passaram.
+PASS/FAIL: PASS
 
-1) Comando(s) de teste rodados + resumo da saída
-- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.accounts.tests.TenantMembersViewTests -v 2 --noinput`
-  Resumo: 2 testes executados em `apps.accounts`; `test_get_members_as_admin_returns_200_with_tenant_members` e `test_get_members_as_non_admin_returns_403` passaram (`OK`), validando a tela `/members/` e o RBAC admin-only.
-- `bash .orch-test.sh`
-  Resumo: `manage.py check` OK; `makemigrations --check --dry-run` OK; suíte Django dos apps do sprint executou 243 testes em 707.574s com status final `OK`.
+[2] Command: export POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation; PYTHON_BIN="$(command -v python || command -v python3)"; if [ -x ../.venv/bin/python ]; then PYTHON_BIN=../.venv/bin/python; fi; "$PYTHON_BIN" manage.py test apps.accounts -v 1 --noinput
+Summary: executou 26 testes do app accounts; todos passaram.
+PASS/FAIL: PASS
 
-2) PASS/FAIL de cada comando
-- `POSTGRES_HOST=localhost POSTGRES_PORT=5436 POSTGRES_USER=sq POSTGRES_PASSWORD=sq POSTGRES_DB=smartquotation python manage.py test apps.accounts.tests.TenantMembersViewTests -v 2 --noinput`
-  PASS
-- `bash .orch-test.sh`
-  PASS
+[3] Command: bash .orch-test.sh
+Summary: `manage.py check` OK; `makemigrations --check --dry-run` sem pendências; suíte dos apps do sprint executou 246 testes, todos verdes.
+PASS/FAIL: PASS
 
-3) Resumo do diff
-- `backend/apps/accounts/tests.py`: adiciona `TenantMembersViewTests` cobrindo `GET /members/` com `200` para admin e `403` para não-admin, além de validar nomes, papéis, status e CREA dos membros do tenant.
-- `backend/apps/accounts/views.py`: adiciona `members_view` protegida por `require_role(UserProfile.ROLE_ADMIN)`, com consulta apenas a `UserProfile` do schema corrente e filtro opcional por busca.
-- `backend/apps/accounts/urls.py`: registra a rota `/members/`.
-- `backend/apps/accounts/templates/accounts/members.html`: cria a página full com Design System G, busca HTMX e acordeão em Alpine.
-- `backend/apps/accounts/templates/accounts/_members_table.html`: cria o parcial HTMX com a tabela de membros mostrando contato, papel, status e CREA.
+Resumo do diff:
+- backend/apps/accounts/tests.py: adiciona TDD para convite de membro por admin, validação de CREA para engenheiro e bloqueio 403 para não-admin.
+- backend/apps/accounts/models.py: adiciona `must_change_password` em `UserProfile`.
+- backend/apps/accounts/migrations/0002_userprofile_must_change_password.py: migration do novo campo.
+- backend/apps/accounts/forms.py: adiciona `MemberInviteForm` com validação de e-mail único e regra engenheiro->CREA via `full_clean`.
+- backend/apps/accounts/views.py: adiciona fluxo POST admin-only para criar `auth.User` + `UserProfile`, gerar senha provisória e vincular `Group` RBAC.
+- backend/apps/accounts/urls.py: adiciona rota `/members/invite/`.
+- backend/apps/accounts/templates/accounts/members.html: inclui o painel de convite na tela de membros.
+- backend/apps/accounts/templates/accounts/_member_invite_form.html: partial HTMX do formulário e do bloco que mostra login/senha provisória para cópia.
 
-4) Conclusão
-- Tarefa concluída porque a tela de membros do tenant foi implementada no app `accounts`, restrita a admin do tenant, listando apenas `UserProfile` do schema corrente, e o gate `bash .orch-test.sh` terminou verde.
+Conclusão: tarefa concluída porque o convite admin-only com RBAC, senha provisória, exigência de troca e validação de CREA foi implementado e o gate obrigatório `bash .orch-test.sh` passou.
