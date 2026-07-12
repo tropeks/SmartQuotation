@@ -1,6 +1,8 @@
+from datetime import timedelta
 from decimal import Decimal
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from apps.audit.services import log_access
 from apps.engineering_params.models import Rate, RateSuggestion
 from apps.production.models import ActualRate
 
@@ -44,20 +46,57 @@ def generate_suggestions():
     return criadas
 
 
-def apply_suggestion(pk, user):
-    """Aceita sugestão: cria/atualiza Rate vigente a partir de hoje e marca accepted."""
+def apply_suggestion(pk, user, request=None):
+    """Aceita sugestão: fecha o Rate vigente e cria nova versão com o valor sugerido —
+    mesmo caminho de edição versionada da calibração (T2). Se já existe uma versão de
+    hoje (2º apply no mesmo dia), atualiza-a em vez de duplicar. Audita com
+    origem='apontamento' quando `request` é fornecido."""
     with transaction.atomic():
         s = RateSuggestion.objects.select_for_update().get(pk=pk, status='pending')
-        # update_or_create previne IntegrityError se já existe Rate com valid_from=hoje
-        Rate.objects.update_or_create(
-            operacao=s.operacao,
-            valid_from=timezone.now().date(),
-            defaults={'rate_hh': s.actual_mean_rate, 'rate_hm': Decimal('0.00')},
-        )
+        today = timezone.localdate()
+        vigente = Rate.objects.vigente(s.operacao)
+        current_rate = Rate.objects.select_for_update().get(pk=vigente.pk) if vigente is not None else None
+
+        previous_payload = None
+        if current_rate is not None:
+            previous_payload = {
+                'rate_hh': str(current_rate.rate_hh),
+                'rate_hm': str(current_rate.rate_hm) if current_rate.rate_hm is not None else None,
+            }
+
+        if current_rate is not None and current_rate.valid_from == today:
+            current_rate.rate_hh = s.actual_mean_rate
+            current_rate.save(update_fields=['rate_hh'])
+            new_rate = current_rate
+        else:
+            rate_hm = current_rate.rate_hm if current_rate is not None else Decimal('0.00')
+            if current_rate is not None:
+                current_rate.valid_until = today - timedelta(days=1)
+                current_rate.save(update_fields=['valid_until'])
+            new_rate = Rate.objects.create(
+                operacao=s.operacao,
+                rate_hh=s.actual_mean_rate,
+                rate_hm=rate_hm,
+                valid_from=today,
+                valid_until=None,
+            )
+
         s.status = 'accepted'
         s.resolved_at = timezone.now()
         s.resolved_by = user
         s.save()
+
+        if request is not None:
+            log_access(request, 'rate_change', new_rate, {
+                'operacao': s.operacao,
+                'origem': 'apontamento',
+                'suggestion_id': s.pk,
+                'anterior': previous_payload,
+                'novo': {
+                    'rate_hh': str(new_rate.rate_hh),
+                    'rate_hm': str(new_rate.rate_hm) if new_rate.rate_hm is not None else None,
+                },
+            })
     return s
 
 

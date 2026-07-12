@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Calibração de Engenharia{% endblock %}
+{% block content %}
+<div class="eyebrow">ENG · Calibração</div>
+<header style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <div>
+    <h1 class="q-number">CALIBRAÇÃO</h1>
+    <p style="max-width:72ch;color:var(--g-gray-1);margin:8px 0 0">
+      Externaliza taxas e parâmetros auditáveis do tenant sem depender do admin. Nesta etapa a tela é somente leitura.
+    </p>
+  </div>
+</header>
+
+<div style="margin-top:16px">
+  {% include "engineering_params/_calibration_tabs.html" %}
+</div>
+{% endblock %}

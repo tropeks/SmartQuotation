@@ -103,6 +103,8 @@ class AccessLog(models.Model):
         ("itp_generate", "ITP Generate"),
         ("itp_accept", "ITP Accept"),
         ("edit", "Edit"),
+        ("rate_change", "Rate Change"),
+        ("param_change", "Param Change"),
     ]
 
     user = models.ForeignKey(

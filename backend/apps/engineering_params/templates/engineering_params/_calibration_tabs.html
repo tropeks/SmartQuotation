@@ -1,0 +1,183 @@
+<section class="g-section" x-data="{ activeTab: '{{ active_tab }}' }" id="calibration-tabs">
+  <header class="g-section-head" style="align-items:center;gap:12px;flex-wrap:wrap">
+    <div>
+      <h3>Base de calibração vigente</h3>
+      <p class="g-note" style="margin:4px 0 0">Somente registros vigentes do tenant atual.</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button"
+              class="q-btn"
+              :class="{ 'primary': activeTab === 'rates' }"
+              @click="activeTab = 'rates'"
+              hx-get="{% url 'engineering_params:calibration' %}?tab=rates"
+              hx-target="#calibration-tabs"
+              hx-swap="outerHTML"
+              hx-push-url="true">
+        Taxas
+      </button>
+      <button type="button"
+              class="q-btn"
+              :class="{ 'primary': activeTab === 'process' }"
+              @click="activeTab = 'process'"
+              hx-get="{% url 'engineering_params:calibration' %}?tab=process"
+              hx-target="#calibration-tabs"
+              hx-swap="outerHTML"
+              hx-push-url="true">
+        Parâmetros de processo
+      </button>
+    </div>
+  </header>
+
+  <div class="g-section-body" x-show="activeTab === 'rates'" x-cloak style="padding:0">
+    {% if pending_suggestions %}
+    <div style="padding:0 0 16px">
+      <h4 style="margin:0 0 8px">Sugestões pendentes (apontamento)</h4>
+      <div class="list-table-wrap table-scroll">
+        <table class="g-table">
+          <thead>
+            <tr>
+              <th>Operação</th>
+              <th class="num">Rate atual</th>
+              <th class="num">Sugerido</th>
+              <th class="num">Δ%</th>
+              <th class="num">N</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for suggestion in pending_suggestions %}
+            <tr>
+              <td class="id">{{ suggestion.operacao }}</td>
+              <td class="mono num">{{ suggestion.current_rate_hh }}</td>
+              <td class="mono num">{{ suggestion.actual_mean_rate }}</td>
+              <td class="num" style="color:{% if suggestion.delta_pct > 0 %}var(--g-green){% else %}var(--g-red){% endif %};font-weight:var(--w-bold)">
+                {% if suggestion.delta_pct > 0 %}+{% endif %}{{ suggestion.delta_pct }}%
+              </td>
+              <td class="mono num">{{ suggestion.n_samples }}</td>
+              <td>
+                {% if can_apply_suggestions %}
+                <form method="post"
+                      hx-post="{% url 'engineering_params:accept_rate_suggestion' suggestion.pk %}"
+                      hx-target="#calibration-tabs"
+                      hx-swap="outerHTML"
+                      style="margin:0">
+                  {% csrf_token %}
+                  <button type="submit" class="q-btn mini primary">Aceitar sugestão</button>
+                </form>
+                {% else %}
+                <span class="g-note">Somente leitura</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+    <div class="list-table-wrap table-scroll">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th>Operação</th>
+            <th class="num">Rate HH</th>
+            <th class="num">Rate HM</th>
+            <th class="num">Vigente desde</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rate in rates %}
+          <tr>
+            <td class="id">{{ rate.operacao }}</td>
+            <td class="mono num">{{ rate.rate_hh }}</td>
+            <td class="mono num">{% if rate.rate_hm is not None %}{{ rate.rate_hm }}{% else %}—{% endif %}</td>
+            <td class="mono num">{{ rate.valid_from|date:"d/m/Y" }}</td>
+            <td>
+              {% if can_edit_rates %}
+              <form method="post"
+                    hx-post="{% url 'engineering_params:save_rate' rate.pk %}"
+                    hx-target="#calibration-tabs"
+                    hx-swap="outerHTML"
+                    style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                {% csrf_token %}
+                <input class="q-input" type="text" name="rate_hh" value="{{ rate.rate_hh }}" inputmode="decimal" aria-label="Rate HH {{ rate.operacao }}" style="width:96px">
+                <input class="q-input" type="text" name="rate_hm" value="{% if rate.rate_hm is not None %}{{ rate.rate_hm }}{% endif %}" inputmode="decimal" aria-label="Rate HM {{ rate.operacao }}" style="width:96px">
+                <button type="button" class="q-btn ghost"
+                        hx-post="{% url 'engineering_params:preview_rate_impact' rate.pk %}"
+                        hx-target="#rate-impact-{{ rate.pk }}"
+                        hx-swap="outerHTML">
+                  Simular impacto
+                </button>
+                <button type="submit" class="q-btn primary">Salvar</button>
+              </form>
+              <div id="rate-impact-{{ rate.pk }}"></div>
+              {% else %}
+              <span class="g-note">Somente leitura</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">Sem taxas vigentes.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="g-section-body" x-show="activeTab === 'process'" x-cloak style="padding:0">
+    <div class="list-table-wrap table-scroll">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th>Operação</th>
+            <th>Método</th>
+            <th>Material</th>
+            <th class="num">Valor</th>
+            <th>Unidade</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for parameter in process_parameters %}
+          <tr>
+            <td class="id">{{ parameter.operacao }}</td>
+            <td>{{ parameter.get_metodo_display }}</td>
+            <td>{% if parameter.material %}{{ parameter.material }}{% else %}Fallback{% endif %}</td>
+            <td class="mono num">{% if parameter.valor is not None %}{{ parameter.valor }}{% else %}Pendente{% endif %}</td>
+            <td>{{ parameter.unidade }}</td>
+            <td>
+              {% if can_edit_rates %}
+              <form method="post"
+                    hx-post="{% url 'engineering_params:save_process_parameter' parameter.pk %}"
+                    hx-target="#calibration-tabs"
+                    hx-swap="outerHTML"
+                    style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                {% csrf_token %}
+                <input class="q-input" type="text" name="valor" value="{% if parameter.valor is not None %}{{ parameter.valor }}{% endif %}" inputmode="decimal" aria-label="Valor {{ parameter.operacao }} {{ parameter.get_metodo_display }}" style="width:96px">
+                <button type="button" class="q-btn ghost"
+                        hx-post="{% url 'engineering_params:preview_process_parameter_impact' parameter.pk %}"
+                        hx-target="#pp-impact-{{ parameter.pk }}"
+                        hx-swap="outerHTML">
+                  Simular impacto
+                </button>
+                <button type="submit" class="q-btn primary">Salvar</button>
+              </form>
+              <div id="pp-impact-{{ parameter.pk }}"></div>
+              {% else %}
+              <span class="g-note">Somente leitura</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">Sem parâmetros vigentes.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

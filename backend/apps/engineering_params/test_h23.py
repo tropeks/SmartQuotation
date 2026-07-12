@@ -8,15 +8,17 @@ Cobre os 24 cenários do motor de aprendizado de rates:
 Usa TenantTestCase: as tabelas de TENANT_APPS só existem no schema do tenant de teste.
 Self-contained: cria Rate vigente e ActualRate no setUp / por teste.
 """
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.test import RequestFactory
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
 
 from apps.accounts.models import UserProfile
+from apps.audit.models import AccessLog
 from apps.engineering_params.models import Rate, RateSuggestion
 from apps.engineering_params.services import (
     apply_suggestion,
@@ -130,7 +132,7 @@ class LearningEngineServiceTests(TenantTestCase):
         self.assertEqual(Rate.objects.filter(operacao="TEST_OP").count(), antes + 1)
         novo = Rate.objects.vigente("TEST_OP")
         self.assertEqual(novo.rate_hh, Decimal("115.00"))
-        self.assertEqual(novo.valid_from, timezone.now().date())
+        self.assertEqual(novo.valid_from, timezone.localdate())
 
     def test_apply_marca_accepted(self):
         s = RateSuggestion.objects.create(
@@ -202,6 +204,44 @@ class LearningEngineServiceTests(TenantTestCase):
         apply_suggestion(s.pk, self.user)
         novo = Rate.objects.vigente("TEST_OP")
         self.assertEqual(novo.rate_hm, Decimal("0.00"))
+
+    def test_apply_com_request_fecha_vigente_e_audita_origem_apontamento(self):
+        """apply_suggestion(request=...) reusa o caminho de edição versionada da calibração
+        (T2): fecha o Rate vigente (valid_until) em vez de deixar dois vigentes sobrepostos,
+        e audita a mudança com origem='apontamento'."""
+        s = RateSuggestion.objects.create(
+            operacao="TEST_OP", actual_mean_rate=Decimal("115.00"),
+            current_rate_hh=Decimal("100.00"), delta_pct=Decimal("15.00"),
+            n_samples=25, confidence=Decimal("0.80"),
+        )
+        antigo_pk = self.rate.pk
+        request = RequestFactory().post(f"/engenharia/calibracao/sugestoes/{s.pk}/aceitar/")
+        request.user = self.user
+
+        apply_suggestion(s.pk, self.user, request=request)
+
+        self.rate.refresh_from_db()
+        self.assertEqual(self.rate.valid_until, timezone.localdate() - timedelta(days=1))
+
+        novo = Rate.objects.vigente("TEST_OP")
+        self.assertNotEqual(novo.pk, antigo_pk)
+        self.assertEqual(novo.rate_hh, Decimal("115.00"))
+
+        log = AccessLog.objects.get(action="rate_change", resource_id=str(novo.pk))
+        self.assertEqual(log.metadata["origem"], "apontamento")
+        self.assertEqual(log.metadata["operacao"], "TEST_OP")
+        self.assertEqual(log.metadata["suggestion_id"], s.pk)
+
+    def test_apply_sem_request_nao_audita(self):
+        """Sem request (ex.: chamada programática), apply_suggestion não deve quebrar nem
+        criar AccessLog — auditoria é opcional, versionamento não."""
+        s = RateSuggestion.objects.create(
+            operacao="TEST_OP", actual_mean_rate=Decimal("115.00"),
+            current_rate_hh=Decimal("100.00"), delta_pct=Decimal("15.00"),
+            n_samples=25, confidence=Decimal("0.80"),
+        )
+        apply_suggestion(s.pk, self.user)
+        self.assertFalse(AccessLog.objects.filter(action="rate_change").exists())
 
     def test_apply_mesmo_dia_idempotente(self):
         """Dois applies no mesmo dia → update_or_create, não IntegrityError."""
