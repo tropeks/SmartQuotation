@@ -18,6 +18,7 @@ from django_tenants.test.cases import TenantTestCase as TestCase
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import ROLE_GROUPS, ensure_groups, require_role
+from apps.audit.models import AccessLog
 
 
 class UserProfileModelTests(TestCase):
@@ -430,3 +431,142 @@ class RbacTests(TestCase):
         resp = self._view(UserProfile.ROLE_ADMIN)(request)
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.url, "/login/")
+
+
+class TenantMemberRoleChangeTests(TestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+        self.admin_user = User.objects.create_user(username="tenant-admin", password="segredo123")
+        self.admin_profile = UserProfile.objects.create(
+            user=self.admin_user, full_name="Alice Admin", role=UserProfile.ROLE_ADMIN, is_active=True,
+        )
+
+        self.member_user = User.objects.create_user(username="membro-orc", password="segredo123")
+        self.member_profile = UserProfile.objects.create(
+            user=self.member_user, full_name="Bia Orc", role=UserProfile.ROLE_ORCAMENTISTA, is_active=True,
+        )
+
+        self.non_admin_user = User.objects.create_user(username="tenant-orc", password="segredo123")
+        UserProfile.objects.create(
+            user=self.non_admin_user, full_name="Olivia Orc", role=UserProfile.ROLE_ORCAMENTISTA, is_active=True,
+        )
+
+    def test_admin_muda_papel_de_membro_atualiza_group_e_gera_accesslog(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            f"/members/{self.member_profile.pk}/role/",
+            {"role": UserProfile.ROLE_GESTOR_COMERCIAL},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.member_profile.refresh_from_db()
+        self.assertEqual(self.member_profile.role, UserProfile.ROLE_GESTOR_COMERCIAL)
+        self.assertEqual(
+            list(self.member_user.groups.values_list("name", flat=True)),
+            [ROLE_GROUPS[UserProfile.ROLE_GESTOR_COMERCIAL]],
+        )
+        log = AccessLog.objects.get(action="role_change")
+        self.assertEqual(log.user_id, self.admin_user.pk)
+        self.assertEqual(log.resource_id, str(self.member_profile.pk))
+        self.assertEqual(log.metadata["old_role"], UserProfile.ROLE_ORCAMENTISTA)
+        self.assertEqual(log.metadata["new_role"], UserProfile.ROLE_GESTOR_COMERCIAL)
+
+    def test_mudar_papel_para_engenheiro_sem_crea_falha(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            f"/members/{self.member_profile.pk}/role/",
+            {"role": UserProfile.ROLE_ENGENHEIRO},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.member_profile.refresh_from_db()
+        self.assertEqual(self.member_profile.role, UserProfile.ROLE_ORCAMENTISTA)
+        self.assertFalse(AccessLog.objects.filter(action="role_change").exists())
+
+    def test_mudar_papel_para_engenheiro_com_crea_funciona(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            f"/members/{self.member_profile.pk}/role/",
+            {"role": UserProfile.ROLE_ENGENHEIRO, "crea_number": "CREA-999", "crea_state": "SP"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.member_profile.refresh_from_db()
+        self.assertEqual(self.member_profile.role, UserProfile.ROLE_ENGENHEIRO)
+        self.assertEqual(self.member_profile.crea_number, "CREA-999")
+
+    def test_nao_admin_nao_pode_mudar_papel(self):
+        self.client.force_login(self.non_admin_user)
+
+        response = self.client.post(
+            f"/members/{self.member_profile.pk}/role/",
+            {"role": UserProfile.ROLE_GESTOR_COMERCIAL},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.member_profile.refresh_from_db()
+        self.assertEqual(self.member_profile.role, UserProfile.ROLE_ORCAMENTISTA)
+
+
+class TenantMemberDeactivationTests(TestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+
+        self.admin_user = User.objects.create_user(username="tenant-admin", password="segredo123")
+        self.admin_profile = UserProfile.objects.create(
+            user=self.admin_user, full_name="Alice Admin", role=UserProfile.ROLE_ADMIN, is_active=True,
+        )
+
+        self.member_user = User.objects.create_user(username="membro-orc", password="segredo123")
+        self.member_profile = UserProfile.objects.create(
+            user=self.member_user, full_name="Bia Orc", role=UserProfile.ROLE_ORCAMENTISTA, is_active=True,
+        )
+
+        self.non_admin_user = User.objects.create_user(username="tenant-orc", password="segredo123")
+        UserProfile.objects.create(
+            user=self.non_admin_user, full_name="Olivia Orc", role=UserProfile.ROLE_ORCAMENTISTA, is_active=True,
+        )
+
+    def test_admin_desativa_membro_seta_inactive_e_gera_accesslog(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            f"/members/{self.member_profile.pk}/deactivate/",
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.member_profile.refresh_from_db()
+        self.assertFalse(self.member_profile.is_active)
+        log = AccessLog.objects.get(action="member_deactivate")
+        self.assertEqual(log.user_id, self.admin_user.pk)
+        self.assertEqual(log.resource_id, str(self.member_profile.pk))
+
+    def test_admin_nao_pode_desativar_a_si_mesmo(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            f"/members/{self.admin_profile.pk}/deactivate/",
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.admin_profile.refresh_from_db()
+        self.assertTrue(self.admin_profile.is_active)
+        self.assertFalse(AccessLog.objects.filter(action="member_deactivate").exists())
+
+    def test_nao_admin_nao_pode_desativar_membro(self):
+        self.client.force_login(self.non_admin_user)
+
+        response = self.client.post(f"/members/{self.member_profile.pk}/deactivate/")
+
+        self.assertEqual(response.status_code, 403)
+        self.member_profile.refresh_from_db()
+        self.assertTrue(self.member_profile.is_active)

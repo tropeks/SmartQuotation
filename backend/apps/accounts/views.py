@@ -14,15 +14,16 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
-from apps.accounts.forms import LoginForm, MemberInviteForm
+from apps.accounts.forms import LoginForm, MemberInviteForm, MemberRoleChangeForm
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import ensure_groups, require_role
 from apps.accounts.rbac import has_tenant_membership
 from apps.audit.models import TechnicalApproval
+from apps.audit.services import log_access
 from apps.quotations.models import Quotation
 
 
@@ -122,8 +123,7 @@ def dashboard_view(request):
     )
 
 
-@require_role(UserProfile.ROLE_ADMIN)
-def members_view(request):
+def _members_context(request):
     query = (request.GET.get("q") or "").strip()
     members = UserProfile.objects.select_related("user").order_by("full_name")
     if query:
@@ -134,7 +134,7 @@ def members_view(request):
             | Q(crea_number__icontains=query)
         )
 
-    context = {
+    return {
         "members": members,
         "search": query,
         "active_members": members.filter(is_active=True).count(),
@@ -142,9 +142,69 @@ def members_view(request):
         "engineers": members.filter(role=UserProfile.ROLE_ENGENHEIRO).count(),
         "invite_form": MemberInviteForm(),
         "invitation_result": None,
+        "role_choices": UserProfile.ROLE,
     }
+
+
+@require_role(UserProfile.ROLE_ADMIN)
+def members_view(request):
+    context = _members_context(request)
     template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
     return render(request, template, context)
+
+
+@require_POST
+@require_role(UserProfile.ROLE_ADMIN)
+def change_member_role_view(request, pk):
+    profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=pk)
+    form = MemberRoleChangeForm(request.POST)
+    template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
+
+    if not form.is_valid():
+        context = _members_context(request)
+        context["role_change_error"] = "Papel inválido."
+        return render(request, template, context, status=400)
+
+    old_role = profile.role
+    new_role = form.cleaned_data["role"]
+    profile.role = new_role
+    if new_role == UserProfile.ROLE_ENGENHEIRO:
+        profile.crea_number = form.cleaned_data.get("crea_number") or profile.crea_number
+        profile.crea_state = (form.cleaned_data.get("crea_state") or profile.crea_state or "").upper()
+
+    try:
+        profile.full_clean(exclude=["user"])
+    except ValidationError as exc:
+        context = _members_context(request)
+        context["role_change_error"] = " ".join(
+            message for messages in exc.message_dict.values() for message in messages
+        )
+        return render(request, template, context, status=400)
+
+    profile.save()
+    role_group = ensure_groups()[new_role]
+    profile.user.groups.set([role_group])
+    log_access(request, "role_change", profile, {"old_role": old_role, "new_role": new_role})
+
+    return render(request, template, _members_context(request))
+
+
+@require_POST
+@require_role(UserProfile.ROLE_ADMIN)
+def deactivate_member_view(request, pk):
+    profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=pk)
+    template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
+
+    if profile.user_id == request.user.pk:
+        context = _members_context(request)
+        context["deactivate_error"] = "Admin não pode desativar a si mesmo."
+        return render(request, template, context, status=400)
+
+    profile.is_active = False
+    profile.save(update_fields=["is_active"])
+    log_access(request, "member_deactivate", profile, {})
+
+    return render(request, template, _members_context(request))
 
 
 @require_POST

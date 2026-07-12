@@ -88,3 +88,12 @@ class MemberInviteForm(forms.Form):
                 for message in messages:
                     self.add_error(field, message)
         return cleaned_data
+
+
+class MemberRoleChangeForm(forms.Form):
+    """Reatribuição de papel RBAC de um membro existente. clean() delega a validação
+    de domínio (engenheiro->CREA) para UserProfile.full_clean()."""
+
+    role = forms.ChoiceField(label="Papel", choices=UserProfile.ROLE)
+    crea_number = forms.CharField(label="Número do CREA", max_length=30, required=False)
+    crea_state = forms.CharField(label="UF do CREA", max_length=2, required=False)
