@@ -32,7 +32,8 @@ class Quotation(models.Model):
     STATUS = [("draft", "Rascunho"), ("in_review", "Em Revisão"),
               ("approved", "Aprovada"), ("sent", "Enviada"),
               ("won", "Ganha"), ("lost", "Perdida")]
-    SCOPE = [("tube_bundle", "Feixe Tubular"), ("complete", "Equipamento Completo")]
+    SCOPE = [("tube_bundle", "Feixe Tubular"), ("complete", "Equipamento Completo"),
+             ("parts", "Peças de Reposição")]
 
     number = models.CharField(max_length=50, unique=True)
     revision = models.PositiveSmallIntegerField(default=0)
@@ -151,3 +152,24 @@ class ItemOperation(models.Model):
         if self.pk:
             self.save(update_fields=["custo"])
         return self.custo
+
+
+class QuotationPart(models.Model):
+    """Composição por PARTES avulsas (scope='parts'): quais componentes TEMA entram na
+    cotação — casco só, cabeçote só, feixe reto/U só, ou a combinação p/ montar o
+    equipamento. Cada linha aponta um ComponentTemplate + a geometria/material DESTA
+    instância. Alimenta o custeio (adapter.recompute ramo 'parts') e o Databook."""
+    quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name="parts")
+    template = models.ForeignKey("tema_templates.ComponentTemplate",
+                                 on_delete=models.PROTECT, related_name="+")
+    tema_letter = models.CharField(max_length=1, blank=True)          # A/B/E/F/U/S...
+    material_sigla = models.CharField(max_length=50, blank=True)      # sigla do Material (ex SA-516 GR 70)
+    params = models.JSONField(default=dict, blank=True)              # geometria da instância (Ø, comp, nº furos, massa...)
+    incluso = models.BooleanField(default=True)                      # p/ ligar/desligar a peça na cotação
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order"]
+
+    def __str__(self):
+        return f"{self.quotation.number} · {self.template} ({self.material_sigla or '—'})"

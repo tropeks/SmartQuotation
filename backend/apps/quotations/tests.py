@@ -309,6 +309,34 @@ class ItemOperationMigrationTests(TenantMigrationTestCase):
         self.assertEqual(operation.custo, Decimal("321.00"))
 
 
+class QuotationPartTests(TenantTestCase):
+    """Task 3: composição por partes avulsas + scope 'parts'."""
+
+    def setUp(self):
+        from apps.tema_templates.models import ComponentTemplate
+        self.customer = Customer.objects.create(company_name="Cliente Reposição")
+        self.casco = ComponentTemplate.objects.create(
+            tema_part="shell", tema_letter="E", name="Casco E")
+        self.cabecote = ComponentTemplate.objects.create(
+            tema_part="front_head", tema_letter="A", name="Cabeçote A")
+
+    def test_scope_parts_disponivel(self):
+        self.assertIn("parts", dict(Quotation.SCOPE))
+
+    def test_cria_partes_com_ordenacao_e_related_name(self):
+        from apps.quotations.models import QuotationPart
+        q = Quotation.objects.create(
+            number="COT-PARTS-1", customer=self.customer, title="Reposição", scope="parts")
+        QuotationPart.objects.create(quotation=q, template=self.cabecote, tema_letter="A",
+                                     material_sigla="SA-105", incluso=False, sort_order=2)
+        QuotationPart.objects.create(quotation=q, template=self.casco, tema_letter="E",
+                                     material_sigla="SA-516 GR 70", incluso=True, sort_order=1)
+        partes = list(q.parts.all())                 # related_name 'parts'
+        self.assertEqual(len(partes), 2)
+        self.assertEqual(partes[0].template, self.casco)   # sort_order=1 primeiro
+        self.assertEqual(q.parts.filter(incluso=True).count(), 1)
+
+
 class ItemOperationProvenanceTests(TenantTestCase):
     """Task 2: override NÃO-DESTRUTIVO — origem + horas sugeridas + restaurar."""
 
