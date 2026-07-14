@@ -337,6 +337,66 @@ def databook_export(request, pk):
     return resp
 
 
+def _resolve_customer(request):
+    cid = request.POST.get("customer_id")
+    if cid:
+        return get_object_or_404(Customer, pk=cid)
+    name = (request.POST.get("customer_name") or "Cliente").strip()
+    cust, _ = Customer.objects.get_or_create(company_name=name)
+    return cust
+
+
+@require_role(*_ENTRY_ROLES)
+def compose_parts_new(request):
+    """Tela de composição: montar equipamento conforme TEMA OU só partes de reposição."""
+    from apps.tema_templates.models import ComponentTemplate
+    grupos = {}
+    for t in ComponentTemplate.objects.filter(is_active=True).order_by("tema_part", "tema_letter", "name"):
+        grupos.setdefault(t.get_tema_part_display(), []).append(t)
+    return render(request, "quotations/new_parts.html",
+                  {"grupos": grupos, "customers": Customer.objects.order_by("company_name")})
+
+
+@require_role(*_ENTRY_ROLES)
+@require_POST
+def compose_parts_create(request):
+    """Gera a cotação (scope='parts') a partir das partes selecionadas e custeia."""
+    from apps.tema_templates.models import ComponentTemplate
+    from apps.quotations.models import QuotationPart
+    from apps.quotations.services import next_number
+    from apps.quotations.adapter import recompute
+
+    ids = request.POST.getlist("template_id")
+    if not ids:
+        return HttpResponseBadRequest("Selecione ao menos uma parte.")
+    q = Quotation.objects.create(
+        number=next_number(), customer=_resolve_customer(request),
+        title=(request.POST.get("title") or "Peças de reposição").strip(),
+        scope="parts", created_by=request.user)
+    for i, tid in enumerate(ids):
+        tmpl = get_object_or_404(ComponentTemplate, pk=tid)
+        params = {}
+        massa = _parse_decimal(request.POST.get(f"massa_{tid}"), None)
+        if massa is not None:
+            params["massa"] = float(massa)
+        QuotationPart.objects.create(
+            quotation=q, template=tmpl,
+            tema_letter=(request.POST.get(f"letra_{tid}") or tmpl.tema_letter or "")[:1],
+            material_sigla=(request.POST.get(f"material_{tid}") or "")[:50],
+            params=params, incluso=True, sort_order=i)
+    recompute(q)
+    return redirect("quotations:detail", pk=q.pk)
+
+
+@require_role(*_READ_ROLES)
+def compose_compat_check(request):
+    """HTMX: avisos de compatibilidade TEMA (front×shell×rear) ao montar o equipamento."""
+    from apps.tema_templates.models import check_compatibility
+    avisos = check_compatibility(request.GET.get("front", ""),
+                                 request.GET.get("shell", ""), request.GET.get("rear", ""))
+    return render(request, "quotations/_compat_check.html", {"avisos": avisos})
+
+
 from apps.quotations.models import QuotationItem
 
 

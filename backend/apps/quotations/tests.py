@@ -429,6 +429,44 @@ class DatabookServiceTests(TenantTestCase):
         self.assertIn("A194", normas)                 # porcas
 
 
+class ComposePartsTests(TenantTestCase):
+    """Task 9: UI compor — montar TEMA ou só partes."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+        from apps.tema_templates.models import ComponentTemplate
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.user = User.objects.create_user(username="orc", password="senha-forte-123")
+        UserProfile.objects.create(user=self.user, full_name="Orc",
+                                   role=UserProfile.ROLE_ORCAMENTISTA)
+        self.client.force_login(self.user)
+        self.casco = ComponentTemplate.objects.create(
+            tema_part="shell", tema_letter="E", name="Casco E")
+
+    def test_form_carrega(self):
+        self.assertEqual(self.client.get("/cotacoes/nova/partes/").status_code, 200)
+
+    def test_cria_cotacao_de_partes(self):
+        from apps.quotations.models import QuotationPart
+        resp = self.client.post("/cotacoes/nova/partes/criar/", {
+            "customer_name": "Cliente X", "title": "Reposição casco",
+            "template_id": str(self.casco.pk),
+            f"material_{self.casco.pk}": "SA-516 GR 70",
+            f"massa_{self.casco.pk}": "500",
+        })
+        self.assertEqual(resp.status_code, 302)
+        q = Quotation.objects.get(title="Reposição casco")
+        self.assertEqual(q.scope, "parts")
+        self.assertEqual(q.parts.count(), 1)
+        self.assertEqual(q.parts.first().material_sigla, "SA-516 GR 70")
+
+    def test_compat_check_avisa_incompativel(self):
+        resp = self.client.get("/cotacoes/partes/compat/", {"front": "N", "shell": "E", "rear": "M"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "N")   # aviso sobre cabeçote frontal N
+
+
 class FolgaRcb43Tests(TenantTestCase):
     """Task 8: folga periférica shell-to-bundle (TEMA RCB-4.3) do feixe de reposição."""
 

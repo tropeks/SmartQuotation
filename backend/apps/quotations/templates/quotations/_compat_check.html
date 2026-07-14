@@ -1,0 +1,7 @@
+{% if avisos %}
+<ul class="compat-avisos">
+  {% for a in avisos %}<li class="g-muted">⚠ {{ a }}</li>{% endfor %}
+</ul>
+{% else %}
+<p class="g-muted">Combinação TEMA sem avisos de compatibilidade.</p>
+{% endif %}

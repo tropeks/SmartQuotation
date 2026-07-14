@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Nova cotação — Peças / Montar TEMA{% endblock %}
+{% block content %}
+<div class="q-head">
+  <h2>Nova cotação — Peças de Reposição</h2>
+  <p class="g-muted">Monte o equipamento conforme TEMA (cabeçote frontal · casco · cabeçote
+    traseiro · feixe) ou selecione só as partes desejadas. O sistema gera a lista de peças e custeia.</p>
+</div>
+
+<form method="post" action="{% url 'quotations:parts_create' %}" x-data="{}">
+  {% csrf_token %}
+
+  <section class="drawer-block">
+    <label class="g-field">
+      <span>Cliente</span>
+      <input class="g-input" type="text" name="customer_name" placeholder="Nome do cliente" required>
+    </label>
+    <label class="g-field">
+      <span>Título</span>
+      <input class="g-input" type="text" name="title" value="Peças de reposição">
+    </label>
+  </section>
+
+  <section class="drawer-block">
+    <h5>Compatibilidade TEMA (ao montar)</h5>
+    <div class="compat-row" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+      <label class="g-field"><span>Frontal</span>
+        <input class="g-input" name="front" size="2" maxlength="1"
+               hx-get="{% url 'quotations:compat_check' %}" hx-trigger="keyup changed delay:300ms"
+               hx-include="[name='shell'],[name='rear']" hx-target="#compat-out"></label>
+      <label class="g-field"><span>Casco</span>
+        <input class="g-input" name="shell" size="2" maxlength="1"
+               hx-get="{% url 'quotations:compat_check' %}" hx-trigger="keyup changed delay:300ms"
+               hx-include="[name='front'],[name='rear']" hx-target="#compat-out"></label>
+      <label class="g-field"><span>Traseiro</span>
+        <input class="g-input" name="rear" size="2" maxlength="1"
+               hx-get="{% url 'quotations:compat_check' %}" hx-trigger="keyup changed delay:300ms"
+               hx-include="[name='front'],[name='shell']" hx-target="#compat-out"></label>
+    </div>
+    <div id="compat-out"></div>
+  </section>
+
+  <section class="drawer-block">
+    <h5>Partes</h5>
+    {% for grupo, templates in grupos.items %}
+    <fieldset class="parts-group">
+      <legend>{{ grupo }}</legend>
+      {% for t in templates %}
+      <div class="part-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0">
+        <label style="min-width:220px">
+          <input type="checkbox" name="template_id" value="{{ t.pk }}"> {{ t.name }}
+          {% if t.tema_letter %}<span class="mono g-muted">[{{ t.tema_letter }}]</span>{% endif %}
+        </label>
+        <input class="g-input" name="material_{{ t.pk }}" placeholder="Material (ex SA-516 GR 70)" size="18">
+        <input class="g-input" name="letra_{{ t.pk }}" placeholder="Letra" size="2" maxlength="1"
+               value="{{ t.tema_letter }}">
+        <input class="g-input" name="massa_{{ t.pk }}" placeholder="Massa (kg)" size="8" inputmode="decimal">
+      </div>
+      {% endfor %}
+    </fieldset>
+    {% empty %}
+    <p class="g-muted">Nenhum ComponentTemplate cadastrado. Rode <code>seed_tema_catalog</code>.</p>
+    {% endfor %}
+  </section>
+
+  <div class="drawer-actions">
+    <button type="submit" class="q-btn primary">Gerar cotação de peças</button>
+    <a class="q-btn" href="{% url 'quotations:list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
