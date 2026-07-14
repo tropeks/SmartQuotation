@@ -51,6 +51,37 @@ FLOATING_REARS = {"P", "S", "T", "W"}
 U_TUBE_REARS = {"U"}
 
 
+class ComponentOperation(models.Model):
+    """Roteiro de fabricação SUGERIDO de um ComponentTemplate: QUAIS operações e qual driver
+    físico usar. NÃO calcula horas aqui — isso é driver × ProcessParameter.objects.vigente(...)
+    (outra task). `operacao` casa com engineering_params.ProcessParameter.operacao/Rate.operacao."""
+
+    METODO = [("radial", "Radial"), ("cnc", "CNC"), ("manual", "Manual")]
+    DRIVER = [
+        ("diametro_bocal", "Ø bocal"), ("n_furos", "Nº furos"), ("n_tubos", "Nº tubos"),
+        ("comprimento", "Comprimento"), ("diametro_casco", "Ø casco"),
+        ("area_solda", "Área de solda"), ("massa", "Massa"), ("volume", "Volume"),
+        ("fixo", "Fixo"),
+    ]
+
+    template = models.ForeignKey(
+        "ComponentTemplate", on_delete=models.CASCADE, related_name="component_operations")
+    codigo_op = models.CharField(max_length=40)
+    descricao = models.CharField(max_length=255)
+    operacao = models.CharField(max_length=100)
+    metodo = models.CharField(max_length=20, choices=METODO, blank=True)
+    driver = models.CharField(max_length=20, choices=DRIVER)
+    setup_fixo = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    aplicavel_default = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "codigo_op"]
+
+    def __str__(self):
+        return f"{self.template} · {self.codigo_op} — {self.descricao}"
+
+
 def check_compatibility(front: str, shell: str, rear: str) -> list[str]:
     """Retorna lista de avisos (vazia = combinação ok). Não bloqueia aqui (o caller decide
     block/warn/free conforme TenantConfig)."""

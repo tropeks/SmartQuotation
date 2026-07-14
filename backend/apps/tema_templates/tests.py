@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django_tenants.test.cases import TenantTestCase as TestCase
 
-from apps.tema_templates.models import ComponentTemplate, check_compatibility
+from apps.tema_templates.models import ComponentOperation, ComponentTemplate, check_compatibility
 from apps.engineering_params.models import TenantParamConfig
 
 
@@ -54,6 +54,54 @@ class SeedCatalogTests(TestCase):
         n1 = ComponentTemplate.objects.count()
         call_command("seed_tema_catalog")
         self.assertEqual(ComponentTemplate.objects.count(), n1)
+
+
+class ComponentOperationModelTests(TestCase):
+    """ComponentOperation: roteiro de fabricação sugerido (só descreve — não calcula horas)."""
+
+    def test_criacao_relacao_e_ordenacao(self):
+        template = ComponentTemplate.objects.create(
+            tema_part="shell", tema_letter="E", name="Um passe no casco")
+        op2 = ComponentOperation.objects.create(
+            template=template, codigo_op="CASCO-02", descricao="Calandragem",
+            operacao="CALANDRAGEM", driver="comprimento", sort_order=20)
+        op1 = ComponentOperation.objects.create(
+            template=template, codigo_op="CASCO-01", descricao="Corte de chapa",
+            operacao="CORTE_CHAPA", driver="massa", sort_order=10)
+        self.assertEqual(list(template.component_operations.all()), [op1, op2])
+        self.assertEqual(op1.setup_fixo, 0)
+        self.assertTrue(op1.aplicavel_default)
+
+    def test_metodo_e_driver_sao_opcoes_validas(self):
+        template = ComponentTemplate.objects.create(
+            tema_part="front_head", tema_letter="A", name="Canal e tampa removível")
+        op = ComponentOperation.objects.create(
+            template=template, codigo_op="CAB-01", descricao="Solda longitudinal",
+            operacao="SOLDA_LONGITUDINAL", metodo="manual", driver="area_solda")
+        self.assertEqual(op.metodo, "manual")
+        self.assertEqual(op.driver, "area_solda")
+
+
+class SeedComponentOperationsTests(TestCase):
+    def setUp(self):
+        call_command("seed_tema_catalog")
+
+    def test_seed_popula_roteiro_para_casco_e_cabecotes(self):
+        call_command("seed_component_operations")
+        shell = ComponentTemplate.objects.filter(tema_part="shell").first()
+        front = ComponentTemplate.objects.filter(tema_part="front_head").first()
+        rear = ComponentTemplate.objects.filter(tema_part="rear_head").first()
+        self.assertGreater(shell.component_operations.count(), 0)
+        self.assertGreater(front.component_operations.count(), 0)
+        self.assertGreater(rear.component_operations.count(), 0)
+        for op in shell.component_operations.all():
+            self.assertIn("(sugerida — pendente validação do PE)", op.descricao)
+
+    def test_seed_idempotente(self):
+        call_command("seed_component_operations")
+        n1 = ComponentOperation.objects.count()
+        call_command("seed_component_operations")
+        self.assertEqual(ComponentOperation.objects.count(), n1)
 
 
 class ComposeViewTests(TestCase):

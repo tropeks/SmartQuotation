@@ -1,0 +1,110 @@
+{
+  "_fonte": "Roteiro de fabricação SUGERIDO por parte TEMA (casco/cabeçotes) — ponto de partida para o motor de horas (driver × ProcessParameter.vigente). Ainda NÃO validado com o PE; cada linha carrega '(sugerida — pendente validação do PE)' na descrição até revisão.",
+  "roteiros": [
+    {
+      "tema_part": "shell",
+      "operacoes": [
+        {
+          "codigo_op": "CASCO-01",
+          "descricao": "Corte de chapa do casco (sugerida — pendente validação do PE)",
+          "operacao": "CORTE_CHAPA",
+          "metodo": "cnc",
+          "driver": "massa",
+          "setup_fixo": "0.50",
+          "sort_order": 10
+        },
+        {
+          "codigo_op": "CASCO-02",
+          "descricao": "Calandragem do casco (sugerida — pendente validação do PE)",
+          "operacao": "CALANDRAGEM",
+          "metodo": "manual",
+          "driver": "comprimento",
+          "setup_fixo": "1.00",
+          "sort_order": 20
+        },
+        {
+          "codigo_op": "CASCO-03",
+          "descricao": "Solda longitudinal do casco (sugerida — pendente validação do PE)",
+          "operacao": "SOLDA_LONGITUDINAL",
+          "metodo": "manual",
+          "driver": "area_solda",
+          "setup_fixo": "0.50",
+          "sort_order": 30
+        },
+        {
+          "codigo_op": "CASCO-04",
+          "descricao": "Solda circunferencial do casco (sugerida — pendente validação do PE)",
+          "operacao": "SOLDA_CIRCUNFERENCIAL",
+          "metodo": "manual",
+          "driver": "diametro_casco",
+          "setup_fixo": "0.50",
+          "sort_order": 40
+        }
+      ]
+    },
+    {
+      "tema_part": "front_head",
+      "operacoes": [
+        {
+          "codigo_op": "CAB-FRONT-01",
+          "descricao": "Corte de chapa do cabeçote frontal (sugerida — pendente validação do PE)",
+          "operacao": "CORTE_CHAPA",
+          "metodo": "cnc",
+          "driver": "massa",
+          "setup_fixo": "0.50",
+          "sort_order": 10
+        },
+        {
+          "codigo_op": "CAB-FRONT-02",
+          "descricao": "Calandragem/conformação do cabeçote frontal (sugerida — pendente validação do PE)",
+          "operacao": "CALANDRAGEM",
+          "metodo": "manual",
+          "driver": "comprimento",
+          "setup_fixo": "1.00",
+          "sort_order": 20
+        },
+        {
+          "codigo_op": "CAB-FRONT-03",
+          "descricao": "Solda longitudinal do cabeçote frontal (sugerida — pendente validação do PE)",
+          "operacao": "SOLDA_LONGITUDINAL",
+          "metodo": "manual",
+          "driver": "area_solda",
+          "setup_fixo": "0.50",
+          "sort_order": 30
+        }
+      ]
+    },
+    {
+      "tema_part": "rear_head",
+      "operacoes": [
+        {
+          "codigo_op": "CAB-TRAS-01",
+          "descricao": "Corte de chapa do cabeçote traseiro (sugerida — pendente validação do PE)",
+          "operacao": "CORTE_CHAPA",
+          "metodo": "cnc",
+          "driver": "massa",
+          "setup_fixo": "0.50",
+          "sort_order": 10
+        },
+        {
+          "codigo_op": "CAB-TRAS-02",
+          "descricao": "Calandragem/conformação do cabeçote traseiro (sugerida — pendente validação do PE)",
+          "operacao": "CALANDRAGEM",
+          "metodo": "manual",
+          "driver": "comprimento",
+          "setup_fixo": "1.00",
+          "sort_order": 20
+        },
+        {
+          "codigo_op": "CAB-TRAS-03",
+          "descricao": "Solda longitudinal do cabeçote traseiro (sugerida — pendente validação do PE)",
+          "operacao": "SOLDA_LONGITUDINAL",
+          "metodo": "manual",
+          "driver": "area_solda",
+          "setup_fixo": "0.50",
+          "sort_order": 30
+        }
+      ]
+    }
+  ]
+}
