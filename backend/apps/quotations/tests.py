@@ -391,6 +391,44 @@ class CosturaARecomputeTests(TenantTestCase):
         self.assertEqual(q.custo_total, Decimal("0.00"))
 
 
+class DatabookServiceTests(TenantTestCase):
+    """Task 5: Databook de Suprimentos (ASTM por componente, consome MaterialStandard)."""
+
+    def setUp(self):
+        from django.core.management import call_command
+        from apps.tema_templates.models import ComponentTemplate
+        call_command("seed_material_standards")
+        self.customer = Customer.objects.create(company_name="Cliente Reposição")
+        self.casco = ComponentTemplate.objects.create(
+            tema_part="shell", tema_letter="E", name="Casco E")
+        self.cabecote = ComponentTemplate.objects.create(
+            tema_part="front_head", tema_letter="A", name="Cabeçote A")
+
+    def _databook_casco_inox_cabecote(self):
+        from apps.quotations.models import QuotationPart
+        from apps.quotations.databook import build_databook
+        q = Quotation.objects.create(number="COT-DB1", customer=self.customer,
+                                     title="Reposição", scope="parts")
+        QuotationPart.objects.create(quotation=q, template=self.casco, tema_letter="E",
+                                     material_sigla="ASTM A240 Tp 316L", incluso=True, sort_order=1)
+        QuotationPart.objects.create(quotation=q, template=self.cabecote, tema_letter="A",
+                                     material_sigla="SA-516 GR 70", incluso=True, sort_order=2)
+        return build_databook(q)
+
+    def test_casco_inox_resolve_norma_316L(self):
+        rows = self._databook_casco_inox_cabecote()
+        chapa_inox = [r for r in rows if "316L" in r["norma_astm"]]
+        self.assertTrue(chapa_inox, "esperava chapa de pressão inox 316L")
+        self.assertEqual(chapa_inox[0]["certificacao"], "EN 10204 3.1")
+
+    def test_cabecote_puxa_junta_e_prisioneiros(self):
+        rows = self._databook_casco_inox_cabecote()
+        normas = " | ".join(r["norma_astm"] for r in rows)
+        self.assertIn("Double Jacketed", normas)     # junta de cabeçote
+        self.assertIn("A193 Gr. B7", normas)          # prisioneiros
+        self.assertIn("A194", normas)                 # porcas
+
+
 class ItemOperationProvenanceTests(TenantTestCase):
     """Task 2: override NÃO-DESTRUTIVO — origem + horas sugeridas + restaurar."""
 
