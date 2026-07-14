@@ -73,12 +73,14 @@
           <td class="num"><span class="val mono num{% if not op.custo %} g-muted{% endif %}"
                  aria-label="Custo derivado da operação {{ op.descricao }}">R$ {{ op.custo|brl }}</span>
             {% if op.origem == 'manual' %}
-            <span class="drawer-manual-badge g-muted" title="Valor editado manualmente (sobrescreve a sugestão do motor)">editado</span>
+            <span class="drawer-origem-chip drawer-manual-badge" title="Valor editado manualmente (sobrescreve a sugestão do motor){% if op.horas_hh_sugerida != None %} · sugerido: {{ op.horas_hh_sugerida }}{% endif %}">editado</span>
             <button type="button" class="q-btn ghost drawer-restore"
                     title="Restaurar a sugestão do motor para esta operação"
                     hx-post="{% url 'quotations:eap_op_restore' op.pk %}"
                     hx-target="#eap-drawer-form" hx-swap="outerHTML"
                     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>↺ sugestão</button>
+            {% else %}
+            <span class="drawer-origem-chip g-muted" title="Valor sugerido — aceite ou digite outro">{% if op.origem == 'template' %}sugerido (template){% else %}sugerido (motor){% endif %}</span>
             {% endif %}
           </td>
           {% endif %}

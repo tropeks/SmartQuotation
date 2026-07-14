@@ -632,6 +632,13 @@ class ItemOperationProvenanceTests(TenantTestCase):
         self.assertEqual(op.horas_hh, nova)
         self.assertEqual(op.horas_hh_sugerida, sugerida)   # sugestão preservada
 
+    def test_drawer_mostra_input_aberto_e_chip_origem(self):
+        _q, op = self._op_horaria()
+        resp = self.client.get(f"/cotacoes/eap/item/{op.item.pk}/drawer/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f"op_horas_hh_{op.pk}")   # input aberto, prefillado
+        self.assertContains(resp, "sugerido (motor)")        # chip de origem seed
+
     def test_restore_volta_sugerida_e_recalcula(self):
         _q, op = self._op_horaria()
         sugerida = op.horas_hh_sugerida
