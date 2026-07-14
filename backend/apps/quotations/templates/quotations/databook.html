@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Databook — {{ q.number }}{% endblock %}
+{% block content %}
+<style media="print">
+  .q-actions, .q-crumbs, nav, header { display: none !important; }
+  .g-table { font-size: 11px; }
+</style>
+<div class="q-crumbs">
+  <a href="{% url 'quotations:list' %}">Cotações</a>
+  <span>/</span>
+  <a href="{% url 'quotations:detail' q.pk %}">{{ q.number }}</a>
+  <span>/</span>
+  <span>Databook</span>
+</div>
+
+<div class="q-head">
+  <h2>Databook de Suprimentos</h2>
+  <p class="g-muted">{{ q.number }} · {{ q.customer.company_name }} · {{ q.title }}</p>
+</div>
+
+<div class="q-actions">
+  <a class="q-btn" href="{% url 'quotations:detail' q.pk %}">← Voltar</a>
+  <a class="q-btn primary" href="{% url 'quotations:databook_export' q.pk %}">Exportar CSV</a>
+  <button type="button" class="q-btn" onclick="window.print()">Imprimir</button>
+</div>
+
+<section class="drawer-block">
+  {% if rows %}
+  <table class="g-table">
+    <thead>
+      <tr><th>Componente</th><th>Família</th><th>Norma ASTM</th>
+          <th>Condição normativa</th><th>Certificação</th><th>Notas</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.componente }}</td>
+        <td class="g-muted">{{ r.familia }}</td>
+        <td class="mono">{{ r.norma_astm }}</td>
+        <td class="g-muted">{{ r.condicao|default:"—" }}</td>
+        <td class="mono">{{ r.certificacao }}</td>
+        <td class="g-muted">{{ r.notas|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="g-muted">Sem componentes para gerar o databook desta cotação.</p>
+  {% endif %}
+</section>
+{% endblock %}

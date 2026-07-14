@@ -429,6 +429,40 @@ class DatabookServiceTests(TenantTestCase):
         self.assertIn("A194", normas)                 # porcas
 
 
+class DatabookViewTests(TenantTestCase):
+    """Task 6: view + CSV do Databook."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from django.core.management import call_command
+        from apps.accounts.models import UserProfile
+        from apps.tema_templates.models import ComponentTemplate
+        from apps.quotations.models import QuotationPart
+        call_command("seed_material_standards")
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.user = User.objects.create_user(username="orc", password="senha-forte-123")
+        UserProfile.objects.create(user=self.user, full_name="Orc",
+                                   role=UserProfile.ROLE_ORCAMENTISTA)
+        self.client.force_login(self.user)
+        customer = Customer.objects.create(company_name="Cliente")
+        casco = ComponentTemplate.objects.create(tema_part="shell", tema_letter="E", name="Casco E")
+        self.q = Quotation.objects.create(number="COT-DBV", customer=customer,
+                                          title="Reposição", scope="parts")
+        QuotationPart.objects.create(quotation=self.q, template=casco,
+                                     material_sigla="ASTM A240 Tp 316L", incluso=True)
+
+    def test_databook_view_200(self):
+        resp = self.client.get(f"/cotacoes/{self.q.pk}/databook/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "316L")
+
+    def test_databook_csv(self):
+        resp = self.client.get(f"/cotacoes/{self.q.pk}/databook.csv")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("text/csv", resp["Content-Type"])
+        self.assertIn("316L", resp.content.decode("utf-8"))
+
+
 class ItemOperationProvenanceTests(TenantTestCase):
     """Task 2: override NÃO-DESTRUTIVO — origem + horas sugeridas + restaurar."""
 

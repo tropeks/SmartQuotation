@@ -73,6 +73,7 @@
       <a class="q-btn" href="{% url 'quotations:edit' q.pk %}">Nova Revisão</a>
       {% endif %}
       <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">Gerar Proposta</a>
+      <a class="q-btn" href="{% url 'quotations:databook' q.pk %}">Databook de Suprimentos</a>
       <div id="convertibility-panel"
            hx-get="{% url 'audit:convertibility_panel' q.pk %}"
            hx-trigger="load, every 5s"

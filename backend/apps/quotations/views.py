@@ -312,6 +312,31 @@ def quotation_detail(request, pk):
                   })
 
 
+@require_role(*_READ_ROLES, allow_platform_staff=True)
+def databook_detail(request, pk):
+    """Databook de Suprimentos: Lista de Compras com a norma ASTM por componente."""
+    from apps.quotations.databook import build_databook
+    q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
+    return render(request, "quotations/databook.html", {"q": q, "rows": build_databook(q)})
+
+
+@require_role(*_READ_ROLES, allow_platform_staff=True)
+def databook_export(request, pk):
+    """Databook em CSV (Pedido de Compra)."""
+    import csv
+    from django.http import HttpResponse
+    from apps.quotations.databook import build_databook
+    q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
+    resp = HttpResponse(content_type="text/csv; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename="databook-{q.number}.csv"'
+    writer = csv.writer(resp)
+    writer.writerow(["Componente", "Família", "Norma ASTM", "Condição", "Certificação", "Notas"])
+    for r in build_databook(q):
+        writer.writerow([r["componente"], r["familia"], r["norma_astm"],
+                         r["condicao"], r["certificacao"], r["notas"]])
+    return resp
+
+
 from apps.quotations.models import QuotationItem
 
 
