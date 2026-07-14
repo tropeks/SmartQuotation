@@ -18,6 +18,7 @@ urlpatterns = [
     path("cotacoes/<int:pk>/", views.quotation_detail, name="detail"),
     path("cotacoes/eap/item/<int:pk>/drawer/", views.eap_item_drawer, name="eap_item_drawer"),
     path("cotacoes/eap/item/<int:pk>/salvar/", views.eap_item_save, name="eap_item_save"),
+    path("cotacoes/eap/op/<int:pk>/restaurar/", views.eap_op_restore, name="eap_op_restore"),
     path("cotacoes/<int:pk>/status/", views.quotation_set_status, name="set_status"),
     path("cotacoes/<int:pk>/editar/", views.quotation_edit, name="edit"),
     path("cotacoes/<int:pk>/revisar/", views.quotation_revise, name="revise"),

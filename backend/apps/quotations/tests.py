@@ -309,6 +309,60 @@ class ItemOperationMigrationTests(TenantMigrationTestCase):
         self.assertEqual(operation.custo, Decimal("321.00"))
 
 
+class ItemOperationProvenanceTests(TenantTestCase):
+    """Task 2: override NÃO-DESTRUTIVO — origem + horas sugeridas + restaurar."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="Petrobras RPBC")
+        self.user = User.objects.create_user(username="orc", password="senha-forte-123")
+        UserProfile.objects.create(user=self.user, full_name="Orc",
+                                   role=UserProfile.ROLE_ORCAMENTISTA)
+        self.client.force_login(self.user)
+
+    def _op_horaria(self):
+        """Uma cotação de feixe custeada → devolve uma ItemOperation horária (custo_direto=False)."""
+        q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
+        op = (ItemOperation.objects.filter(item__quotation=q, custo_direto=False)
+              .exclude(horas_hh=0).first())
+        self.assertIsNotNone(op, "esperava ao menos uma operação horária no feixe")
+        return q, op
+
+    def test_recompute_grava_sugeridas_e_origem_seed(self):
+        _q, op = self._op_horaria()
+        self.assertEqual(op.origem, "seed")
+        self.assertEqual(op.horas_hh_sugerida, op.horas_hh)
+        self.assertEqual(op.horas_hm_sugerida, op.horas_hm)
+
+    def test_override_marca_manual_e_mantem_sugerida(self):
+        _q, op = self._op_horaria()
+        sugerida = op.horas_hh_sugerida
+        nova = (sugerida or Decimal("0")) + Decimal("7.00")
+        resp = self.client.post(
+            f"/cotacoes/eap/item/{op.item.pk}/salvar/",
+            {f"op_horas_hh_{op.pk}": str(nova)})
+        self.assertEqual(resp.status_code, 200)
+        op.refresh_from_db()
+        self.assertEqual(op.origem, "manual")
+        self.assertEqual(op.horas_hh, nova)
+        self.assertEqual(op.horas_hh_sugerida, sugerida)   # sugestão preservada
+
+    def test_restore_volta_sugerida_e_recalcula(self):
+        _q, op = self._op_horaria()
+        sugerida = op.horas_hh_sugerida
+        self.client.post(f"/cotacoes/eap/item/{op.item.pk}/salvar/",
+                         {f"op_horas_hh_{op.pk}": str((sugerida or Decimal("0")) + Decimal("9"))})
+        resp = self.client.post(f"/cotacoes/eap/op/{op.pk}/restaurar/")
+        self.assertEqual(resp.status_code, 200)
+        op.refresh_from_db()
+        self.assertEqual(op.horas_hh, sugerida)
+        self.assertEqual(op.origem, "seed")
+        self.assertEqual(op.custo, (op.horas_hh * op.taxa_hora
+                                    + op.horas_hm * op.taxa_hora_hm))
+
+
 class DataSheetViewTests(TenantTestCase):
     """Slice end-to-end via HTTP: login -> data sheet -> recompute -> criar -> detalhe."""
 

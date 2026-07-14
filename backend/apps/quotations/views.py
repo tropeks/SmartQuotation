@@ -411,7 +411,10 @@ def eap_item_save(request, pk):
                 antes_hh, antes_hm = op.horas_hh, op.horas_hm
                 op.horas_hh = _parse_decimal(request.POST.get(hh_key), op.horas_hh)
                 op.horas_hm = _parse_decimal(request.POST.get(hm_key), op.horas_hm)
-                op.save(update_fields=["horas_hh", "horas_hm"])
+                # Override MANUAL: marca a proveniência SEM tocar na sugestão do motor
+                # (horas_*_sugerida), para o UI mostrar sugerido↔digitado e permitir restaurar.
+                op.origem = "manual"
+                op.save(update_fields=["horas_hh", "horas_hm", "origem"])
                 op.recalc_custo()
                 _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh)
                 _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm)
@@ -432,6 +435,46 @@ def eap_item_save(request, pk):
     # estado canônico do banco, sem depender de caches/instâncias mutadas.
     item.refresh_from_db()
 
+    return render(request, "quotations/_eap_item_drawer.html", {"item": item, "saved": True})
+
+
+@require_role(*_WRITE_ROLES)
+@require_POST
+def eap_op_restore(request, pk):
+    """Restaura a sugestão do motor de uma operação (desfaz o override manual).
+
+    Copia horas_*_sugerida → horas_*, seta origem='seed', recalcula o custo derivado
+    e re-soma os roll-ups (item + cotação) por SOMA — igual eap_item_save, SEM chamar
+    o motor e SEM criar revisão. Só faz sentido em operação horária (custo_direto=False).
+    """
+    from decimal import Decimal
+    from apps.quotations.models import ItemOperation
+
+    op = get_object_or_404(
+        ItemOperation.objects.select_related("item__quotation"), pk=pk)
+    antes_hh, antes_hm = op.horas_hh, op.horas_hm
+    if op.horas_hh_sugerida is not None:
+        op.horas_hh = op.horas_hh_sugerida
+    if op.horas_hm_sugerida is not None:
+        op.horas_hm = op.horas_hm_sugerida
+    op.origem = "seed"
+    op.save(update_fields=["horas_hh", "horas_hm", "origem"])
+    op.recalc_custo()
+    _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh)
+    _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm)
+
+    item = op.item
+    item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
+    item.custo_mo = sum((o.custo for o in item.operacoes.all() if o.aplicavel), Decimal("0"))
+    item.save(update_fields=["custo_material", "custo_mo"])
+
+    q = item.quotation
+    q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
+    q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
+    q.custo_total = q.custo_material + q.custo_mo
+    q.save(update_fields=["custo_material", "custo_mo", "custo_total", "updated_at"])
+
+    item.refresh_from_db()
     return render(request, "quotations/_eap_item_drawer.html", {"item": item, "saved": True})
 
 

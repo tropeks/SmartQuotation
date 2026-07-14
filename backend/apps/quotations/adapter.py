@@ -122,7 +122,9 @@ def recompute(quotation) -> None:
                     horas_hh=D(op.horas_hh), horas_hm=D(op.horas_hm),
                     taxa_hora=D(op.rate_hh), taxa_hora_hm=D(op.rate_hm),
                     custo_direto=(op.horas_hh == 0 and op.horas_hm == 0),
-                    aplicavel=op.aplicavel)
+                    aplicavel=op.aplicavel,
+                    origem="seed",
+                    horas_hh_sugerida=D(op.horas_hh), horas_hm_sugerida=D(op.horas_hm))
         custo_material += D(it.custo_material)
         custo_mo += D(it.custo_mo)
 

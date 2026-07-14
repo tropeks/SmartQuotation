@@ -118,7 +118,16 @@ class ItemMaterial(models.Model):
 
 
 class ItemOperation(models.Model):
-    """Nível 2 — operação do roteiro de um item (custo)."""
+    """Nível 2 — operação do roteiro de um item (custo).
+
+    Override NÃO-DESTRUTIVO: `horas_*_sugerida` guarda a sugestão do motor ao lado do
+    valor efetivo (`horas_*`); `origem` diz de onde veio o valor corrente
+    (seed=motor feixe/completo | template=ComponentOperation | manual=digitado pelo
+    orçamentista). Sobrescrever no drawer marca origem='manual' SEM apagar a sugestão,
+    para o UI mostrar "sugerido X / você digitou Y" e permitir restaurar.
+    """
+    ORIGEM = [("seed", "Motor"), ("template", "Template"), ("manual", "Manual")]
+
     item = models.ForeignKey(QuotationItem, on_delete=models.CASCADE, related_name="operacoes")
     codigo_op = models.CharField(max_length=40)
     descricao = models.CharField(max_length=255)
@@ -130,6 +139,9 @@ class ItemOperation(models.Model):
     taxa_hora_hm = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     custo_direto = models.BooleanField(default=True)
     aplicavel = models.BooleanField(default=True)
+    origem = models.CharField(max_length=10, choices=ORIGEM, default="seed")
+    horas_hh_sugerida = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    horas_hm_sugerida = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
 
     def recalc_custo(self):
         if self.custo_direto:
