@@ -27,6 +27,21 @@ def D(x) -> Decimal:
     return Decimal(str(round(float(x), 6)))
 
 
+def _to_float(x) -> float:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+# Parte TEMA → forma de material (p/ lookup de preço no tenant cost chain).
+_FORMA_POR_PARTE = {
+    "shell": "chapa", "tubesheet": "chapa", "baffle": "chapa",
+    "front_head": "chapa", "rear_head": "chapa",
+    "tube_bundle": "tubo", "nozzle": "tubo", "flange": "forjado", "tie_rod": "barra",
+}
+
+
 def default_inputs() -> dict:
     """Inputs default (caso 136 tubos) — ponto de partida do data sheet."""
     base = caso_136_tubos()
@@ -88,6 +103,21 @@ def build_cost_chain(quotation) -> TenantCostChain:
 
 
 def recompute(quotation) -> None:
+    """Recomputa a cotação e persiste a EAP, RAMIFICANDO por scope:
+    - tube_bundle → quote_feixe (motor do feixe) — caminho histórico, intocado.
+    - complete    → quote_completo (permutador completo por designação TEMA).
+    - parts       → soma das QuotationParts inclusas (custeio de casco/cabeçote via
+                    ComponentOperation × ProcessParameter × Rate).
+    """
+    scope = getattr(quotation, "scope", "tube_bundle")
+    if scope == "parts":
+        return _recompute_parts(quotation)
+    if scope == "complete":
+        return _recompute_complete(quotation)
+    return _recompute_feixe(quotation)
+
+
+def _recompute_feixe(quotation) -> None:
     """Recomputa a cotação via pricing_engine (com a cadeia de custos do tenant) e persiste a EAP."""
     inp = to_feixe_inputs(quotation)
     cot = quote_feixe(inp, cost_chain=build_cost_chain(quotation))
@@ -146,5 +176,121 @@ def recompute(quotation) -> None:
     quotation.preco_com_impostos = D(cot.preco_com_impostos)
     quotation.peso_bruto_kg = peso_bruto
     quotation.peso_liquido_kg = peso_liquido
+    quotation.computed_at = timezone.now()
+    quotation.save()
+
+
+def _recompute_parts(quotation) -> None:
+    """Custeia uma cotação por PARTES avulsas (scope='parts'): cada QuotationPart inclusa
+    vira um QuotationItem, com material = massa × preço do tenant e MO derivada do roteiro
+    sugerido do ComponentTemplate (ComponentOperation × ProcessParameter × Rate × FC).
+    Valores são DEFAULTS sugeridos (origem='template'); o orçamentista sobrescreve no drawer.
+    Operação sem ProcessParameter/Rate vigente entra como sugerida-não-custeável (aplicavel=False),
+    nunca quebra o custeio."""
+    from apps.engineering_params.models import ProcessParameter, Rate, TenantParamConfig
+
+    chain = build_cost_chain(quotation)
+    fator_mo = float(TenantParamConfig.get_solo().fator_correcao_mo)
+
+    quotation.itens.all().delete()
+    custo_material = Decimal("0")
+    custo_mo = Decimal("0")
+    peso_bruto = Decimal("0")
+    order = 0
+
+    for part in quotation.parts.filter(incluso=True).select_related("template"):
+        tmpl = part.template
+        qi = QuotationItem.objects.create(
+            quotation=quotation,
+            codigo_item=(f"{tmpl.tema_part}-{part.tema_letter}".strip("-"))[:30],
+            descricao=str(tmpl)[:255], sort_order=order)
+        order += 1
+        params = part.params or {}
+        material = (part.material_sigla or "").strip()
+
+        # material: massa × preço (forma pela parte TEMA)
+        massa = _to_float(params.get("massa"))
+        forma = _FORMA_POR_PARTE.get(tmpl.tema_part, "chapa")
+        preco = chain.material_price.get((material.upper(), forma)) if material else None
+        item_mat = Decimal("0")
+        if massa and preco:
+            item_mat = D(massa * float(preco))
+            ItemMaterial.objects.create(
+                item=qi, codigo_mp=(material or forma)[:30],
+                descricao=f"{tmpl.get_tema_part_display()} — {forma}"[:255],
+                material=material[:50], forma=forma,
+                peso_bruto_kg=D(massa), peso_liquido_kg=D(massa),
+                preco_kgf=D(preco), custo=item_mat)
+            peso_bruto += D(massa)
+
+        # MO: roteiro sugerido do template
+        item_mo = Decimal("0")
+        for co in tmpl.component_operations.all():
+            driver_val = 1.0 if co.driver == "fixo" else _to_float(params.get(co.driver))
+            pp = ProcessParameter.objects.vigente(co.operacao, co.metodo or "", material or None)
+            rate = Rate.objects.vigente(co.operacao)
+            if pp is None or pp.valor is None or rate is None:
+                ItemOperation.objects.create(
+                    item=qi, codigo_op=co.codigo_op[:40], descricao=co.descricao[:255],
+                    metodo=co.metodo, custo=Decimal("0"), custo_direto=False, aplicavel=False,
+                    origem="template", horas_hh_sugerida=Decimal("0"), horas_hm_sugerida=Decimal("0"))
+                continue
+            horas_hh = driver_val * float(pp.valor) + float(co.setup_fixo)
+            custo_op = D(horas_hh * float(rate.rate_hh) * fator_mo)
+            ItemOperation.objects.create(
+                item=qi, codigo_op=co.codigo_op[:40], descricao=co.descricao[:255],
+                metodo=co.metodo, custo=custo_op, custo_direto=False,
+                aplicavel=co.aplicavel_default,
+                horas_hh=D(horas_hh), horas_hm=Decimal("0"),
+                taxa_hora=D(rate.rate_hh), taxa_hora_hm=D(rate.rate_hm or 0),
+                origem="template", horas_hh_sugerida=D(horas_hh), horas_hm_sugerida=Decimal("0"))
+            item_mo += custo_op
+
+        qi.custo_material = item_mat
+        qi.custo_mo = item_mo
+        qi.save(update_fields=["custo_material", "custo_mo"])
+        custo_material += item_mat
+        custo_mo += item_mo
+
+    custo_total = custo_material + custo_mo
+    quotation.custo_material = custo_material
+    quotation.custo_mo = custo_mo
+    quotation.custo_total = custo_total
+    preco_sem = custo_total * quotation.fator_preco
+    quotation.preco_sem_impostos = D(preco_sem)
+    quotation.preco_com_impostos = D(preco_sem * (1 + quotation.impostos_pct / Decimal("100")))
+    quotation.peso_bruto_kg = peso_bruto
+    quotation.peso_liquido_kg = peso_bruto
+    quotation.computed_at = timezone.now()
+    quotation.save()
+
+
+def _recompute_complete(quotation) -> None:
+    """Recomputa um permutador completo (scope='complete') por designação TEMA, reusando o
+    motor via tema_templates.estimate_complete e repersistindo a EAP por seção (mesma forma
+    de services.create_permutador_quotation). SEGURO: se a designação não é custeável, é
+    NO-OP (preserva o snapshot atual em vez de zerar a cotação)."""
+    from apps.tema_templates.services import estimate_complete
+
+    desig = (quotation.inputs or {}).get("designacao")
+    resultado = estimate_complete(desig) if desig else None
+    if not resultado:
+        return
+
+    quotation.itens.all().delete()
+    for i, (secao, valor) in enumerate(sorted((resultado.get("por_secao") or {}).items())):
+        is_material = "material" in secao
+        QuotationItem.objects.create(
+            quotation=quotation, codigo_item=secao[:30],
+            descricao=secao.replace("_", " ").title()[:255],
+            custo_material=D(valor) if is_material else Decimal("0"),
+            custo_mo=Decimal("0") if is_material else D(valor), sort_order=i)
+
+    custo_mo = float(resultado.get("custo_mao_obra", 0)) + float(resultado.get("custo_servicos", 0))
+    quotation.custo_material = D(resultado.get("custo_material") or 0)
+    quotation.custo_mo = D(custo_mo)
+    quotation.custo_total = D(resultado.get("custo_total") or 0)
+    quotation.preco_sem_impostos = D(resultado.get("preco_sem_impostos") or 0)
+    quotation.preco_com_impostos = D(resultado.get("preco_com_impostos") or 0)
     quotation.computed_at = timezone.now()
     quotation.save()
