@@ -1,0 +1,49 @@
+{
+  "_fonte": "Dicionário de Materiais e Padrões de Norma — PE Wellington (2026-07-14). Obs.1 (normas_referencia_materiais + requisitos_qualidade) + Obs.2 (especificacao_materiais_por_componente). Dirige o Databook de Suprimentos (Pedido de Compra).",
+  "requisitos_qualidade": {
+    "certificacao_padrao": "EN 10204 3.1",
+    "tolerancias_tubo": "TEMA RCB-2.2 (Ø e espessura, tolerância estrita p/ mandrilagem)",
+    "requisitos_impacto": "ASME UG-20(f) / UCS-66 (isenção ou teste de impacto Charpy V-Notch)"
+  },
+  "standards": [
+    {"familia": "aco_carbono", "componente": "chapas_pressao", "norma_astm": "ASTM A516 Gr. 70",
+     "condicao": "Normalizado se T < -29°C ou espessura > 38 mm",
+     "notas": "ASME UG-20(f)/UCS-66: verificar isenção ou Charpy V-Notch"},
+    {"familia": "aco_carbono", "componente": "tubos_troca", "norma_astm": "ASTM A179 (s/ costura, trefilado a frio)",
+     "condicao": "Alt.: ASTM A214 (c/ costura REW). Bright Annealed p/ dobras em U (TEMA U)",
+     "notas": "TEMA RCB-2.2 (mandrilagem); Eddy Current na fábrica de tubos"},
+    {"familia": "aco_carbono", "componente": "tubos_bocais", "norma_astm": "ASTM A106 Gr. B (s/ costura)",
+     "condicao": "Alt.: ASTM A53 Gr. B", "notas": ""},
+    {"familia": "aco_carbono", "componente": "forjados_flanges", "norma_astm": "ASTM A105",
+     "condicao": "", "notas": ""},
+    {"familia": "aco_carbono", "componente": "barras_chicanas", "norma_astm": "ASTM A36",
+     "condicao": "Alt.: ASTM A283 Gr. C. Não sujeito à pressão",
+     "notas": "Tirantes/espaçadores casados com material da chicana (evita corrosão galvânica)"},
+
+    {"familia": "inox_304L", "componente": "chapas_pressao", "norma_astm": "ASTM A240 Tp 304L",
+     "condicao": "", "notas": ""},
+    {"familia": "inox_304L", "componente": "tubos_troca", "norma_astm": "ASTM A213 Tp 304L (s/ costura)",
+     "condicao": "Alt.: ASTM A249 Tp 304L (c/ costura)", "notas": "TEMA RCB-2.2; Eddy Current"},
+    {"familia": "inox_304L", "componente": "tubos_bocais", "norma_astm": "ASTM A312 Tp 304L",
+     "condicao": "", "notas": ""},
+    {"familia": "inox_304L", "componente": "forjados_flanges", "norma_astm": "ASTM A182 F304L",
+     "condicao": "", "notas": ""},
+
+    {"familia": "inox_316L", "componente": "chapas_pressao", "norma_astm": "ASTM A240 Tp 316L",
+     "condicao": "", "notas": ""},
+    {"familia": "inox_316L", "componente": "tubos_troca", "norma_astm": "ASTM A213 Tp 316L (s/ costura)",
+     "condicao": "Alt.: ASTM A249 Tp 316L (c/ costura)", "notas": "TEMA RCB-2.2; Eddy Current"},
+    {"familia": "inox_316L", "componente": "tubos_bocais", "norma_astm": "ASTM A312 Tp 316L",
+     "condicao": "", "notas": ""},
+    {"familia": "inox_316L", "componente": "forjados_flanges", "norma_astm": "ASTM A182 F316L",
+     "condicao": "", "notas": ""},
+
+    {"familia": "geral", "componente": "estojos_prisioneiros", "norma_astm": "ASTM A193 Gr. B7",
+     "condicao": "Gr. B8 (inox) p/ serviço inox/anticorrosão", "notas": "Alta temperatura/pressão"},
+    {"familia": "geral", "componente": "porcas", "norma_astm": "ASTM A194 Gr. 2H",
+     "condicao": "Gr. 8 (inox) p/ serviço inox", "notas": ""},
+    {"familia": "geral", "componente": "junta_cabecote", "norma_astm": "Dupla Jaqueta (Double Jacketed)",
+     "condicao": "Padrão TEMA p/ cabeçotes. Alt.: Espiralada (Spiral Wound) ou Camprofile",
+     "notas": "Enchimento: Grafite Flexível ou PTFE"}
+  ]
+}

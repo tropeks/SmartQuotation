@@ -90,3 +90,39 @@ class LigaMetalurgica(models.Model):
             except (TypeError, ValueError):
                 continue
         return out
+
+
+class MaterialStandard(models.Model):
+    """Dicionário de normas ASTM por (família metalúrgica × componente TEMA) — PE Wellington.
+
+    Fonte da verdade = pricing_engine/seeds/material_standards.json (carregado por
+    seed_material_standards). TENANT-editável no admin (empresa pode ter norma própria).
+    Dirige o DATABOOK DE SUPRIMENTOS: dado o modelo TEMA cotado, emite a norma ASTM exata
+    exigida por componente no Pedido de Compra (+ condição normativa e requisitos de qualidade).
+    """
+    FAMILIA = [
+        ("aco_carbono", "Aço Carbono"), ("inox_304L", "Inox 304L"),
+        ("inox_316L", "Inox 316L"), ("geral", "Geral (independe de liga)"),
+    ]
+    COMPONENTE = [
+        ("chapas_pressao", "Chapas de pressão"), ("tubos_troca", "Tubos de troca"),
+        ("tubos_bocais", "Tubos de bocais"), ("forjados_flanges", "Forjados/Flanges"),
+        ("barras_chicanas", "Barras/Chicanas"),
+        ("estojos_prisioneiros", "Estojos/Prisioneiros"), ("porcas", "Porcas"),
+        ("junta_cabecote", "Junta de cabeçote"),
+    ]
+    familia = models.CharField(max_length=20, choices=FAMILIA, db_index=True)
+    componente = models.CharField(max_length=20, choices=COMPONENTE, db_index=True)
+    norma_astm = models.CharField(max_length=120)                 # "ASTM A516 Gr. 70"
+    condicao = models.CharField(max_length=255, blank=True)       # regra/alternativa (ex: normalizado se T<-29°C)
+    certificacao = models.CharField(max_length=60, default="EN 10204 3.1")
+    notas = models.CharField(max_length=255, blank=True)          # RCB-2.2, UG-20(f), Eddy Current...
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["familia", "componente"]
+        constraints = [models.UniqueConstraint(
+            fields=["familia", "componente"], name="uniq_material_standard")]
+
+    def __str__(self):
+        return f"{self.get_familia_display()} · {self.get_componente_display()} → {self.norma_astm}"

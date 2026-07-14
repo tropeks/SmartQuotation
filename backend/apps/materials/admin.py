@@ -1,7 +1,7 @@
 """Admin do catálogo de materiais e do CADASTRO DE LIGAS (editável sem deploy — #2 Wellington)."""
 from django.contrib import admin
 
-from apps.materials.models import Material, MaterialPrice, LigaMetalurgica
+from apps.materials.models import Material, MaterialPrice, LigaMetalurgica, MaterialStandard
 
 
 @admin.register(LigaMetalurgica)
@@ -20,6 +20,14 @@ class LigaMetalurgicaAdmin(admin.ModelAdmin):
                                          "temp_limite_c")}),
         ("Procedência (rastreabilidade ASME)", {"fields": ("norma", "edicao", "tabela", "linha")}),
     )
+
+
+@admin.register(MaterialStandard)
+class MaterialStandardAdmin(admin.ModelAdmin):
+    list_display = ("familia", "componente", "norma_astm", "condicao", "certificacao", "is_active")
+    list_editable = ("norma_astm", "certificacao", "is_active")
+    list_filter = ("familia", "componente", "is_active")
+    search_fields = ("norma_astm", "condicao", "notas")
 
 
 admin.site.register(Material)

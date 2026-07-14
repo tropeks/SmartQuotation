@@ -14,7 +14,7 @@ from django_tenants.test.cases import TenantTestCase
 
 from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog
-from apps.materials.models import Material, MaterialPrice, LigaMetalurgica
+from apps.materials.models import Material, MaterialPrice, LigaMetalurgica, MaterialStandard
 from apps.quotations.models import Customer, ItemMaterial, Quotation, QuotationItem
 from apps.quotations.adapter import default_inputs, recompute
 from apps.quotations.services import next_number
@@ -48,6 +48,51 @@ class SeedLigasFromDbTest(TenantTestCase):
         self._run()
         n2 = LigaMetalurgica.objects.count()
         self.assertEqual(n1, n2)
+
+
+class SeedMaterialStandardsTest(TenantTestCase):
+    """Dicionário de normas ASTM por (família × componente) — Databook de Suprimentos."""
+
+    def _run(self):
+        out = StringIO()
+        call_command("seed_material_standards", stdout=out)
+        return out.getvalue()
+
+    def test_carrega_familias_e_componentes(self):
+        self._run()
+        # 3 ligas (carbono/304L/316L) + geral (parafusos/porcas/junta)
+        self.assertGreaterEqual(MaterialStandard.objects.count(), 16)
+        familias = set(MaterialStandard.objects.values_list("familia", flat=True))
+        self.assertEqual(familias, {"aco_carbono", "inox_304L", "inox_316L", "geral"})
+
+    def test_chapa_pressao_carbono_tem_condicao_normalizacao(self):
+        self._run()
+        chapa = MaterialStandard.objects.get(familia="aco_carbono", componente="chapas_pressao")
+        self.assertEqual(chapa.norma_astm, "ASTM A516 Gr. 70")
+        self.assertIn("Normalizado", chapa.condicao)
+        self.assertEqual(chapa.certificacao, "EN 10204 3.1")
+
+    def test_tubos_troca_inox_316L(self):
+        self._run()
+        tubo = MaterialStandard.objects.get(familia="inox_316L", componente="tubos_troca")
+        self.assertIn("A213 Tp 316L", tubo.norma_astm)
+        self.assertIn("RCB-2.2", tubo.notas)   # tolerância p/ mandrilagem
+
+    def test_databook_cabecote_frontal_A(self):
+        """Ex. do PE: cabeçote frontal exige flange A105, prisioneiros A193 B7, junta Double Jacketed."""
+        self._run()
+        flange = MaterialStandard.objects.get(familia="aco_carbono", componente="forjados_flanges")
+        estojo = MaterialStandard.objects.get(familia="geral", componente="estojos_prisioneiros")
+        junta = MaterialStandard.objects.get(familia="geral", componente="junta_cabecote")
+        self.assertEqual(flange.norma_astm, "ASTM A105")
+        self.assertIn("A193 Gr. B7", estojo.norma_astm)
+        self.assertIn("Double Jacketed", junta.norma_astm)
+
+    def test_idempotente(self):
+        self._run()
+        n1 = MaterialStandard.objects.count()
+        self._run()
+        self.assertEqual(MaterialStandard.objects.count(), n1)
 
 
 class MaterialListViewTests(TenantTestCase):
