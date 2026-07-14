@@ -429,6 +429,61 @@ class DatabookServiceTests(TenantTestCase):
         self.assertIn("A194", normas)                 # porcas
 
 
+class MetalurgiaValidatorTests(TenantTestCase):
+    """Task 7: validador metalúrgico/térmico → Quotation.avisos."""
+
+    def setUp(self):
+        from apps.quotations.validators import validate_metalurgia
+        self.validate = validate_metalurgia
+        self.customer = Customer.objects.create(company_name="Cliente")
+
+    def _q(self, **inputs):
+        return Quotation.objects.create(
+            number=f"COT-V{Quotation.objects.count()}", customer=self.customer,
+            title="V", scope="tube_bundle", inputs=inputs)
+
+    def test_warning_inox_feixe_casco_cs_espelho_fixo(self):
+        q = self._q(tubo_material="ASTM A213 Tp 316L", casco_material="ASTM A516 Gr 70",
+                    designacao="AEM", temperatura_projeto_c=200)   # rear M = espelho fixo
+        avisos = self.validate(q)
+        codes = [a["codigo"] for a in avisos]
+        self.assertIn("THERM_EXPANSAO_FIXO", codes)
+        msg = next(a["mensagem"] for a in avisos if a["codigo"] == "THERM_EXPANSAO_FIXO")
+        self.assertIn("junta de expansão", msg)
+        self.assertTrue("TEMA U" in msg or " S " in msg)
+
+    def test_block_chicana_a36_tubos_inox_corrosivo(self):
+        q = self._q(tubo_material="ASTM A249 Tp 304L", chicana_material="ASTM A36",
+                    servico_corrosivo=True)
+        avisos = self.validate(q)
+        blocks = [a for a in avisos if a["nivel"] == "block"]
+        self.assertTrue(blocks)
+        self.assertEqual(blocks[0]["codigo"], "GALVANICA_CHICANA")
+
+    def test_compativel_sem_block(self):
+        q = self._q(tubo_material="SA-179", casco_material="SA-516 GR 70", designacao="AEM")
+        avisos = self.validate(q)
+        self.assertFalse([a for a in avisos if a["nivel"] == "block"])
+        self.assertNotIn("THERM_EXPANSAO_FIXO", [a["codigo"] for a in avisos])
+
+    def test_recompute_persiste_avisos(self):
+        from apps.tema_templates.models import ComponentTemplate
+        from apps.quotations.models import QuotationPart
+        feixe = ComponentTemplate.objects.create(tema_part="tube_bundle", name="Feixe")
+        casco = ComponentTemplate.objects.create(tema_part="shell", name="Casco")
+        rear = ComponentTemplate.objects.create(tema_part="rear_head", tema_letter="M", name="Cab M")
+        q = Quotation.objects.create(number="COT-VR", customer=self.customer,
+                                     title="VR", scope="parts")
+        QuotationPart.objects.create(quotation=q, template=feixe, material_sigla="ASTM A213 Tp 316L",
+                                     params={"delta_t": 180}, incluso=True)
+        QuotationPart.objects.create(quotation=q, template=casco, material_sigla="ASTM A516 Gr 70",
+                                     incluso=True)
+        QuotationPart.objects.create(quotation=q, template=rear, tema_letter="M", incluso=True)
+        recompute(q)
+        q.refresh_from_db()
+        self.assertIn("THERM_EXPANSAO_FIXO", [a["codigo"] for a in q.avisos])
+
+
 class DatabookViewTests(TenantTestCase):
     """Task 6: view + CSV do Databook."""
 

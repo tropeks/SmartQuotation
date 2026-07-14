@@ -111,10 +111,23 @@ def recompute(quotation) -> None:
     """
     scope = getattr(quotation, "scope", "tube_bundle")
     if scope == "parts":
-        return _recompute_parts(quotation)
-    if scope == "complete":
-        return _recompute_complete(quotation)
-    return _recompute_feixe(quotation)
+        _recompute_parts(quotation)
+    elif scope == "complete":
+        _recompute_complete(quotation)
+    else:
+        _recompute_feixe(quotation)
+    _apply_avisos(quotation)
+
+
+def _apply_avisos(quotation) -> None:
+    """Roda os validadores de negócio e persiste em Quotation.avisos (não quebra o custeio)."""
+    from apps.quotations.validators import validate_metalurgia
+    try:
+        avisos = list(validate_metalurgia(quotation))
+    except Exception:
+        avisos = []
+    quotation.avisos = avisos
+    quotation.save(update_fields=["avisos"])
 
 
 def _recompute_feixe(quotation) -> None:
