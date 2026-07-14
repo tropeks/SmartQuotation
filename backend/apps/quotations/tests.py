@@ -429,6 +429,42 @@ class DatabookServiceTests(TenantTestCase):
         self.assertIn("A194", normas)                 # porcas
 
 
+class FolgaRcb43Tests(TenantTestCase):
+    """Task 8: folga periférica shell-to-bundle (TEMA RCB-4.3) do feixe de reposição."""
+
+    def setUp(self):
+        from apps.tema_templates.models import ComponentTemplate
+        from apps.quotations.validators import validate_folga_feixe
+        self.validate = validate_folga_feixe
+        self.customer = Customer.objects.create(company_name="Cliente")
+        self.feixe_tmpl = ComponentTemplate.objects.create(
+            tema_part="tube_bundle", name="Feixe reto")
+
+    def _q_feixe(self, d_casco):
+        from apps.quotations.models import QuotationPart
+        q = Quotation.objects.create(number=f"COT-F{Quotation.objects.count()}",
+                                     customer=self.customer, title="Feixe", scope="parts")
+        QuotationPart.objects.create(
+            quotation=q, template=self.feixe_tmpl, incluso=True,
+            params={"n_tubos": 100, "od_tubo_mm": 19.05, "d_casco_mm": d_casco, "cabecote": "M"})
+        return q
+
+    def test_folga_suficiente_sem_aviso(self):
+        self.assertEqual(self.validate(self._q_feixe(400)), [])   # feixe ≈274mm, folga >> 12
+
+    def test_folga_apertada_warning_rcb43(self):
+        avisos = self.validate(self._q_feixe(280))   # feixe ≈274mm → folga ~6mm < 12
+        self.assertTrue(avisos)
+        self.assertEqual(avisos[0]["nivel"], "warning")
+        self.assertIn("RCB-4.3", avisos[0]["mensagem"])
+
+    def test_folga_negativa_block(self):
+        avisos = self.validate(self._q_feixe(250))   # feixe ≈274mm > casco → não entra
+        self.assertTrue(avisos)
+        self.assertEqual(avisos[0]["nivel"], "block")
+        self.assertEqual(avisos[0]["codigo"], "FOLGA_RCB43_NEGATIVA")
+
+
 class MetalurgiaValidatorTests(TenantTestCase):
     """Task 7: validador metalúrgico/térmico → Quotation.avisos."""
 

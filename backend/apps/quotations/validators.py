@@ -95,6 +95,9 @@ def validate_metalurgia(quotation) -> list[dict]:
                 "corrosão/contaminação galvânica. Use chicana em material compatível (inox)."),
         })
 
+    # Folga periférica do feixe de reposição (RCB-4.3) — some ao mesmo aviso.
+    avisos.extend(validate_folga_feixe(quotation))
+
     # Compatibilidade TEMA (reuso) quando as letras estão disponíveis.
     if ctx["front"] or ctx["shell"] or ctx["rear"]:
         try:
@@ -105,3 +108,65 @@ def validate_metalurgia(quotation) -> list[dict]:
             pass
 
     return avisos
+
+
+def _to_float(x) -> float:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _contexto_feixe(quotation) -> dict:
+    """Geometria do feixe de reposição + Ø do casco EXISTENTE do cliente (parts ou inputs)."""
+    inputs = quotation.inputs or {}
+    ctx = {"n_tubos": 0, "od": 0.0, "d_casco": 0.0, "rear": ""}
+    if quotation.scope == "parts":
+        for part in quotation.parts.filter(incluso=True).select_related("template"):
+            tp = part.template.tema_part
+            p = part.params or {}
+            if tp == "tube_bundle":
+                ctx["n_tubos"] = int(_to_float(p.get("n_tubos")))
+                ctx["od"] = _to_float(p.get("od_tubo_mm") or p.get("tubo_od_mm"))
+                ctx["d_casco"] = _to_float(p.get("d_casco_mm") or p.get("diametro_casco_mm"))
+                ctx["rear"] = ctx["rear"] or (p.get("cabecote") or part.tema_letter or "").upper()
+            elif tp == "rear_head":
+                ctx["rear"] = (part.tema_letter or "").upper()
+    if not ctx["n_tubos"]:
+        ctx["n_tubos"] = int(_to_float(inputs.get("n_tubos")))
+    ctx["od"] = ctx["od"] or _to_float(inputs.get("tubo_od_mm") or inputs.get("od_tubo_mm"))
+    ctx["d_casco"] = ctx["d_casco"] or _to_float(
+        inputs.get("diametro_casco_mm") or inputs.get("d_casco_mm"))
+    if not ctx["rear"]:
+        desig = inputs.get("designacao") or ""
+        if len(desig) >= 3:
+            ctx["rear"] = desig[2].upper()
+    return ctx
+
+
+def validate_folga_feixe(quotation) -> list[dict]:
+    """Folga periférica shell-to-bundle (TEMA RCB-4.3): garante que o feixe de reposição
+    ENTRA e não trava no casco EXISTENTE do cliente. Reaproveita o motor puro
+    (permutador_layout.d_feixe_min + folga_cabecote)."""
+    from pricing_engine.permutador_layout import d_feixe_min, folga_cabecote
+
+    ctx = _contexto_feixe(quotation)
+    n, od, d_casco, rear = ctx["n_tubos"], ctx["od"], ctx["d_casco"], ctx["rear"]
+    if not (n and od and d_casco):
+        return []
+    d_feixe = d_feixe_min(n, od)
+    folga_min = folga_cabecote(rear)          # folga diametral mínima (RCB-4.3) por cabeçote
+    folga_disp = d_casco - d_feixe
+    if folga_disp < 0:
+        return [{"nivel": "block", "codigo": "FOLGA_RCB43_NEGATIVA",
+                 "mensagem": (
+                     f"Feixe de reposição NÃO entra no casco do cliente: envelope do feixe "
+                     f"≈ {d_feixe:.0f}mm > Ø casco {d_casco:.0f}mm. Reveja tube-count/OD "
+                     f"(TEMA RCB-4.3).")}]
+    if folga_disp < folga_min:
+        return [{"nivel": "warning", "codigo": "FOLGA_RCB43_APERTADA",
+                 "mensagem": (
+                     f"Folga periférica insuficiente (TEMA RCB-4.3): disponível ~{folga_disp:.0f}mm "
+                     f"< mínimo {folga_min:.0f}mm p/ cabeçote '{rear or '—'}'. Risco do feixe "
+                     f"travar no casco Ø{d_casco:.0f}mm (feixe ≈ {d_feixe:.0f}mm).")}]
+    return []
