@@ -191,12 +191,13 @@ Sprint 5:   28 SP restantes → entrega 28 SP →   0 SP ✅
 | Milestone | Prazo estimado | Entrega |
 |---|---|---|
 | **H2.1** — Conversão cotação → OF ✅ **(entregue, #47)** | mês 7 | Ordem de Fabricação herdando BOM e roteiro da cotação; zero retrabalho de digitação. Exige aprovação técnica ativa; deep-copy com snapshot_hash pinado; workflow de status com autoria por transição |
-| **H2.2** — Apontamento de produção ✅ **(entregue, PR)** | mês 9 | Operador registra horas por operação; no fechamento da OF calcula R$/h observado (= custo ÷ horas reais) → `ActualRate` (Welford). Baseline = custo (o motor não expõe horas estimadas) |
+| **H2.2** — Apontamento de produção ✅ **(entregue, PR)** | mês 9 | Operador registra horas por operação; no fechamento da OF calcula R$/h observado (= custo ÷ horas reais) → `ActualRate` (Welford). Baseline entregue foi custo; horas estimadas hoje fluem motor→adapter→`ItemOperation`→`OFOperation`, e a decomposição horas orçadas vs reais fica planejada em H2.x Cost & Pricing Intelligence |
 | **H2.3** — Motor de aprendizado de índices ✅ **(entregue, `aa3127c`)** | mês 10 | Sistema sugere atualização do `TenantRate` quando `ActualRate` tem N ≥ 20 amostras e confidence ≥ 70%; aplicação/descarta via UI com RBAC |
 | **H2.4** — ITP básico ✅ **(entregue)** | mês 11 | Plano de inspeção gerado a partir do roteiro; aceite por item com responsável e data |
 | **H2.5** — Conector TOTVS Protheus ✅ **(foundation + H2.5.1 + H2.5.2 entregues)** | mês 13 | Foundation tenant-scoped + export assíncrono da OF, tasks tenant-aware, adapter HTTP mínimo, staging governado de catálogo, scheduler/beat único, healthcheck admin-only, retry tipado e reenfileiramento seguro |
 | **H2.6** — Conector Omie / Bling ✅ **(Omie entregue, Bling fora do slice)** | mês 14 | Emissão assistida de NF-e via Omie a partir da OF concluída, com config tenant-scoped, runs assíncronos, admin operacional e healthcheck |
 | **H2.7a** — Conector SAP B1 manual/admin-only ✅ **(slice entregue)** | mês 16 | Foundation tenant-scoped + healthcheck admin-only + action manual de export da OF para SAP B1 via Service Layer, com reenfileiramento seguro; automação assistida completa fica para H2.7b |
+| **H2.x** — Cost & Pricing Intelligence | próximo ciclo | Rotular preço `referencial` vs `validado por custo`; auditar contaminação de back-solve; decompor horas orçadas vs reais; modelar custo fixo/capacidade como overhead separado; alertar preço mínimo/margem sem bloquear cotação |
 | **H2.8** — Expansão normativa: API 650 | mês 15 | Tanques atmosféricos dimensionados conforme API 650/620 |
 | **H2.9** — Expansão normativa: ASME B31.3 | mês 17 | Tubulações de processo dimensionadas |
 | **H2.10** — Multi-moeda e exportação | mês 18 | Cotações em USD/EUR; conversão automática; adequação PED para exportação EU |
