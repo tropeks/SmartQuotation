@@ -254,6 +254,81 @@ class FeixeQuotationTests(TenantTestCase):
         self.assertEqual(inp.tubo_material, "SA-179")    # default preservado
 
 
+class PricingBasisTests(TenantTestCase):
+    """SQ-COST-2: proveniência do preço (`referencial` vs `validado_custo`).
+
+    Não é um campo editável à mão (ver spec SQ-COST-1 §5.2) — este ciclo só garante
+    o default/backfill `referencial` e a exposição do rótulo humano. `validado_custo`
+    só passa a ser atingível quando `CostStructure`/preço mínimo existirem (SQ-COST-4/5).
+    """
+
+    def setUp(self):
+        self.customer = Customer.objects.create(company_name="Cliente Provenance")
+
+    def test_nova_cotacao_default_referencial(self):
+        q = create_feixe_quotation(self.customer, "Feixe provenance")
+        self.assertEqual(q.pricing_basis, "referencial")
+
+    def test_label_humano_provenance(self):
+        q = create_feixe_quotation(self.customer, "Feixe provenance label")
+        self.assertEqual(q.get_pricing_basis_display(), "Referencial")
+
+    def test_pricing_basis_nao_e_campo_do_form_data_sheet(self):
+        """Guardrail do spec: usuário não pode marcar `validado_custo` à mão via form comum."""
+        from apps.quotations.forms import FeixeDataSheetForm
+        self.assertNotIn("pricing_basis", FeixeDataSheetForm.base_fields)
+
+    def test_recompute_nao_altera_totais_calculados(self):
+        """Regressão: adicionar provenance não move nenhum total já validado pelos gates."""
+        baseline = create_feixe_quotation(self.customer, "Feixe baseline pricing basis", inputs=default_inputs())
+        q = create_feixe_quotation(self.customer, "Feixe com provenance", inputs=default_inputs())
+
+        self.assertEqual(q.pricing_basis, baseline.pricing_basis)
+        self.assertEqual(q.custo_material, baseline.custo_material)
+        self.assertEqual(q.custo_mo, baseline.custo_mo)
+        self.assertEqual(q.custo_total, baseline.custo_total)
+        self.assertEqual(q.preco_sem_impostos, baseline.preco_sem_impostos)
+        self.assertEqual(q.preco_com_impostos, baseline.preco_com_impostos)
+
+
+class PricingBasisMigrationTests(TenantMigrationTestCase):
+    migrate_from = ("quotations", "0007_quotation_avisos")
+    migrate_to = ("quotations", "0008_quotation_pricing_basis")
+
+    def setUp(self):
+        super().setUp()
+        self.executor = MigrationExecutor(connection)
+        self.executor.loader.build_graph()
+        self.executor.migrate([self.migrate_from])
+
+        old_apps = self.executor.loader.project_state([self.migrate_from]).apps
+        customer = old_apps.get_model("quotations", "Customer").objects.create(
+            company_name="Cliente legado provenance"
+        )
+        old_apps.get_model("quotations", "Quotation").objects.create(
+            number="COT-LEGACY-PB-0001",
+            customer=customer,
+            title="Cotacao legado provenance",
+        )
+
+        self.executor = MigrationExecutor(connection)
+        self.executor.loader.build_graph()
+        self.executor.migrate([self.migrate_to])
+        self.apps = self.executor.loader.project_state([self.migrate_to]).apps
+
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_to])
+        super().tearDown()
+
+    def test_migration_backfill_pricing_basis_referencial(self):
+        quotation = self.apps.get_model("quotations", "Quotation").objects.get(
+            number="COT-LEGACY-PB-0001"
+        )
+        self.assertEqual(quotation.pricing_basis, "referencial")
+
+
 class ItemOperationMigrationTests(TenantMigrationTestCase):
     migrate_from = ("quotations", "0003_customer_phone")
     migrate_to = ("quotations", "0004_itemoperation_custo_direto_itemoperation_horas_hh_and_more")

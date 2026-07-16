@@ -138,6 +138,16 @@
           </div>
           <div class="param"><div class="lbl">Escopo</div><div class="val">{{ q.get_scope_display }}</div></div>
           <div class="param"><div class="lbl">Status</div><div class="val">{{ q.get_status_display }}</div></div>
+          <div class="param">
+            <div class="lbl">Proveniência do Preço</div>
+            <div class="val">
+              <span title="{% if q.pricing_basis == 'referencial' %}Preço formado por markup/calibração histórica — ainda não validado contra estrutura de custo real.{% else %}Preço validado contra estrutura de custo/preço mínimo do tenant.{% endif %}"
+                    style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;
+                           {% if q.pricing_basis == 'referencial' %}background:var(--g-gray-2,#e5e5e5);color:var(--g-ink,#222){% else %}background:var(--g-green,#1b7a43);color:#fff{% endif %}">
+                {{ q.get_pricing_basis_display }}
+              </span>
+            </div>
+          </div>
           <div class="param"><div class="lbl">Revisão</div><div class="val mono">{{ q.revision }}</div></div>
           <div class="param"><div class="lbl">Atualizada</div><div class="val mono">{{ q.updated_at|date:"d/m/Y H:i" }}</div></div>
         </div>
@@ -181,6 +191,7 @@
         <div class="price-line" style="margin-top:0">
           <span class="lbl">Preço de Venda</span>
           <span class="val mono">R$ {{ q.preco_com_impostos|brl }}</span>
+          <span class="pricing-basis-badge pricing-basis-badge--{{ q.pricing_basis }}">{{ q.get_pricing_basis_display }}</span>
         </div>
         <div class="price-sub">
           <span>Sem impostos: R$ {{ q.preco_sem_impostos|brl }}</span>
