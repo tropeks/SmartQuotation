@@ -124,7 +124,10 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 > H2.1 desenhado por agente Opus, codado por Sonnet, revisado por Opus (TOCTOU do guard fechado
 > com `select_for_update` + `UniqueConstraint` parcial; desempate determinístico do snapshot).
 > H2.1/H2.2 desenhados por Opus, codados por Sonnet (TDD), revisados por Opus. H2.2 fez pivot durante a
-> review: o motor expõe custo (não horas) por operação → baseline = custo, aprendizado em R$/h observado.
+> review para baseline de custo e aprendizado em R$/h observado. Revisão Wellington/Cost Discovery
+> (2026-07-16) corrigiu a leitura: horas estimadas hoje fluem `wbs.py` → `adapter.py` → `ItemOperation`
+> → `OFOperation`; falta ainda decompor horas orçadas vs reais para separar erro de índice físico
+> (`ProcessParameter`) de erro de rate R$/h.
 > H2.3 foi codado com TDD e auditado em `aa3127c` (7 achados corrigidos): geração idempotente, bordas
 > de confiança, proteção contra `Rate` inválido/zero, aplicação transacional e RBAC nas views.
 > H2.4 seguiu TDD: ITP idempotente, snapshot do roteiro da OF, aceite protegido e eventos no `AccessLog`.

@@ -57,6 +57,7 @@ tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 - ✅ H2.7a: app tenant-scoped `apps.integrations.sap_b1` registrado em settings, healthcheck admin-only e action manual de export da OF no admin de produção.
 - ✅ H2.7b: `_schedule_sap_b1_export` wired em `production.services.transition()` em STATUS_LIBERADA; enfileira sales_order + BOM via `maybe_enqueue_*` com dispatch `on_commit`.
 - ✅ H2.x audit (Spock+Ewoks, 2026-06-26, PR #58 commits 1dd1972+15efa48): 8 bugs corrigidos — SAP B1 idempotency PROCESSING guard, Protheus remote_code `or`-fallback (CRITICAL), RBAC appoint view, entry_date str→date parse, hours_hh/hm >24 validation, delta clamp, reset_sync_run select_for_update.
+- 🧭 H2.x Cost & Pricing Intelligence (discovery Wellington, 2026-07-16): próximo corte deve preservar CPQ atual e adicionar provenance `referencial` vs `validado por custo`, auditar back-solve como benchmark-contaminável, decompor horas orçadas vs reais, e tratar custo fixo/overhead como linha separada (`overhead_*`/`custo_estrutura_*`; NÃO reutilizar `wbs.OperacaoExecutada.custo_fixo`, que significa serviço de valor fixo).
 - ✅ Testes locais: gates do motor OK; 334 testes Django OK (apps.*).
 
 ## 🧭 DECISÕES TRAVADAS (não re-litigar)
@@ -68,4 +69,4 @@ Rate dia-1 só camada tenant · ProcessParameter separado de Rate · EAP/WBS com
 gstack em todas etapas · autonomia (perguntas só essenciais) · /cso a cada milestone · Boil the Ocean.
 
 ## ▶️ PRÓXIMO PASSO
-H2.8 — a definir. H2.x 100% completo e auditado: integrações Protheus/Omie/SAP B1 + 8 bugs corrigidos via Spock/Ewoks.
+SQ-COST-1 — spec + auditoria de contaminação do back-solve antes de implementar modelos. H2.x integrações Protheus/Omie/SAP B1 seguem completos/auditados; o novo corte é Cost & Pricing Intelligence.
