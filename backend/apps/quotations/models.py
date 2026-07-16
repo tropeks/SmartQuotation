@@ -34,6 +34,12 @@ class Quotation(models.Model):
               ("won", "Ganha"), ("lost", "Perdida")]
     SCOPE = [("tube_bundle", "Feixe Tubular"), ("complete", "Equipamento Completo"),
              ("parts", "Peças de Reposição")]
+    # Proveniência do preço (SQ-COST-1 spec §5). NÃO é um campo de formulário livre:
+    # `validado_custo` só passa a ser atingível quando existir CostStructure/preço mínimo
+    # (SQ-COST-4/5) e a derivação automática correspondente. Até lá, toda cotação —
+    # nova ou legada — é `referencial` (default explícito, nunca o oposto).
+    PRICING_BASIS = [("referencial", "Referencial"),
+                      ("validado_custo", "Validado por custo")]
 
     number = models.CharField(max_length=50, unique=True)
     revision = models.PositiveSmallIntegerField(default=0)
@@ -41,6 +47,11 @@ class Quotation(models.Model):
     title = models.CharField(max_length=500)
     scope = models.CharField(max_length=20, choices=SCOPE, default="tube_bundle")
     status = models.CharField(max_length=20, choices=STATUS, default="draft")
+    # editable=False: fora de qualquer ModelForm (data sheet/edit) por construção — evita que
+    # o orçamentista marque "validado por custo" manualmente. Só admin/leitura e código de
+    # derivação automática (futuro) devem tocar este campo.
+    pricing_basis = models.CharField(max_length=20, choices=PRICING_BASIS,
+                                      default="referencial", editable=False)
 
     # --- inputs do data sheet do feixe (params que o orçamentista preenche) ---
     inputs = models.JSONField(default=dict, blank=True)   # serializa FeixeInputs
