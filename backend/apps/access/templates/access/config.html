@@ -41,5 +41,33 @@
       </div>
     </section>
   {% endfor %}
+
+  <section class="g-section" style="margin-bottom:16px">
+    <header class="g-section-head">
+      <h3>Fluxo de aprovações</h3>
+      <span class="g-muted">{{ stages|length }} estágio{{ stages|length|pluralize }}</span>
+    </header>
+    <p style="max-width:72ch;color:var(--g-gray-1);margin:0 0 8px;padding:0 12px">
+      Estágios obrigatórios travam a conversão de cotação em Ordem de Fabricação:
+      uma cotação só é convertível quando TODOS os estágios obrigatórios estão
+      satisfeitos. A aprovação técnica (CREA) é obrigatória por compliance e não
+      pode ser desativada.
+    </p>
+    <div class="g-section-body table-scroll">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Estágio</th>
+            <th style="text-align:center">Obrigatório</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for stage in stages %}
+            {% include "access/_stage_row.html" with stage=stage %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 {% endblock %}

@@ -108,11 +108,12 @@ class AccessLog(models.Model):
         ("role_change", "Role Change"),
         ("member_deactivate", "Member Deactivate"),
         ("permission_change", "Permission Change"),
+        ("approval_config_change", "Approval Config Change"),
     ]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="access_logs")
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    action = models.CharField(max_length=32, choices=ACTION_CHOICES)
     resource_type = models.CharField(max_length=100)
     resource_id = models.CharField(max_length=100, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)

@@ -68,6 +68,68 @@ assert set(DEFAULT_MATRIX.keys()) == set(CAPABILITIES.keys()), (
 )
 
 
+# ── Estágios de aprovação default (T7) ───────────────────────────────────────
+# APENAS o estágio built-in `technical` (aprovação técnica CREA), semeado required
+# e travado. NÃO semeamos estágios adicionais (comercial etc.): a semântica deles
+# depende do Wellington (Q10). Com só este estágio, `production.is_convertible` se
+# comporta EXATAMENTE como antes do F10.
+DEFAULT_STAGES = [
+    {
+        "key": "technical",
+        "label": "Aprovação técnica (CREA)",
+        "order": 10,
+        "required": True,
+        "approver_capability": "approval.request_remote",
+        "is_builtin": True,
+    },
+]
+
+
+def seed_approval_stages(*, model=None):
+    """
+    Semeia (idempotente) os estágios de aprovação default no schema ATIVO.
+
+    Cria só o estágio built-in `technical` (required, travado). Usa update_or_create
+    nos campos de sistema (label/order/approver_capability/is_builtin) para manter o
+    built-in coerente, mas NÃO força `required` de volta em reexecuções — um admin
+    NÃO pode desligar o técnico pela UI (é built-in), então `required` do técnico é
+    de fato imutável; para estágios não-builtin (se existirem no futuro) preservamos
+    a customização de `required` feita pelo admin.
+
+    `model`: injeta o model histórico numa data migration (apps.get_model).
+    Retorna {"created": int, "existing": int}.
+    """
+    if model is None:
+        from apps.access.models import ApprovalStage as model  # noqa: N806
+
+    created = existing = 0
+    for spec in DEFAULT_STAGES:
+        defaults = {
+            "label": spec["label"],
+            "order": spec["order"],
+            "approver_capability": spec["approver_capability"],
+            "is_builtin": spec["is_builtin"],
+        }
+        # `required` só entra no create (não sobrescreve customização de admin em
+        # estágios não-builtin). O técnico é built-in => required travado em True.
+        if spec["is_builtin"]:
+            defaults["required"] = spec["required"]
+            _obj, was_created = model.objects.update_or_create(
+                key=spec["key"], defaults=defaults
+            )
+        else:
+            defaults["required"] = spec["required"]
+            _obj, was_created = model.objects.get_or_create(
+                key=spec["key"], defaults=defaults
+            )
+        if was_created:
+            created += 1
+        else:
+            existing += 1
+
+    return {"created": created, "existing": existing}
+
+
 def seed_access_matrix(*, model=None, updated_by=None):
     """
     Semeia (idempotente) a matriz papel×capability no schema ATIVO.

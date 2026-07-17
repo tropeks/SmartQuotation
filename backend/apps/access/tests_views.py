@@ -13,8 +13,8 @@ from django.core.cache import cache
 from django_tenants.test.cases import TenantTestCase as TestCase
 
 from apps.access.enforcement import role_can
-from apps.access.matrix import seed_access_matrix
-from apps.access.models import RolePermission
+from apps.access.matrix import seed_access_matrix, seed_approval_stages
+from apps.access.models import ApprovalStage, RolePermission
 from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog
 
@@ -144,3 +144,71 @@ class AccessConfigViewTests(TestCase):
         self.assertEqual(log.resource_type, "RolePermission")
         self.assertEqual(log.metadata["capability"], "quotation.create")
         self.assertTrue(log.metadata["allowed"])
+
+
+class ApprovalStageToggleViewTests(TestCase):
+    """T7: seção "Fluxo de aprovações" — toggle de `required` do ApprovalStage.
+
+    Cobre: estágio técnico built-in NÃO desabilitável (toggle recusado, continua
+    obrigatório); estágio não-builtin alterna e audita; não-admin -> 403.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        seed_access_matrix()
+        seed_approval_stages()
+
+        self.admin = User.objects.create_user(username="admin", password="x")
+        UserProfile.objects.create(
+            user=self.admin, full_name="Admin", role=UserProfile.ROLE_ADMIN
+        )
+        self.orca = User.objects.create_user(username="orca", password="x")
+        UserProfile.objects.create(
+            user=self.orca, full_name="Orca", role=UserProfile.ROLE_ORCAMENTISTA
+        )
+
+    def test_grade_mostra_secao_de_estagios(self):
+        self.client.force_login(self.admin)
+        resp = self.client.get("/config/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Fluxo de aprovações")
+        self.assertContains(resp, "stage-row-technical")
+
+    def test_builtin_technical_nao_pode_ser_desabilitado(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post("/config/stage/toggle/", {"key": "technical"})
+        self.assertEqual(resp.status_code, 400)
+        stage = ApprovalStage.objects.get(key="technical")
+        self.assertTrue(stage.required)  # continua obrigatório
+        # toggle recusado NÃO gera log de mudança
+        self.assertFalse(
+            AccessLog.objects.filter(action="approval_config_change").exists()
+        )
+
+    def test_toggle_estagio_nao_builtin_persiste_e_audita(self):
+        stage = ApprovalStage.objects.create(
+            key="comercial", label="Aprovação comercial", order=20,
+            required=True, is_builtin=False,
+        )
+        self.client.force_login(self.admin)
+        resp = self.client.post("/config/stage/toggle/", {"key": "comercial"})
+        self.assertEqual(resp.status_code, 200)
+        stage.refresh_from_db()
+        self.assertFalse(stage.required)
+
+        log = AccessLog.objects.filter(action="approval_config_change").first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.resource_type, "ApprovalStage")
+        self.assertEqual(log.metadata["key"], "comercial")
+        self.assertFalse(log.metadata["required"])
+
+    def test_nao_admin_recebe_403(self):
+        self.client.force_login(self.orca)
+        resp = self.client.post("/config/stage/toggle/", {"key": "technical"})
+        self.assertEqual(resp.status_code, 403)
+
+    def test_key_inexistente_retorna_400(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post("/config/stage/toggle/", {"key": "inexistente"})
+        self.assertEqual(resp.status_code, 400)

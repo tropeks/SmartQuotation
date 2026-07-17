@@ -28,7 +28,7 @@ from apps.access.capabilities import (
 )
 from apps.access.enforcement import invalidate_matrix_cache, require_capability
 from apps.access.matrix import ALL_ROLES
-from apps.access.models import RolePermission
+from apps.access.models import ApprovalStage, RolePermission
 from apps.accounts.models import UserProfile
 from apps.audit.services import log_access
 
@@ -55,6 +55,7 @@ CATEGORY_ORDER = [
 ]
 
 _ROW_PARTIAL = "access/_config_row.html"
+_STAGE_ROW_PARTIAL = "access/_stage_row.html"
 
 
 def _role_header():
@@ -112,7 +113,31 @@ def _config_context():
                 "rows": [_capability_row(code, perms) for code in codes],
             }
         )
-    return {"groups": groups, "roles": _role_header()}
+    return {
+        "groups": groups,
+        "roles": _role_header(),
+        "stages": _stage_rows(),
+    }
+
+
+def _stage_row(stage, *, error=None):
+    """Dict de UMA linha da tabela de estágios de aprovação."""
+    return {
+        "pk": stage.pk,
+        "key": stage.key,
+        "row_id": stage.key.replace(".", "-"),
+        "label": stage.label,
+        "order": stage.order,
+        "required": stage.required,
+        "is_builtin": stage.is_builtin,
+        "approver_capability": stage.approver_capability,
+        "error": error,
+    }
+
+
+def _stage_rows():
+    """Todos os estágios de aprovação do tenant, na ordem canônica (order, key)."""
+    return [_stage_row(s) for s in ApprovalStage.objects.all().order_by("order", "key")]
 
 
 @login_required
@@ -176,3 +201,41 @@ def toggle_permission(request):
     )
 
     return render(request, _ROW_PARTIAL, {"cap": _capability_row(capability)})
+
+
+@require_POST
+@require_capability("access.manage")
+def toggle_stage(request):
+    """
+    Inverte `required` de um ApprovalStage e re-renderiza a linha (HTMX).
+
+    Compliance: estágios `is_builtin=True` (aprovação técnica CREA) têm `required`
+    TRAVADO — o toggle é recusado (400) e a linha volta com o estado original. Isto
+    garante que `is_convertible` sempre exija a aprovação técnica CREA.
+    """
+    key = (request.POST.get("key") or "").strip()
+    stage = ApprovalStage.objects.filter(key=key).first()
+    if stage is None:
+        return HttpResponseBadRequest("Estágio de aprovação inválido.")
+
+    if stage.is_builtin:
+        # Built-in (CREA): required é imutável por compliance. Recusa o toggle.
+        row = _stage_row(
+            stage,
+            error="A aprovação técnica (CREA) é obrigatória por compliance e não "
+            "pode ser desativada.",
+        )
+        return render(request, _STAGE_ROW_PARTIAL, {"stage": row}, status=400)
+
+    stage.required = not stage.required
+    stage.updated_by = request.user
+    stage.save(update_fields=["required", "updated_by", "updated_at"])
+
+    log_access(
+        request,
+        "approval_config_change",
+        stage,
+        {"key": stage.key, "required": stage.required},
+    )
+
+    return render(request, _STAGE_ROW_PARTIAL, {"stage": _stage_row(stage)})

@@ -29,10 +29,11 @@ class Command(BaseCommand):
         # no auto_create_schema; este hook reforça (idempotente) e alinha os Groups.
         with schema_context(schema):
             from apps.accounts.rbac import ensure_groups
-            from apps.access.matrix import seed_access_matrix
+            from apps.access.matrix import seed_access_matrix, seed_approval_stages
 
             ensure_groups()
             seed_access_matrix()
+            seed_approval_stages()
 
         self.stdout.write(self.style.SUCCESS(
             f"Tenant '{tenant.name}' criado: schema={schema} domain={opts['domain']}"))

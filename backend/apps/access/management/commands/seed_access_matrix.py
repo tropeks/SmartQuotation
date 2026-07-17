@@ -12,11 +12,11 @@ não sobrescreve customizações já feitas por admins — só preenche lacunas.
 from django.core.management.base import BaseCommand
 from django_tenants.utils import get_public_schema_name, get_tenant_model, schema_context
 
-from apps.access.matrix import seed_access_matrix
+from apps.access.matrix import seed_access_matrix, seed_approval_stages
 
 
 class Command(BaseCommand):
-    help = "Semeia RolePermission (DEFAULT_MATRIX) por tenant, idempotente."
+    help = "Semeia RolePermission (DEFAULT_MATRIX) + ApprovalStage por tenant, idempotente."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -44,9 +44,11 @@ class Command(BaseCommand):
         for tenant in tenants:
             with schema_context(tenant.schema_name):
                 result = seed_access_matrix()
+                stages = seed_approval_stages()
             total += result["created"]
             self.stdout.write(
-                f"{tenant.schema_name}: +{result['created']} criadas, "
-                f"{result['existing']} já existentes."
+                f"{tenant.schema_name}: +{result['created']} permissões, "
+                f"{result['existing']} já existentes; "
+                f"+{stages['created']} estágios de aprovação."
             )
         self.stdout.write(self.style.SUCCESS(f"OK: {total} permissões criadas."))
