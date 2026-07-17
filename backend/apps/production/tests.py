@@ -930,6 +930,130 @@ class HourVarianceToleranceTests(TenantTestCase):
             )
 
 
+class ProductionReviewSignalTests(TenantTestCase):
+    """SQ-COST-6: sinal operacional de revisão de ProcessParameter.
+
+    Agrega ProductionObservation.delta_horas_pct (SQ-COST-3) por operação e classifica
+    candidatos a revisão da física (ProcessParameter) — SOMENTE LEITURA/analytics. Não
+    recalcula delta_horas_pct, não altera ProcessParameter/Rate/ActualRate (Welford)/
+    RateSuggestion nem pricing_engine. Observações são criadas diretamente (mesmo padrão
+    de HourVarianceUITests/HourVarianceToleranceTests), não via fechamento real.
+    """
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_signal")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng Signal", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-93", crea_state="SP",
+        )
+        self.q = create_feixe_quotation(self.customer, "Feixe Signal")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+
+    def _observation(self, operacao, delta_horas_pct):
+        from apps.production.models import ProductionObservation
+        return ProductionObservation.objects.create(
+            operacao=operacao, ordem=self.of,
+            estimated_custo=Decimal("100.00"), actual_hh=Decimal("10.00"),
+            observed_rate=Decimal("10.00"), estimated_hh=Decimal("10.00"),
+            delta_horas_pct=delta_horas_pct,
+        )
+
+    def test_insufficient_data_com_menos_de_3_observacoes(self):
+        self._observation("OP-INSUF", Decimal("10.00"))
+        self._observation("OP-INSUF", Decimal("12.00"))
+
+        signal = services.production_review_signal()
+
+        row = next(r for r in signal if r["operacao"] == "OP-INSUF")
+        self.assertEqual(row["count"], 2)
+        self.assertEqual(row["status"], "insufficient_data")
+
+    def test_review_recommended_quando_media_abs_acima_de_5pct_com_3_amostras(self):
+        self._observation("OP-REVISAR", Decimal("8.00"))
+        self._observation("OP-REVISAR", Decimal("-9.00"))
+        self._observation("OP-REVISAR", Decimal("7.00"))
+        # média |Δ| = (8+9+7)/3 = 8.00 > 5.00 (TOLERANCIA_HORAS_PCT)
+
+        signal = services.production_review_signal()
+
+        row = next(r for r in signal if r["operacao"] == "OP-REVISAR")
+        self.assertEqual(row["count"], 3)
+        self.assertEqual(row["mean_abs_delta_pct"], Decimal("8.00"))
+        self.assertEqual(row["status"], "review_recommended")
+        flagged = [r["operacao"] for r in signal if r["status"] == "review_recommended"]
+        self.assertIn("OP-REVISAR", flagged)
+
+    def test_ok_quando_media_abs_dentro_da_tolerancia_com_3_amostras(self):
+        self._observation("OP-OK", Decimal("2.00"))
+        self._observation("OP-OK", Decimal("-3.00"))
+        self._observation("OP-OK", Decimal("1.00"))
+        # média |Δ| = (2+3+1)/3 = 2.00 <= 5.00
+
+        signal = services.production_review_signal()
+
+        row = next(r for r in signal if r["operacao"] == "OP-OK")
+        self.assertEqual(row["status"], "ok")
+        flagged = [r["operacao"] for r in signal if r["status"] == "review_recommended"]
+        self.assertNotIn("OP-OK", flagged)
+
+    def test_deltas_none_sao_ignorados_no_calculo_da_media(self):
+        self._observation("OP-NONE", Decimal("10.00"))
+        self._observation("OP-NONE", Decimal("10.00"))
+        self._observation("OP-NONE", Decimal("10.00"))
+        self._observation("OP-NONE", None)  # operação de valor fixo, sem base — ignorada
+        self._observation("OP-NONE", None)
+
+        signal = services.production_review_signal()
+
+        row = next(r for r in signal if r["operacao"] == "OP-NONE")
+        self.assertEqual(row["count"], 3)  # as 2 observações None não contam na amostra
+        self.assertEqual(row["mean_abs_delta_pct"], Decimal("10.00"))
+        self.assertEqual(row["status"], "review_recommended")
+
+    def test_service_agrega_por_operacao_corretamente(self):
+        self._observation("OP-A", Decimal("1.00"))
+        self._observation("OP-A", Decimal("2.00"))
+        self._observation("OP-B", Decimal("20.00"))
+        self._observation("OP-B", Decimal("-25.00"))
+        self._observation("OP-B", Decimal("22.00"))
+
+        signal = services.production_review_signal()
+
+        by_op = {r["operacao"]: r for r in signal}
+        self.assertIn("OP-A", by_op)
+        self.assertIn("OP-B", by_op)
+        self.assertEqual(by_op["OP-A"]["count"], 2)
+        self.assertEqual(by_op["OP-A"]["status"], "insufficient_data")
+        self.assertEqual(by_op["OP-B"]["count"], 3)
+        self.assertEqual(by_op["OP-B"]["status"], "review_recommended")
+
+    def test_detail_renderiza_secao_de_sinal_para_operacao_flagged_da_propria_of(self):
+        # usa o código de operação real do roteiro copiado da OF, para que a seção
+        # apareça vinculada a esta OF especificamente (não é um relatório global solto)
+        op = OFOperation.objects.filter(item__ordem=self.of).first()
+        self._observation(op.codigo_op, Decimal("8.00"))
+        self._observation(op.codigo_op, Decimal("-9.00"))
+        self._observation(op.codigo_op, Decimal("7.00"))
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sinal de Revis")
+        self.assertContains(response, op.codigo_op)
+
+    def test_detail_nao_renderiza_secao_quando_nenhuma_operacao_flagged(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Sinal de Revis")
+
+
 class ProductionObservationAdminTests(TenantTestCase):
     """SQ-COST-4: admin somente-leitura para ProductionObservation (padrão de
     apps.integrations.sap_b1.admin.SapB1ReadOnlyAdmin: sem add/delete, todos os campos

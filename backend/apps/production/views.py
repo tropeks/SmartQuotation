@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
 from apps.quotations.models import Quotation
-from apps.production.models import InspectionItem, OrdemFabricacao, OFOperation
+from apps.production.models import InspectionItem, OrdemFabricacao, OFOperation, ProductionObservation
 from apps.production import services
 
 
@@ -36,12 +36,25 @@ def ordem_detail(request, pk):
             .select_related("of_operation", "accepted_by")
             .all()
         )
+    # SQ-COST-6: sinal operacional de revisão de ProcessParameter — cross-OF (agrega
+    # ProductionObservation por operação, ver services.production_review_signal), mas
+    # exibido aqui restrito ao roteiro desta OF para não poluir a página com ruído de
+    # outras OFs. Somente leitura: não recalcula/altera nada.
+    of_operacao_codes = set(
+        OFOperation.objects.filter(item__ordem=of).values_list("codigo_op", flat=True)
+    )
+    review_signal_flagged = [
+        row for row in services.production_review_signal()
+        if row["status"] == ProductionObservation.STATUS_REVIEW_RECOMMENDED
+        and row["operacao"] in of_operacao_codes
+    ]
     return render(request, "production/detail.html", {
         "of": of,
         "itens": itens,
         "inspection_plan": inspection_plan,
         "inspection_items": inspection_items,
         "can_manage_itp": user_role(request.user) in _ITP_ROLES,
+        "review_signal_flagged": review_signal_flagged,
     })
 
 

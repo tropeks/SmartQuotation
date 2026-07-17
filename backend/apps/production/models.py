@@ -171,6 +171,61 @@ class ProductionEntry(models.Model):
         indexes = [models.Index(fields=["of_operation", "entry_date"])]
 
 
+class ProductionObservationManager(models.Manager):
+    """SQ-COST-6: agregação somente-leitura de ProductionObservation por operação.
+
+    NÃO recalcula/persiste nada — só lê o já gravado por services._close_out_observations
+    (SQ-COST-3) para sugerir onde a física (ProcessParameter) pode estar desalinhada.
+    """
+
+    # < este nº de amostras com base (delta_horas_pct != None) => sinal não confiável.
+    REVIEW_MIN_SAMPLES = 3
+
+    def review_signal(self):
+        """Agrega |delta_horas_pct| por operação (ignorando observações sem base, i.e.
+        delta_horas_pct=None — operação de valor fixo, sem ProcessParameter de horas) e
+        classifica cada operação como 'insufficient_data' | 'review_recommended' | 'ok'.
+
+        Retorna lista de dicts (ordenada por operação):
+        {"operacao", "count", "mean_abs_delta_pct", "status"}.
+        """
+        tolerancia = ProductionObservation.TOLERANCIA_HORAS_PCT
+        by_op = {}
+        rows = (
+            self.get_queryset()
+            .exclude(delta_horas_pct__isnull=True)
+            .values_list("operacao", "delta_horas_pct")
+        )
+        for operacao, delta in rows:
+            by_op.setdefault(operacao, []).append(abs(delta))
+
+        signal = []
+        for operacao in sorted(by_op):
+            deltas = by_op[operacao]
+            count = len(deltas)
+            mean_abs = (sum(deltas) / count).quantize(Decimal("0.01"))
+            if count < self.REVIEW_MIN_SAMPLES:
+                status = ProductionObservation.STATUS_REVIEW_INSUFFICIENT
+            elif mean_abs > tolerancia:
+                status = ProductionObservation.STATUS_REVIEW_RECOMMENDED
+            else:
+                status = ProductionObservation.STATUS_REVIEW_OK
+            signal.append({
+                "operacao": operacao,
+                "count": count,
+                "mean_abs_delta_pct": mean_abs,
+                "status": status,
+            })
+        return signal
+
+    def flagged_for_review(self):
+        """Atalho: só as operações classificadas 'review_recommended'."""
+        return [
+            row for row in self.review_signal()
+            if row["status"] == ProductionObservation.STATUS_REVIEW_RECOMMENDED
+        ]
+
+
 class ProductionObservation(models.Model):
     # SQ-COST-5: tolerância/semáforo de desvio de horas. Default ±5% nesta sprint —
     # não configurável por tenant (MVP). Puramente classificatório/apresentação: NÃO
@@ -181,6 +236,14 @@ class ProductionObservation(models.Model):
     STATUS_DENTRO = "dentro"
     STATUS_ACIMA = "acima"
     STATUS_ABAIXO = "abaixo"
+
+    # SQ-COST-6: sinal operacional de revisão de ProcessParameter (por operação,
+    # agregando várias observações — ver ProductionObservationManager.review_signal).
+    STATUS_REVIEW_INSUFFICIENT = "insufficient_data"
+    STATUS_REVIEW_RECOMMENDED = "review_recommended"
+    STATUS_REVIEW_OK = "ok"
+
+    objects = ProductionObservationManager()
 
     operacao = models.CharField(max_length=100, db_index=True)
     ordem = models.ForeignKey("OrdemFabricacao", on_delete=models.PROTECT, related_name="observations")

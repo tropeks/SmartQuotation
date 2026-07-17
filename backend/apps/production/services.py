@@ -382,6 +382,22 @@ def log_production_entry(of_operation, operator, hours_hh, hours_hm=0,
     return entry
 
 
+def production_review_signal():
+    """SQ-COST-6: sinal operacional de revisão de ProcessParameter (física → horas).
+
+    Agrega ProductionObservation.delta_horas_pct (SQ-COST-3) por operação e classifica
+    cada uma como 'insufficient_data' | 'review_recommended' | 'ok', sugerindo onde a
+    física pode estar desalinhada — SOMENTE LEITURA/analytics. NÃO recalcula/persiste
+    delta_horas_pct, NÃO altera ProcessParameter/Rate/ActualRate (Welford)/
+    RateSuggestion, NÃO toca pricing_engine nem totais de cotação/OF.
+
+    Thin wrapper sobre ProductionObservation.objects.review_signal() — mantido como
+    função de serviço porque o sinal é uma agregação cross-OF (não pertence a uma
+    única OrdemFabricacao/ProductionObservation).
+    """
+    return ProductionObservation.objects.review_signal()
+
+
 def _update_actual_rate(operacao: str, observed_rate):
     """Upsert online (Welford) do agregado ActualRate (R$/h) de uma operação. Requer transação."""
     from decimal import Decimal
