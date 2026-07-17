@@ -71,6 +71,7 @@ python manage.py tenant_command seed_engineering_params --schema=engematex
 python manage.py tenant_command seed_ligas --schema=engematex          # ligas metalúrgicas (S 2025)
 python manage.py tenant_command seed_proposal_template --schema=engematex
 python manage.py tenant_command seed_tema_catalog --schema=engematex    # partes TEMA (dropdowns Compor Trocador) — SEM isto o /tema/compor/ fica vazio
+python manage.py tenant_command seed_access_matrix --schema=engematex    # matriz papel×capability (RBAC configurável F10) — backfill de tenant existente
 python manage.py runserver 0.0.0.0:8000     # acessar via engematex.localhost:8000
 # PDF da proposta: WeasyPrint (Docker) ou google-chrome --print-to-pdf (fallback). DOCX: python-docx.
 ```

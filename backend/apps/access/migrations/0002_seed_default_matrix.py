@@ -1,21 +1,19 @@
 """
-Backfill retroativo: semeia a DEFAULT_MATRIX em cada schema de tenant durante
-migrate_schemas --tenant. Idempotente (get_or_create) e reversível como no-op.
+NO-OP intencional.
+
+O seeding da DEFAULT_MATRIX foi movido para FORA das migrations, para (a) não
+pré-semear os schemas de teste do django-tenants — o que quebrava os testes de
+enforcement que criam linhas RolePermission específicas (colisão de unique) — e
+(b) não acoplar código de app dentro de uma migration.
+
+A matriz é semeada por:
+  * `provision_tenant` (hook, tenants novos) — idempotente;
+  * `manage.py tenant_command seed_access_matrix` (backfill de tenants existentes,
+    passo de deploy, como os demais seeds do projeto).
+
+Esta migration é mantida como no-op só para preservar o histórico já aplicado.
 """
 from django.db import migrations
-
-
-def forwards(apps, schema_editor):
-    RolePermission = apps.get_model("access", "RolePermission")
-    # Import do helper de seed (usa CAPABILITIES/DEFAULT_MATRIX estáticos do código).
-    from apps.access.matrix import seed_access_matrix
-
-    seed_access_matrix(model=RolePermission)
-
-
-def backwards(apps, schema_editor):
-    # Não removemos linhas no downgrade (poderiam conter customizações de admin).
-    pass
 
 
 class Migration(migrations.Migration):
@@ -24,6 +22,4 @@ class Migration(migrations.Migration):
         ("access", "0001_initial"),
     ]
 
-    operations = [
-        migrations.RunPython(forwards, backwards),
-    ]
+    operations = []
