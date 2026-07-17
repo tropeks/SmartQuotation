@@ -728,6 +728,86 @@ class ItemOperationProvenanceTests(TenantTestCase):
                                     + op.horas_hm * op.taxa_hora_hm))
 
 
+class ItemOperationTaxaEditavelTests(TenantTestCase):
+    """F1: o VALOR da hora-homem (taxa_hora) e da hora-máquina (taxa_hora_hm) é
+    editável no drawer da EAP, além das quantidades. Sem isso, editar horas-HM
+    dava horas_hm×0 = 0 e o total não mudava (taxa_hora_hm chega zero na maioria
+    das operações)."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="Petrobras RPBC")
+        self.user = User.objects.create_user(username="orc", password="senha-forte-123")
+        UserProfile.objects.create(user=self.user, full_name="Orc",
+                                   role=UserProfile.ROLE_ORCAMENTISTA)
+        self.client.force_login(self.user)
+
+    def _op_horaria(self):
+        q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
+        op = (ItemOperation.objects.filter(item__quotation=q, custo_direto=False)
+              .exclude(horas_hh=0).first())
+        self.assertIsNotNone(op, "esperava ao menos uma operação horária no feixe")
+        return q, op
+
+    def test_edita_taxa_hora_homem_muda_op_item_e_total(self):
+        q, op = self._op_horaria()
+        item = op.item
+        antes_custo = op.custo
+        antes_item_mo = item.custo_mo
+        antes_total = q.custo_total
+        nova_taxa = op.taxa_hora + Decimal("50.00")
+        esperado_op = (op.horas_hh * nova_taxa) + (op.horas_hm * op.taxa_hora_hm)
+        delta = esperado_op - antes_custo
+        self.assertGreater(delta, Decimal("0"))
+
+        resp = self.client.post(
+            f"/cotacoes/eap/item/{item.pk}/salvar/",
+            {f"op_taxa_hh_{op.pk}": str(nova_taxa)})
+        self.assertEqual(resp.status_code, 200)
+
+        op.refresh_from_db(); item.refresh_from_db(); q.refresh_from_db()
+        self.assertEqual(op.taxa_hora, nova_taxa)
+        self.assertEqual(op.custo, esperado_op)
+        self.assertEqual(item.custo_mo, antes_item_mo + delta)
+        self.assertEqual(q.custo_total, antes_total + delta)
+
+    def test_edita_taxa_hora_maquina_muda_op_item_e_total(self):
+        q, op = self._op_horaria()
+        item = op.item
+        antes_custo = op.custo
+        antes_item_mo = item.custo_mo
+        antes_total = q.custo_total
+        # dá horas de máquina + valor da hora-máquina (que chegava zero): agora o
+        # produto horas_hm×taxa_hora_hm passa a contar no custo derivado.
+        novas_horas_hm = Decimal("4.00")
+        nova_taxa_hm = Decimal("90.00")
+        esperado_op = (op.horas_hh * op.taxa_hora) + (novas_horas_hm * nova_taxa_hm)
+        delta = esperado_op - antes_custo
+        self.assertNotEqual(delta, Decimal("0"))
+
+        resp = self.client.post(
+            f"/cotacoes/eap/item/{item.pk}/salvar/",
+            {f"op_horas_hm_{op.pk}": str(novas_horas_hm),
+             f"op_taxa_hm_{op.pk}": str(nova_taxa_hm)})
+        self.assertEqual(resp.status_code, 200)
+
+        op.refresh_from_db(); item.refresh_from_db(); q.refresh_from_db()
+        self.assertEqual(op.taxa_hora_hm, nova_taxa_hm)
+        self.assertEqual(op.horas_hm, novas_horas_hm)
+        self.assertEqual(op.custo, esperado_op)
+        self.assertEqual(item.custo_mo, antes_item_mo + delta)
+        self.assertEqual(q.custo_total, antes_total + delta)
+
+    def test_drawer_expoe_inputs_de_taxa(self):
+        q, op = self._op_horaria()
+        resp = self.client.get(f"/cotacoes/eap/item/{op.item.pk}/drawer/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f"op_taxa_hh_{op.pk}")
+        self.assertContains(resp, f"op_taxa_hm_{op.pk}")
+
+
 class DataSheetViewTests(TenantTestCase):
     """Slice end-to-end via HTTP: login -> data sheet -> recompute -> criar -> detalhe."""
 

@@ -48,7 +48,7 @@
     <h5>Mão de obra</h5>
     {% if item.operacoes.all %}
     <table class="g-table drawer-table">
-      <thead><tr><th>Operação</th><th>Descrição</th><th>Método</th><th class="num">Horas HH</th><th class="num">Horas HM</th><th class="num">Custo (R$)</th></tr></thead>
+      <thead><tr><th>Operação</th><th>Descrição</th><th>Método</th><th class="num">Horas HH</th><th class="num">Taxa HH (R$/h)</th><th class="num">Horas HM</th><th class="num">Taxa HM (R$/h)</th><th class="num">Custo (R$)</th></tr></thead>
       <tbody>
         {% for op in item.operacoes.all %}
         <tr>
@@ -56,6 +56,8 @@
           <td>{{ op.descricao }}</td>
           <td class="g-muted">{{ op.metodo|default:"—" }}</td>
           {% if op.custo_direto %}
+          <td class="num"><span class="g-muted">—</span></td>
+          <td class="num"><span class="g-muted">—</span></td>
           <td class="num"><span class="g-muted">—</span></td>
           <td class="num"><span class="g-muted">—</span></td>
           <td class="num"><input class="g-input drawer-num{% if not op.custo %} g-muted{% endif %}" type="text" inputmode="decimal"
@@ -66,10 +68,16 @@
                  name="op_horas_hh_{{ op.pk }}" value="{{ op.horas_hh }}"
                  {% if op.horas_hh_sugerida != None %}title="Sugerido pelo motor: {{ op.horas_hh_sugerida }}"{% endif %}
                  aria-label="Horas HH da operação {{ op.descricao }}"></td>
+          <td class="num"><input class="g-input drawer-num{% if not op.taxa_hora %} g-muted{% endif %}" type="text" inputmode="decimal"
+                 name="op_taxa_hh_{{ op.pk }}" value="{{ op.taxa_hora }}"
+                 aria-label="Taxa da hora-homem da operação {{ op.descricao }}"></td>
           <td class="num"><input class="g-input drawer-num" type="text" inputmode="decimal"
                  name="op_horas_hm_{{ op.pk }}" value="{{ op.horas_hm }}"
                  {% if op.horas_hm_sugerida != None %}title="Sugerido pelo motor: {{ op.horas_hm_sugerida }}"{% endif %}
                  aria-label="Horas HM da operação {{ op.descricao }}"></td>
+          <td class="num"><input class="g-input drawer-num{% if not op.taxa_hora_hm %} g-muted{% endif %}" type="text" inputmode="decimal"
+                 name="op_taxa_hm_{{ op.pk }}" value="{{ op.taxa_hora_hm }}"
+                 aria-label="Taxa da hora-máquina da operação {{ op.descricao }}"></td>
           <td class="num"><span class="val mono num{% if not op.custo %} g-muted{% endif %}"
                  aria-label="Custo derivado da operação {{ op.descricao }}">R$ {{ op.custo|brl }}</span>
             {% if op.origem == 'manual' %}
