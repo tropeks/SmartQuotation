@@ -27,28 +27,30 @@ No áudio F2 você citou "usinar, cortar, [expandir], traçar furos". A transcri
 
 ### Q3 — F8: ângulo de disposição da furação (30/45/60/90)
 O motor hoje só conhece layout "triangular/quadrado" e **não** usa ângulo (30/45/60/90) no custo. Expor o ângulo é fácil; a questão é o efeito no custo.
-**Preciso saber:** o ângulo do layout **muda o custo/horas** (via passo → nº de furos/área do espelho), ou por ora é só informação documental na cotação?
-**Default proposto:** por ora tratar como campo documental (não altera custo). Se você quiser que dirija o custo, me diga a relação passo↔ângulo que usam.
+**🔎 Pesquisa (Fable, com fonte):** layouts **30°/60°/45°/90°** e passo mínimo TEMA **1,25 × OD** confirmados. O ângulo **pode** dirigir custo via densidade de furos (30° = mais denso; 45°/90° obrigatórios quando há limpeza mecânica externa).
+**Preciso saber (só o que a norma não dá):** qual o **passo (pitch) que a ENGEMATEX pratica** por bitola, e se querem que o ângulo **entre no custo** (via nº de furos/área do espelho) ou fique documental por ora.
 
-### Q4 — F8: recorte da chicana (baffle cut)
-Hoje o sistema guarda o corte como **"altura restante" (mm)**. Você disse "recorte da chicana".
-**Default proposto:** manter altura restante (mm), que é o que o motor usa (TEMA RCB-4, hc = OD − corte).
-**Preciso saber:** prefere que o orçamentista informe o corte em **% (padrão TEMA, ex. 25%)** e o sistema converta para mm? (dá pra oferecer os dois.)
+### Q4 — F8: recorte da chicana (baffle cut) — 🔎 pesquisado, quase fechado
+Hoje o sistema guarda o corte como **"altura restante" (mm)**.
+**🔎 Pesquisa (Fable, com fonte):** o padrão da indústria é informar o baffle cut em **% do diâmetro interno do casco**; boa prática **20–35%**, típico **20–25%** (ScienceDirect / WeBBusterZ). Recomendação: input primário em **% (default 25%)** com conversão automática para mm (que o motor guarda).
+**Só preciso do seu OK:** adoto input em % (default 25%) convertendo para mm — concorda? Alguma faixa/valor que a ENGEMATEX prefira?
 
-### Q5 — F9: tubo em U desenvolvido + emenda
-Para calcular o tubo reto desenvolvido a partir do U, preciso fixar duas convenções.
-**Default proposto:**
-- Comprimentos padrão de mercado = **6,95 m** e **12 m** (configuráveis).
-- Comprimento reto desenvolvido = 2 × perna reta + comprimento desenvolvido da curva (π × raio de curvatura). Raio mínimo de curvatura = **1,5 × OD do tubo** (TEMA RCB).
-**Preciso saber:** confirma 6,95 m e 12 m? E o raio de curvatura que vocês usam (1,5×OD? outro?). Emenda sinalizada quando desenvolvido > comprimento padrão.
+### Q5 — F9: tubo em U desenvolvido + emenda — 🔎 pesquisado, 1 ponto a confirmar
+Para calcular o tubo reto desenvolvido a partir do U.
+**🔎 Pesquisa (Fable, com fonte):**
+- Raio mínimo de curvatura **≥ 1,5 × OD** confirmado (**TEMA RCB-2.3**), com afinamento de parede na curva `t₀ = t₁(1 + dₒ/4R)`.
+- Comprimentos preferenciais TEMA = 8/10/12/16/20 ft; mercado vende muito **6,10 m (20 ft)** e **12 m**.
+- **⚠️ ATENÇÃO:** o **"6,95 m" que apareceu no áudio NÃO existe como comprimento padrão de mercado em nenhuma fonte** — provável erro de transcrição do Whisper. **Não vou usar 6,95 m sem sua confirmação.**
+**Só preciso do seu OK:** adoto **6,10 m e 12 m** (configuráveis) como padrões e **1,5×OD** como raio mínimo — confirma? (Ou me dá os valores reais que a ENGEMATEX usa.) Emenda sinalizada quando o desenvolvido > comprimento padrão.
 
 ### Q6 — F5/F6: escopo da Fase 1 (aval do faseamento)
 Como arquiteto, minha recomendação é adotar já a separação **"equipamento completo × partes"** (o dado já existe no banco). Fase 1 oferece **apenas**: *equipamento completo* e *feixe tubular* (reto/U). Partes avulsas (só cabeçote, só casco, tampa…) ficam para a **Fase 2**, e cada nova designação TEMA custeável exige um job real de calibração (ver Q7).
 **Preciso saber:** confirma o escopo da Fase 1 = {completo, feixe} só?
 
-### Q7 — F7: designações TEMA custeáveis
-Hoje só **BEU** e **BEM** têm custeio validado (a 0,0% vs gabarito). Qualquer outra designação (ex.: **AES**) precisa de um **job real fechado** para gerar o seed de calibração — não dá para "carregar da norma" sozinho, porque os pesos/horas vêm do gabarito.
-**Preciso saber:** quais designações você precisa a seguir (AES? outras?) e você consegue me passar um orçamento fechado real de cada uma para eu gerar o seed?
+### Q7 — F7: designações TEMA custeáveis — 🔎 caracterizado, falta o gabarito
+Hoje só **BEU** e **BEM** têm custeio validado (0,0% vs gabarito). Nova designação precisa de **job real fechado** para gerar o seed (pesos/horas vêm do gabarito, não da norma).
+**🔎 Pesquisa (Fable, com fonte):** BEU = removível mais econômico/comum; BEM = mais barato (espelho fixo, serviço limpo); **AES** = padrão refinaria p/ fouling; NEN = alta pressão. Custo típico **BEM < BEU < AES**.
+**Preciso saber:** quais designações você precisa a seguir (AES? outras?) e **um orçamento fechado real de cada** para eu gerar o seed de calibração.
 
 ---
 
