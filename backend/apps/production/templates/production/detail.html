@@ -81,6 +81,37 @@
   </div>
 </section>
 
+{% if of.hour_variance_observations %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Desvios de Horas (Orçado × Real)</h3></header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th>Operação</th><th class="num">Horas est. (HH)</th><th class="num">Horas reais (HH)</th><th class="num">Desvio</th></tr></thead>
+      <tbody>
+        {% for obs in of.hour_variance_observations %}
+        <tr>
+          <td class="mono">{{ obs.operacao }}</td>
+          <td class="num mono">{{ obs.estimated_hh|brl }}</td>
+          <td class="num mono">{{ obs.actual_hh|brl }}</td>
+          <td class="num mono">
+            {% if obs.delta_horas_pct == None %}
+            <span class="q-badge q-badge--na">sem base</span>
+            {% elif obs.delta_horas_pct > 0 %}
+            <span class="q-badge q-badge--over">+{{ obs.delta_horas_pct|brl }}% acima</span>
+            {% elif obs.delta_horas_pct < 0 %}
+            <span class="q-badge q-badge--under">{{ obs.delta_horas_pct|brl }}% abaixo</span>
+            {% else %}
+            <span class="q-badge q-badge--neutral">0,00% no orçado</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>Plano de Inspeção e Testes (ITP)</h3></header>
   <div class="g-section-body" style="padding:0">
