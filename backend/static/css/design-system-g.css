@@ -48,6 +48,8 @@ a { color:var(--g-orange); }
 .q-badge--under { color:var(--g-green); border-color:var(--g-green); }
 .q-badge--neutral { color:var(--g-gray-1); border-color:var(--g-gray-3); }
 .q-badge--na { color:var(--g-amber); border-color:var(--g-amber); }
+/* SQ-COST-5: dentro da tolerância ±5% — não é alerta, mas distinto de "sem base" (--na) */
+.q-badge--ok { color:var(--g-gray-1); border-color:var(--g-gray-3); }
 
 /* Foco de teclado visível em toda a superfície interativa (não só inputs) */
 a:focus-visible, button:focus-visible, .q-btn:focus-visible,

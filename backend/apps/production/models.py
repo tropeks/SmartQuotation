@@ -172,6 +172,16 @@ class ProductionEntry(models.Model):
 
 
 class ProductionObservation(models.Model):
+    # SQ-COST-5: tolerância/semáforo de desvio de horas. Default ±5% nesta sprint —
+    # não configurável por tenant (MVP). Puramente classificatório/apresentação: NÃO
+    # altera delta_horas_pct (SQ-COST-3, calculado em services._close_out_observations).
+    TOLERANCIA_HORAS_PCT = Decimal("5.00")
+
+    STATUS_SEM_BASE = "sem_base"
+    STATUS_DENTRO = "dentro"
+    STATUS_ACIMA = "acima"
+    STATUS_ABAIXO = "abaixo"
+
     operacao = models.CharField(max_length=100, db_index=True)
     ordem = models.ForeignKey("OrdemFabricacao", on_delete=models.PROTECT, related_name="observations")
     of_operation = models.ForeignKey("OFOperation", null=True, blank=True,
@@ -192,6 +202,18 @@ class ProductionObservation(models.Model):
     class Meta:
         ordering = ["-observed_at"]
         indexes = [models.Index(fields=["operacao", "observed_at"])]
+
+    @property
+    def hours_variance_status(self):
+        """SQ-COST-5: classifica delta_horas_pct contra a tolerância (±5.00%, MVP fixo
+        nesta sprint). Somente leitura/apresentação — não recalcula nem persiste nada."""
+        if self.delta_horas_pct is None:
+            return self.STATUS_SEM_BASE
+        if abs(self.delta_horas_pct) <= self.TOLERANCIA_HORAS_PCT:
+            return self.STATUS_DENTRO
+        if self.delta_horas_pct > self.TOLERANCIA_HORAS_PCT:
+            return self.STATUS_ACIMA
+        return self.STATUS_ABAIXO
 
 
 class ActualRate(models.Model):

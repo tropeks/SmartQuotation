@@ -83,7 +83,10 @@
 
 {% if of.hour_variance_observations %}
 <section class="g-section" style="margin-top:16px">
-  <header class="g-section-head"><h3>Desvios de Horas (Orçado × Real)</h3></header>
+  <header class="g-section-head">
+    <h3>Desvios de Horas (Orçado × Real)</h3>
+    <p class="g-note" style="margin:0">tolerância ±5%</p>
+  </header>
   <div class="g-section-body" style="padding:0">
     <table class="g-table">
       <thead><tr><th>Operação</th><th class="num">Horas est. (HH)</th><th class="num">Horas reais (HH)</th><th class="num">Desvio</th></tr></thead>
@@ -94,14 +97,18 @@
           <td class="num mono">{{ obs.estimated_hh|brl }}</td>
           <td class="num mono">{{ obs.actual_hh|brl }}</td>
           <td class="num mono">
-            {% if obs.delta_horas_pct == None %}
+            {% if obs.hours_variance_status == "sem_base" %}
             <span class="q-badge q-badge--na">sem base</span>
+            {% elif obs.hours_variance_status == "acima" %}
+            <span class="q-badge q-badge--over">+{{ obs.delta_horas_pct|brl }}% acima da tolerância</span>
+            {% elif obs.hours_variance_status == "abaixo" %}
+            <span class="q-badge q-badge--under">{{ obs.delta_horas_pct|brl }}% abaixo da tolerância</span>
             {% elif obs.delta_horas_pct > 0 %}
-            <span class="q-badge q-badge--over">+{{ obs.delta_horas_pct|brl }}% acima</span>
+            <span class="q-badge q-badge--ok">+{{ obs.delta_horas_pct|brl }}% dentro do esperado</span>
             {% elif obs.delta_horas_pct < 0 %}
-            <span class="q-badge q-badge--under">{{ obs.delta_horas_pct|brl }}% abaixo</span>
+            <span class="q-badge q-badge--ok">{{ obs.delta_horas_pct|brl }}% dentro do esperado</span>
             {% else %}
-            <span class="q-badge q-badge--neutral">0,00% no orçado</span>
+            <span class="q-badge q-badge--ok">0,00% dentro do esperado</span>
             {% endif %}
           </td>
         </tr>
