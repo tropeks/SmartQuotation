@@ -494,17 +494,28 @@ def eap_item_save(request, pk):
         else:
             hh_key = f"op_horas_hh_{op.pk}"
             hm_key = f"op_horas_hm_{op.pk}"
-            if hh_key in request.POST or hm_key in request.POST:
+            taxa_hh_key = f"op_taxa_hh_{op.pk}"
+            taxa_hm_key = f"op_taxa_hm_{op.pk}"
+            if (hh_key in request.POST or hm_key in request.POST
+                    or taxa_hh_key in request.POST or taxa_hm_key in request.POST):
                 antes_hh, antes_hm = op.horas_hh, op.horas_hm
+                antes_taxa_hh, antes_taxa_hm = op.taxa_hora, op.taxa_hora_hm
                 op.horas_hh = _parse_decimal(request.POST.get(hh_key), op.horas_hh)
                 op.horas_hm = _parse_decimal(request.POST.get(hm_key), op.horas_hm)
+                # Taxa da hora-homem/hora-máquina também é editável: o default vem do
+                # cadastro (motor/template), mas o orçamentista pode sobrescrever o VALOR
+                # da hora aqui — sem isso, editar horas-HM×taxa_hora_hm=0 não movia o total.
+                op.taxa_hora = _parse_decimal(request.POST.get(taxa_hh_key), op.taxa_hora)
+                op.taxa_hora_hm = _parse_decimal(request.POST.get(taxa_hm_key), op.taxa_hora_hm)
                 # Override MANUAL: marca a proveniência SEM tocar na sugestão do motor
                 # (horas_*_sugerida), para o UI mostrar sugerido↔digitado e permitir restaurar.
                 op.origem = "manual"
-                op.save(update_fields=["horas_hh", "horas_hm", "origem"])
+                op.save(update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "origem"])
                 op.recalc_custo()
                 _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh)
                 _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm)
+                _log_field_edit(request, op, "taxa_hora", antes_taxa_hh, op.taxa_hora)
+                _log_field_edit(request, op, "taxa_hora_hm", antes_taxa_hm, op.taxa_hora_hm)
 
     # Roll-up SOMENTE por soma (SEM motor): item = soma das rows; cotação = soma dos itens.
     item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
