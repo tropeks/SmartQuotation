@@ -43,6 +43,7 @@ TENANT_APPS = [
     "drf_spectacular",
     "django_filters",
     "apps.accounts",
+    "apps.access",
     "apps.audit",
     "apps.integrations.protheus.apps.ProtheusConfig",
     "apps.integrations.omie.apps.OmieConfig",
