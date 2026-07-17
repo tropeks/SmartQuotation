@@ -168,6 +168,14 @@ class ProductionObservation(models.Model):
     estimated_custo = models.DecimalField(max_digits=14, decimal_places=2)
     actual_hh = models.DecimalField(max_digits=8, decimal_places=2)
     observed_rate = models.DecimalField(max_digits=12, decimal_places=2)
+    # SQ-COST-3: decomposição horas orçadas (ProcessParameter) vs horas reais (apontamento),
+    # aditivo — não afeta observed_rate/ActualRate (Welford), ver services._close_out_observations.
+    estimated_hh = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    delta_horas_pct = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="(actual_hh − estimated_hh) / estimated_hh × 100. Null quando estimated_hh=0 "
+                   "(operação de valor fixo, sem horas estimadas) — evita divisão por zero.",
+    )
     observed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
