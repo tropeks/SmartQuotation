@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
+from apps.access.enforcement import require_capability, user_can
 from apps.quotations.models import Quotation
 from apps.production.models import InspectionItem, OrdemFabricacao, OFOperation, ProductionObservation
 from apps.production import services
@@ -86,15 +87,15 @@ def ordem_detail(request, pk):
         "itens": itens,
         "inspection_plan": inspection_plan,
         "inspection_items": inspection_items,
-        "can_manage_itp": user_role(request.user) in _ITP_ROLES,
-        "can_manage_of": user_role(request.user) in _OF_TRANSITION_ROLES,
+        "can_manage_itp": user_can(request.user, "itp.manage"),
+        "can_manage_of": user_can(request.user, "of.transition"),
         "review_signal_flagged": review_signal_flagged,
         "hour_variance_observations": hour_variance_observations,
         "tolerancia_horas_pct": tolerancia_horas_pct,
     })
 
 
-@require_role(*_OF_CONVERT_ROLES)
+@require_capability("of.convert")
 @require_POST
 def convert_quotation(request, quotation_pk):
     q = get_object_or_404(Quotation, pk=quotation_pk)
@@ -107,7 +108,7 @@ def convert_quotation(request, quotation_pk):
         return redirect("quotations:detail", pk=q.pk)
 
 
-@require_role(*_OF_TRANSITION_ROLES)
+@require_capability("of.transition")
 @require_POST
 def transition_ordem(request, pk):
     of = get_object_or_404(OrdemFabricacao, pk=pk)
@@ -129,7 +130,7 @@ def transition_ordem(request, pk):
     return redirect("production:detail", pk=of.pk)
 
 
-@require_role(*_ITP_ROLES)
+@require_capability("itp.manage")
 @require_POST
 def appoint(request, op_pk):
     op = get_object_or_404(OFOperation, pk=op_pk)
@@ -149,7 +150,7 @@ def appoint(request, op_pk):
     return redirect("production:detail", pk=op.item.ordem_id)
 
 
-@require_role(*_ITP_ROLES)
+@require_capability("itp.manage")
 @require_POST
 def generate_itp(request, pk):
     of = get_object_or_404(OrdemFabricacao, pk=pk)
@@ -161,7 +162,7 @@ def generate_itp(request, pk):
     return redirect("production:detail", pk=of.pk)
 
 
-@require_role(*_ITP_ROLES)
+@require_capability("itp.manage")
 @require_POST
 def accept_itp_item(request, item_pk):
     item = get_object_or_404(InspectionItem.objects.select_related("plan__ordem"), pk=item_pk)
