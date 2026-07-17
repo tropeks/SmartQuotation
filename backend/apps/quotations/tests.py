@@ -771,7 +771,9 @@ class ItemOperationTaxaEditavelTests(TenantTestCase):
         self.assertEqual(op.taxa_hora, nova_taxa)
         self.assertEqual(op.custo, esperado_op)
         self.assertEqual(item.custo_mo, antes_item_mo + delta)
-        self.assertEqual(q.custo_total, antes_total + delta)
+        # custo_total é campo de dinheiro (quantizado a centavos no roll-up); o delta
+        # pode ter mais casas, então comparo a 2 decimais.
+        self.assertAlmostEqual(q.custo_total, antes_total + delta, places=2)
 
     def test_edita_taxa_hora_maquina_muda_op_item_e_total(self):
         q, op = self._op_horaria()
@@ -798,7 +800,8 @@ class ItemOperationTaxaEditavelTests(TenantTestCase):
         self.assertEqual(op.horas_hm, novas_horas_hm)
         self.assertEqual(op.custo, esperado_op)
         self.assertEqual(item.custo_mo, antes_item_mo + delta)
-        self.assertEqual(q.custo_total, antes_total + delta)
+        # custo_total é campo de dinheiro (quantizado a centavos no roll-up).
+        self.assertAlmostEqual(q.custo_total, antes_total + delta, places=2)
 
     def test_drawer_expoe_inputs_de_taxa(self):
         q, op = self._op_horaria()
