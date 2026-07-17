@@ -20,6 +20,14 @@ BASE_TXT = REQ / "base.txt"
 BASE_LOCK = REQ / "base.lock"
 CI_TXT = REQ / "ci.txt"
 CI_LOCK = REQ / "ci.lock"
+OPS_TXT = REQ / "ops.txt"
+OPS_LOCK = REQ / "ops.lock"
+
+# Todo par (fonte, lock) do repo. Adicionar um par novo aqui o inscreve em TODOS os testes
+# de contrato abaixo — foi assim que ops entrou depois de `pip install pyyaml` solto
+# escapar do gate por não existir par para ele.
+PAIRS = ((BASE_TXT, BASE_LOCK), (CI_TXT, CI_LOCK), (OPS_TXT, OPS_LOCK))
+LOCKS = tuple(lock for _, lock in PAIRS)
 DOCKERFILE = ROOT / "backend" / "Dockerfile"
 CI_YML = ROOT / ".github" / "workflows" / "ci.yml"
 
@@ -85,7 +93,7 @@ def _lock_blocks(path: Path) -> dict:
 
 def test_lockfiles_exist():
     """Sem lock, o build não é reproduzível e um incidente é irreconstruível."""
-    for lock in (BASE_LOCK, CI_LOCK):
+    for lock in LOCKS:
         assert lock.exists(), (
             f"{lock.relative_to(ROOT)} não existe. Gere com:\n"
             f"  cd backend && pip-compile --generate-hashes --strip-extras "
@@ -96,7 +104,7 @@ def test_lockfiles_exist():
 def test_lockfiles_have_hashes():
     """--require-hashes só protege se CADA pacote tiver hash — verificado por pacote,
     não pelo total do arquivo (um pacote com 100 hashes esconderia dez com zero)."""
-    for lock in (BASE_LOCK, CI_LOCK):
+    for lock in LOCKS:
         blocks = _lock_blocks(lock)
         assert blocks, f"{lock.relative_to(ROOT)} não tem nenhum pacote pinado."
         sem_hash = sorted(pkg for pkg, n in blocks.items() if n == 0)
@@ -108,7 +116,7 @@ def test_lockfiles_have_hashes():
 
 def test_lock_pins_every_package_exactly():
     """Nenhuma dep pode ficar flutuante no lock — nem transitiva."""
-    for lock in (BASE_LOCK, CI_LOCK):
+    for lock in LOCKS:
         for line in _text(lock).splitlines():
             stripped = line.strip()
             if not stripped or stripped.startswith(("#", "--", "\\")):
@@ -126,7 +134,7 @@ def test_lock_covers_every_declared_requirement():
     Checar só as pinadas com == deixava 7 das 18 diretas de base.txt de fora: adicionar
     `foo>=1.0` sem regenerar o lock passaria verde, --require-hashes instalaria sem foo,
     e a imagem de produção quebraria com ImportError em runtime."""
-    for txt, lock in ((BASE_TXT, BASE_LOCK), (CI_TXT, CI_LOCK)):
+    for txt, lock in PAIRS:
         declared = _req_names(txt)
         locked = set(_pins(lock, _LOCK_PIN_RE))
         faltando = sorted(declared - locked)
@@ -139,7 +147,7 @@ def test_lock_covers_every_declared_requirement():
 def test_lock_agrees_with_source_pins():
     """Um `.txt` editado sem regenerar o `.lock` deixa o build na versão velha —
     exatamente o caso do Django==5.2.8 (CVE-2025-64459). O lock é o que instala."""
-    for txt, lock in ((BASE_TXT, BASE_LOCK), (CI_TXT, CI_LOCK)):
+    for txt, lock in PAIRS:
         src = _pins(txt, _PIN_RE)
         locked = _pins(lock, _LOCK_PIN_RE)
         for name, version in src.items():
@@ -154,15 +162,29 @@ def test_lock_agrees_with_source_pins():
 
 
 def test_django_not_vulnerable_pin():
-    """Django 5.2.0 tem CVE-2025-64459 (SQLi via kwarg _connector, CVSS 9.1, corrigido
-    em 5.2.8) e CVE-2025-57833 (SQLi via FilteredRelation, corrigido em 5.2.6)."""
+    """Piso mínimo do Django. LEIA ISTO ANTES DE CONFIAR NESTE TESTE.
+
+    Este teste é um PISO ESTÁTICO e, sozinho, é um carimbo. Ele já falhou uma vez
+    exatamente assim: foi escrito em 2026-07-17 com `>= (5, 2, 8)` porque 5.2.8 era a
+    versão pinada naquele dia, e passou verde enquanto o pin envelhecia 8 meses. Uma
+    auditoria no mesmo dia rodou pip-audit e achou 26 advisories no 5.2.8 — inclusive
+    PYSEC-2025-109, OUTRO SQLi de FilteredRelation, corrigido no 5.2.9. Ou seja: a
+    classe de bug que o bump para 5.2.8 foi fechar já tinha sido re-quebrada, e este
+    teste dizia que estava tudo bem.
+
+    Quem PEGA regressão de verdade é o job `pip-audit` do CI (.github/workflows/ci.yml),
+    que consulta a base de advisories ao vivo. Este teste é só a rede de proteção para
+    quem rodar a suíte offline: ele impede voltar ATRÁS do piso conhecido, não detecta
+    que o piso ficou velho.
+    """
     locked = _pins(BASE_LOCK, _LOCK_PIN_RE)
     version = locked.get("django")
     assert version is not None, "django não está em base.lock."
     parts = tuple(int(p) for p in re.findall(r"\d+", version)[:3])
-    assert parts >= (5, 2, 8), (
-        f"django=={version} em base.lock é vulnerável a CVE-2025-64459 / CVE-2025-57833. "
-        "Mínimo 5.2.8."
+    assert parts >= (5, 2, 16), (
+        f"django=={version} em base.lock está abaixo do piso conhecido. O 5.2.8 acumulou "
+        "26 advisories (PYSEC-2025-104/109, PYSEC-2026-42..55, 197..201, 2090..2092, "
+        "2448/2449), corrigidos ao longo da série até 5.2.16. Mínimo 5.2.16."
     )
 
 
@@ -197,6 +219,67 @@ def test_ci_installs_from_lock_with_require_hashes():
     )
 
 
+def test_ci_has_no_unhashed_pip_install():
+    """NENHUM `pip install` do CI pode escapar do --require-hashes.
+
+    O gate anterior só olhava a rota do ci.lock, então `pip install pyyaml` (solto, sem
+    pin e sem hash) sobreviveu no job de ops — justamente o job que valida os contratos
+    de backup e de lockfile. Uma auditoria posterior achou essa linha depois da rodada
+    anterior ter afirmado "nenhuma rota de install sem hash sobrou". Este teste checa
+    TODA linha `pip install`, não só as que alguém lembrou de conferir.
+    """
+    ofensores = []
+    for i, line in enumerate(_text(CI_YML).splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith("#") or "pip install" not in stripped:
+            continue
+        if "--require-hashes" in stripped:
+            continue
+        ofensores.append(f"ci.yml:{i}: {stripped}")
+    assert not ofensores, (
+        "install sem --require-hashes no CI:\n  " + "\n  ".join(ofensores)
+        + "\nAdicione a dep ao lock apropriado (base/ci/ops) e instale com --require-hashes."
+    )
+
+
+def test_ci_runs_pip_audit_against_locks():
+    """Piso estático de versão não detecta pin velho; base de advisories ao vivo detecta.
+
+    `assert django >= (5,2,8)` passou verde por 8 meses enquanto o 5.2.8 acumulava 26
+    advisories. Este job é o que pega a próxima vez, então ele precisa existir de fato.
+    """
+    text = _text(CI_YML)
+    assert "pip-audit" in text, (
+        ".github/workflows/ci.yml deve ter um job pip-audit — o piso estático em "
+        "test_django_not_vulnerable_pin não detecta que o pin envelheceu."
+    )
+    for lock in ("base.lock", "ci.lock"):
+        assert f"pip-audit --no-deps -r backend/requirements/{lock}" in text, (
+            f"ci.yml deve rodar `pip-audit --no-deps -r backend/requirements/{lock}`."
+        )
+
+
+def test_base_and_ci_locks_agree_on_shared_packages():
+    """CI e produção têm que instalar as MESMAS versões dos pacotes compartilhados.
+
+    Se divergirem, o CI testa um código e a imagem embarca outro — e a suíte verde deixa
+    de significar o que se pensa que significa. Hoje concordam nos 63 compartilhados; sem
+    teste, isso é sorte que dura até alguém regenerar um lock só.
+    """
+    base = _pins(BASE_LOCK, _LOCK_PIN_RE)
+    ci = _pins(CI_LOCK, _LOCK_PIN_RE)
+    divergentes = [
+        f"{nome}: base.lock={base[nome]} vs ci.lock={ci[nome]}"
+        for nome in sorted(set(base) & set(ci))
+        if _release(base[nome]) != _release(ci[nome])
+    ]
+    assert not divergentes, (
+        "base.lock e ci.lock divergem — o CI não testa o que produção instala:\n  "
+        + "\n  ".join(divergentes)
+        + "\nRegenere os DOIS locks a partir dos .txt."
+    )
+
+
 def test_runner_registers_every_test():
     """A lista do __main__ é manual: uma função test_* definida e esquecida ali nunca
     roda e o CI fica verde sobre um teste que não existe na prática (aconteceu com
@@ -226,6 +309,9 @@ if __name__ == "__main__":
         test_dockerfile_installs_from_lock_with_require_hashes,
         test_dockerfile_base_image_pinned_by_digest,
         test_ci_installs_from_lock_with_require_hashes,
+        test_ci_has_no_unhashed_pip_install,
+        test_ci_runs_pip_audit_against_locks,
+        test_base_and_ci_locks_agree_on_shared_packages,
         test_runner_registers_every_test,
     ]
     _REGISTERED = tests

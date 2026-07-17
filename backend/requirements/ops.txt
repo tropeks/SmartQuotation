@@ -1,0 +1,13 @@
+# Deps dos jobs de ops/infra do CI. Ficam FORA de base/ci de propósito: os testes de ops
+# são stdlib puro (não importam Django) e o job de auditoria não deve arrastar a árvore da
+# app só para rodar um scanner.
+#
+# Por que existe: o job ops-tests instalava `pyyaml` solto (`pip install pyyaml`, sem pin e
+# sem hash) enquanto todo o resto do repo instala com --require-hashes. Era a última rota
+# de install sem verificação — e logo no job que valida os contratos de backup e de lock.
+# Um release comprometido de pyyaml executava código no runner e podia fazer justamente
+# esse gate reportar verde estando quebrado.
+pyyaml==6.0.3
+# Roda contra base.lock/ci.lock no job pip-audit. Pinado + hasheado como todo o resto:
+# um scanner comprometido poderia simplesmente dizer "nenhuma vulnerabilidade".
+pip-audit==2.10.1

@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse
+from django.conf import settings
 from django.test import RequestFactory
 
 # TenantTestCase cria schema de tenant de teste; o URLconf de tenant (com /login/)
@@ -661,3 +662,60 @@ class TenantMemberDeactivationTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.member_profile.refresh_from_db()
         self.assertTrue(self.member_profile.is_active)
+
+
+class AxesBruteForceConfigTests(TestCase):
+    """Contrato das settings do django-axes.
+
+    Achado HIGH da auditoria /cso de 2026-07-17: a proteção de força bruta estava
+    anulada. `AXES_LOCKOUT_PARAMETERS = ["ip_address"]` + django-ipware ausente faz o
+    axes cair em REMOTE_ADDR (axes/helpers.py get_client_ip_address: CLIENT_IP_CALLABLE
+    -> ipware -> REMOTE_ADDR). Como o deploy fica atrás de um túnel que termina TLS,
+    REMOTE_ADDR é o endereço do cloudflared em toda request: a plataforma inteira
+    dividia UM contador de lockout. Com `AXES_RESET_ON_SUCCESS = True`, qualquer login
+    bem-sucedido zerava as falhas de todos — um atacante alternava 4 senhas erradas
+    contra o admin e 1 login na própria conta, para sempre.
+
+    Estes testes travam as duas pontas. São asserções sobre settings, não sobre
+    comportamento, de propósito: o comportamento depende do IP de origem real, que não
+    é reproduzível em teste unitário.
+    """
+
+    def test_lockout_parameters_include_username(self):
+        """Sem username no bucket, o lockout é inútil atrás de um proxy: todos os
+        usuários compartilham o IP do túnel e portanto o mesmo contador."""
+        params = settings.AXES_LOCKOUT_PARAMETERS
+        achatado = {
+            item
+            for entry in params
+            for item in ([entry] if isinstance(entry, str) else entry)
+        }
+        self.assertIn(
+            "username",
+            achatado,
+            "AXES_LOCKOUT_PARAMETERS precisa conter 'username'. Chavear só por "
+            "ip_address anula a proteção atrás do Cloudflare Tunnel (REMOTE_ADDR é o "
+            "mesmo para todos). Ver o comentário em settings/base.py.",
+        )
+
+    def test_reset_on_success_disabled(self):
+        """Com RESET_ON_SUCCESS, o sucesso do atacante na própria conta apaga as
+        falhas acumuladas contra a conta alvo que compartilha o bucket."""
+        self.assertFalse(
+            settings.AXES_RESET_ON_SUCCESS,
+            "AXES_RESET_ON_SUCCESS deve ser False: um login bem-sucedido apagava os "
+            "AccessAttempt do bucket inteiro, zerando o contador do alvo.",
+        )
+
+    def test_failure_limit_and_cooloff_still_set(self):
+        """O lockout só existe se houver limite e janela."""
+        self.assertGreater(settings.AXES_FAILURE_LIMIT, 0)
+        self.assertTrue(settings.AXES_COOLOFF_TIME)
+
+    def test_axes_backend_is_first(self):
+        """AxesStandaloneBackend precisa ser o primeiro: se o ModelBackend autenticar
+        antes, o axes nunca vê a tentativa."""
+        self.assertEqual(
+            settings.AUTHENTICATION_BACKENDS[0],
+            "axes.backends.AxesStandaloneBackend",
+        )

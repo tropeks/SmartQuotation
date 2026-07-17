@@ -158,8 +158,29 @@ FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default=None)
 # ─── django-axes (brute-force protection) ────────────────────────────────────
 AXES_FAILURE_LIMIT = 5            # tentativas antes do lockout
 AXES_COOLOFF_TIME = 1             # horas de lockout
-AXES_LOCKOUT_PARAMETERS = ["ip_address"]
-AXES_RESET_ON_SUCCESS = True      # limpa contador após login bem-sucedido
+# O bucket de lockout PRECISA conter o username. Chavear só por ip_address anulava a
+# proteção inteira: o deploy fica atrás de um túnel que termina TLS (Cloudflare, ver
+# production.py), django-ipware não está instalado, e nesse caso o axes cai em
+# REMOTE_ADDR (axes/helpers.py get_client_ip_address: CLIENT_IP_CALLABLE -> ipware ->
+# REMOTE_ADDR). Atrás do túnel REMOTE_ADDR é o endereço do cloudflared em TODA request,
+# então a plataforma inteira compartilhava UM contador. Com username no bucket, 5 senhas
+# erradas contra uma conta travam AQUELA conta, venha o request de onde vier.
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"], "username"]
+# NÃO reativar sem antes garantir que o bucket contenha username. Com o bucket antigo
+# (só ip), o reset filtrava AccessAttempt por ip_address e deletava TUDO: qualquer login
+# bem-sucedido de qualquer usuário zerava as falhas acumuladas contra todos os outros.
+# Um atacante alternava 4 tentativas erradas contra o admin + 1 login na própria conta,
+# indefinidamente, e o cool-off nunca disparava.
+AXES_RESET_ON_SUCCESS = False
+# Trade-off aceito: com username no bucket, alguém que saiba um username pode trancá-lo
+# por AXES_COOLOFF_TIME. É o trade-off clássico de qualquer política de lockout, limitado
+# a 1h. O contrário — adivinhação online ilimitada de senha, sem MFA e sem rate limit no
+# /login/ — é pior.
+# PENDENTE (precisa de infra, não de código): instalar django-ipware e usar
+# HTTP_CF_CONNECTING_IP restauraria o IP real do cliente, devolvendo precisão ao componente
+# de IP do bucket. Só é seguro DEPOIS que a origem parar de aceitar tráfego direto —
+# docker-compose.prod.yml publica 8000 em 0.0.0.0, então hoje o header seria spoofável e
+# trocaríamos este bug por um pior.
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",  # deve ser primeiro
     "django.contrib.auth.backends.ModelBackend",

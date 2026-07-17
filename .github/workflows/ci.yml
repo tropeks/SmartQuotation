@@ -28,8 +28,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # Do lock, com hashes, como todo o resto. Era `pip install pyyaml` solto: a última
+      # rota de install sem verificação no repo, logo no job que valida os contratos de
+      # backup e de lockfile (um pyyaml comprometido podia fazer este gate mentir).
       - name: Instalar dependências dos testes de ops
-        run: pip install pyyaml
+        run: pip install --require-hashes -r backend/requirements/ops.lock
       - name: Verificar script de backup (backup_db.sh)
         run: python -m tests.test_backup_script
       - name: Verificar configuração de volume de media
@@ -40,6 +43,33 @@ jobs:
         run: python -m tests.test_proposals_storage_contract
       - name: Verificar contrato dos lockfiles de dependência (hashes + drift)
         run: python -m tests.test_requirements_lock
+
+  # Este job existe por causa de uma falha real, não por completude. Em 2026-07-17 uma
+  # remediação subiu Django 5.2 -> 5.2.8 para fechar um CVE e declarou o supply chain
+  # resolvido. O 5.2.8 já tinha 8 meses e 26 advisories — incluindo PYSEC-2025-109, OUTRO
+  # SQLi de FilteredRelation (a MESMA classe de bug que o bump foi fechar), corrigido no
+  # 5.2.9. O gate da época era `assert django >= (5,2,8)` em test_requirements_lock: um
+  # piso estático, escrito com a versão do dia, que passava verde enquanto o pin envelhecia.
+  # Piso estático não detecta pin velho; só uma base de advisories ao vivo detecta.
+  # O Dependabot abre o PR de bump, mas nada FORÇA o merge — este job força.
+  pip-audit:
+    name: pip-audit (CVEs nos locks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # O scanner também vem do lock com hashes: um pip-audit comprometido poderia
+      # simplesmente reportar "nenhuma vulnerabilidade".
+      - name: Instalar pip-audit (do lock, com hashes)
+        run: pip install --require-hashes -r backend/requirements/ops.lock
+      # --no-deps: audita exatamente as versões PINADAS no lock (que é o que a imagem de
+      # produção instala), em vez de re-resolver a árvore. Falha o job em advisory novo.
+      - name: Auditar base.lock (o que produção instala)
+        run: pip-audit --no-deps -r backend/requirements/base.lock
+      - name: Auditar ci.lock
+        run: pip-audit --no-deps -r backend/requirements/ci.lock
 
   django-check:
     name: Django check + migrations
