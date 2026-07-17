@@ -28,6 +28,9 @@ def _view(request, *args, **kwargs):
 class RoleCanTests(TestCase):
     def setUp(self):
         cache.clear()
+        # Slate limpo: a migration 0002 pré-semeia a matriz no schema; estes
+        # testes gerenciam suas próprias linhas.
+        RolePermission.objects.all().delete()
         RolePermission.objects.create(
             role=UserProfile.ROLE_ENGENHEIRO, capability="of.convert", allowed=True
         )
@@ -68,6 +71,7 @@ class RoleCanTests(TestCase):
 class UserCanTests(TestCase):
     def setUp(self):
         cache.clear()
+        RolePermission.objects.all().delete()
         RolePermission.objects.create(
             role=UserProfile.ROLE_ENGENHEIRO, capability="of.convert", allowed=True
         )
@@ -101,6 +105,7 @@ class RequireCapabilityTests(TestCase):
     def setUp(self):
         cache.clear()
         self.factory = RequestFactory()
+        RolePermission.objects.all().delete()
         RolePermission.objects.create(
             role=UserProfile.ROLE_ENGENHEIRO, capability="of.convert", allowed=True
         )

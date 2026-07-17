@@ -1,19 +1,25 @@
 """
-NO-OP intencional.
+Backfill retroativo: semeia a DEFAULT_MATRIX em cada schema de tenant durante
+migrate_schemas --tenant (e nos schemas de teste do django-tenants, para que o
+enforcement por capability funcione nos testes das demais apps). Idempotente
+(get_or_create), reversível como no-op.
 
-O seeding da DEFAULT_MATRIX foi movido para FORA das migrations, para (a) não
-pré-semear os schemas de teste do django-tenants — o que quebrava os testes de
-enforcement que criam linhas RolePermission específicas (colisão de unique) — e
-(b) não acoplar código de app dentro de uma migration.
-
-A matriz é semeada por:
-  * `provision_tenant` (hook, tenants novos) — idempotente;
-  * `manage.py tenant_command seed_access_matrix` (backfill de tenants existentes,
-    passo de deploy, como os demais seeds do projeto).
-
-Esta migration é mantida como no-op só para preservar o histórico já aplicado.
+Os testes PRÓPRIOS da app access que criam linhas RolePermission específicas
+(tests_enforcement, tests_matrix) limpam a tabela no setUp para ter slate limpo.
 """
 from django.db import migrations
+
+
+def forwards(apps, schema_editor):
+    RolePermission = apps.get_model("access", "RolePermission")
+    from apps.access.matrix import seed_access_matrix
+
+    seed_access_matrix(model=RolePermission)
+
+
+def backwards(apps, schema_editor):
+    # Não removemos linhas no downgrade (poderiam conter customizações de admin).
+    pass
 
 
 class Migration(migrations.Migration):
@@ -22,4 +28,6 @@ class Migration(migrations.Migration):
         ("access", "0001_initial"),
     ]
 
-    operations = []
+    operations = [
+        migrations.RunPython(forwards, backwards),
+    ]

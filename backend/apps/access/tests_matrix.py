@@ -17,6 +17,9 @@ from apps.access.models import RolePermission
 class DefaultMatrixSeedTests(TestCase):
     def setUp(self):
         cache.clear()
+        # A migration 0002 pré-semeia a matriz; estes testes exercitam o seed a
+        # partir de um slate limpo.
+        RolePermission.objects.all().delete()
 
     def test_cobre_o_catalogo(self):
         self.assertEqual(set(DEFAULT_MATRIX.keys()), set(CAPABILITIES.keys()))

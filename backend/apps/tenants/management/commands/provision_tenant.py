@@ -25,9 +25,8 @@ class Command(BaseCommand):
         Domain.objects.create(domain=opts["domain"], tenant=tenant, is_primary=True)
 
         # Substrato RBAC no schema recém-criado (idempotente): Groups por papel +
-        # matriz papel×capability default. O seeding NÃO vive em migration (para não
-        # pré-semear schemas de teste) — este hook é a fonte para tenants novos;
-        # tenants existentes usam `tenant_command seed_access_matrix` no deploy.
+        # matriz papel×capability default. A data migration 0002 já semeia a matriz
+        # no auto_create_schema; este hook reforça (idempotente) e alinha os Groups.
         with schema_context(schema):
             from apps.accounts.rbac import ensure_groups
             from apps.access.matrix import seed_access_matrix
