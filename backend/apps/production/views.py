@@ -43,8 +43,15 @@ def ordem_detail(request, pk):
     of_operacao_codes = set(
         OFOperation.objects.filter(item__ordem=of).values_list("codigo_op", flat=True)
     )
+    # SQ-COST-7: proposta somente-leitura de novo ProcessParameter para as mesmas
+    # operações flagged — anexada por operação ao sinal acima (mesmo escopo/filtro
+    # desta OF). Não recalcula/altera nada; ver services.processparameter_suggestion.
+    suggestion_by_op = {
+        row["operacao"]: row for row in services.processparameter_suggestion()
+    }
     review_signal_flagged = [
-        row for row in services.production_review_signal()
+        {**row, "suggestion": suggestion_by_op.get(row["operacao"])}
+        for row in services.production_review_signal()
         if row["status"] == ProductionObservation.STATUS_REVIEW_RECOMMENDED
         and row["operacao"] in of_operacao_codes
     ]

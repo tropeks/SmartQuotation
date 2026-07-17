@@ -127,17 +127,34 @@
   </header>
   <div class="g-section-body" style="padding:0">
     <table class="g-table">
-      <thead><tr><th>Operação</th><th class="num">Amostras</th><th class="num">Desvio médio abs.</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Operação</th>
+          <th class="num">Amostras</th>
+          <th class="num">Desvio médio abs.</th>
+          <th class="num">HH médio real</th>
+          <th class="num">HH médio estimado</th>
+          <th class="num">Fator proposto</th>
+          <th class="num">ProcessParameter atual</th>
+          <th class="num">ProcessParameter proposto</th>
+        </tr>
+      </thead>
       <tbody>
         {% for row in review_signal_flagged %}
         <tr>
           <td class="mono">{{ row.operacao }}</td>
           <td class="num mono">{{ row.count }}</td>
           <td class="num mono"><span class="q-badge q-badge--over">{{ row.mean_abs_delta_pct|brl }}%</span></td>
+          <td class="num mono">{% if row.suggestion.mean_actual_hh != None %}{{ row.suggestion.mean_actual_hh|brl }}{% else %}—{% endif %}</td>
+          <td class="num mono">{% if row.suggestion.mean_estimated_hh != None %}{{ row.suggestion.mean_estimated_hh|brl }}{% else %}—{% endif %}</td>
+          <td class="num mono">{% if row.suggestion.factor != None %}{{ row.suggestion.factor|brl:4 }}×{% else %}—{% endif %}</td>
+          <td class="num mono">{% if row.suggestion.current_value != None %}{{ row.suggestion.current_value|brl:4 }}{% else %}—{% endif %}</td>
+          <td class="num mono">{% if row.suggestion.proposed_value != None %}{{ row.suggestion.proposed_value|brl:4 }}{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    <p class="g-note" style="margin:8px 12px 12px">Fator e valor "proposto" acima são apenas uma <strong>proposta manual</strong> de novo ProcessParameter, calculada a partir da média de horas reais vs. estimadas nas observações fechadas — <strong>nada é alterado automaticamente</strong>; quando não há um método (radial/CNC/manual) inequívoco ligado às observações, o mapeamento ao ProcessParameter fica "—" e cabe ao engenheiro decidir a qual parâmetro aplicar. Revisão e atualização do parâmetro são sempre manuais.</p>
   </div>
 </section>
 {% endif %}
