@@ -14,6 +14,21 @@ from apps.production import services
 
 _ITP_ROLES = (UserProfile.ROLE_ENGENHEIRO, UserProfile.ROLE_ADMIN)
 
+# Papéis com permissão de CONVERTER cotação em OF. Converter dispara os exports de
+# ERP (Protheus/Nomus/SAP-B1), então fica com engenharia e o comercial que responde
+# pelo pedido — o orçamentista monta a cotação mas não lança manufatura. Viewer é
+# somente-leitura e fica explicitamente fora.
+_OF_CONVERT_ROLES = (
+    UserProfile.ROLE_ENGENHEIRO,
+    UserProfile.ROLE_GESTOR_COMERCIAL,
+    UserProfile.ROLE_ADMIN,
+)
+
+# Papéis com permissão de TRANSICIONAR status da OF (liberar/iniciar/concluir/
+# cancelar). Mesmo conjunto do ITP: são ações de chão de fábrica. `cancelar` é
+# terminal e `concluir` dispara emissão de NF-e — nenhuma delas é reversível pela app.
+_OF_TRANSITION_ROLES = _ITP_ROLES
+
 
 @login_required
 def list_ordens(request):
@@ -72,13 +87,14 @@ def ordem_detail(request, pk):
         "inspection_plan": inspection_plan,
         "inspection_items": inspection_items,
         "can_manage_itp": user_role(request.user) in _ITP_ROLES,
+        "can_manage_of": user_role(request.user) in _OF_TRANSITION_ROLES,
         "review_signal_flagged": review_signal_flagged,
         "hour_variance_observations": hour_variance_observations,
         "tolerancia_horas_pct": tolerancia_horas_pct,
     })
 
 
-@login_required
+@require_role(*_OF_CONVERT_ROLES)
 @require_POST
 def convert_quotation(request, quotation_pk):
     q = get_object_or_404(Quotation, pk=quotation_pk)
@@ -91,7 +107,7 @@ def convert_quotation(request, quotation_pk):
         return redirect("quotations:detail", pk=q.pk)
 
 
-@login_required
+@require_role(*_OF_TRANSITION_ROLES)
 @require_POST
 def transition_ordem(request, pk):
     of = get_object_or_404(OrdemFabricacao, pk=pk)

@@ -1,4 +1,4 @@
-{% if not has_active_of %}
+{% if not has_active_of and can_convert %}
   {% if is_convertible %}
   <form method="post" action="{% url 'production:convert' q.pk %}" style="display:inline">{% csrf_token %}
     <button type="submit" class="q-btn primary">Converter em OF</button>

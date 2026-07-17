@@ -191,12 +191,25 @@ class FeatureViewsTests(TenantTestCase):
         """O contexto marca is_convertible pela MESMA regra do POST
         (production.services._assert_convertible): sem aprovação técnica ativa
         casando com o snapshot atual → False e botão desabilitado; com aprovação
-        válida → True e botão habilitado (form de POST presente)."""
+        válida → True e botão habilitado (form de POST presente).
+
+        Loga como engenheiro (e não com o orçamentista do setUp) porque o bloco do
+        botão é gateado por can_convert desde o achado /cso 2026-07-17: converter
+        dispara os exports de ERP e ficou restrito a _OF_CONVERT_ROLES. O que este
+        teste cobre é o gate de APROVAÇÃO, não o de papel — ver
+        OFAuthorizationViewTests em apps/production/tests.py para o de papel."""
         from django.urls import reverse
         from django.contrib.auth.models import User
         from apps.accounts.models import UserProfile
         from apps.audit.services import approve_quotation
         from apps.production.services import is_convertible
+
+        eng_user = User.objects.create_user(username="eng-conv")
+        engineer = UserProfile.objects.create(
+            user=eng_user, full_name="Eng Conv", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-999", crea_state="SP",
+        )
+        self.client.force_login(eng_user)
 
         q = create_feixe_quotation(self.customer, "Feixe Conv", created_by=self.user)
 
@@ -208,11 +221,6 @@ class FeatureViewsTests(TenantTestCase):
         self.assertContains(resp, "Aguardando aprovação")
 
         # Aprova tecnicamente com engenheiro (CREA)
-        eng_user = User.objects.create_user(username="eng-conv")
-        engineer = UserProfile.objects.create(
-            user=eng_user, full_name="Eng Conv", role=UserProfile.ROLE_ENGENHEIRO,
-            crea_number="CREA-999", crea_state="SP",
-        )
         approve_quotation(q, engineer)
 
         # Com aprovação válida → convertível e botão habilitado
