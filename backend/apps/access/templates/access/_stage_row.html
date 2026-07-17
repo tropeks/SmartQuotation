@@ -1,0 +1,40 @@
+{% comment %}
+Parcial de UMA linha da tabela de estágios de aprovação (fluxo de aprovações).
+Re-renderizada por toggle_stage (hx-swap=outerHTML no <tr id="stage-row-...">).
+`stage`: dict de _stage_row (pk, key, row_id, label, order, required, is_builtin,
+approver_capability, error).
+{% endcomment %}
+<tr id="stage-row-{{ stage.row_id }}">
+  <th scope="row" style="text-align:left;font-weight:500">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span>{{ stage.label }}</span>
+      {% if stage.is_builtin %}
+        <span class="q-badge" title="Estágio de sistema — obrigatório por compliance CREA">compliance</span>
+      {% endif %}
+    </div>
+    <code class="g-muted" style="font-size:.75em">{{ stage.key }}</code>
+    {% if stage.approver_capability %}
+      <span class="g-muted" style="display:block;font-weight:400">Aprovador: {{ stage.approver_capability }}</span>
+    {% endif %}
+    {% if stage.error %}
+      <div role="alert" style="margin-top:4px;color:var(--g-red)">{{ stage.error }}</div>
+    {% endif %}
+  </th>
+  <td style="text-align:center">
+    <input type="checkbox" role="switch"
+           aria-label="{{ stage.label }} — obrigatório"
+           x-data
+           @change="$el.blur()"
+           {% if stage.is_builtin %}
+             disabled
+             title="A aprovação técnica (CREA) é obrigatória por compliance e não pode ser desativada."
+           {% else %}
+             hx-post="{% url 'access:toggle_stage' %}"
+             hx-vals='{"key": "{{ stage.key }}"}'
+             hx-target="#stage-row-{{ stage.row_id }}"
+             hx-swap="outerHTML"
+             hx-trigger="change"
+           {% endif %}
+           {% if stage.required %}checked{% endif %}>
+  </td>
+</tr>

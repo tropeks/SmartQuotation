@@ -1859,3 +1859,64 @@ class ApontamentoValidacaoViewTests(TenantTestCase):
         )
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
+
+
+class ApprovalStageGateTests(TenantTestCase):
+    """T7: is_convertible consulta os ApprovalStage required=True do tenant.
+
+    O estágio built-in `technical` (CREA) preserva EXATAMENTE a trava anterior ao
+    F10; um estágio não-builtin obrigatório sem resolver bloqueia (Wellington Q10);
+    desligar `required` desse estágio remove o gate.
+    """
+
+    def setUp(self):
+        from apps.access.models import ApprovalStage  # noqa: F401 (garante app carregado)
+
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.quotation = create_feixe_quotation(self.customer, "Feixe")
+        self.user = User.objects.create_user(username="eng")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng PE", role="engenheiro",
+            crea_number="CREA-123", crea_state="SP",
+        )
+
+    def test_technical_builtin_semeado_required_e_travado(self):
+        from apps.access.models import ApprovalStage
+
+        stage = ApprovalStage.objects.get(key="technical")
+        self.assertTrue(stage.is_builtin)
+        self.assertTrue(stage.required)
+
+    def test_defaults_igual_comportamento_atual(self):
+        # Sem aprovação técnica -> NÃO convertível (idêntico ao gate pré-F10)…
+        self.assertFalse(services.is_convertible(self.quotation))
+        # …com aprovação técnica ativa casando o snapshot -> convertível.
+        approve_quotation(self.quotation, self.engineer)
+        self.assertTrue(services.is_convertible(self.quotation))
+
+    def test_estagio_nao_builtin_obrigatorio_bloqueia_e_toggle_off_libera(self):
+        from apps.access.models import ApprovalStage
+
+        approve_quotation(self.quotation, self.engineer)  # técnico satisfeito
+        self.assertTrue(services.is_convertible(self.quotation))
+
+        stage = ApprovalStage.objects.create(
+            key="comercial", label="Aprovação comercial", order=20,
+            required=True, is_builtin=False,
+        )
+        # estágio obrigatório sem resolver conhecido -> não satisfeito -> bloqueia
+        self.assertFalse(services.is_convertible(self.quotation))
+
+        # desligar `required` remove o gate desse estágio
+        stage.required = False
+        stage.save(update_fields=["required"])
+        self.assertTrue(services.is_convertible(self.quotation))
+
+    def test_fallback_sem_estagios_semeados_exige_tecnico(self):
+        """Schema legado sem estágios semeados: cai no técnico built-in sintético."""
+        from apps.access.models import ApprovalStage
+
+        ApprovalStage.objects.all().delete()
+        self.assertFalse(services.is_convertible(self.quotation))
+        approve_quotation(self.quotation, self.engineer)
+        self.assertTrue(services.is_convertible(self.quotation))

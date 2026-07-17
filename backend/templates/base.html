@@ -1,4 +1,5 @@
 {% load static %}
+{% load access_tags %}
 <!doctype html>
 <html lang="pt-br">
 <head>
@@ -27,6 +28,10 @@
         <a class="q-btn" href="{% url 'quotations:tema_entry' %}">TEMA</a>
         <a class="q-btn" href="{% url 'tema_templates:catalog' %}">Catálogo</a>
         <a class="q-btn" href="{% url 'tema_templates:data_sheet' %}">Permutador</a>
+        {% user_can request.user "access.manage" as can_manage_access %}
+        {% if can_manage_access %}
+          <a class="q-btn" href="{% url 'access:config' %}">Acessos</a>
+        {% endif %}
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}
           <button class="q-btn">Sair</button></form>
       </nav>

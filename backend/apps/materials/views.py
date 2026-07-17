@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
+from apps.access.enforcement import require_capability, user_can
 from apps.audit.services import log_access
 from apps.materials.models import Material, MaterialPrice
 from apps.quotations.models import ItemMaterial
@@ -131,19 +132,19 @@ def _material_detail_context(material):
     }
 
 
-@require_role(*_READ_ROLES)
+@require_capability("material.read")
 def list_materials(request):
     context = _materials_context(request)
     template = "materials/_results.html" if request.headers.get("HX-Request") == "true" else "materials/list.html"
     return render(request, template, context)
 
 
-@require_role(*_READ_ROLES)
+@require_capability("material.read")
 def detail_material(request, pk):
     price_qs = MaterialPrice.objects.order_by("forma", "-valid_from", "-created_at")
     material = get_object_or_404(Material.objects.prefetch_related(Prefetch("precos", queryset=price_qs)), pk=pk)
     context = _material_detail_context(material)
-    context["can_edit_prices"] = user_role(request.user) in _WRITE_ROLES
+    context["can_edit_prices"] = user_can(request.user, "material.write")
     template = "materials/_detail.html" if request.headers.get("HX-Request") == "true" else "materials/detail.html"
     return render(request, template, context)
 
@@ -166,7 +167,7 @@ def _current_price_for_forma(material, forma, today):
     return prices.get(forma)
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("material.write")
 @require_POST
 @transaction.atomic
 def save_material_price(request, pk, forma):

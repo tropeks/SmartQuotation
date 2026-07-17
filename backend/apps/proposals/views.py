@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role
+from apps.access.enforcement import require_capability
 from apps.quotations.models import Quotation
 from apps.proposals.models import Proposal, ProposalTemplate
 from apps.proposals.richtext import normalize_rich_text
@@ -27,7 +28,7 @@ def _proposal_redirect_target(request, proposal):
     return next_url if next_url.startswith("/") else redirect("proposals:detail", pk=proposal.pk).url
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("proposal.write")
 def proposal_create(request, quotation_pk):
     """Cria a proposta a partir do template padrão (textos já renderizados, editáveis)."""
     q = get_object_or_404(Quotation, pk=quotation_pk)
@@ -36,7 +37,7 @@ def proposal_create(request, quotation_pk):
     return redirect("proposals:edit", pk=proposal.pk)
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("proposal.write")
 def proposal_edit(request, pk):
     """Edita/customiza os textos da proposta (template é ponto de partida)."""
     p = get_object_or_404(
@@ -111,7 +112,7 @@ def proposal_preview(request, pk):
     return FileResponse(default_storage.open(p.pdf_path, "rb"), filename=os.path.basename(p.pdf_path))
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("proposal.write")
 def proposal_send_email(request, pk):
     if request.method != "POST":
         raise Http404()

@@ -16,6 +16,7 @@ from apps.engineering_params.simulation import (
 )
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role as get_user_role
+from apps.access.enforcement import require_capability, user_can
 from apps.audit.services import log_access
 
 _ROLES_ALTERAM_RATE = {
@@ -28,8 +29,8 @@ _ROLES_EDITAM_RATE = {
     UserProfile.ROLE_ADMIN,
 }
 
-_PODE_ALTERAR_RATE = require_role(*_ROLES_ALTERAM_RATE)
-_PODE_EDITAR_RATE = require_role(*_ROLES_EDITAM_RATE)
+_PODE_ALTERAR_RATE = require_capability("rate.change")
+_PODE_EDITAR_RATE = require_capability("rate.edit")
 
 
 def _calibration_context(active_tab):
@@ -59,8 +60,8 @@ def calibration(request):
     if active_tab not in {"rates", "process"}:
         active_tab = "rates"
     context = _calibration_context(active_tab)
-    context["can_edit_rates"] = get_user_role(request.user) in _ROLES_EDITAM_RATE
-    context["can_apply_suggestions"] = get_user_role(request.user) in _ROLES_ALTERAM_RATE
+    context["can_edit_rates"] = user_can(request.user, "rate.edit")
+    context["can_apply_suggestions"] = user_can(request.user, "rate.change")
     template = (
         "engineering_params/_calibration_tabs.html"
         if request.headers.get("HX-Request") == "true"
@@ -134,7 +135,7 @@ def save_rate(request, pk):
 
     context = _calibration_context("rates")
     context["can_edit_rates"] = True
-    context["can_apply_suggestions"] = get_user_role(request.user) in _ROLES_ALTERAM_RATE
+    context["can_apply_suggestions"] = user_can(request.user, "rate.change")
     return render(request, "engineering_params/_calibration_tabs.html", context)
 
 @_PODE_EDITAR_RATE
@@ -219,7 +220,7 @@ def save_process_parameter(request, pk):
 
     context = _calibration_context("process")
     context["can_edit_rates"] = True
-    context["can_apply_suggestions"] = get_user_role(request.user) in _ROLES_ALTERAM_RATE
+    context["can_apply_suggestions"] = user_can(request.user, "rate.change")
     return render(request, "engineering_params/_calibration_tabs.html", context)
 
 
@@ -251,7 +252,7 @@ def preview_process_parameter_impact(request, pk):
 @login_required
 def suggestions_list(request):
     if request.method == 'POST' and 'refresh' in request.POST:
-        if get_user_role(request.user) in _ROLES_ALTERAM_RATE:
+        if user_can(request.user, "rate.change"):
             services.generate_suggestions()
     pending = RateSuggestion.objects.filter(status='pending').order_by('-created_at')
     accepted = RateSuggestion.objects.filter(status='accepted').order_by('-resolved_at')[:10]
@@ -275,8 +276,8 @@ def accept_rate_suggestion(request, pk):
     s = get_object_or_404(RateSuggestion, pk=pk, status='pending')
     services.apply_suggestion(s.pk, request.user, request=request)
     context = _calibration_context("rates")
-    context["can_edit_rates"] = get_user_role(request.user) in _ROLES_EDITAM_RATE
-    context["can_apply_suggestions"] = get_user_role(request.user) in _ROLES_ALTERAM_RATE
+    context["can_edit_rates"] = user_can(request.user, "rate.edit")
+    context["can_apply_suggestions"] = user_can(request.user, "rate.change")
     return render(request, "engineering_params/_calibration_tabs.html", context)
 
 @_PODE_ALTERAR_RATE

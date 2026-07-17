@@ -28,22 +28,82 @@ def next_of_number() -> str:
     return f"{prefixo}{seq:03d}"
 
 
+_TECHNICAL_STAGE_KEY = "technical"
+_TECHNICAL_STAGE_ERROR = (
+    "Cotação não possui aprovação técnica ativa para o snapshot atual. "
+    "Aprove o cálculo antes de converter em OF."
+)
+
+
+def _technical_approval_satisfied(quotation, snapshot) -> bool:
+    """Estágio técnico (CREA): aprovação técnica ativa casando o snapshot atual.
+
+    É EXATAMENTE a checagem que o gate fazia antes do F10 — mantida intacta para
+    que o estágio built-in `technical` preserve o comportamento histórico.
+    """
+    return quotation.technical_approvals.filter(
+        revoked_at__isnull=True,
+        calculation_snapshot_hash=snapshot.snapshot_hash,
+    ).exists()
+
+
+# Resolvedores de satisfação por chave de estágio. Um estágio `required=True`
+# cuja chave NÃO tem resolver conhecido é tratado como NÃO satisfeito (gate
+# fechado) — a semântica de estágios adicionais (comercial etc.) depende do
+# Wellington (Q10); o F10 entrega só a MECÂNICA + o built-in técnico.
+_STAGE_RESOLVERS = {
+    _TECHNICAL_STAGE_KEY: _technical_approval_satisfied,
+}
+
+
+def _stage_satisfied(quotation, stage, snapshot) -> bool:
+    resolver = _STAGE_RESOLVERS.get(stage.key)
+    if resolver is None:
+        return False
+    return resolver(quotation, snapshot)
+
+
+def _stage_error(stage) -> str:
+    if stage.key == _TECHNICAL_STAGE_KEY:
+        return _TECHNICAL_STAGE_ERROR
+    return f"Estágio de aprovação obrigatório não satisfeito: {stage.label}."
+
+
+def _required_stages():
+    """Estágios `required=True` do tenant que gateiam a conversão.
+
+    Compat/fail-safe: se a tabela ApprovalStage ainda não foi semeada (schema
+    legado, antes do seed do F10), retorna um estágio técnico built-in sintético
+    — assim `is_convertible` se comporta EXATAMENTE como antes do F10 (só a
+    aprovação técnica CREA é exigida).
+    """
+    from apps.access.models import ApprovalStage
+
+    stages = list(ApprovalStage.objects.filter(required=True).order_by("order", "key"))
+    if stages:
+        return stages
+    return [
+        ApprovalStage(
+            key=_TECHNICAL_STAGE_KEY,
+            label="Aprovação técnica (CREA)",
+            required=True,
+            is_builtin=True,
+        )
+    ]
+
+
 def _assert_convertible(quotation):
     """Verifica pré-condições para converter cotação em OF. Retorna o snapshot."""
     snapshot = latest_snapshot_for(quotation)
     if snapshot is None:
         raise ValidationError("Cotação sem CalculationSnapshot — execute o cálculo antes de converter.")
 
-    # Requer aprovação técnica ativa com hash correspondente ao snapshot atual
-    approval = quotation.technical_approvals.filter(
-        revoked_at__isnull=True,
-        calculation_snapshot_hash=snapshot.snapshot_hash,
-    ).first()
-    if approval is None:
-        raise ValidationError(
-            "Cotação não possui aprovação técnica ativa para o snapshot atual. "
-            "Aprove o cálculo antes de converter em OF."
-        )
+    # Todos os estágios de aprovação obrigatórios (ApprovalStage required=True) do
+    # tenant precisam estar satisfeitos. Com só o estágio técnico built-in semeado
+    # (default), isto é idêntico à trava de aprovação técnica anterior ao F10.
+    for stage in _required_stages():
+        if not _stage_satisfied(quotation, stage, snapshot):
+            raise ValidationError(_stage_error(stage))
 
     # Bloqueia se já existe OF não-cancelada para esta cotação
     existing = quotation.ordens_fabricacao.exclude(status=STATUS_CANCELADA).first()

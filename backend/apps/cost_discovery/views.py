@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role
+from apps.access.enforcement import require_capability
 from apps.cost_discovery.models import CostDiscoverySession
 from apps.cost_discovery import services
 from apps.engineering_params.models import TenantParamConfig
@@ -26,7 +27,7 @@ def wizard_home(request):
     return render(request, "cost_discovery/home.html", ctx)
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("cost_discovery.write")
 def top_down(request):
     """Seed: o empresário entra preços de material e o fator de MO de cabeça."""
     if request.method == "POST":
@@ -47,7 +48,7 @@ def top_down(request):
                   {"fator_mo": TenantParamConfig.get_solo().fator_correcao_mo})
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("cost_discovery.write")
 def back_solve(request):
     """Calibração: entra um job real (specs + preço conhecido) → fator de MO que o reproduz."""
     result = None

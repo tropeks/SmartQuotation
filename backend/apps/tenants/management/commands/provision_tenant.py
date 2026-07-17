@@ -3,6 +3,8 @@ Cria um tenant (empresa cliente) com schema isolado.
 Uso: python manage.py create_tenant --name "ENGEMATEX" --schema engematex --domain engematex.localhost
 """
 from django.core.management.base import BaseCommand
+from django_tenants.utils import schema_context
+
 from apps.tenants.models import Tenant, Domain
 
 
@@ -21,5 +23,17 @@ class Command(BaseCommand):
             return
         tenant = Tenant.objects.create(name=opts["name"], schema_name=schema)  # auto_create_schema
         Domain.objects.create(domain=opts["domain"], tenant=tenant, is_primary=True)
+
+        # Substrato RBAC no schema recém-criado (idempotente): Groups por papel +
+        # matriz papel×capability default. A data migration 0002 já semeia a matriz
+        # no auto_create_schema; este hook reforça (idempotente) e alinha os Groups.
+        with schema_context(schema):
+            from apps.accounts.rbac import ensure_groups
+            from apps.access.matrix import seed_access_matrix, seed_approval_stages
+
+            ensure_groups()
+            seed_access_matrix()
+            seed_approval_stages()
+
         self.stdout.write(self.style.SUCCESS(
             f"Tenant '{tenant.name}' criado: schema={schema} domain={opts['domain']}"))

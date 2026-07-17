@@ -6,9 +6,9 @@ from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
+from apps.access.enforcement import require_capability, user_can
 from apps.audit.services import approve_presencial, request_remote_approval
 from apps.production.services import is_convertible
-from apps.production.views import _OF_CONVERT_ROLES
 from apps.quotations.models import Quotation
 
 _WRITE_ROLES = (
@@ -22,7 +22,7 @@ _READ_ROLES = _WRITE_ROLES
 
 
 @require_POST
-@require_role(*_WRITE_ROLES)
+@require_capability("approval.request_remote")
 def request_remote(request, pk):
     quotation = get_object_or_404(Quotation, pk=pk)
     request_remote_approval(
@@ -36,7 +36,7 @@ def request_remote(request, pk):
 
 
 @require_POST
-@require_role(*_WRITE_ROLES)
+@require_capability("approval.request_presencial")
 def approve_presencial_view(request, pk):
     quotation = get_object_or_404(Quotation, pk=pk)
     approver_profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=request.POST.get("approved_by"))
@@ -56,7 +56,7 @@ def approve_presencial_view(request, pk):
 
 
 @require_GET
-@require_role(*_READ_ROLES)
+@require_capability("approval.panel_read")
 def convertibility_panel(request, pk):
     quotation = get_object_or_404(Quotation, pk=pk)
     return render(
@@ -66,6 +66,6 @@ def convertibility_panel(request, pk):
             "q": quotation,
             "has_active_of": quotation.ordens_fabricacao.exclude(status="cancelada").exists(),
             "is_convertible": is_convertible(quotation),
-            "can_convert": user_role(request.user) in _OF_CONVERT_ROLES,
+            "can_convert": user_can(request.user, "of.convert"),
         },
     )

@@ -11,6 +11,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
+from apps.access.enforcement import require_capability, user_can
 from apps.audit.models import ApprovalRequest
 from apps.audit.services import log_access
 from apps.quotations.models import Quotation, Customer
@@ -142,7 +143,7 @@ def _list_context(request):
         "customers": Customer.objects.order_by("company_name"),
         "selected_customer": customer_id,
         "search": search,
-        "can_create_quotation": user_role(request.user) in _ENTRY_ROLES,
+        "can_create_quotation": user_can(request.user, "quotation.create"),
     }
 
 
@@ -167,7 +168,7 @@ def list_quotations(request):
     return render(request, "quotations/list.html", _list_context(request))
 
 
-@require_role(*_ENTRY_ROLES)
+@require_capability("quotation.create")
 def quotation_new(request):
     """COT-02: formulário linear para criar uma cotação draft."""
     customer_qs = Customer.objects.order_by("company_name")
@@ -199,7 +200,7 @@ def quotation_new(request):
 
 
 @require_POST
-@require_role(*_ENTRY_ROLES)
+@require_capability("quotation.create")
 def customer_quick_create(request):
     """Cadastro rápido de cliente (modal da Nova Cotação). Retorna JSON.
 
@@ -215,7 +216,7 @@ def customer_quick_create(request):
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
 
-@require_role(*_ENTRY_ROLES)
+@require_capability("quotation.create")
 def tema_entry(request):
     """F4 — entrada TEMA unificada: pergunta 'Equipamento completo × Feixe tubular'.
 
@@ -236,7 +237,7 @@ def tema_entry(request):
     return render(request, "quotations/tema_entry.html", {"tipos_feixe": FEIXE_TIPO})
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 def feixe_data_sheet(request):
     """Tela do data sheet com form + painel de resultados (recálculo HTMX).
 
@@ -252,7 +253,7 @@ def feixe_data_sheet(request):
     return render(request, "quotations/data_sheet.html", ctx)
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 def recompute_preview(request):
     """HTMX: recalcula ao vivo a partir dos campos atuais (sem persistir)."""
     form = FeixeDataSheetForm(request.POST)
@@ -263,7 +264,7 @@ def recompute_preview(request):
                   {"results": _preview(default_inputs()), "form_errors": form.errors})
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 def create_quotation(request):
     """Persiste a cotação (deep-copy/snapshot via adapter) e vai pro detalhe."""
     form = FeixeDataSheetForm(request.POST)
@@ -276,7 +277,7 @@ def create_quotation(request):
     return redirect("quotations:detail", pk=q.pk)
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 def quotation_edit(request, pk):
     """Tier A: edita os inputs de uma cotação de FEIXE, agrupados por componente,
     e salva o resultado como uma NOVA revisão (recalculada pelo motor). O motor
@@ -317,7 +318,7 @@ def quotation_edit(request, pk):
     return render(request, "quotations/edit.html", {"form": form, "results": results, "orig": orig})
 
 
-@require_role(*_READ_ROLES, allow_platform_staff=True)
+@require_capability("quotation.read", allow_platform_staff=True)
 def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
     itens = (q.itens.prefetch_related("materiais", "operacoes")).all()
@@ -328,14 +329,13 @@ def quotation_detail(request, pk):
     ).exclude(crea_number="").select_related("user")
     pending_remote_request = q.approval_requests.filter(status=ApprovalRequest.STATUS_PENDING).first()
     from apps.production.services import is_convertible
-    from apps.production.views import _OF_CONVERT_ROLES
     return render(request, "quotations/detail.html",
                   {
                       "q": q,
                       "itens": itens,
                       "has_active_of": has_active_of,
                       "is_convertible": is_convertible(q),
-                      "can_convert": user_role(request.user) in _OF_CONVERT_ROLES,
+                      "can_convert": user_can(request.user, "of.convert"),
                       "approval_engineers": approval_engineers,
                       "pending_remote_request": pending_remote_request,
                       "status_options": _status_options(),
@@ -343,7 +343,7 @@ def quotation_detail(request, pk):
                   })
 
 
-@require_role(*_READ_ROLES, allow_platform_staff=True)
+@require_capability("quotation.read", allow_platform_staff=True)
 def databook_detail(request, pk):
     """Databook de Suprimentos: Lista de Compras com a norma ASTM por componente."""
     from apps.quotations.databook import build_databook
@@ -351,7 +351,7 @@ def databook_detail(request, pk):
     return render(request, "quotations/databook.html", {"q": q, "rows": build_databook(q)})
 
 
-@require_role(*_READ_ROLES, allow_platform_staff=True)
+@require_capability("quotation.read", allow_platform_staff=True)
 def databook_export(request, pk):
     """Databook em CSV (Pedido de Compra)."""
     import csv
@@ -377,7 +377,7 @@ def _resolve_customer(request):
     return cust
 
 
-@require_role(*_ENTRY_ROLES)
+@require_capability("quotation.create")
 def compose_parts_new(request):
     """Tela de composição: montar equipamento conforme TEMA OU só partes de reposição."""
     from apps.tema_templates.models import ComponentTemplate
@@ -388,7 +388,7 @@ def compose_parts_new(request):
                   {"grupos": grupos, "customers": Customer.objects.order_by("company_name")})
 
 
-@require_role(*_ENTRY_ROLES)
+@require_capability("quotation.create")
 @require_POST
 def compose_parts_create(request):
     """Gera a cotação (scope='parts') a partir das partes selecionadas e custeia."""
@@ -419,7 +419,7 @@ def compose_parts_create(request):
     return redirect("quotations:detail", pk=q.pk)
 
 
-@require_role(*_READ_ROLES)
+@require_capability("quotation.read")
 def compose_compat_check(request):
     """HTMX: avisos de compatibilidade TEMA (front×shell×rear) ao montar o equipamento."""
     from apps.tema_templates.models import check_compatibility
@@ -431,7 +431,7 @@ def compose_compat_check(request):
 from apps.quotations.models import QuotationItem
 
 
-@require_role(*_READ_ROLES)
+@require_capability("quotation.read")
 def eap_item_drawer(request, pk):
     """Tela 05 item 4 (parte B): parcial HTMX do DRAWER de uma linha da EAP (N1).
 
@@ -471,7 +471,7 @@ def _log_field_edit(request, resource, field, before, after):
     log_access(request, "edit", resource, {"field": field, "before": str(before), "after": str(after)})
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 @require_POST
 def eap_item_save(request, pk):
     """Tela 05 item 4 (parte B): persiste OVERRIDES MANUAIS nas rows ItemMaterial/
@@ -565,7 +565,7 @@ def eap_item_save(request, pk):
     return render(request, "quotations/_eap_item_drawer.html", {"item": item, "saved": True})
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 @require_POST
 def eap_op_restore(request, pk):
     """Restaura a sugestão do motor de uma operação (desfaz o override manual).
@@ -605,7 +605,7 @@ def eap_op_restore(request, pk):
     return render(request, "quotations/_eap_item_drawer.html", {"item": item, "saved": True})
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 @require_POST
 def quotation_set_status(request, pk):
     q = get_object_or_404(Quotation, pk=pk)
@@ -626,7 +626,7 @@ def quotation_set_status(request, pk):
 _META_FIELDS = ("title", "description", "valid_until", "delivery_weeks", "payment_terms")
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 @require_POST
 def quotation_update_meta(request, pk):
     """Tela 05 item 4: edição INLINE de METADADOS comerciais da cotação ATUAL.
@@ -654,7 +654,7 @@ def quotation_update_meta(request, pk):
     return JsonResponse({"ok": True, "title": q.title, "updated": updated})
 
 
-@require_role(*_WRITE_ROLES)
+@require_capability("quotation.write")
 @require_POST
 def quotation_revise(request, pk):
     orig = get_object_or_404(Quotation, pk=pk)

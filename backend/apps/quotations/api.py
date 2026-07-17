@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import user_role
+from apps.access.enforcement import user_can
 from apps.quotations.models import Quotation
 from apps.quotations.serializers import QuotationSerializer
 
@@ -30,7 +31,7 @@ class CanWriteQuotations(BasePermission):
             return False
         if request.method in SAFE_METHODS:
             return True
-        return user_role(request.user) in _WRITE_ROLES
+        return user_can(request.user, "quotation.price_api")
 
 
 class QuotationViewSet(viewsets.ReadOnlyModelViewSet):

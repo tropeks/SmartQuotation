@@ -5,6 +5,7 @@ from django.shortcuts import render
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import user_role
+from apps.access.enforcement import user_can
 from apps.tema_templates.models import ComponentTemplate, check_compatibility
 from apps.tema_templates.services import (
     estimate_complete, reference_inputs, _physical_params, _metalurgia,
@@ -52,7 +53,7 @@ def data_sheet(request):
     memorial = []
     if request.method == "POST":
         # Persistir (salvar) é escrita: só papéis que editam custeio. Recompute/preview é leitura.
-        if request.POST.get("salvar") and user_role(request.user) not in _WRITE_ROLES:
+        if request.POST.get("salvar") and not user_can(request.user, "tema_template.write"):
             raise PermissionDenied("Papel sem permissão para persistir cotação/proposta.")
         form = PermutadorDataSheetForm(request.POST)
         if form.is_valid():
