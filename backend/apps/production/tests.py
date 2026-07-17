@@ -1054,6 +1054,131 @@ class ProductionReviewSignalTests(TenantTestCase):
         self.assertNotContains(response, "Sinal de Revis")
 
 
+class ProcessParameterSuggestionTests(TenantTestCase):
+    """SQ-COST-7: sugestão somente-leitura de novo ProcessParameter (física → horas)
+    para operações 'review_recommended' (SQ-COST-6) — proposta manual, nunca aplicada
+    automaticamente. Observações criadas diretamente (mesmo padrão de
+    ProductionReviewSignalTests), não via fechamento real.
+    """
+
+    def setUp(self):
+        from apps.engineering_params.models import ProcessParameter
+        self.ProcessParameter = ProcessParameter
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_pp_suggestion")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng PP Suggestion", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-94", crea_state="SP",
+        )
+        self.q = create_feixe_quotation(self.customer, "Feixe PP Suggestion")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+
+    def _observation(self, operacao, delta_horas_pct, actual_hh=Decimal("10.00"),
+                     estimated_hh=Decimal("10.00"), of_operation=None):
+        from apps.production.models import ProductionObservation
+        return ProductionObservation.objects.create(
+            operacao=operacao, ordem=self.of, of_operation=of_operation,
+            estimated_custo=Decimal("100.00"), actual_hh=actual_hh,
+            observed_rate=Decimal("10.00"), estimated_hh=estimated_hh,
+            delta_horas_pct=delta_horas_pct,
+        )
+
+    def _op_com_metodo(self, codigo_op, metodo="radial"):
+        of_item = OFItem.objects.create(ordem=self.of, codigo_item="IT-PP", descricao="Item PP")
+        return OFOperation.objects.create(
+            item=of_item, codigo_op=codigo_op, descricao="Operação PP", metodo=metodo,
+            custo=Decimal("100.00"), horas_hh=Decimal("10.00"),
+        )
+
+    def test_proposed_value_e_current_vezes_factor_com_mapeamento_disponivel(self):
+        op = self._op_com_metodo("OP-PP-MAP")
+        self.ProcessParameter.objects.create(
+            operacao=op.codigo_op, metodo="radial", material=None, valor=Decimal("40.0000"),
+            unidade="mm/min", descricao="avanço teste",
+        )
+        # 3 observações fechadas, todas actual=12.00 / estimated=10.00 -> delta=+20.00%
+        # (flagged: média |Δ| 20.00% > 5.00%) -> factor = 12/10 = 1.2000
+        for _ in range(3):
+            self._observation(op.codigo_op, Decimal("20.00"),
+                              actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"),
+                              of_operation=op)
+
+        suggestions = services.processparameter_suggestion()
+
+        row = next(r for r in suggestions if r["operacao"] == "OP-PP-MAP")
+        self.assertEqual(row["mean_actual_hh"], Decimal("12.00"))
+        self.assertEqual(row["mean_estimated_hh"], Decimal("10.00"))
+        self.assertEqual(row["factor"], Decimal("1.2000"))
+        self.assertEqual(row["current_value"], Decimal("40.0000"))
+        self.assertEqual(row["proposed_value"], Decimal("48.0000"))
+
+    def test_estimated_hh_medio_zero_nao_gera_proposed_value(self):
+        self._observation("OP-PP-ZERO", Decimal("8.00"),
+                          actual_hh=Decimal("5.00"), estimated_hh=Decimal("0.00"))
+        self._observation("OP-PP-ZERO", Decimal("-9.00"),
+                          actual_hh=Decimal("5.00"), estimated_hh=Decimal("0.00"))
+        self._observation("OP-PP-ZERO", Decimal("7.00"),
+                          actual_hh=Decimal("5.00"), estimated_hh=Decimal("0.00"))
+
+        suggestions = services.processparameter_suggestion()
+
+        row = next(r for r in suggestions if r["operacao"] == "OP-PP-ZERO")
+        self.assertEqual(row["mean_estimated_hh"], Decimal("0.00"))
+        self.assertIsNone(row["factor"])
+        self.assertIsNone(row["proposed_value"])
+
+    def test_operacao_nao_flagged_nao_aparece_na_sugestao(self):
+        self._observation("OP-PP-OK", Decimal("2.00"))
+        self._observation("OP-PP-OK", Decimal("-3.00"))
+        self._observation("OP-PP-OK", Decimal("1.00"))
+        # média |Δ| = 2.00 <= 5.00 -> 'ok', não 'review_recommended'
+
+        suggestions = services.processparameter_suggestion()
+
+        operacoes = [r["operacao"] for r in suggestions]
+        self.assertNotIn("OP-PP-OK", operacoes)
+
+    def test_sugestao_nao_persiste_processparameter(self):
+        op = self._op_com_metodo("OP-PP-NOWRITE")
+        pp = self.ProcessParameter.objects.create(
+            operacao=op.codigo_op, metodo="radial", material=None, valor=Decimal("40.0000"),
+            unidade="mm/min", descricao="avanço teste",
+        )
+        for _ in range(3):
+            self._observation(op.codigo_op, Decimal("20.00"),
+                              actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"),
+                              of_operation=op)
+
+        services.processparameter_suggestion()
+
+        pp.refresh_from_db()
+        self.assertEqual(pp.valor, Decimal("40.0000"))
+
+    def test_detail_renderiza_proposta_manual_para_operacao_flagged(self):
+        op = self._op_com_metodo("OP-PP-DETAIL")
+        # precisa ser o codigo_op do roteiro *desta* OF -> usa um já copiado
+        of_op = OFOperation.objects.filter(item__ordem=self.of).exclude(pk=op.pk).first()
+        of_op.metodo = "radial"
+        of_op.save(update_fields=["metodo"])
+        self.ProcessParameter.objects.create(
+            operacao=of_op.codigo_op, metodo="radial", material=None, valor=Decimal("40.0000"),
+            unidade="mm/min", descricao="avanço teste",
+        )
+        for _ in range(3):
+            self._observation(of_op.codigo_op, Decimal("20.00"),
+                              actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"),
+                              of_operation=of_op)
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "proposta manual")
+        self.assertContains(response, "48,0000")
+
+
 class ProductionObservationAdminTests(TenantTestCase):
     """SQ-COST-4: admin somente-leitura para ProductionObservation (padrão de
     apps.integrations.sap_b1.admin.SapB1ReadOnlyAdmin: sem add/delete, todos os campos

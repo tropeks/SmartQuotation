@@ -398,6 +398,89 @@ def production_review_signal():
     return ProductionObservation.objects.review_signal()
 
 
+def processparameter_suggestion():
+    """SQ-COST-7: sugestão somente-leitura de novo valor de ProcessParameter (física →
+    horas) para operações classificadas 'review_recommended' pelo sinal SQ-COST-6
+    (production_review_signal/ProductionObservationManager.flagged_for_review).
+
+    Para cada operação flagged, usa as MESMAS observações fechadas (delta_horas_pct
+    != None) do sinal para calcular:
+      mean_actual_hh    = média de actual_hh
+      mean_estimated_hh = média de estimated_hh
+      factor            = mean_actual_hh / mean_estimated_hh — None se
+        mean_estimated_hh == 0 (guarda divisão por zero; na prática
+        services._close_out_observations só grava delta_horas_pct quando
+        estimated_hh > 0, então essa combinação só ocorre em observações criadas
+        diretamente — ex.: testes — mas o guard é defensivo)
+
+    Mapeamento para ProcessParameter (current_value/proposed_value): ProcessParameter é
+    chaveado por (operacao × metodo × material), mas ProductionObservation só guarda
+    `operacao` (codigo_op) — o `metodo`/`material` reais só existem, quando existem, na
+    OFOperation ligada via `of_operation` (FK nullable, SET_NULL). Uma mesma `operacao`
+    pode ter sido apontada em OFs com métodos diferentes (roteiro mudou entre radial e
+    CNC, por ex.) — nesse caso não há uma chave confiável e o mapeamento fica ambíguo
+    de propósito:
+      - Se todas as observações fechadas desta operação (que ainda têm of_operation
+        setado) concordam num único `metodo` não-vazio, busca o ProcessParameter
+        vigente via ProcessParameter.objects.vigente(operacao, metodo, material=None)
+        — usa o fallback material=None porque não há uma chave de material confiável
+        em ProductionObservation/OFOperation.
+      - Caso contrário (métodos divergentes, nenhum of_operation setado, ou nenhum
+        ProcessParameter vigente com valor não-nulo), current_value/proposed_value
+        ficam None — a sugestão ainda é retornada com factor + médias; o mapeamento ao
+        ProcessParameter correto fica a critério do engenheiro.
+
+    proposed_value = current_value * factor (só quando ambos não são None).
+
+    SOMENTE LEITURA: não escreve em ProcessParameter/Rate/ActualRate (Welford)/
+    RateSuggestion/pricing_engine, não altera delta_horas_pct nem totais de
+    cotação/OF. A proposta é só uma sugestão — aplicação é manual, fora deste código.
+    """
+    from decimal import Decimal
+
+    from apps.engineering_params.models import ProcessParameter
+
+    suggestions = []
+    for row in ProductionObservation.objects.flagged_for_review():
+        operacao = row["operacao"]
+        obs = ProductionObservation.objects.filter(
+            operacao=operacao, delta_horas_pct__isnull=False,
+        )
+        actual_vals = list(obs.values_list("actual_hh", flat=True))
+        estimated_vals = list(obs.values_list("estimated_hh", flat=True))
+        mean_actual_hh = (sum(actual_vals) / len(actual_vals)).quantize(Decimal("0.01"))
+        mean_estimated_hh = (sum(estimated_vals) / len(estimated_vals)).quantize(Decimal("0.01"))
+
+        factor = None
+        if mean_estimated_hh != 0:
+            factor = (mean_actual_hh / mean_estimated_hh).quantize(Decimal("0.0001"))
+
+        current_value = None
+        metodos = set(
+            obs.exclude(of_operation__isnull=True)
+            .exclude(of_operation__metodo="")
+            .values_list("of_operation__metodo", flat=True)
+        )
+        if len(metodos) == 1:
+            pp = ProcessParameter.objects.vigente(operacao, next(iter(metodos)), material=None)
+            if pp is not None and pp.valor is not None:
+                current_value = pp.valor
+
+        proposed_value = None
+        if factor is not None and current_value is not None:
+            proposed_value = (current_value * factor).quantize(Decimal("0.0001"))
+
+        suggestions.append({
+            "operacao": operacao,
+            "current_value": current_value,
+            "proposed_value": proposed_value,
+            "factor": factor,
+            "mean_actual_hh": mean_actual_hh,
+            "mean_estimated_hh": mean_estimated_hh,
+        })
+    return suggestions
+
+
 def _update_actual_rate(operacao: str, observed_rate):
     """Upsert online (Welford) do agregado ActualRate (R$/h) de uma operação. Requer transação."""
     from decimal import Decimal
