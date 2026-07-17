@@ -1,0 +1,37 @@
+# Sem isto, os pins do /cso 2026-07-17 (base image por digest em backend/Dockerfile,
+# árvore travada em requirements/*.lock) trocam integridade de supply chain por CVE
+# apodrecendo: a única rota de atualização vira um comentário que alguém precisa
+# lembrar de ler. `python:3.12-slim` rebaseia em updates de segurança do Debian com
+# frequência — um digest parado seis meses embarca libssl/zlib vulneráveis em prod.
+# Dependabot entende digest e abre PR de bump, preservando reprodutibilidade E patch.
+version: 2
+updates:
+  # Imagem base do Dockerfile (pinada por digest).
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies", "security"]
+
+  # Deps Python. Dependabot lê os .txt (fonte); o .lock precisa ser REGENERADO à mão
+  # no PR — ver backend/requirements/README.md. tests/test_requirements_lock.py falha
+  # o CI se o PR bumpar o .txt e esquecer o lock, então o drift não passa silencioso.
+  - package-ecosystem: pip
+    directory: /backend/requirements
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    labels: ["dependencies", "security"]
+    open-pull-requests-limit: 5
+
+  # As actions do CI não são SHA-pinadas (todas first-party actions/*); manter atualizadas.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(ci)"
+    labels: ["dependencies"]
