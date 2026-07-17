@@ -8,6 +8,7 @@ from apps.integrations.bling.tasks import export_of_to_bling as export_of_to_bli
 
 from apps.production.models import (
     InspectionItem, InspectionPlan, OrdemFabricacao, OFItem, OFMaterial, OFOperation,
+    ProductionObservation,
 )
 
 
@@ -140,6 +141,30 @@ class OFMaterialAdmin(admin.ModelAdmin):
 @admin.register(OFOperation)
 class OFOperationAdmin(admin.ModelAdmin):
     list_display = ("item", "codigo_op", "descricao", "custo", "aplicavel")
+
+
+@admin.register(ProductionObservation)
+class ProductionObservationAdmin(admin.ModelAdmin):
+    """SQ-COST-4: superfície somente-leitura do desvio horas orçado × real (SQ-COST-3).
+
+    Mesmo padrão de apps.integrations.sap_b1.admin.SapB1ReadOnlyAdmin — bloqueia
+    add/delete e expõe todos os campos como readonly; não recalcula nada.
+    """
+    list_display = (
+        "ordem", "operacao", "estimated_hh", "actual_hh", "delta_horas_pct",
+        "observed_rate", "observed_at",
+    )
+    list_filter = ("operacao",)
+    search_fields = ("operacao", "ordem__number")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)
 
 
 class InspectionItemInline(admin.TabularInline):

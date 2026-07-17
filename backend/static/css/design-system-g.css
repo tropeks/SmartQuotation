@@ -43,6 +43,12 @@ a { color:var(--g-orange); }
   font-family:var(--font-display); font-weight:var(--w-bold); font-size:10px;
   letter-spacing:var(--ls-up); text-transform:uppercase; border:var(--border-strong); }
 
+/* SQ-COST-4: desvio de horas orçado × real (ProductionObservation.delta_horas_pct) */
+.q-badge--over { color:var(--g-red); border-color:var(--g-red); }
+.q-badge--under { color:var(--g-green); border-color:var(--g-green); }
+.q-badge--neutral { color:var(--g-gray-1); border-color:var(--g-gray-3); }
+.q-badge--na { color:var(--g-amber); border-color:var(--g-amber); }
+
 /* Foco de teclado visível em toda a superfície interativa (não só inputs) */
 a:focus-visible, button:focus-visible, .q-btn:focus-visible,
 [tabindex]:focus-visible, .g3-minimap a:focus-visible, [role="tab"]:focus-visible,

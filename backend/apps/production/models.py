@@ -80,6 +80,17 @@ class OrdemFabricacao(models.Model):
     def __str__(self):
         return f"{self.number} — {self.title}"
 
+    @property
+    def hour_variance_observations(self):
+        """SQ-COST-4: observações de horas (SQ-COST-3) ordenadas por |delta_horas_pct|
+        desc — maior desvio primeiro. Observações sem base de horas (delta_horas_pct=None,
+        operação de valor fixo) ficam por último. Somente leitura/apresentação: não
+        recalcula estimated_hh/delta_horas_pct (isso é feito em
+        services._close_out_observations, SQ-COST-3 — não tocado aqui)."""
+        def _abs_delta(obs):
+            return abs(obs.delta_horas_pct) if obs.delta_horas_pct is not None else Decimal("-1")
+        return sorted(self.observations.all(), key=_abs_delta, reverse=True)
+
 
 class OFItem(models.Model):
     ordem = models.ForeignKey("OrdemFabricacao", on_delete=models.CASCADE, related_name="itens")

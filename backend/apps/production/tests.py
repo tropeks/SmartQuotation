@@ -5,6 +5,7 @@ from unittest import mock
 from decimal import Decimal
 
 from django.contrib import admin
+from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -721,6 +722,142 @@ class OrdemFabricacaoDetailViewTests(TenantTestCase):
         self.assertContains(response, "Horas est.")
         self.assertContains(response, "HH 3,50")
         self.assertContains(response, "HM 1,25")
+
+
+class HourVarianceUITests(TenantTestCase):
+    """SQ-COST-4: superfície de leitura do desvio horas orçado × real (SQ-COST-3).
+
+    Observações são criadas diretamente (sem passar pelo fechamento real) para testar
+    só a apresentação — não a computação de estimated_hh/delta_horas_pct, que é
+    responsabilidade de services._close_out_observations (SQ-COST-3, não tocado aqui).
+    """
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_hv")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng HV", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-90", crea_state="SP",
+        )
+        self.q = create_feixe_quotation(self.customer, "Feixe HV")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+
+    def _observation(self, operacao, estimated_hh, actual_hh, delta_horas_pct):
+        from apps.production.models import ProductionObservation
+        return ProductionObservation.objects.create(
+            operacao=operacao, ordem=self.of,
+            estimated_custo=Decimal("100.00"), actual_hh=Decimal(actual_hh),
+            observed_rate=Decimal("10.00"), estimated_hh=Decimal(estimated_hh),
+            delta_horas_pct=delta_horas_pct,
+        )
+
+    def test_detail_renderiza_secao_desvios_de_horas_quando_observations_existem(self):
+        self._observation("SOLDA-01", "10.00", "12.50", Decimal("25.00"))
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Desvios de Horas")
+        self.assertContains(response, "SOLDA-01")
+
+    def test_detail_sem_observations_nao_renderiza_secao_e_nao_quebra(self):
+        # regressão: OF recém-convertida, sem apontamento/fechamento -> sem observações
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Desvios de Horas")
+
+    def test_delta_positivo_renderiza_badge_over(self):
+        self._observation("SOLDA-01", "10.00", "12.50", Decimal("25.00"))
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertContains(response, "q-badge--over")
+        self.assertContains(response, "+25,00%")
+
+    def test_delta_negativo_renderiza_badge_under(self):
+        self._observation("CORTE-02", "10.00", "6.00", Decimal("-40.00"))
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertContains(response, "q-badge--under")
+        self.assertContains(response, "-40,00%")
+
+    def test_delta_none_renderiza_sem_base_sem_crash(self):
+        self._observation("SERV-FIXO", "0.00", "3.00", None)
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "q-badge--na")
+        self.assertContains(response, "sem base")
+        self.assertNotContains(response, "0,00%")
+
+    def test_hour_variance_observations_ordenadas_por_maior_delta_absoluto(self):
+        self._observation("OP-PEQUENO", "10.00", "10.50", Decimal("5.00"))
+        self._observation("OP-GRANDE", "10.00", "6.00", Decimal("-40.00"))
+        self._observation("OP-MEDIO", "10.00", "11.00", Decimal("10.00"))
+        self._observation("OP-SEM-BASE", "0.00", "3.00", None)
+
+        ordered = [obs.operacao for obs in self.of.hour_variance_observations]
+
+        self.assertEqual(ordered, ["OP-GRANDE", "OP-MEDIO", "OP-PEQUENO", "OP-SEM-BASE"])
+
+    def test_detail_renderiza_ordem_por_maior_desvio_absoluto(self):
+        self._observation("OP-PEQUENO", "10.00", "10.50", Decimal("5.00"))
+        self._observation("OP-GRANDE", "10.00", "6.00", Decimal("-40.00"))
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+        content = response.content.decode()
+
+        self.assertLess(content.index("OP-GRANDE"), content.index("OP-PEQUENO"))
+
+
+class ProductionObservationAdminTests(TenantTestCase):
+    """SQ-COST-4: admin somente-leitura para ProductionObservation (padrão de
+    apps.integrations.sap_b1.admin.SapB1ReadOnlyAdmin: sem add/delete, todos os campos
+    readonly)."""
+
+    def setUp(self):
+        from apps.production.admin import ProductionObservationAdmin
+        from apps.production.models import ProductionObservation
+        self.site = AdminSite()
+        self.admin_obj = ProductionObservationAdmin(ProductionObservation, self.site)
+        self.request = RequestFactory().get("/admin/")
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_hv_admin")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng HV Admin", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-91", crea_state="SP",
+        )
+        q = create_feixe_quotation(self.customer, "Feixe HV Admin")
+        approve_quotation(q, self.engineer)
+        of = services.convert_quotation_to_of(q, created_by=self.user)
+        self.observation = ProductionObservation.objects.create(
+            operacao="SOLDA-01", ordem=of,
+            estimated_custo=Decimal("100.00"), actual_hh=Decimal("12.50"),
+            observed_rate=Decimal("10.00"), estimated_hh=Decimal("10.00"),
+            delta_horas_pct=Decimal("25.00"),
+        )
+
+    def test_admin_e_somente_leitura(self):
+        self.assertFalse(self.admin_obj.has_add_permission(self.request))
+        self.assertFalse(self.admin_obj.has_delete_permission(self.request, self.observation))
+        readonly = self.admin_obj.get_readonly_fields(self.request, obj=self.observation)
+        self.assertIn("delta_horas_pct", readonly)
+        self.assertIn("estimated_hh", readonly)
+
+    def test_admin_list_display_inclui_delta(self):
+        self.assertIn("delta_horas_pct", self.admin_obj.list_display)
 
 
 class ITPServiceTests(TenantTestCase):
