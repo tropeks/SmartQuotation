@@ -23,6 +23,7 @@ from apps.accounts.forms import LoginForm, MemberInviteForm, MemberRoleChangeFor
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import ensure_groups, require_role
 from apps.accounts.rbac import has_tenant_membership
+from apps.access.enforcement import require_capability
 from apps.audit.models import TechnicalApproval
 from apps.audit.services import log_access
 from apps.quotations.models import Quotation
@@ -164,7 +165,7 @@ def _members_context(request):
     }
 
 
-@require_role(UserProfile.ROLE_ADMIN)
+@require_capability("members.manage")
 def members_view(request):
     context = _members_context(request)
     template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
@@ -172,7 +173,7 @@ def members_view(request):
 
 
 @require_POST
-@require_role(UserProfile.ROLE_ADMIN)
+@require_capability("members.manage")
 def change_member_role_view(request, pk):
     profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=pk)
     form = MemberRoleChangeForm(request.POST)
@@ -208,7 +209,7 @@ def change_member_role_view(request, pk):
 
 
 @require_POST
-@require_role(UserProfile.ROLE_ADMIN)
+@require_capability("members.manage")
 def deactivate_member_view(request, pk):
     profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=pk)
     template = "accounts/_members_table.html" if _is_htmx(request) else "accounts/members.html"
@@ -226,7 +227,7 @@ def deactivate_member_view(request, pk):
 
 
 @require_POST
-@require_role(UserProfile.ROLE_ADMIN)
+@require_capability("members.manage")
 def invite_member_view(request):
     form = MemberInviteForm(request.POST)
     if not form.is_valid():

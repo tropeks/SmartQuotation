@@ -5,6 +5,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import UserProfile
 from apps.accounts.rbac import require_role, user_role
+from apps.access.enforcement import require_capability, user_can
 from apps.integrations.nomus.models import NomusSyncRun
 from apps.production import services as production_services
 from apps.production.models import OrdemFabricacao
@@ -31,7 +32,7 @@ def _panel_context(request, of):
     return {
         "of": of,
         "sync_runs": _sync_runs_for_of(of),
-        "can_reexport": user_role(request.user) in _REEXPORT_ROLES,
+        "can_reexport": user_can(request.user, "nomus.reexport"),
     }
 
 
@@ -41,7 +42,7 @@ def export_panel(request, of_pk):
     return render(request, "nomus/_export_panel.html", _panel_context(request, of))
 
 
-@require_role(*_REEXPORT_ROLES)
+@require_capability("nomus.reexport")
 @require_POST
 def reexport(request, of_pk):
     of = get_object_or_404(OrdemFabricacao, pk=of_pk)
