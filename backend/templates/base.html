@@ -24,7 +24,8 @@
         <a class="q-btn" href="{% url 'quotations:list' %}">Cotações</a>
         <a class="q-btn" href="{% url 'production:list' %}">OFs</a>
         <a class="q-btn" href="{% url 'cost_discovery:home' %}">Custos</a>
-        <a class="q-btn" href="{% url 'tema_templates:catalog' %}">TEMA</a>
+        <a class="q-btn" href="{% url 'quotations:tema_entry' %}">TEMA</a>
+        <a class="q-btn" href="{% url 'tema_templates:catalog' %}">Catálogo</a>
         <a class="q-btn" href="{% url 'tema_templates:data_sheet' %}">Permutador</a>
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}
           <button class="q-btn">Sair</button></form>

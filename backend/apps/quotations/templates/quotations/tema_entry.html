@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Nova Cotação TEMA{% endblock %}
+{% block content %}
+<div class="eyebrow">TEMA · Nova</div>
+<h1 class="q-number">NOVA COTAÇÃO TEMA</h1>
+<p style="color:var(--g-gray-1)">O que você quer cotar? Escolha o escopo para seguir ao data sheet correto.</p>
+
+{# F4 — Fase 1: só Equipamento completo e Feixe tubular.
+   TODO Fase 2: adicionar cartão "Partes avulsas" (scope='parts') → quotations:parts_new. #}
+<div class="g-form" x-data="{ feixe: false }" style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start">
+
+  {# Opção A — Equipamento completo (fluxo tema_templates: compose → data_sheet) #}
+  <section class="g-section">
+    <header class="g-section-head"><h3>Equipamento completo</h3></header>
+    <div class="g-section-body">
+      <p style="color:var(--g-gray-1)">Permutador completo por designação TEMA (cabeçote · casco · feixe).
+        Você compõe front · casco · traseiro e ajusta o data sheet paramétrico.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+        <a class="q-btn primary" href="{% url 'tema_templates:compose' %}">Compor equipamento completo</a>
+      </div>
+    </div>
+  </section>
+
+  {# Opção B — Feixe tubular (data sheet do feixe). Pergunta reto × U ANTES. #}
+  <section class="g-section">
+    <header class="g-section-head"><h3>Feixe tubular</h3></header>
+    <div class="g-section-body">
+      <p style="color:var(--g-gray-1)">Somente o feixe tubular. Escolha o tipo de feixe para abrir o data sheet.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px" x-show="!feixe">
+        <button type="button" class="q-btn primary" @click="feixe = true">Cotar feixe tubular</button>
+      </div>
+      <div x-show="feixe" x-cloak style="margin-top:12px">
+        <span class="req" style="display:block;margin-bottom:8px">Tipo de feixe</span>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          {% for value, label in tipos_feixe %}
+          <a class="q-btn" href="{% url 'quotations:feixe_new' %}?tipo={{ value|urlencode }}">{{ label }}</a>
+          {% endfor %}
+        </div>
+        <div style="margin-top:12px">
+          <button type="button" class="q-btn ghost" @click="feixe = false">Voltar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="g-section" style="margin-top:16px">
+  <div class="g-section-body">
+    <a class="q-btn" href="{% url 'quotations:list' %}">Cancelar</a>
+  </div>
+</div>
+{% endblock %}
