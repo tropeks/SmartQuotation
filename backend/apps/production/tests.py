@@ -821,6 +821,24 @@ class HourVarianceUITests(TenantTestCase):
 
         self.assertLess(content.index("OP-GRANDE"), content.index("OP-PEQUENO"))
 
+    def test_hour_variance_observations_avaliada_uma_unica_vez_na_view(self):
+        # SQ-COST-8 achado 3: a property era avaliada 2x no template (um {% if %} e um
+        # {% for %}). A view agora computa uma vez e injeta a lista pronta no contexto.
+        # Usa um retorno truthy (não []) para que o {% for %} realmente seja alcançado —
+        # com [] o {% if %} já é falso e o for nunca reavalia a property (falso-positivo).
+        obs = self._observation("SOLDA-01", "10.00", "12.50", Decimal("25.00"))
+        self.client.force_login(self.user)
+
+        with mock.patch(
+            "apps.production.models.OrdemFabricacao.hour_variance_observations",
+            new_callable=mock.PropertyMock,
+            return_value=[obs],
+        ) as mocked:
+            response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(mocked.call_count, 1)
+
 
 class HourVarianceToleranceTests(TenantTestCase):
     """SQ-COST-5: tolerância/semáforo de ±5% sobre ProductionObservation.delta_horas_pct.
@@ -910,6 +928,15 @@ class HourVarianceToleranceTests(TenantTestCase):
         response = self._get_detail()
 
         self.assertContains(response, "±5%")
+
+    def test_tolerancia_vem_do_context_a_partir_de_tolerancia_horas_pct(self):
+        # SQ-COST-8 achado 4: "±5%" não pode mais estar hardcoded no template — a view
+        # deve derivar a string de exibição de ProductionObservation.TOLERANCIA_HORAS_PCT.
+        self._observation("OP-TOL-CTX", Decimal("1.00"))
+
+        response = self._get_detail()
+
+        self.assertEqual(response.context["tolerancia_horas_pct"], "±5%")
 
     def test_model_hours_variance_status_classifica_corretamente(self):
         from apps.production.models import ProductionObservation
@@ -1053,6 +1080,20 @@ class ProductionReviewSignalTests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Sinal de Revis")
 
+    def test_copy_da_secao_de_sinal_usa_frase_precisa_com_tolerancia(self):
+        # SQ-COST-8 achado 2: "acima de ±5%" é impreciso pq o valor comparado já é
+        # absoluto. Corrigido para "acima da tolerância (±5%)".
+        op = OFOperation.objects.filter(item__ordem=self.of).first()
+        self._observation(op.codigo_op, Decimal("8.00"))
+        self._observation(op.codigo_op, Decimal("-9.00"))
+        self._observation(op.codigo_op, Decimal("7.00"))
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertContains(response, "acima da tolerância (±5%)")
+        self.assertNotContains(response, "acima de ±5%")
+
 
 class ProcessParameterSuggestionTests(TenantTestCase):
     """SQ-COST-7: sugestão somente-leitura de novo ProcessParameter (física → horas)
@@ -1076,10 +1117,10 @@ class ProcessParameterSuggestionTests(TenantTestCase):
         self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
 
     def _observation(self, operacao, delta_horas_pct, actual_hh=Decimal("10.00"),
-                     estimated_hh=Decimal("10.00"), of_operation=None):
+                     estimated_hh=Decimal("10.00"), of_operation=None, ordem=None):
         from apps.production.models import ProductionObservation
         return ProductionObservation.objects.create(
-            operacao=operacao, ordem=self.of, of_operation=of_operation,
+            operacao=operacao, ordem=ordem or self.of, of_operation=of_operation,
             estimated_custo=Decimal("100.00"), actual_hh=actual_hh,
             observed_rate=Decimal("10.00"), estimated_hh=estimated_hh,
             delta_horas_pct=delta_horas_pct,
@@ -1177,6 +1218,89 @@ class ProcessParameterSuggestionTests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "proposta manual")
         self.assertContains(response, "48,0000")
+
+    def test_suggestion_computation_e_escopada_as_operacoes_informadas(self):
+        # SQ-COST-8 achado 1: processparameter_suggestion() era computada para TODAS as
+        # operações flagged e só depois a view descartava as de fora da OF atual. O
+        # parâmetro `operacoes` permite escopar o cálculo antes, sem query desperdiçada.
+        for _ in range(3):
+            self._observation("OP-SCOPE-A", Decimal("20.00"),
+                              actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"))
+        for _ in range(3):
+            self._observation("OP-SCOPE-B", Decimal("30.00"),
+                              actual_hh=Decimal("13.00"), estimated_hh=Decimal("10.00"))
+
+        todas = services.processparameter_suggestion()
+        operacoes_todas = {r["operacao"] for r in todas}
+        self.assertIn("OP-SCOPE-A", operacoes_todas)
+        self.assertIn("OP-SCOPE-B", operacoes_todas)
+
+        escopadas = services.processparameter_suggestion(operacoes={"OP-SCOPE-A"})
+        operacoes_escopadas = {r["operacao"] for r in escopadas}
+        self.assertIn("OP-SCOPE-A", operacoes_escopadas)
+        self.assertNotIn("OP-SCOPE-B", operacoes_escopadas)
+
+    def test_view_computa_sugestao_somente_para_operacoes_da_of_atual(self):
+        # Integração: a operação flagged de OUTRA OF não deve aparecer no contexto da
+        # view, e (por consequência do escopo acima) nem é computada para ela.
+        op_desta_of = OFOperation.objects.filter(item__ordem=self.of).first()
+        for _ in range(3):
+            self._observation(op_desta_of.codigo_op, Decimal("20.00"),
+                              actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"),
+                              of_operation=op_desta_of)
+        self._observation("OP-DE-OUTRA-OF", Decimal("30.00"),
+                          actual_hh=Decimal("13.00"), estimated_hh=Decimal("10.00"))
+        self._observation("OP-DE-OUTRA-OF", Decimal("-31.00"),
+                          actual_hh=Decimal("13.00"), estimated_hh=Decimal("10.00"))
+        self._observation("OP-DE-OUTRA-OF", Decimal("29.00"),
+                          actual_hh=Decimal("13.00"), estimated_hh=Decimal("10.00"))
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+
+        self.assertEqual(response.status_code, 200)
+        operacoes_no_contexto = {row["operacao"] for row in response.context["review_signal_flagged"]}
+        self.assertIn(op_desta_of.codigo_op, operacoes_no_contexto)
+        self.assertNotIn("OP-DE-OUTRA-OF", operacoes_no_contexto)
+
+    def test_detail_renderiza_traco_para_metodo_ambiguo_mas_mantem_fator_e_medias(self):
+        # SQ-COST-8 achado 5: quando as observações fechadas de uma operação divergem
+        # quanto ao `metodo` do OFOperation vinculado, current_value/proposed_value
+        # ficam None (services.processparameter_suggestion, branch "ambíguo") — mas
+        # fator e médias continuam sendo mostrados. Faltava cobertura de template p/
+        # esse branch (só havia teste de serviço).
+        of_op = OFOperation.objects.filter(item__ordem=self.of).first()
+        of_op.metodo = "radial"
+        of_op.save(update_fields=["metodo"])
+        outro_op = self._op_com_metodo(of_op.codigo_op, metodo="cnc")
+        self.ProcessParameter.objects.create(
+            operacao=of_op.codigo_op, metodo="radial", material=None, valor=Decimal("40.0000"),
+            unidade="mm/min", descricao="avanço teste",
+        )
+        self._observation(of_op.codigo_op, Decimal("20.00"),
+                          actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"),
+                          of_operation=of_op)
+        self._observation(of_op.codigo_op, Decimal("20.00"),
+                          actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"),
+                          of_operation=outro_op)
+        self._observation(of_op.codigo_op, Decimal("20.00"),
+                          actual_hh=Decimal("12.00"), estimated_hh=Decimal("10.00"),
+                          of_operation=of_op)
+        self.client.force_login(self.user)
+
+        response = self.client.get(f"/ofs/{self.of.pk}/")
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        idx = content.index("Sinal de Revis")
+        row_start = content.index(of_op.codigo_op, idx)
+        row_end = content.index("</tr>", row_start)
+        row_html = content[row_start:row_end]
+        self.assertEqual(row_html.count("—"), 2)
+        self.assertIn("1,2000×", row_html)
+        self.assertIn("12,00", row_html)
+        self.assertNotIn("40,0000", row_html)
+        self.assertNotIn("48,0000", row_html)
 
 
 class ProductionObservationAdminTests(TenantTestCase):
