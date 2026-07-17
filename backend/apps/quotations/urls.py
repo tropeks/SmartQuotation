@@ -11,6 +11,7 @@ router.register(r'cotacoes', api.QuotationViewSet, basename='api_cotacoes')
 urlpatterns = [
     path("cotacoes/", views.list_quotations, name="list"),
     path("cotacoes/nova/", views.quotation_new, name="new"),
+    path("cotacoes/nova/tema/", views.tema_entry, name="tema_entry"),
     path("cotacoes/clientes/criar/", views.customer_quick_create, name="customer_quick_create"),
     path("cotacoes/nova/feixe/", views.feixe_data_sheet, name="feixe_new"),
     path("cotacoes/nova/partes/", views.compose_parts_new, name="parts_new"),

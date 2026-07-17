@@ -215,10 +215,39 @@ def customer_quick_create(request):
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
 
+@require_role(*_ENTRY_ROLES)
+def tema_entry(request):
+    """F4 — entrada TEMA unificada: pergunta 'Equipamento completo × Feixe tubular'.
+
+    Ponto único de entrada de nova cotação TEMA. NÃO custeia nada: apenas orquestra a
+    navegação entre os fluxos JÁ existentes, reusando o campo Quotation.scope.
+
+    Fase 1 — só duas opções:
+      * Equipamento completo  → fluxo do app tema_templates (compose → data_sheet),
+        que persiste Quotation(scope='complete').
+      * Feixe tubular         → data sheet do feixe (feixe_data_sheet), que persiste
+        Quotation(scope='feixe'/default). Antes pergunta reto × U (input `tipo`),
+        que é repassado ao data sheet via querystring (?tipo=...).
+
+    TODO Fase 2 — partes avulsas (scope='parts'): só cabeçote, só casco, etc.
+    reusando compose_parts_new/compose_parts_create. Manter fora da Fase 1.
+    """
+    from apps.quotations.forms import TIPO as FEIXE_TIPO
+    return render(request, "quotations/tema_entry.html", {"tipos_feixe": FEIXE_TIPO})
+
+
 @require_role(*_WRITE_ROLES)
 def feixe_data_sheet(request):
-    """Tela do data sheet com form + painel de resultados (recálculo HTMX)."""
-    form = FeixeDataSheetForm(initial=_initial_from_defaults())
+    """Tela do data sheet com form + painel de resultados (recálculo HTMX).
+
+    Aceita `?tipo=TUBO RETO|TUBO U` (vindo de tema_entry) para pré-selecionar o tipo
+    de feixe reto × U — a escolha feita na tela de entrada TEMA é repassada adiante.
+    """
+    initial = _initial_from_defaults()
+    tipo = request.GET.get("tipo")
+    if tipo in dict(FeixeDataSheetForm.base_fields["tipo"].choices):
+        initial["tipo"] = tipo
+    form = FeixeDataSheetForm(initial=initial)
     ctx = {"form": form, "results": _preview(default_inputs())}
     return render(request, "quotations/data_sheet.html", ctx)
 

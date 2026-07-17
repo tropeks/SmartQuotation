@@ -1109,3 +1109,45 @@ class CustomerQuickCreateTests(TenantTestCase):
     def test_get_nao_permitido(self):
         resp = self.client.get(self.url)
         self.assertEqual(resp.status_code, 405)
+
+
+class TemaEntryRoutingTests(TenantTestCase):
+    """F4 — tela de entrada TEMA unificada (completo × feixe reto/U).
+
+    Cobre o ROTEAMENTO das duas escolhas da Fase 1: 'Equipamento completo'
+    (fluxo tema_templates) e 'Feixe tubular' com reto × U repassado ao data sheet.
+    Não custeia nada — só verifica navegação/estado.
+    """
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.user = User.objects.create_user(username="orc", password="senha-forte-123")
+        UserProfile.objects.create(user=self.user, full_name="Orc",
+                                   role=UserProfile.ROLE_ORCAMENTISTA)
+        self.client.force_login(self.user)
+
+    def test_entrada_oferece_completo_e_feixe(self):
+        r = self.client.get("/cotacoes/nova/tema/")
+        self.assertEqual(r.status_code, 200)
+        # Opção A: link para o fluxo de equipamento completo (tema_templates).
+        self.assertContains(r, "/tema/compor/")
+        # Opção B: escolha reto × U aponta para o data sheet do feixe com ?tipo=.
+        self.assertContains(r, "/cotacoes/nova/feixe/?tipo=TUBO%20RETO")
+        self.assertContains(r, "/cotacoes/nova/feixe/?tipo=TUBO%20U")
+
+    def test_feixe_reto_pre_seleciona_tipo(self):
+        r = self.client.get("/cotacoes/nova/feixe/", {"tipo": "TUBO RETO"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["form"].initial.get("tipo"), "TUBO RETO")
+
+    def test_feixe_u_pre_seleciona_tipo(self):
+        r = self.client.get("/cotacoes/nova/feixe/", {"tipo": "TUBO U"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["form"].initial.get("tipo"), "TUBO U")
+
+    def test_tipo_invalido_e_ignorado(self):
+        r = self.client.get("/cotacoes/nova/feixe/", {"tipo": "XPTO"})
+        self.assertEqual(r.status_code, 200)
+        self.assertNotEqual(r.context["form"].initial.get("tipo"), "XPTO")
