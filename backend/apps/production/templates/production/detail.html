@@ -119,6 +119,29 @@
 </section>
 {% endif %}
 
+{% if review_signal_flagged %}
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head">
+    <h3>Sinal de Revisão — ProcessParameter</h3>
+    <p class="g-note" style="margin:0">operações desta OF com desvio médio |Δhoras| acima de ±5% em observações fechadas (histórico entre OFs) — sugestão de revisar a física do parâmetro, nada é alterado automaticamente</p>
+  </header>
+  <div class="g-section-body" style="padding:0">
+    <table class="g-table">
+      <thead><tr><th>Operação</th><th class="num">Amostras</th><th class="num">Desvio médio abs.</th></tr></thead>
+      <tbody>
+        {% for row in review_signal_flagged %}
+        <tr>
+          <td class="mono">{{ row.operacao }}</td>
+          <td class="num mono">{{ row.count }}</td>
+          <td class="num mono"><span class="q-badge q-badge--over">{{ row.mean_abs_delta_pct|brl }}%</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>Plano de Inspeção e Testes (ITP)</h3></header>
   <div class="g-section-body" style="padding:0">
