@@ -6,7 +6,8 @@
 
 <form id="ds-form" hx-post="{% url 'quotations:recompute' %}" hx-target="#results"
       hx-trigger="change delay:250ms from:#ds-form, submit"
-      hx-swap="outerHTML">
+      hx-swap="outerHTML"
+      x-data="{ espelhoTipo: '{{ form.espelho_tipo.value|default_if_none:"FLUTUANTE" }}' }">
   {% csrf_token %}
 
   <section class="g-section">
@@ -34,9 +35,12 @@
   <section class="g-section">
     <header class="g-section-head"><h3>§3 · Espelhos</h3></header>
     <div class="g-section-body"><div class="g-form">
+      <div class="field col-3"><label>{{ form.espelho_tipo.label }}</label>{{ form.espelho_tipo }}</div>
       <div class="field col-3"><label>{{ form.espelho_material.label }}</label>{{ form.espelho_material }}</div>
       <div class="field col-3"><label>{{ form.espelho_od_mm.label }}</label>{{ form.espelho_od_mm }}</div>
-      <div class="field col-3"><label>{{ form.espelho_flutuante_od_mm.label }}</label>{{ form.espelho_flutuante_od_mm }}</div>
+      <div class="field col-3" :class="{ 'is-disabled': espelhoTipo === 'FIXO' }">
+        <label>{{ form.espelho_flutuante_od_mm.label }}</label>{{ form.espelho_flutuante_od_mm }}
+      </div>
       <div class="field col-3"><label>{{ form.espelho_esp_bruta_mm.label }}</label>{{ form.espelho_esp_bruta_mm }}</div>
     </div></div>
   </section>
@@ -49,11 +53,26 @@
       <div class="field col-2"><label>{{ form.chicana_esp_mm.label }}</label>{{ form.chicana_esp_mm }}</div>
       <div class="field col-3"><label>{{ form.chicana_cut_remaining_mm.label }}</label>{{ form.chicana_cut_remaining_mm }}</div>
       <div class="field col-2"><label>{{ form.tirante_qty.label }}</label>{{ form.tirante_qty }}</div>
+      <div class="field col-3"><label>{{ form.tirante_material.label }}</label>{{ form.tirante_material }}</div>
+      <div class="field col-3"><label>{{ form.tirante_comp_mm.label }}</label>{{ form.tirante_comp_mm }}</div>
     </div></div>
   </section>
 
   <section class="g-section">
-    <header class="g-section-head"><h3>§5 · Requisitos</h3></header>
+    <header class="g-section-head"><h3>§5 · União Tubo-Espelho, Selagem e Espaçadores</h3></header>
+    <div class="g-section-body"><div class="g-form">
+      <div class="field col-3"><label>{{ form.uniao_tubo_espelho.label }}</label>{{ form.uniao_tubo_espelho }}</div>
+      <div class="field col-2"><label>{{ form.num_grooves.label }}</label>{{ form.num_grooves }}</div>
+      <div class="field col-3"><label>{{ form.solda_selagem.label }}</label>{{ form.solda_selagem }}</div>
+      <div class="field col-4"><label>{{ form.n_barras_selagem_desliz.label }}</label>{{ form.n_barras_selagem_desliz }}</div>
+      <div class="field col-3"><label>{{ form.espacador_qty.label }}</label>{{ form.espacador_qty }}</div>
+      <div class="field col-3"><label>{{ form.espacador_material.label }}</label>{{ form.espacador_material }}</div>
+      <div class="field col-3"><label>{{ form.espacador_comp_mm.label }}</label>{{ form.espacador_comp_mm }}</div>
+    </div></div>
+  </section>
+
+  <section class="g-section">
+    <header class="g-section-head"><h3>§6 · Requisitos</h3></header>
     <div class="g-section-body"><div class="g-form">
       <div class="field col-4"><label>{{ form.teste_hidrostatico.label }}</label>{{ form.teste_hidrostatico }}</div>
       <div class="field col-4"><label>{{ form.tratamento_termico.label }}</label>{{ form.tratamento_termico }}</div>
@@ -62,7 +81,7 @@
   </section>
 
   <section class="g-section">
-    <header class="g-section-head"><h3>§6 · Resultado</h3>
+    <header class="g-section-head"><h3>§7 · Resultado</h3>
       <button class="q-btn primary" type="button"
               hx-post="{% url 'quotations:create' %}" hx-include="#ds-form" hx-target="body" hx-push-url="true">
         Salvar Cotação

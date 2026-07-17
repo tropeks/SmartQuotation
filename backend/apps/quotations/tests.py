@@ -781,6 +781,42 @@ class DataSheetViewTests(TenantTestCase):
         self.assertContains(detalhe, q.number)
         self.assertContains(detalhe, "Estrutura Analítica")
 
+    def test_espelho_fixo_espelha_od_do_flutuante_no_od_do_fixo(self):
+        """F8a: espelho_tipo='FIXO' desabilita espelho_flutuante_od_mm no front (o campo
+        não chega no POST, como um <input disabled>) — o form deve completar o OD do
+        flutuante com o OD do fixo (não há cabeçote flutuante distinto nessa construção)."""
+        data = self._form_data(espelho_tipo="FIXO", espelho_od_mm=500)
+        data.pop("espelho_flutuante_od_mm", None)
+        resp = self.client.post("/cotacoes/criar/", data)
+        self.assertEqual(resp.status_code, 302)
+        q = Quotation.objects.latest("created_at")
+        self.assertEqual(q.inputs["espelho_tipo"], "FIXO")
+        self.assertEqual(q.inputs["espelho_flutuante_od_mm"], 500.0)
+
+    def test_espelho_flutuante_default_quando_tipo_omitido(self):
+        """Sem espelho_tipo no POST (form legado/JS desabilitado), cai no default
+        'FLUTUANTE' e preserva o OD flutuante enviado."""
+        data = self._form_data()
+        data.pop("espelho_tipo", None)
+        resp = self.client.post("/cotacoes/criar/", data)
+        self.assertEqual(resp.status_code, 302)
+        q = Quotation.objects.latest("created_at")
+        self.assertEqual(q.inputs["espelho_tipo"], "FLUTUANTE")
+        self.assertEqual(q.inputs["espelho_flutuante_od_mm"], 412.0)
+
+    def test_espacadores_aceitos_e_alteram_o_recompute(self):
+        """F8a: espacador_qty/material/comp_mm são aceitos pelo form e realmente
+        alteram o custo (ESC-6a em pricing_engine/components.py usa esses inputs)."""
+        poucos = self.client.post(
+            "/cotacoes/recompute/", self._form_data(espacador_qty=2, espacador_comp_mm=6096)
+        )
+        muitos = self.client.post(
+            "/cotacoes/recompute/", self._form_data(espacador_qty=60, espacador_comp_mm=6096)
+        )
+        self.assertEqual(poucos.status_code, 200)
+        self.assertEqual(muitos.status_code, 200)
+        self.assertNotEqual(poucos.content, muitos.content)
+
     def test_login_required(self):
         self.client.logout()
         resp = self.client.get("/cotacoes/nova/feixe/")
