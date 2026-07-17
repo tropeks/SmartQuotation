@@ -822,6 +822,114 @@ class HourVarianceUITests(TenantTestCase):
         self.assertLess(content.index("OP-GRANDE"), content.index("OP-PEQUENO"))
 
 
+class HourVarianceToleranceTests(TenantTestCase):
+    """SQ-COST-5: tolerância/semáforo de ±5% sobre ProductionObservation.delta_horas_pct.
+
+    Observações são criadas diretamente (mesmo padrão de HourVarianceUITests) para testar
+    só a classificação/apresentação — não a computação de delta_horas_pct (SQ-COST-3,
+    não tocado aqui).
+    """
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="eng_tol")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng Tol", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-92", crea_state="SP",
+        )
+        self.q = create_feixe_quotation(self.customer, "Feixe Tol")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.user)
+
+    def _observation(self, operacao, delta_horas_pct):
+        from apps.production.models import ProductionObservation
+        return ProductionObservation.objects.create(
+            operacao=operacao, ordem=self.of,
+            estimated_custo=Decimal("100.00"), actual_hh=Decimal("10.00"),
+            observed_rate=Decimal("10.00"), estimated_hh=Decimal("10.00"),
+            delta_horas_pct=delta_horas_pct,
+        )
+
+    def _get_detail(self):
+        self.client.force_login(self.user)
+        return self.client.get(f"/ofs/{self.of.pk}/")
+
+    def test_delta_0_01_pct_dentro_da_tolerancia_nao_alerta(self):
+        self._observation("OP-TOL-A", Decimal("0.01"))
+
+        response = self._get_detail()
+
+        self.assertContains(response, "dentro do esperado")
+        self.assertNotContains(response, "q-badge--over")
+        self.assertNotContains(response, "q-badge--under")
+
+    def test_delta_exatamente_5_pct_dentro_da_tolerancia(self):
+        self._observation("OP-TOL-B", Decimal("5.00"))
+
+        response = self._get_detail()
+
+        self.assertContains(response, "dentro do esperado")
+        self.assertNotContains(response, "q-badge--over")
+
+    def test_delta_exatamente_minus_5_pct_dentro_da_tolerancia(self):
+        self._observation("OP-TOL-C", Decimal("-5.00"))
+
+        response = self._get_detail()
+
+        self.assertContains(response, "dentro do esperado")
+        self.assertNotContains(response, "q-badge--under")
+
+    def test_delta_5_01_pct_acima_da_tolerancia(self):
+        self._observation("OP-TOL-D", Decimal("5.01"))
+
+        response = self._get_detail()
+
+        self.assertContains(response, "q-badge--over")
+        self.assertContains(response, "acima da tolerância")
+
+    def test_delta_minus_5_01_pct_abaixo_da_tolerancia(self):
+        self._observation("OP-TOL-E", Decimal("-5.01"))
+
+        response = self._get_detail()
+
+        self.assertContains(response, "q-badge--under")
+        self.assertContains(response, "abaixo da tolerância")
+
+    def test_delta_none_continua_sem_base(self):
+        self._observation("OP-TOL-F", None)
+
+        response = self._get_detail()
+
+        self.assertContains(response, "q-badge--na")
+        self.assertContains(response, "sem base")
+
+    def test_ui_menciona_tolerancia_de_5_porcento(self):
+        self._observation("OP-TOL-G", Decimal("1.00"))
+
+        response = self._get_detail()
+
+        self.assertContains(response, "±5%")
+
+    def test_model_hours_variance_status_classifica_corretamente(self):
+        from apps.production.models import ProductionObservation
+
+        casos = [
+            (Decimal("0.01"), "dentro"),
+            (Decimal("5.00"), "dentro"),
+            (Decimal("-5.00"), "dentro"),
+            (Decimal("5.01"), "acima"),
+            (Decimal("-5.01"), "abaixo"),
+            (None, "sem_base"),
+        ]
+        for delta, esperado in casos:
+            obs = ProductionObservation(delta_horas_pct=delta)
+            self.assertEqual(
+                obs.hours_variance_status, esperado,
+                msg=f"delta={delta} esperava {esperado}",
+            )
+
+
 class ProductionObservationAdminTests(TenantTestCase):
     """SQ-COST-4: admin somente-leitura para ProductionObservation (padrão de
     apps.integrations.sap_b1.admin.SapB1ReadOnlyAdmin: sem add/delete, todos os campos
