@@ -8,7 +8,7 @@ em versão exata + hash sha256).
 |---|---|---|
 | `base.txt` | fonte — deps da app | você edita |
 | `base.lock` | lock com hashes | `backend/Dockerfile` (imagem de produção) |
-| `ci.txt` | fonte — subconjunto sem weasyprint/docxtpl (precisam de libs de sistema) | você edita |
+| `ci.txt` | fonte — subconjunto sem docxtpl; inclui weasyprint (o CI instala as libs de pango) | você edita |
 | `ci.lock` | lock com hashes | `.github/workflows/ci.yml` |
 | `development.txt` | `-r base.txt` + pytest/ruff | venv local |
 

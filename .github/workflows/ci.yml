@@ -90,9 +90,18 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements/ci.lock
+      # WeasyPrint liga em pango/gobject via ctypes em tempo de import. Sem estas libs
+      # ele não importa, os testes de PDF voltam a virar skip silencioso e a suíte fica
+      # verde sem exercitar a geração de proposta.
+      - name: Instalar libs de sistema do WeasyPrint
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0
       - name: Instalar deps de CI
         run: pip install --require-hashes -r requirements/ci.lock
-      - name: Rodar a suite (TenantTestCase; PDF via chrome é skip no CI)
+      # Guarda o guard: se o WeasyPrint parar de importar, queremos falha ruidosa aqui e
+      # não 3 testes silenciosamente pulados lá embaixo.
+      - name: Verificar que há backend de PDF
+        run: python -c "import weasyprint; print('weasyprint', weasyprint.__version__)"
+      - name: Rodar a suite (TenantTestCase; PDF via WeasyPrint)
         env:
           DJANGO_SETTINGS_MODULE: smartquotation.settings.development
           POSTGRES_HOST: localhost

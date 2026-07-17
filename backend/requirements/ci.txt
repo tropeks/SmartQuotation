@@ -1,4 +1,7 @@
-# Deps para CI (Django check) — sem weasyprint/docxtpl (precisam de libs de sistema; vão no Docker)
+# Deps para CI (Django check + suíte). docxtpl fica fora (só o Docker gera .docx via template).
+# weasyprint ENTRA: sem um backend de PDF, os 3 testes de geração de proposta viravam skip
+# silencioso e o caminho de PDF não era exercitado por ninguém. Precisa das libs de pango
+# (ver o passo "Instalar libs de sistema do WeasyPrint" em .github/workflows/ci.yml).
 Django==5.2.8
 djangorestframework==3.16
 django-tenants>=3.5,<4.0
@@ -13,5 +16,7 @@ requests==2.32.4
 argon2-cffi==23.1
 django-axes==7.0.1
 python-docx>=1.1
+# Mesmo range de base.txt — o lock é quem fixa a versão exata (69.0 nos dois).
+weasyprint>=62.0
 # static files: WhiteNoiseMiddleware é carregado em settings/base.py (todos os ambientes)
 whitenoise>=6.6
