@@ -318,9 +318,19 @@ def _close_out_observations(of):
         if actual_hh <= 0:
             continue  # leniente: sem apontamento / 0 horas -> sem observação (evita div/0)
         observed_rate = (Decimal(op.custo) / Decimal(actual_hh)).quantize(Decimal("0.01"))
+        # SQ-COST-3: snapshot de horas orçadas (ProcessParameter) para separar erro de horas
+        # (estimativa física) de erro de R$/h (Rate) — ver docs/specs/sq-cost-1... Seção 6.
+        # estimated_hh=0 é legítimo (operação de valor fixo, wbs.custo_fixo) -> delta fica None.
+        estimated_hh = Decimal(op.horas_hh)
+        delta_horas_pct = None
+        if estimated_hh > 0:
+            delta_horas_pct = (
+                (Decimal(actual_hh) - estimated_hh) / estimated_hh * Decimal("100")
+            ).quantize(Decimal("0.01"))
         ProductionObservation.objects.create(
             operacao=op.codigo_op, ordem=of, of_operation=op,
             estimated_custo=op.custo, actual_hh=actual_hh, observed_rate=observed_rate,
+            estimated_hh=estimated_hh, delta_horas_pct=delta_horas_pct,
         )
         _update_actual_rate(op.codigo_op, observed_rate)
 

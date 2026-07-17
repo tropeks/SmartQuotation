@@ -979,6 +979,104 @@ class FechamentoExtrasTests(TenantTestCase):
         self.assertEqual(ProductionObservation.objects.filter(ordem=of).count(), count_before)
 
 
+class HorasDecompositionTests(TenantTestCase):
+    """SQ-COST-3: decomposição de horas orçadas (estimated_hh) vs reais (actual_hh)."""
+
+    def setUp(self):
+        from datetime import date
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.user = User.objects.create_user(username="op_hd")
+        self.engineer = UserProfile.objects.create(
+            user=User.objects.create_user(username="eng_hd"), full_name="Eng",
+            role="engenheiro", crea_number="CREA-10", crea_state="SP")
+        self.today = date.today()
+
+    def _of_em_producao(self, titulo):
+        q = create_feixe_quotation(self.customer, titulo)
+        approve_quotation(q, self.engineer)
+        of = services.convert_quotation_to_of(q, created_by=self.user)
+        services.liberar(of, by=self.user)
+        services.iniciar_producao(of, by=self.user)
+        return of
+
+    def test_fechamento_grava_estimated_hh_do_ofoperation(self):
+        """A observação de fechamento snapshota estimated_hh de OFOperation.horas_hh."""
+        from decimal import Decimal
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe HD1")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0, horas_hh__gt=0).first()
+        self.assertIsNotNone(op, "Precisa de uma operação com horas_hh>0 para este teste")
+        services.log_production_entry(op, self.user, Decimal("10"), Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        obs = ProductionObservation.objects.get(ordem=of, operacao=op.codigo_op)
+        self.assertEqual(obs.estimated_hh, op.horas_hh)
+
+    def test_delta_horas_pct_positivo_quando_real_maior_que_estimado(self):
+        """actual_hh > estimated_hh -> delta_horas_pct > 0 (estourou horas)."""
+        from decimal import Decimal
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe HD2")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0, horas_hh__gt=0).first()
+        self.assertIsNotNone(op)
+        actual_hh = op.horas_hh * Decimal("2")  # dobro do estimado
+        services.log_production_entry(op, self.user, actual_hh, Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        obs = ProductionObservation.objects.get(ordem=of, operacao=op.codigo_op)
+        expected = ((actual_hh - op.horas_hh) / op.horas_hh * 100).quantize(Decimal("0.01"))
+        self.assertEqual(obs.delta_horas_pct, expected)
+        self.assertGreater(obs.delta_horas_pct, 0)
+
+    def test_delta_horas_pct_negativo_quando_real_menor_que_estimado(self):
+        """actual_hh < estimated_hh -> delta_horas_pct < 0 (folga de horas)."""
+        from decimal import Decimal
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe HD3")
+        op = OFOperation.objects.filter(
+            item__ordem=of, custo__gt=0, horas_hh__gt=Decimal("1")
+        ).first()
+        self.assertIsNotNone(op)
+        actual_hh = (op.horas_hh / Decimal("2")).quantize(Decimal("0.01"))
+        self.assertGreater(actual_hh, 0)
+        services.log_production_entry(op, self.user, actual_hh, Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        obs = ProductionObservation.objects.get(ordem=of, operacao=op.codigo_op)
+        expected = ((actual_hh - op.horas_hh) / op.horas_hh * 100).quantize(Decimal("0.01"))
+        self.assertEqual(obs.delta_horas_pct, expected)
+        self.assertLess(obs.delta_horas_pct, 0)
+
+    def test_delta_horas_pct_none_quando_estimated_hh_zero_sem_crash(self):
+        """estimated_hh=0 (op. de valor fixo) não gera div/0; delta_horas_pct fica None."""
+        from decimal import Decimal
+        from apps.production.models import ProductionObservation
+        of = self._of_em_producao("Feixe HD4")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0).first()
+        self.assertIsNotNone(op)
+        # Simula operação de valor fixo: custo>0 mas sem horas estimadas.
+        op.horas_hh = Decimal("0")
+        op.save(update_fields=["horas_hh"])
+        services.log_production_entry(op, self.user, Decimal("5"), Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        obs = ProductionObservation.objects.get(ordem=of, operacao=op.codigo_op)
+        self.assertEqual(obs.estimated_hh, Decimal("0"))
+        self.assertIsNone(obs.delta_horas_pct)
+
+    def test_regressao_observed_rate_e_actual_rate_inalterados(self):
+        """Regressão: observed_rate/ActualRate (Welford) continuam funcionando após o campo aditivo."""
+        from decimal import Decimal
+        from apps.production.models import ActualRate, ProductionObservation
+        of = self._of_em_producao("Feixe HD5")
+        op = OFOperation.objects.filter(item__ordem=of, custo__gt=0).first()
+        self.assertIsNotNone(op)
+        services.log_production_entry(op, self.user, Decimal("10"), Decimal("0"), self.today)
+        services.concluir(of, by=self.user)
+        obs = ProductionObservation.objects.get(ordem=of, operacao=op.codigo_op)
+        expected_rate = (op.custo / Decimal("10")).quantize(Decimal("0.01"))
+        self.assertEqual(obs.observed_rate, expected_rate)
+        ar = ActualRate.objects.get(operacao=op.codigo_op)
+        self.assertEqual(ar.sample_count, 1)
+        self.assertAlmostEqual(float(ar.mean_rate), float(expected_rate), places=2)
+
+
 class ApontamentoValidacaoViewTests(TenantTestCase):
     """Testes de validação de input na view de apontamento."""
 
