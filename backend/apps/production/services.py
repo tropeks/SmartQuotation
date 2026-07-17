@@ -398,10 +398,17 @@ def production_review_signal():
     return ProductionObservation.objects.review_signal()
 
 
-def processparameter_suggestion():
+def processparameter_suggestion(operacoes=None):
     """SQ-COST-7: sugestão somente-leitura de novo valor de ProcessParameter (física →
     horas) para operações classificadas 'review_recommended' pelo sinal SQ-COST-6
     (production_review_signal/ProductionObservationManager.flagged_for_review).
+
+    `operacoes`: iterable opcional de codigo_op para escopar o cálculo (SQ-COST-8
+    achado 1) — quando informado, operações flagged fora do conjunto são puladas ANTES
+    de disparar as queries de médias/mapeamento de ProcessParameter, evitando trabalho
+    desperdiçado para linhas que o chamador nem vai usar (ex.: apps/production/views.py
+    escopa à roteiro da OF exibida). None (default) preserva o comportamento anterior:
+    computa para todas as operações flagged.
 
     Para cada operação flagged, usa as MESMAS observações fechadas (delta_horas_pct
     != None) do sinal para calcular:
@@ -443,6 +450,8 @@ def processparameter_suggestion():
     suggestions = []
     for row in ProductionObservation.objects.flagged_for_review():
         operacao = row["operacao"]
+        if operacoes is not None and operacao not in operacoes:
+            continue
         obs = ProductionObservation.objects.filter(
             operacao=operacao, delta_horas_pct__isnull=False,
         )

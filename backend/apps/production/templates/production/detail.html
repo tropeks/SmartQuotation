@@ -81,17 +81,17 @@
   </div>
 </section>
 
-{% if of.hour_variance_observations %}
+{% if hour_variance_observations %}
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head">
     <h3>Desvios de Horas (Orçado × Real)</h3>
-    <p class="g-note" style="margin:0">tolerância ±5%</p>
+    <p class="g-note" style="margin:0">tolerância {{ tolerancia_horas_pct }}</p>
   </header>
   <div class="g-section-body" style="padding:0">
     <table class="g-table">
       <thead><tr><th>Operação</th><th class="num">Horas est. (HH)</th><th class="num">Horas reais (HH)</th><th class="num">Desvio</th></tr></thead>
       <tbody>
-        {% for obs in of.hour_variance_observations %}
+        {% for obs in hour_variance_observations %}
         <tr>
           <td class="mono">{{ obs.operacao }}</td>
           <td class="num mono">{{ obs.estimated_hh|brl }}</td>
@@ -123,7 +123,7 @@
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head">
     <h3>Sinal de Revisão — ProcessParameter</h3>
-    <p class="g-note" style="margin:0">operações desta OF com desvio médio |Δhoras| acima de ±5% em observações fechadas (histórico entre OFs) — sugestão de revisar a física do parâmetro, nada é alterado automaticamente</p>
+    <p class="g-note" style="margin:0">operações desta OF com desvio médio |Δhoras| acima da tolerância ({{ tolerancia_horas_pct }}) em observações fechadas (histórico entre OFs) — sugestão de revisar a física do parâmetro, nada é alterado automaticamente</p>
   </header>
   <div class="g-section-body" style="padding:0">
     <table class="g-table">

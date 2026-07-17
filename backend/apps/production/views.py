@@ -45,9 +45,13 @@ def ordem_detail(request, pk):
     )
     # SQ-COST-7: proposta somente-leitura de novo ProcessParameter para as mesmas
     # operações flagged — anexada por operação ao sinal acima (mesmo escopo/filtro
-    # desta OF). Não recalcula/altera nada; ver services.processparameter_suggestion.
+    # desta OF). Escopada a of_operacao_codes (SQ-COST-8 achado 1) para não computar
+    # médias/mapeamento de ProcessParameter para operações flagged de outras OFs que
+    # nunca seriam renderizadas aqui. Não recalcula/altera nada; ver
+    # services.processparameter_suggestion.
     suggestion_by_op = {
-        row["operacao"]: row for row in services.processparameter_suggestion()
+        row["operacao"]: row
+        for row in services.processparameter_suggestion(operacoes=of_operacao_codes)
     }
     review_signal_flagged = [
         {**row, "suggestion": suggestion_by_op.get(row["operacao"])}
@@ -55,6 +59,13 @@ def ordem_detail(request, pk):
         if row["status"] == ProductionObservation.STATUS_REVIEW_RECOMMENDED
         and row["operacao"] in of_operacao_codes
     ]
+    # SQ-COST-4: hour_variance_observations é uma property que ordena/itera a relação
+    # observations a cada chamada — computada uma única vez aqui (em vez de 2x no
+    # template, num {% if %} e num {% for %} separados) e injetada pronta no contexto.
+    hour_variance_observations = of.hour_variance_observations
+    # SQ-COST-5: string de exibição da tolerância derivada de TOLERANCIA_HORAS_PCT, para
+    # que copy do template e lógica de classificação não possam divergir.
+    tolerancia_horas_pct = f"±{ProductionObservation.TOLERANCIA_HORAS_PCT:.0f}%"
     return render(request, "production/detail.html", {
         "of": of,
         "itens": itens,
@@ -62,6 +73,8 @@ def ordem_detail(request, pk):
         "inspection_items": inspection_items,
         "can_manage_itp": user_role(request.user) in _ITP_ROLES,
         "review_signal_flagged": review_signal_flagged,
+        "hour_variance_observations": hour_variance_observations,
+        "tolerancia_horas_pct": tolerancia_horas_pct,
     })
 
 
