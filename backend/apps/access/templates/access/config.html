@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Níveis de Acesso{% endblock %}
+{% block content %}
+<div class="eyebrow">ADM · Tenant</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <div>
+    <h1 class="q-number">NÍVEIS DE ACESSO</h1>
+    <p style="max-width:72ch;color:var(--g-gray-1);margin:8px 0 0">
+      Configure quais papéis podem cada capability. As mudanças valem imediatamente
+      para todo o tenant (enforcement fail-closed). Marque/desmarque para conceder/revogar.
+    </p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    {% for role in roles %}<span class="q-badge">{{ role.label }}</span>{% endfor %}
+  </div>
+</div>
+
+<div id="access-config"
+     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+     style="margin-top:16px">
+  {% for group in groups %}
+    <section class="g-section" style="margin-bottom:16px">
+      <header class="g-section-head">
+        <h3>{{ group.label }}</h3>
+        <span class="g-muted">{{ group.rows|length }} capabilit{{ group.rows|length|pluralize:"y,ies" }}</span>
+      </header>
+      <div class="g-section-body table-scroll">
+        <table class="g-table">
+          <thead>
+            <tr>
+              <th style="text-align:left">Capability</th>
+              {% for role in roles %}<th style="text-align:center">{{ role.label }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for cap in group.rows %}
+              {% include "access/_config_row.html" with cap=cap %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

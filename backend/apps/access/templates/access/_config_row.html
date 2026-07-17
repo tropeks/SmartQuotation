@@ -1,0 +1,34 @@
+{% comment %}
+Parcial de UMA linha da grade papel×capability (capability + 5 células de papel).
+Re-renderizada pelo toggle_permission (hx-swap=outerHTML no <tr id="cap-row-...">).
+`cap`: dict de _capability_row (code, row_id, label, description, is_dangerous, cells, error).
+{% endcomment %}
+<tr id="cap-row-{{ cap.row_id }}">
+  <th scope="row" style="text-align:left;font-weight:500">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span>{{ cap.label }}</span>
+      {% if cap.is_dangerous %}
+        <span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">sensível</span>
+      {% endif %}
+    </div>
+    <span class="g-muted" style="display:block;font-weight:400">{{ cap.description }}</span>
+    <code class="g-muted" style="font-size:.75em">{{ cap.code }}</code>
+    {% if cap.error %}
+      <div role="alert" style="margin-top:4px;color:var(--g-red)">{{ cap.error }}</div>
+    {% endif %}
+  </th>
+  {% for cell in cap.cells %}
+    <td style="text-align:center">
+      <input type="checkbox" role="switch"
+             aria-label="{{ cap.label }} — {{ cell.role }}"
+             x-data
+             @change="$el.blur()"
+             hx-post="{% url 'access:toggle_permission' %}"
+             hx-vals='{"role": "{{ cell.role }}", "capability": "{{ cap.code }}"}'
+             hx-target="#cap-row-{{ cap.row_id }}"
+             hx-swap="outerHTML"
+             hx-trigger="change"
+             {% if cell.allowed %}checked{% endif %}>
+    </td>
+  {% endfor %}
+</tr>
