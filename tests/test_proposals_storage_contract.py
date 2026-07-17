@@ -221,6 +221,55 @@ def test_production_rejects_dev_encryption_key():
     )
 
 
+def test_production_requires_secret_key_env():
+    """production.py must re-source SECRET_KEY with no default. base.py falls back to
+    the committed literal "dev-insecure-change-me", so without this the app boots
+    silently on a public signing key whenever DJANGO_SECRET_KEY is missing from the
+    deploy env — while FIELD_ENCRYPTION_KEY, the sibling secret, refuses to boot."""
+    text = _text(PRODUCTION_PY)
+    assert 'SECRET_KEY = env("DJANGO_SECRET_KEY")' in text, (
+        'production.py must set SECRET_KEY = env("DJANGO_SECRET_KEY") with NO default, '
+        "so a missing env var raises instead of falling back to base.py's dev literal."
+    )
+
+
+def test_production_rejects_dev_secret_key():
+    """production.py must refuse to boot if SECRET_KEY equals the committed dev default."""
+    text = _text(PRODUCTION_PY)
+    assert "dev-insecure-change-me" in text and "ImproperlyConfigured" in text, (
+        "production.py must raise ImproperlyConfigured when DJANGO_SECRET_KEY matches the "
+        "committed development default. Otherwise a copy-pasted dev key silently ships."
+    )
+
+
+def test_production_rejects_every_committed_secret_key_placeholder():
+    """Guarding only base.py's default is theatre: CLAUDE.md tells you to
+    `cp backend/.env.example backend/.env`, and that file ships its OWN placeholder.
+    The env var IS set, so env() never raises — the app boots silently on a key that
+    is public in the repo. Every placeholder in every committed .env*.example must be
+    in production.py's rejected set."""
+    prod = _text(PRODUCTION_PY)
+    examples = sorted(ROOT.glob(".env*.example")) + sorted((ROOT / "backend").glob(".env*.example"))
+    assert examples, "no .env*.example files found — check the glob."
+    missing = []
+    for path in examples:
+        for line in _text(path).splitlines():
+            line = line.strip()
+            if not line.startswith("DJANGO_SECRET_KEY="):
+                continue
+            value = line.split("=", 1)[1].strip()
+            # Placeholders that can't parse as a usable key fail loudly on their own.
+            if not value or value.startswith("<"):
+                continue
+            if value not in prod:
+                missing.append(f"{path.relative_to(ROOT)} ships DJANGO_SECRET_KEY={value!r}")
+    assert not missing, (
+        "production.py must reject these committed placeholder secret keys, but does not:\n  "
+        + "\n  ".join(missing)
+        + "\nAdd them to _PUBLIC_SECRET_KEYS in backend/smartquotation/settings/production.py."
+    )
+
+
 def test_dockerignore_excludes_env_secrets():
     """A .dockerignore at the build-context root must exclude .env files so secrets are
     not baked into the image by `COPY backend/ .`."""
@@ -276,6 +325,9 @@ if __name__ == "__main__":
         test_production_use_s3_env_var_gates_s3_backend,
         test_production_filesystem_storage_is_fallback,
         test_production_rejects_dev_encryption_key,
+        test_production_requires_secret_key_env,
+        test_production_rejects_dev_secret_key,
+        test_production_rejects_every_committed_secret_key_placeholder,
         test_dockerignore_excludes_env_secrets,
         test_dockerfile_runs_as_non_root,
         test_prod_compose_requires_postgres_password,

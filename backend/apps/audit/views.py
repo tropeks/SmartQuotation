@@ -5,9 +5,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.models import UserProfile
-from apps.accounts.rbac import require_role
+from apps.accounts.rbac import require_role, user_role
 from apps.audit.services import approve_presencial, request_remote_approval
 from apps.production.services import is_convertible
+from apps.production.views import _OF_CONVERT_ROLES
 from apps.quotations.models import Quotation
 
 _WRITE_ROLES = (
@@ -65,5 +66,6 @@ def convertibility_panel(request, pk):
             "q": quotation,
             "has_active_of": quotation.ordens_fabricacao.exclude(status="cancelada").exists(),
             "is_convertible": is_convertible(quotation),
+            "can_convert": user_role(request.user) in _OF_CONVERT_ROLES,
         },
     )

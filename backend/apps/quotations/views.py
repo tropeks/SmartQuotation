@@ -299,12 +299,14 @@ def quotation_detail(request, pk):
     ).exclude(crea_number="").select_related("user")
     pending_remote_request = q.approval_requests.filter(status=ApprovalRequest.STATUS_PENDING).first()
     from apps.production.services import is_convertible
+    from apps.production.views import _OF_CONVERT_ROLES
     return render(request, "quotations/detail.html",
                   {
                       "q": q,
                       "itens": itens,
                       "has_active_of": has_active_of,
                       "is_convertible": is_convertible(q),
+                      "can_convert": user_role(request.user) in _OF_CONVERT_ROLES,
                       "approval_engineers": approval_engineers,
                       "pending_remote_request": pending_remote_request,
                       "status_options": _status_options(),

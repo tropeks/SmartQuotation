@@ -691,6 +691,96 @@ class ApontamentoViewTests(TenantTestCase):
         self.assertFalse(ProductionEntry.objects.filter(of_operation=self.op).exists())
 
 
+class OFAuthorizationViewTests(TenantTestCase):
+    """
+    Autorização das views de conversão e transição de OF.
+
+    Regressão do achado /cso 2026-07-17: ambas carregavam só @login_required, então
+    o viewer (papel dedicado de somente-leitura) conseguia cancelar OF — estado
+    terminal — e converter cotação em OF, disparando os exports de ERP e, via
+    `concluir`, a emissão de NF-e. Não há backstop em services.py: ele valida a
+    máquina de estados e as pré-condições de negócio, nunca o papel do chamador.
+    """
+
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.eng_user = User.objects.create_user(username="eng_authz", password="x")
+        self.engineer = UserProfile.objects.create(
+            user=self.eng_user, full_name="Eng Authz", role=UserProfile.ROLE_ENGENHEIRO,
+            crea_number="CREA-77", crea_state="SP",
+        )
+        self.q = create_feixe_quotation(self.customer, "Feixe Authz")
+        approve_quotation(self.q, self.engineer)
+        self.of = services.convert_quotation_to_of(self.q, created_by=self.eng_user)
+
+    def _profile(self, username, role):
+        user = User.objects.create_user(username=username, password="x")
+        UserProfile.objects.create(user=user, full_name=username, role=role)
+        return user
+
+    def test_transicao_bloqueia_viewer(self):
+        """Viewer é somente-leitura: cancelar é terminal e irreversível pela app."""
+        self.client.force_login(self._profile("viewer_cancel", UserProfile.ROLE_VIEWER))
+        resp = self.client.post(f"/ofs/{self.of.pk}/transicao/", {"action": "cancelar"})
+        self.assertEqual(resp.status_code, 403)
+        self.of.refresh_from_db()
+        self.assertEqual(self.of.status, STATUS_ABERTA)
+
+    def test_transicao_bloqueia_orcamentista(self):
+        self.client.force_login(self._profile("orc_transicao", UserProfile.ROLE_ORCAMENTISTA))
+        resp = self.client.post(f"/ofs/{self.of.pk}/transicao/", {"action": "liberar"})
+        self.assertEqual(resp.status_code, 403)
+        self.of.refresh_from_db()
+        self.assertEqual(self.of.status, STATUS_ABERTA)
+
+    def test_transicao_permite_engenheiro(self):
+        self.client.force_login(self.eng_user)
+        resp = self.client.post(f"/ofs/{self.of.pk}/transicao/", {"action": "liberar"})
+        self.assertEqual(resp.status_code, 302)
+        self.of.refresh_from_db()
+        self.assertEqual(self.of.status, STATUS_LIBERADA)
+
+    def test_converter_bloqueia_viewer(self):
+        q2 = create_feixe_quotation(self.customer, "Feixe Conv Viewer")
+        approve_quotation(q2, self.engineer)
+        self.client.force_login(self._profile("viewer_conv", UserProfile.ROLE_VIEWER))
+        resp = self.client.post(f"/cotacoes/{q2.pk}/converter-of/")
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(q2.ordens_fabricacao.exists())
+
+    def test_converter_bloqueia_orcamentista(self):
+        """Orçamentista monta a cotação mas não lança manufatura no ERP."""
+        q2 = create_feixe_quotation(self.customer, "Feixe Conv Orc")
+        approve_quotation(q2, self.engineer)
+        self.client.force_login(self._profile("orc_conv", UserProfile.ROLE_ORCAMENTISTA))
+        resp = self.client.post(f"/cotacoes/{q2.pk}/converter-of/")
+        self.assertEqual(resp.status_code, 403)
+        self.assertFalse(q2.ordens_fabricacao.exists())
+
+    def test_converter_permite_gestor_comercial(self):
+        q2 = create_feixe_quotation(self.customer, "Feixe Conv Gestor")
+        approve_quotation(q2, self.engineer)
+        self.client.force_login(self._profile("gestor_conv", UserProfile.ROLE_GESTOR_COMERCIAL))
+        resp = self.client.post(f"/cotacoes/{q2.pk}/converter-of/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(q2.ordens_fabricacao.exists())
+
+    def test_detalhe_nao_renderiza_acoes_para_viewer(self):
+        """O botão 'Cancelar OF' era gateado por status, não por papel."""
+        self.client.force_login(self._profile("viewer_detail", UserProfile.ROLE_VIEWER))
+        resp = self.client.get(f"/ofs/{self.of.pk}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context["can_manage_of"])
+        self.assertNotContains(resp, "Cancelar OF")
+
+    def test_detalhe_renderiza_acoes_para_engenheiro(self):
+        self.client.force_login(self.eng_user)
+        resp = self.client.get(f"/ofs/{self.of.pk}/")
+        self.assertTrue(resp.context["can_manage_of"])
+        self.assertContains(resp, "Cancelar OF")
+
+
 class OrdemFabricacaoDetailViewTests(TenantTestCase):
     def setUp(self):
         self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()

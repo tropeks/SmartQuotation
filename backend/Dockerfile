@@ -1,4 +1,8 @@
-FROM python:3.12-slim
+# Pinada por digest, não por tag: `python:3.12-slim` é mutável e o mesmo Dockerfile
+# renderia imagens diferentes ao longo do tempo, sem forma de reconstruir o que uma
+# imagem antiga continha durante resposta a incidente. Para atualizar:
+#   docker pull python:3.12-slim && docker inspect python:3.12-slim --format '{{index .RepoDigests 0}}'
+FROM python:3.12-slim@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -19,7 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY backend/requirements/ requirements/
-RUN pip install --no-cache-dir -r requirements/base.txt
+# Instala do LOCK, não do .txt: base.lock trava toda a árvore (diretas + transitivas)
+# em versões exatas com hash sha256, e --require-hashes recusa qualquer pacote que
+# não case. Sem isto, `docker build` resolve as deps na hora e um release upstream
+# comprometido entra direto na imagem de produção sem review e sem diff.
+# Regenerar após editar base.txt: ver requirements/README.md
+RUN pip install --no-cache-dir --require-hashes -r requirements/base.lock
 
 COPY backend/ .
 # pricing_engine is a pure-Python lib at the repo ROOT (sibling of backend/), not
