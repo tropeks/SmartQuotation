@@ -20,6 +20,19 @@
   </div>
 </header>
 
+{% if can_edit_knobs %}
+<form method="post" action="{% url 'engineering_params:import_knobs' %}"
+      enctype="multipart/form-data" hx-post="{% url 'engineering_params:import_knobs' %}"
+      hx-target="#knobs-form" hx-swap="outerHTML" hx-encoding="multipart/form-data"
+      style="margin-top:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  {% csrf_token %}
+  <label class="g-note" for="tpl-file">Importar template:</label>
+  <input id="tpl-file" class="q-input" type="file" name="template" accept="application/json,.json" required>
+  <button type="submit" class="q-btn ghost">Importar</button>
+  <span class="g-note">knob sensível vira proposta; livre aplica direto.</span>
+</form>
+{% endif %}
+
 <div style="margin-top:16px">
   {% include "engineering_params/_knobs_form.html" %}
 </div>

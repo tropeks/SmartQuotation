@@ -464,3 +464,29 @@ def export_knobs(request):
     resp = HttpResponse(payload, content_type="application/json")
     resp["Content-Disposition"] = f'attachment; filename="knobs_template_{tenant or "tenant"}.json"'
     return resp
+
+
+@_PODE_EDITAR_RATE
+@require_POST
+def import_knobs(request):
+    """Importa um golden template (upload JSON). Valida versão/kind; knob livre aplica direto,
+    knob sensível (perda/setup) vira proposta (F2). Não toca comercial/versionados (F3/C)."""
+    from apps.engineering_params import knob_template as kt
+
+    f = request.FILES.get("template")
+    if not f:
+        context = _knobs_context(request)
+        context["knob_error"] = "Selecione um arquivo de template (.json)."
+        return render(request, "engineering_params/_knobs_form.html", context)
+    try:
+        data, warnings = kt.parse_template(f.read())
+    except kt.TemplateError as exc:
+        context = _knobs_context(request)
+        context["knob_error"] = str(exc)
+        return render(request, "engineering_params/_knobs_form.html", context)
+
+    result = kt.import_knobs(request.user, data, request=request)
+    context = _knobs_context(request)          # recarrega (proposta sensível pode ter surgido)
+    context["import_result"] = result
+    context["import_warnings"] = warnings
+    return render(request, "engineering_params/_knobs_form.html", context)
