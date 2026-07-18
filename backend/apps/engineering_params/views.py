@@ -8,11 +8,13 @@ from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 
+from django.core.exceptions import PermissionDenied, ValidationError
 from apps.engineering_params.models import (
-    ProcessParameter, Rate, RateSuggestion, TenantParamConfig,
+    ProcessParameter, Rate, RateSuggestion, TenantParamConfig, KnobChangeProposal,
     _default_perda_por_familia, _default_setup_frac,
 )
 from apps.engineering_params import services
+from apps.engineering_params import knob_proposals as kp
 from apps.engineering_params.simulation import (
     simulate_process_parameter_change,
     simulate_rate_change,
@@ -34,6 +36,7 @@ _ROLES_EDITAM_RATE = {
 
 _PODE_ALTERAR_RATE = require_capability("rate.change")
 _PODE_EDITAR_RATE = require_capability("rate.edit")
+_PODE_APROVAR_KNOB = require_capability("knob.approve")
 
 
 def _calibration_context(active_tab):
@@ -317,18 +320,47 @@ def _knob_rows(values, defaults):
     return rows
 
 
-def _knobs_context():
+def _proposal_diff(proposal):
+    """Linhas de diff (grupo, key, before, after) da proposta pendente, p/ a UI."""
+    rows = []
+    labels = {"perda_por_familia": "Scrap por família", "setup_frac": "Setup por parâmetro"}
+    for field, diff in (proposal.payload or {}).items():
+        for key, after in (diff.get("after") or {}).items():
+            rows.append({
+                "grupo": labels.get(field, field), "key": key,
+                "before": (diff.get("before") or {}).get(key), "after": after,
+            })
+    return rows
+
+
+def _knobs_context(request):
     cfg = TenantParamConfig.get_solo()
-    return {
+    ctx = {
         "perda_rows": _knob_rows(cfg.perda_por_familia or {}, _default_perda_por_familia()),
         "setup_rows": _knob_rows(cfg.setup_frac or {}, _default_setup_frac()),
+        "can_edit_knobs": user_can(request.user, "rate.edit"),
+        "can_approve_knobs": user_can(request.user, "knob.approve"),
     }
+    pending = (KnobChangeProposal.objects
+               .filter(status=KnobChangeProposal.STATUS_PENDING)
+               .select_related("requested_by").order_by("-created_at").first())
+    if pending is not None:
+        is_requester = pending.requested_by_id == getattr(request.user, "pk", None)
+        # SoD na UI: o propositor só vê "Aprovar" se for o ÚNICO qualificado (escape auditado).
+        can_act = ctx["can_approve_knobs"] and (
+            not is_requester or not kp._other_qualified_exists(request.user))
+        ctx.update({
+            "pending_proposal": pending,
+            "pending_diff": _proposal_diff(pending),
+            "pending_is_requester": is_requester,
+            "pending_can_act": can_act,
+        })
+    return ctx
 
 
 @_PODE_ALTERAR_RATE
 def knobs(request):
-    context = _knobs_context()
-    context["can_edit_knobs"] = user_can(request.user, "rate.edit")
+    context = _knobs_context(request)
     template = (
         "engineering_params/_knobs_form.html"
         if request.headers.get("HX-Request") == "true"
@@ -353,39 +385,65 @@ def _parse_factor(raw_value):
 
 @_PODE_EDITAR_RATE
 @require_POST
-@transaction.atomic
 def save_knobs(request):
-    """Salva os knobs (perda_por_familia + setup_frac) do TenantParamConfig e audita o diff.
-    Só edita chaves JÁ existentes (a UI não cria/apaga famílias/parâmetros). Entrada inválida
-    ou vazia mantém o valor atual. Fora da faixa ±50% NÃO bloqueia (F1 = warn)."""
-    TenantParamConfig.get_solo()  # garante a linha singleton
-    cfg = TenantParamConfig.objects.select_for_update().get(pk=1)
-    before_perda = dict(cfg.perda_por_familia or {})
-    before_setup = dict(cfg.setup_frac or {})
-
-    def _apply(prefix, current):
-        novo = dict(current)
+    """F2: os knobs desta página são SENSÍVEIS (entram no cálculo) → toda mudança vira uma
+    PROPOSTA (dupla validação/SoD), NÃO aplica direto (muda o comportamento do F1). Monta o diff
+    (só chaves que mudaram vs o vigente) e cria a proposta; um 2º usuário (knob.approve) aprova."""
+    cfg = TenantParamConfig.get_solo()
+    after = {}
+    for field, prefix in (("perda_por_familia", "perda"), ("setup_frac", "setup")):
+        current = getattr(cfg, field) or {}
+        changed = {}
         for key in current:
             try:
                 parsed = _parse_factor(request.POST.get(f"{prefix}__{key}"))
             except ValueError:
-                continue  # mantém o valor atual em entrada inválida
-            if parsed is not None:
-                novo[key] = parsed
-        return novo
+                continue  # entrada inválida → ignora a chave
+            if parsed is not None and round(parsed, 9) != round(float(current[key]), 9):
+                changed[key] = parsed
+        if changed:
+            after[field] = changed
 
-    cfg.perda_por_familia = _apply("perda", before_perda)
-    cfg.setup_frac = _apply("setup", before_setup)
-    cfg.save(update_fields=["perda_por_familia", "setup_frac"])
-
-    if cfg.perda_por_familia != before_perda or cfg.setup_frac != before_setup:
-        log_access(request, "param_change", cfg, {
-            "knob": "config_engenharia_v2",
-            "anterior": {"perda_por_familia": before_perda, "setup_frac": before_setup},
-            "novo": {"perda_por_familia": cfg.perda_por_familia, "setup_frac": cfg.setup_frac},
-        })
-
-    context = _knobs_context()
+    context = _knobs_context(request)
     context["can_edit_knobs"] = True
-    context["saved"] = True
+    if not after:
+        context["knob_msg"] = "Nada alterado."
+        return render(request, "engineering_params/_knobs_form.html", context)
+    try:
+        kp.create_proposal(request.user, after)
+        context = _knobs_context(request)          # recarrega já com a proposta pendente
+        context["can_edit_knobs"] = True
+        context["proposal_created"] = True
+    except ValidationError as exc:
+        context["knob_error"] = "; ".join(getattr(exc, "messages", None) or [str(exc)])
+    return render(request, "engineering_params/_knobs_form.html", context)
+
+
+@_PODE_APROVAR_KNOB
+@require_POST
+def approve_knob(request, pk):
+    """Aprova (2ª validação) e aplica a proposta. Capability knob.approve no decorator; SoD e
+    staleness no serviço (erro renderizado inline, não 403)."""
+    extra = {}
+    try:
+        kp.approve_proposal(pk, request.user, request=request)
+        extra["proposal_applied"] = True
+    except KnobChangeProposal.DoesNotExist:
+        raise Http404()
+    except (PermissionDenied, ValidationError) as exc:
+        extra["knob_error"] = "; ".join(getattr(exc, "messages", None) or [str(exc)])
+    context = _knobs_context(request)
+    context.update(extra)
+    return render(request, "engineering_params/_knobs_form.html", context)
+
+
+@_PODE_APROVAR_KNOB
+@require_POST
+def reject_knob(request, pk):
+    try:
+        kp.reject_proposal(pk, request.user)
+    except KnobChangeProposal.DoesNotExist:
+        raise Http404()
+    context = _knobs_context(request)
+    context["proposal_rejected"] = True
     return render(request, "engineering_params/_knobs_form.html", context)

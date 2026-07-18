@@ -3,27 +3,82 @@
     <div>
       <h3>Knobs de custeio vigentes</h3>
       <p class="g-note" style="margin:4px 0 0">
-        Override do motor por tenant. Vazio/atual = mantém. Fora da faixa segura = aviso (não bloqueia).
+        Knobs sensíveis (entram no cálculo): toda mudança passa por <strong>dupla validação</strong>
+        — um propõe, outro aprova (SoD). Fora da faixa segura só avisa.
       </p>
     </div>
-    {% if saved %}<span class="g-note" style="color:var(--g-green);font-weight:var(--w-bold)">Salvo ✓</span>{% endif %}
+    <div>
+      {% if proposal_created %}<span class="g-note" style="color:var(--g-green);font-weight:var(--w-bold)">Proposta enviada para aprovação ✓</span>{% endif %}
+      {% if proposal_applied %}<span class="g-note" style="color:var(--g-green);font-weight:var(--w-bold)">Aprovada e aplicada ✓</span>{% endif %}
+      {% if proposal_rejected %}<span class="g-note" style="color:var(--g-gray-1);font-weight:var(--w-bold)">Proposta rejeitada</span>{% endif %}
+      {% if knob_msg %}<span class="g-note">{{ knob_msg }}</span>{% endif %}
+      {% if knob_error %}<span class="g-note" style="color:var(--g-red);font-weight:var(--w-bold)">{{ knob_error }}</span>{% endif %}
+    </div>
   </header>
 
-  {% if can_edit_knobs %}
-  <form method="post"
-        hx-post="{% url 'engineering_params:save_knobs' %}"
-        hx-target="#knobs-form"
-        hx-swap="outerHTML"
-        class="g-section-body" style="padding:0">
+  {% if pending_proposal %}
+  <div class="g-section-body" style="padding:0 0 16px">
+    <h4 style="margin:0 0 4px">Proposta pendente de aprovação</h4>
+    <p class="g-note" style="margin:0 0 8px">
+      Proposta #{{ pending_proposal.pk }} por
+      <strong>{{ pending_proposal.requested_by.get_username|default:"—" }}</strong>.
+      Aplicação exige um 2º aprovador (separação de funções).
+    </p>
+    <div class="list-table-wrap table-scroll">
+      <table class="g-table">
+        <thead>
+          <tr><th>Grupo</th><th>Item</th><th class="num">De</th><th class="num">Para</th></tr>
+        </thead>
+        <tbody>
+          {% for r in pending_diff %}
+          <tr>
+            <td class="id">{{ r.grupo }}</td>
+            <td>{{ r.key }}</td>
+            <td class="mono num">{{ r.before|default:"—" }}</td>
+            <td class="mono num" style="font-weight:var(--w-bold)">{{ r.after }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 0 0">
+      {% if pending_can_act %}
+      <form method="post" hx-post="{% url 'engineering_params:approve_knob' pending_proposal.pk %}"
+            hx-target="#knobs-form" hx-swap="outerHTML" style="margin:0">
+        {% csrf_token %}<button type="submit" class="q-btn primary">Aprovar e aplicar</button>
+      </form>
+      <form method="post" hx-post="{% url 'engineering_params:reject_knob' pending_proposal.pk %}"
+            hx-target="#knobs-form" hx-swap="outerHTML" style="margin:0">
+        {% csrf_token %}<button type="submit" class="q-btn ghost">Rejeitar</button>
+      </form>
+      {% elif pending_is_requester %}
+      <span class="g-note">Você propôs esta mudança — aguardando um 2º aprovador (SoD).</span>
+      {% else %}
+      <span class="g-note">Aguardando aprovação de um responsável.</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="g-section-body" style="padding:0">
+    <p class="g-note" style="padding:0 0 8px">
+      Valores vigentes (edição bloqueada enquanto há proposta pendente):
+    </p>
+    {% include "engineering_params/_knobs_tables.html" with can_edit_knobs=False %}
+  </div>
+
+  {% elif can_edit_knobs %}
+  <form method="post" hx-post="{% url 'engineering_params:save_knobs' %}"
+        hx-target="#knobs-form" hx-swap="outerHTML" class="g-section-body" style="padding:0">
     {% csrf_token %}
     {% include "engineering_params/_knobs_tables.html" %}
     <div style="display:flex;justify-content:flex-end;padding:16px 0">
-      <button type="submit" class="q-btn primary">Salvar knobs</button>
+      <button type="submit" class="q-btn primary">Enviar para aprovação</button>
     </div>
   </form>
+
   {% else %}
   <div class="g-section-body" style="padding:0">
-    {% include "engineering_params/_knobs_tables.html" %}
+    {% include "engineering_params/_knobs_tables.html" with can_edit_knobs=False %}
     <p class="g-note" style="padding:16px 0">Somente leitura.</p>
   </div>
   {% endif %}
