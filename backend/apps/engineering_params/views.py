@@ -8,7 +8,10 @@ from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 
-from apps.engineering_params.models import ProcessParameter, Rate, RateSuggestion
+from apps.engineering_params.models import (
+    ProcessParameter, Rate, RateSuggestion, TenantParamConfig,
+    _default_perda_por_familia, _default_setup_frac,
+)
 from apps.engineering_params import services
 from apps.engineering_params.simulation import (
     simulate_process_parameter_change,
@@ -286,3 +289,103 @@ def suggestion_dismiss(request, pk):
     s = get_object_or_404(RateSuggestion, pk=pk, status='pending')
     services.dismiss_suggestion(s.pk, request.user)
     return redirect('engineering_params:suggestions')
+
+
+# ── Config de Engenharia V2 / F1 (Bloco C): knobs configuráveis (scrap por família + setup
+# por parâmetro). Página própria, mesmo padrão da Calibração (POST cru + HTMX + log_access).
+# Faixa segura ±50% do default em modo WARN (avisa, não bloqueia — F1). Gate: rate.edit.
+
+_KNOB_WARN_FRAC = 0.5  # faixa segura = default × [1-0.5, 1+0.5] (±50%); fora → aviso, não bloqueia
+
+
+def _knob_rows(values, defaults):
+    """Linhas (key, value, default, faixa, fora_da_faixa) p/ a UI. 'fora' só avisa (warn)."""
+    rows = []
+    for key in sorted(values):
+        try:
+            val = float(values[key])
+        except (TypeError, ValueError):
+            continue
+        dflt = defaults.get(key)
+        lo = hi = None
+        fora = False
+        if dflt:
+            lo = round(dflt * (1 - _KNOB_WARN_FRAC), 4)
+            hi = round(dflt * (1 + _KNOB_WARN_FRAC), 4)
+            fora = val < lo or val > hi
+        rows.append({"key": key, "value": val, "default": dflt, "lo": lo, "hi": hi, "fora": fora})
+    return rows
+
+
+def _knobs_context():
+    cfg = TenantParamConfig.get_solo()
+    return {
+        "perda_rows": _knob_rows(cfg.perda_por_familia or {}, _default_perda_por_familia()),
+        "setup_rows": _knob_rows(cfg.setup_frac or {}, _default_setup_frac()),
+    }
+
+
+@_PODE_ALTERAR_RATE
+def knobs(request):
+    context = _knobs_context()
+    context["can_edit_knobs"] = user_can(request.user, "rate.edit")
+    template = (
+        "engineering_params/_knobs_form.html"
+        if request.headers.get("HX-Request") == "true"
+        else "engineering_params/knobs.html"
+    )
+    return render(request, template, context)
+
+
+def _parse_factor(raw_value):
+    """Fator > 0 (aceita vírgula). Vazio → None (não altera). Inválido → ValueError."""
+    normalized = (raw_value or "").strip().replace(",", ".")
+    if not normalized:
+        return None
+    try:
+        value = float(Decimal(normalized))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError("Valor inválido.") from exc
+    if value <= 0:
+        raise ValueError("Valor deve ser maior que zero.")
+    return value
+
+
+@_PODE_EDITAR_RATE
+@require_POST
+@transaction.atomic
+def save_knobs(request):
+    """Salva os knobs (perda_por_familia + setup_frac) do TenantParamConfig e audita o diff.
+    Só edita chaves JÁ existentes (a UI não cria/apaga famílias/parâmetros). Entrada inválida
+    ou vazia mantém o valor atual. Fora da faixa ±50% NÃO bloqueia (F1 = warn)."""
+    TenantParamConfig.get_solo()  # garante a linha singleton
+    cfg = TenantParamConfig.objects.select_for_update().get(pk=1)
+    before_perda = dict(cfg.perda_por_familia or {})
+    before_setup = dict(cfg.setup_frac or {})
+
+    def _apply(prefix, current):
+        novo = dict(current)
+        for key in current:
+            try:
+                parsed = _parse_factor(request.POST.get(f"{prefix}__{key}"))
+            except ValueError:
+                continue  # mantém o valor atual em entrada inválida
+            if parsed is not None:
+                novo[key] = parsed
+        return novo
+
+    cfg.perda_por_familia = _apply("perda", before_perda)
+    cfg.setup_frac = _apply("setup", before_setup)
+    cfg.save(update_fields=["perda_por_familia", "setup_frac"])
+
+    if cfg.perda_por_familia != before_perda or cfg.setup_frac != before_setup:
+        log_access(request, "param_change", cfg, {
+            "knob": "config_engenharia_v2",
+            "anterior": {"perda_por_familia": before_perda, "setup_frac": before_setup},
+            "novo": {"perda_por_familia": cfg.perda_por_familia, "setup_frac": cfg.setup_frac},
+        })
+
+    context = _knobs_context()
+    context["can_edit_knobs"] = True
+    context["saved"] = True
+    return render(request, "engineering_params/_knobs_form.html", context)

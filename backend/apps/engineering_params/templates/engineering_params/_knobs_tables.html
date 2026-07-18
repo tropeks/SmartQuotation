@@ -1,0 +1,72 @@
+{# Tabelas dos knobs de custeio. Espera perda_rows, setup_rows, can_edit_knobs no contexto. #}
+<div class="list-table-wrap table-scroll" style="margin-bottom:16px">
+  <table class="g-table">
+    <thead>
+      <tr>
+        <th>Família (scrap bruto/líquido)</th>
+        <th class="num">Fator</th>
+        <th class="num">Default</th>
+        <th class="num">Faixa segura (±50%)</th>
+        <th>Situação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in perda_rows %}
+      <tr>
+        <td class="id">{{ row.key }}</td>
+        <td>
+          {% if can_edit_knobs %}
+          <input class="q-input" type="text" name="perda__{{ row.key }}" value="{{ row.value }}"
+                 inputmode="decimal" aria-label="Scrap {{ row.key }}" style="width:96px">
+          {% else %}<span class="mono num">{{ row.value }}</span>{% endif %}
+        </td>
+        <td class="mono num">{{ row.default|default:"—" }}</td>
+        <td class="mono num">{% if row.lo %}{{ row.lo }} – {{ row.hi }}{% else %}—{% endif %}</td>
+        <td>
+          {% if row.fora %}<span class="g-note" style="color:var(--g-red);font-weight:var(--w-bold)"
+                title="Fora da faixa segura ±50% do default">fora da faixa</span>
+          {% else %}<span class="g-note">ok</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">Sem scrap configurado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="list-table-wrap table-scroll">
+  <table class="g-table">
+    <thead>
+      <tr>
+        <th>Parâmetro (setup fixo)</th>
+        <th class="num">Fração</th>
+        <th class="num">Default</th>
+        <th class="num">Faixa segura (±50%)</th>
+        <th>Situação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in setup_rows %}
+      <tr>
+        <td class="id">{{ row.key }}</td>
+        <td>
+          {% if can_edit_knobs %}
+          <input class="q-input" type="text" name="setup__{{ row.key }}" value="{{ row.value }}"
+                 inputmode="decimal" aria-label="Setup {{ row.key }}" style="width:96px">
+          {% else %}<span class="mono num">{{ row.value }}</span>{% endif %}
+        </td>
+        <td class="mono num">{{ row.default|default:"—" }}</td>
+        <td class="mono num">{% if row.lo %}{{ row.lo }} – {{ row.hi }}{% else %}—{% endif %}</td>
+        <td>
+          {% if row.fora %}<span class="g-note" style="color:var(--g-red);font-weight:var(--w-bold)"
+                title="Fora da faixa segura ±50% do default">fora da faixa</span>
+          {% else %}<span class="g-note">ok</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">Sem setup configurado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

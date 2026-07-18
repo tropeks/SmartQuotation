@@ -1,0 +1,30 @@
+<section class="g-section" id="knobs-form">
+  <header class="g-section-head" style="align-items:center;gap:12px;flex-wrap:wrap">
+    <div>
+      <h3>Knobs de custeio vigentes</h3>
+      <p class="g-note" style="margin:4px 0 0">
+        Override do motor por tenant. Vazio/atual = mantém. Fora da faixa segura = aviso (não bloqueia).
+      </p>
+    </div>
+    {% if saved %}<span class="g-note" style="color:var(--g-green);font-weight:var(--w-bold)">Salvo ✓</span>{% endif %}
+  </header>
+
+  {% if can_edit_knobs %}
+  <form method="post"
+        hx-post="{% url 'engineering_params:save_knobs' %}"
+        hx-target="#knobs-form"
+        hx-swap="outerHTML"
+        class="g-section-body" style="padding:0">
+    {% csrf_token %}
+    {% include "engineering_params/_knobs_tables.html" %}
+    <div style="display:flex;justify-content:flex-end;padding:16px 0">
+      <button type="submit" class="q-btn primary">Salvar knobs</button>
+    </div>
+  </form>
+  {% else %}
+  <div class="g-section-body" style="padding:0">
+    {% include "engineering_params/_knobs_tables.html" %}
+    <p class="g-note" style="padding:16px 0">Somente leitura.</p>
+  </div>
+  {% endif %}
+</section>
