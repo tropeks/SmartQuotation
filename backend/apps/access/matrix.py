@@ -24,6 +24,9 @@ Referências (F10_RBAC_CONFIG_PLAN.md + grep das views):
 - nomus.reexport        -> integrations/nomus/views.py _REEXPORT_ROLES = {E, G, A}
 - members.manage        -> accounts/views.py @require_role(ADMIN) = {A}
 - access.manage         -> NOVO; default admin-only (Wellington Q9; gestor_comercial fica False até validar)
+- approval.*_sign: RBAC V2 M0; assinatura de estágios (ainda não enforced). technical={E},
+  commercial={G,A}, quality/custom={A}. technical_sign vira dupla-condição com requires_crea em M1.
+- role.manage: RBAC V2 M0; default admin-only (separa gerir papéis de editar a matriz).
 """
 from apps.accounts.models import UserProfile
 from apps.access.capabilities import CAPABILITIES
@@ -48,6 +51,16 @@ DEFAULT_MATRIX = {
     "approval.request_remote": frozenset({O, E, G, A}),
     "approval.request_presencial": frozenset({O, E, G, A}),
     "approval.panel_read": frozenset({O, E, G, A}),
+    # RBAC V2 (M0) — assinatura de estágios. Defaults conservadores (ainda não enforced):
+    # técnica só engenheiro (espelha o aprovador CREA atual; A fora — o trait requires_crea
+    # de M1 é quem habilita); comercial no gestor + admin; qualidade/custom só admin até
+    # existir uma role dedicada (criada pelo tenant em M2).
+    "approval.technical_sign": frozenset({E}),
+    "approval.commercial_sign": frozenset({G, A}),
+    "approval.quality_sign": frozenset({A}),
+    "approval.custom_sign_1": frozenset({A}),
+    "approval.custom_sign_2": frozenset({A}),
+    "approval.custom_sign_3": frozenset({A}),
     "cost_discovery.write": frozenset({E, A}),
     "rate.change": frozenset({E, G, A}),
     "rate.edit": frozenset({E, A}),
@@ -58,6 +71,7 @@ DEFAULT_MATRIX = {
     "nomus.reexport": frozenset({E, G, A}),
     "members.manage": frozenset({A}),
     "access.manage": frozenset({A}),
+    "role.manage": frozenset({A}),
 }
 
 # Guarda-corpo: DEFAULT_MATRIX deve cobrir 1:1 o catálogo (drift = erro de deploy).

@@ -92,6 +92,47 @@ CAPABILITIES = {
         "category": CAT_APPROVAL,
         "is_dangerous": False,
     },
+    # ── Assinatura de estágios de aprovação (RBAC V2 — registry estático, M0) ──
+    # Slots FIXOS de capabilities de assinatura. Ainda NÃO enforced (M0 é só o
+    # catálogo + seed da matriz); o builder de fluxos (M3/M4) liga estes codes aos
+    # estágios via ApprovalStage.approver_capability. O gate técnico CREA atual NÃO
+    # muda em M0 — technical_sign só passa a valer com o trait requires_crea (M1).
+    "approval.technical_sign": {
+        "label": "Assinar aprovação técnica",
+        "description": "Assinar o estágio técnico do fluxo (exigirá trait requires_crea + CREA na role — M1).",
+        "category": CAT_APPROVAL,
+        "is_dangerous": True,
+    },
+    "approval.commercial_sign": {
+        "label": "Assinar aprovação comercial",
+        "description": "Assinar o estágio comercial do fluxo (gestor/diretoria).",
+        "category": CAT_APPROVAL,
+        "is_dangerous": True,
+    },
+    "approval.quality_sign": {
+        "label": "Assinar aprovação de qualidade",
+        "description": "Assinar o estágio de qualidade (ITP/ISO em caldeiraria).",
+        "category": CAT_APPROVAL,
+        "is_dangerous": True,
+    },
+    "approval.custom_sign_1": {
+        "label": "Assinar estágio custom 1",
+        "description": "Slot de assinatura para estágio 'do zero' (o admin renomeia o label do estágio).",
+        "category": CAT_APPROVAL,
+        "is_dangerous": True,
+    },
+    "approval.custom_sign_2": {
+        "label": "Assinar estágio custom 2",
+        "description": "Slot de assinatura para estágio 'do zero' (o admin renomeia o label do estágio).",
+        "category": CAT_APPROVAL,
+        "is_dangerous": True,
+    },
+    "approval.custom_sign_3": {
+        "label": "Assinar estágio custom 3",
+        "description": "Slot de assinatura para estágio 'do zero' (o admin renomeia o label do estágio).",
+        "category": CAT_APPROVAL,
+        "is_dangerous": True,
+    },
     # ── Engenharia (custeio / rates) ─────────────────────────────────────
     "cost_discovery.write": {
         "label": "Editar cadeia de custos",
@@ -154,6 +195,15 @@ CAPABILITIES = {
     "access.manage": {
         "label": "Gerenciar permissões",
         "description": "Editar a matriz papel×capability e o fluxo de aprovações.",
+        "category": CAT_ADMIN,
+        "is_dangerous": True,
+    },
+    # RBAC V2 (M0): separa "criar/editar/excluir roles" de "editar a matriz"
+    # (access.manage) — um admin pequeno pode delegar um sem o outro. Enforced a
+    # partir da página "Papéis" (M2).
+    "role.manage": {
+        "label": "Gerenciar papéis",
+        "description": "Criar, editar e excluir papéis do tenant (distinto de editar a matriz).",
         "category": CAT_ADMIN,
         "is_dangerous": True,
     },

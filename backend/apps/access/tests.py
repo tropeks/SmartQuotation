@@ -27,7 +27,8 @@ class CapabilityRegistryTests(SimpleTestCase):
             self.assertIsInstance(meta["is_dangerous"], bool, code)
 
     def test_cobre_todas_capabilities_do_plano(self):
-        # 1:1 com a tabela do F10_RBAC_CONFIG_PLAN.md (tuplas atuais das views).
+        # 1:1 com a tabela do F10_RBAC_CONFIG_PLAN.md (tuplas atuais das views)
+        # + as capabilities aditivas do RBAC V2 M0 (PLAN_RBAC_V2_0_IMPL.md).
         esperadas = {
             "quotation.create",
             "quotation.write",
@@ -49,6 +50,14 @@ class CapabilityRegistryTests(SimpleTestCase):
             "nomus.reexport",
             "members.manage",
             "access.manage",
+            # RBAC V2 M0 — slots de assinatura + gestão de papéis
+            "approval.technical_sign",
+            "approval.commercial_sign",
+            "approval.quality_sign",
+            "approval.custom_sign_1",
+            "approval.custom_sign_2",
+            "approval.custom_sign_3",
+            "role.manage",
         }
         self.assertEqual(capability_codes(), esperadas)
 
