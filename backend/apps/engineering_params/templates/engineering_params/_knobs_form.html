@@ -19,6 +19,12 @@
         </span>
         {% for n in import_result.notes %}<span class="g-note" style="color:var(--g-red)">{{ n }}</span>{% endfor %}
       {% endif %}
+      {% if import_versioned %}
+        <span class="g-note" style="color:var(--g-green);font-weight:var(--w-bold)">
+          Vigências criadas — params: {{ import_versioned.params }}, rates: {{ import_versioned.rates }}, preços: {{ import_versioned.prices }}.
+        </span>
+        {% for n in import_versioned.notes %}<span class="g-note" style="color:var(--g-red)">⚠ {{ n }}</span>{% endfor %}
+      {% endif %}
       {% for w in import_warnings %}<span class="g-note" style="color:var(--g-red)">⚠ {{ w }}</span>{% endfor %}
     </div>
   </header>

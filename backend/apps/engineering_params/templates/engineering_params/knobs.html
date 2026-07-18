@@ -28,6 +28,8 @@
   {% csrf_token %}
   <label class="g-note" for="tpl-file">Importar template:</label>
   <input id="tpl-file" class="q-input" type="file" name="template" accept="application/json,.json" required>
+  <label class="g-note" title="Cria novas vigências de ProcessParameter/Rate/MaterialPrice">
+    <input type="checkbox" name="versioned" value="1"> incluir horas/rates/preços</label>
   <button type="submit" class="q-btn ghost">Importar</button>
   <span class="g-note">knob sensível vira proposta; livre aplica direto.</span>
 </form>

@@ -36,6 +36,13 @@ def _jsonable(v):
     return float(v) if isinstance(v, Decimal) else v
 
 
+def _num(v):
+    try:
+        return round(float(v), 9)
+    except (TypeError, ValueError):
+        return None
+
+
 def _vigentes(qs):
     hoje = date.today()
     return (qs.filter(valid_from__lte=hoje)
@@ -152,4 +159,120 @@ def import_knobs(user, data, request=None):
             msgs = getattr(exc, "messages", None) or [str(exc)]
             result["notes"].append("Knobs sensíveis não propostos: " + "; ".join(msgs))
 
+    return result
+
+
+# ── F3/C: import das camadas VERSIONADAS (horas + comercial) como NOVAS VIGÊNCIAS ────────────
+def _upsert_rate(r, today):
+    from datetime import timedelta
+    op = r.get("operacao")
+    if not op or r.get("rate_hh") is None:
+        return False
+    hh = Decimal(str(r["rate_hh"]))
+    hm = None if r.get("rate_hm") in (None, "") else Decimal(str(r["rate_hm"]))
+    cur = Rate.objects.vigente(op)
+    if cur and cur.rate_hh == hh and cur.rate_hm == hm:
+        return False
+    if cur:
+        if cur.valid_from == today:
+            cur.rate_hh, cur.rate_hm = hh, hm
+            cur.save(update_fields=["rate_hh", "rate_hm"])
+            return True
+        cur.valid_until = today - timedelta(days=1)
+        cur.save(update_fields=["valid_until"])
+    Rate.objects.create(operacao=op, rate_hh=hh, rate_hm=hm, valid_from=today)
+    return True
+
+
+def _upsert_param(h, today):
+    from datetime import timedelta
+    op, metodo, material = h.get("operacao"), h.get("metodo") or "", h.get("material") or None
+    if not op or h.get("valor") is None:
+        return False
+    valor = Decimal(str(h["valor"]))
+    cur = ProcessParameter.objects.vigente(op, metodo, material)
+    if cur and cur.valor == valor:
+        return False
+    if cur:
+        if cur.valid_from == today:
+            cur.valor = valor
+            cur.save(update_fields=["valor"])
+            return True
+        cur.valid_until = today - timedelta(days=1)
+        cur.save(update_fields=["valid_until"])
+    ProcessParameter.objects.create(operacao=op, metodo=metodo, material=material, valor=valor,
+                                    unidade=h.get("unidade") or "fator", valid_from=today)
+    return True
+
+
+def _upsert_price(p, today):
+    from datetime import timedelta
+    from apps.materials.models import Material, MaterialPrice
+    sigla, forma, preco = p.get("material"), p.get("forma"), p.get("preco_brl_kg")
+    if not sigla or not forma or preco is None:
+        return False, None
+    mat = Material.objects.filter(sigla=sigla).first()
+    if mat is None:
+        return False, f"Material '{sigla}' não existe no tenant — preço ignorado."
+    cur = (MaterialPrice.objects.filter(material=mat, forma=forma, valid_from__lte=today)
+           .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today))
+           .order_by("-valid_from").first())
+    preco_str = str(preco)
+    if cur and str(cur.preco_brl_kg) == preco_str:
+        return False, None
+    if cur:
+        if cur.valid_from == today:
+            cur.preco_brl_kg = preco_str
+            cur.save(update_fields=["preco_brl_kg"])
+            return True, None
+        cur.valid_until = today - timedelta(days=1)
+        cur.save(update_fields=["valid_until"])
+    MaterialPrice.objects.create(material=mat, forma=forma, preco_brl_kg=preco_str, valid_from=today)
+    return True, None
+
+
+def import_versioned(user, data, request=None):
+    """Importa horas (ProcessParameter) + comercial (Rate/MaterialPrice) como NOVAS VIGÊNCIAS
+    (nunca muta histórico). fator_correcao_mo NÃO é importado (é calibração do tenant de origem) —
+    emite aviso forte de invalidação. Cada linha ruim vira nota, não quebra o lote. F3/C."""
+    from apps.audit.services import log_access
+    today = date.today()
+    result = {"params": 0, "rates": 0, "prices": 0, "notes": []}
+
+    for h in data.get("horas") or []:
+        try:
+            if _upsert_param(h, today):
+                result["params"] += 1
+        except Exception as exc:                                  # linha inválida → nota
+            result["notes"].append(f"Horas '{h.get('operacao')}' ignorada: {exc}")
+
+    com = data.get("commercial") or {}
+    for r in com.get("rates") or []:
+        try:
+            if _upsert_rate(r, today):
+                result["rates"] += 1
+        except Exception as exc:
+            result["notes"].append(f"Rate '{r.get('operacao')}' ignorada: {exc}")
+    for p in com.get("material_prices") or []:
+        try:
+            ok, note = _upsert_price(p, today)
+            if ok:
+                result["prices"] += 1
+            elif note:
+                result["notes"].append(note)
+        except Exception as exc:
+            result["notes"].append(f"Preço '{p.get('material')}' ignorado: {exc}")
+
+    if "fator_correcao_mo" in com:
+        cfg = TenantParamConfig.get_solo()
+        if _num(com["fator_correcao_mo"]) != _num(cfg.fator_correcao_mo):
+            result["notes"].append(
+                "fator_correcao_mo NÃO foi importado (é a calibração do tenant de origem). "
+                "Importar rates/preços/knobs INVALIDA a calibração local — rode o back-solve de novo.")
+
+    if request is not None and (result["params"] or result["rates"] or result["prices"]):
+        log_access(request, "param_change", TenantParamConfig.get_solo(), {
+            "knob": "import_template_versionado",
+            "params": result["params"], "rates": result["rates"], "prices": result["prices"],
+        })
     return result

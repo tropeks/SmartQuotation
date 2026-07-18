@@ -175,3 +175,106 @@ class ImportViewTests(TestCase):
         self._login(UserProfile.ROLE_ORCAMENTISTA)
         r = self.client.post("/engenharia/knobs/importar/", {"template": self._upload({"kind": "x"})})
         self.assertEqual(r.status_code, 403)
+
+
+class ImportVersionedTests(TestCase):
+    def setUp(self):
+        Rate.objects.create(operacao="FURAR", rate_hh=110, rate_hm=80, valid_from=date.today())
+        ProcessParameter.objects.create(operacao="FURAR", metodo="radial", material=None,
+                                        valor="0.5", unidade="min/furo", valid_from=date.today())
+        from apps.materials.models import Material, MaterialPrice
+        m = Material.objects.create(sigla="SA-179")
+        MaterialPrice.objects.create(material=m, forma="tubo", preco_brl_kg="13.5",
+                                     valid_from=date.today())
+
+    def _eng(self):
+        u = get_user_model().objects.create_user(username="eng", password="x")
+        UserProfile.objects.create(user=u, full_name="eng", role=UserProfile.ROLE_ENGENHEIRO,
+                                   crea_number="CREA-1")
+        return u
+
+    def test_rate_vira_nova_vigencia_e_recompute_veria(self):
+        eng = self._eng()
+        t = kt.export_template()
+        # muda o rate no template
+        for r in t["commercial"]["rates"]:
+            if r["operacao"] == "FURAR":
+                r["rate_hh"] = 200.0
+        res = kt.import_versioned(eng, t)
+        self.assertEqual(res["rates"], 1)
+        # a vigência ativa passou a valer 200 (é o que o adapter/motor leria)
+        from decimal import Decimal
+        self.assertEqual(Rate.objects.vigente("FURAR").rate_hh, Decimal("200"))
+
+    def test_param_e_preco_viram_vigencia(self):
+        eng = self._eng()
+        t = kt.export_template()
+        for h in t["horas"]:
+            if h["operacao"] == "FURAR":
+                h["valor"] = 0.9
+        t["commercial"]["material_prices"][0]["preco_brl_kg"] = 20.0
+        res = kt.import_versioned(eng, t)
+        self.assertEqual(res["params"], 1)
+        self.assertEqual(res["prices"], 1)
+        from decimal import Decimal
+        self.assertEqual(ProcessParameter.objects.vigente("FURAR", "radial", None).valor, Decimal("0.9"))
+
+    def test_material_inexistente_vira_nota(self):
+        eng = self._eng()
+        t = kt.export_template()
+        t["commercial"]["material_prices"].append(
+            {"material": "NAO-EXISTE", "forma": "chapa", "preco_brl_kg": 9.9})
+        res = kt.import_versioned(eng, t)
+        self.assertTrue(any("NAO-EXISTE" in n for n in res["notes"]))
+
+    def test_fator_mo_nao_importa_avisa_calibracao(self):
+        eng = self._eng()
+        t = kt.export_template()
+        t["commercial"]["fator_correcao_mo"] = 1.9      # ≠ default 1.0 do tenant
+        res = kt.import_versioned(eng, t)
+        self.assertTrue(any("back-solve" in n for n in res["notes"]))
+        self.assertEqual(float(TenantParamConfig.get_solo().fator_correcao_mo), 1.0)  # não mudou
+
+    def test_idempotente_sem_mudanca(self):
+        eng = self._eng()
+        t = kt.export_template()
+        res = kt.import_versioned(eng, t)              # mesmos valores → nada muda
+        self.assertEqual((res["rates"], res["params"], res["prices"]), (0, 0, 0))
+
+
+class ImportVersionedViewTests(TestCase):
+    def setUp(self):
+        self.client.defaults["HTTP_HOST"] = self.get_test_tenant_domain()
+        Rate.objects.create(operacao="FURAR", rate_hh=110, valid_from=date.today())
+
+    def _login_admin(self):
+        u = get_user_model().objects.create_user(username="adm", password="x")
+        UserProfile.objects.create(user=u, full_name="adm", role=UserProfile.ROLE_ADMIN)
+        self.client.login(username="adm", password="x")
+
+    def _upload(self, tpl):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return SimpleUploadedFile("t.json", json.dumps(tpl).encode(), content_type="application/json")
+
+    def test_optin_importa_vigencias(self):
+        self._login_admin()
+        t = kt.export_template()
+        for r in t["commercial"]["rates"]:
+            if r["operacao"] == "FURAR":
+                r["rate_hh"] = 250.0
+        r = self.client.post("/engenharia/knobs/importar/",
+                             {"template": self._upload(t), "versioned": "1"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Vigências criadas")
+        from decimal import Decimal
+        self.assertEqual(Rate.objects.vigente("FURAR").rate_hh, Decimal("250"))
+
+    def test_sem_optin_nao_toca_vigencias(self):
+        self._login_admin()
+        t = kt.export_template()
+        for r in t["commercial"]["rates"]:
+            if r["operacao"] == "FURAR":
+                r["rate_hh"] = 250.0
+        self.client.post("/engenharia/knobs/importar/", {"template": self._upload(t)})
+        from decimal import Decimal
+        self.assertEqual(Rate.objects.vigente("FURAR").rate_hh, Decimal("110"))   # inalterado
