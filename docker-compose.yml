@@ -9,7 +9,11 @@ services:
     ports:
       - "5436:5432"            # 5436 p/ não colidir com Vitali (5435)
     volumes:
-      - sq_postgres_data:/var/lib/postgresql/data
+      # Volume DEDICADO de dev. NÃO usar `sq_postgres_data` aqui: esse nome (prefixado
+      # pelo Compose vira `smartquotation_sq_postgres_data`) é EXATAMENTE o volume do
+      # Postgres de PRODUÇÃO (sq-prod-db). Compartilhar → dois postmasters no mesmo PGDATA
+      # → corrupção de catálogo (incidente 2026-07-18). Dev fica isolado em `sq_dev_*`.
+      - sq_dev_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sq} -d ${POSTGRES_DB:-smartquotation}"]
       interval: 10s
@@ -22,7 +26,7 @@ services:
     ports:
       - "6380:6379"            # 6380 p/ não colidir
     volumes:
-      - sq_redis_data:/data
+      - sq_dev_redis_data:/data
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -57,5 +61,7 @@ services:
       - db
 
 volumes:
-  sq_postgres_data:
-  sq_redis_data:
+  # Nomes de dev PROPOSITALMENTE distintos dos de produção (sq-prod-db usa o volume
+  # `smartquotation_sq_postgres_data`). Ver comentário no serviço `db`.
+  sq_dev_postgres_data:
+  sq_dev_redis_data:
