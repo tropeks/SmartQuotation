@@ -13,6 +13,13 @@
       {% if proposal_rejected %}<span class="g-note" style="color:var(--g-gray-1);font-weight:var(--w-bold)">Proposta rejeitada</span>{% endif %}
       {% if knob_msg %}<span class="g-note">{{ knob_msg }}</span>{% endif %}
       {% if knob_error %}<span class="g-note" style="color:var(--g-red);font-weight:var(--w-bold)">{{ knob_error }}</span>{% endif %}
+      {% if import_result %}
+        <span class="g-note" style="color:var(--g-green);font-weight:var(--w-bold)">
+          Template importado{% if import_result.applied_free %} — aplicados: {{ import_result.applied_free|join:", " }}{% endif %}{% if import_result.proposal %} — sensíveis enviados p/ aprovação (proposta #{{ import_result.proposal.pk }}){% endif %}.
+        </span>
+        {% for n in import_result.notes %}<span class="g-note" style="color:var(--g-red)">{{ n }}</span>{% endfor %}
+      {% endif %}
+      {% for w in import_warnings %}<span class="g-note" style="color:var(--g-red)">⚠ {{ w }}</span>{% endfor %}
     </div>
   </header>
 
