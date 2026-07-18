@@ -532,6 +532,13 @@ def role_update(request):
             alvo = "gerenciar acessos" if cap == "access.manage" else "gerenciar papéis"
             return err(f"Este é o único papel que pode {alvo}; não é possível remover essa permissão.")
 
+    before = {  # estado ANTES (para o diff de auditoria M6)
+        "name": role.name, "description": role.description,
+        "requires_crea": role.requires_crea, "is_admin_like": role.is_admin_like,
+        "capabilities": sorted(
+            RolePermission.objects.filter(role=key, allowed=True).values_list("capability", flat=True)
+        ),
+    }
     with transaction.atomic():
         role.name = name
         role.description = description
@@ -548,12 +555,31 @@ def role_update(request):
                 defaults={"allowed": (code in selected), "updated_by": request.user},
             )
     invalidate_matrix_cache()
-    log_access(request, "role_change", role, {
-        "action": "update", "key": key, "name": name,
+    after = {
+        "name": name, "description": description,
         "requires_crea": requires_crea, "is_admin_like": is_admin_like,
         "capabilities": sorted(selected),
+    }
+    log_access(request, "role_change", role, {
+        "action": "update", "key": key, "diff": _diff(before, after),
     })
     return redirect(f"{_roles_url()}?notice=updated")
+
+
+def _diff(before, after):
+    """Diff campo-a-campo para auditoria (M6): {campo: {from, to}}; capabilities como
+    {added, removed}. Só inclui o que mudou."""
+    out = {}
+    for field, old in before.items():
+        new = after.get(field)
+        if field == "capabilities":
+            old_set, new_set = set(old or []), set(new or [])
+            added, removed = sorted(new_set - old_set), sorted(old_set - new_set)
+            if added or removed:
+                out["capabilities"] = {"added": added, "removed": removed}
+        elif old != new:
+            out[field] = {"from": old, "to": new}
+    return out
 
 
 def _role_is_last_grant_of(key, capability):
@@ -713,6 +739,7 @@ def workflow_apply_template(request):
     tpl = get_workflow_template((request.POST.get("template") or "").strip())
     if tpl is None:
         return redirect(f"{_workflow_url()}?notice=bad_template")
+    stages_before = list(workflow.stages.order_by("order", "key").values_list("label", flat=True))
     with transaction.atomic():
         ApprovalStage.objects.filter(workflow=workflow, is_builtin=False).delete()
         for spec in tpl["stages"]:
@@ -738,8 +765,11 @@ def workflow_apply_template(request):
         workflow.updated_by = request.user
         workflow.save(update_fields=["source_template", "updated_by", "updated_at"])
     invalidate_matrix_cache()
-    log_access(request, "approval_config_change", workflow,
-               {"action": "apply_template", "template": tpl["key"]})
+    stages_after = list(workflow.stages.order_by("order", "key").values_list("label", flat=True))
+    log_access(request, "approval_config_change", workflow, {
+        "action": "apply_template", "template": tpl["key"],
+        "diff": {"stages": {"from": stages_before, "to": stages_after}},
+    })
     return redirect(f"{_workflow_url()}?notice=template_applied")
 
 
