@@ -32,6 +32,10 @@
         {% if can_manage_access %}
           <a class="q-btn" href="{% url 'access:config' %}">Acessos</a>
         {% endif %}
+        {% user_can request.user "role.manage" as can_manage_roles %}
+        {% if can_manage_roles %}
+          <a class="q-btn" href="{% url 'access:roles' %}">Papéis</a>
+        {% endif %}
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}
           <button class="q-btn">Sair</button></form>
       </nav>
