@@ -152,6 +152,13 @@ CAPABILITIES = {
         "category": CAT_ENGINEERING,
         "is_dangerous": True,
     },
+    "knob.approve": {
+        "label": "Aprovar knobs de custeio",
+        "description": "Aprovar (2ª validação, SoD) propostas de mudança de knobs sensíveis "
+                       "de engenharia — scrap por família, setup por parâmetro.",
+        "category": CAT_ENGINEERING,
+        "is_dangerous": True,
+    },
     # ── Propostas ────────────────────────────────────────────────────────
     "proposal.write": {
         "label": "Editar proposta",
