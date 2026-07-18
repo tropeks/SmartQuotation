@@ -90,6 +90,99 @@ class ApprovalRequest(models.Model):
         indexes = [models.Index(fields=["quotation", "status", "created_at"])]
 
 
+class ApprovalCase(models.Model):
+    """
+    Instância de execução de um fluxo de aprovação (RBAC V2 M4) para uma cotação.
+
+    Filosofia snapshot do produto: `workflow_snapshot` congela os estágios do fluxo no
+    momento da abertura (não segue mudanças posteriores do builder). `snapshot_hash` é o
+    hash do cálculo da cotação na abertura — se a cotação for recalculada/editada, o hash
+    diverge e o case deixa de valer (invalidação por edição, mesmo mecanismo do
+    TechnicalApproval). Um case OPEN vira COMPLETED quando todas as tasks required são
+    aprovadas; REJECTED quando qualquer task é rejeitada; INVALIDATED quando substituído.
+    """
+
+    STATUS_OPEN = "open"
+    STATUS_COMPLETED = "completed"
+    STATUS_REJECTED = "rejected"
+    STATUS_INVALIDATED = "invalidated"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Aberto"),
+        (STATUS_COMPLETED, "Concluído"),
+        (STATUS_REJECTED, "Rejeitado"),
+        (STATUS_INVALIDATED, "Invalidado"),
+    ]
+
+    quotation = models.ForeignKey(
+        "quotations.Quotation", on_delete=models.CASCADE, related_name="approval_cases")
+    action_type = models.CharField(max_length=32, default="of.convert")
+    workflow_snapshot = models.JSONField(default=list)
+    snapshot_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
+    requested_by = models.ForeignKey(
+        "accounts.UserProfile", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="approval_cases_requested")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["quotation", "status", "created_at"])]
+
+    def __str__(self):
+        return f"Case #{self.pk} {self.action_type} [{self.status}]"
+
+
+class ApprovalTask(models.Model):
+    """
+    Uma etapa (estágio) dentro de um ApprovalCase. `required=True` gateia a conversão;
+    o estágio corrente é a 1ª task required PENDING por `order`. Satisfeita por UMA
+    aprovação de qualquer usuário qualificado (sem quórum na V2.0).
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_SKIPPED = "skipped"
+    STATUS_INVALIDATED = "invalidated"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pendente"),
+        (STATUS_APPROVED, "Aprovada"),
+        (STATUS_REJECTED, "Rejeitada"),
+        (STATUS_SKIPPED, "Pulada"),
+        (STATUS_INVALIDATED, "Invalidada"),
+    ]
+
+    case = models.ForeignKey(ApprovalCase, on_delete=models.CASCADE, related_name="tasks")
+    stage_key = models.CharField(max_length=64)
+    stage_label = models.CharField(max_length=120)
+    order = models.PositiveIntegerField(default=0, db_index=True)
+    required = models.BooleanField(default=True)
+    approver_capability = models.CharField(max_length=64, blank=True)
+    is_builtin = models.BooleanField(default=False)
+
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    decided_by = models.ForeignKey(
+        "accounts.UserProfile", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    reason = models.TextField(blank=True)
+    technical_approval = models.ForeignKey(
+        "audit.TechnicalApproval", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="+")
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+        indexes = [models.Index(fields=["case", "status", "order"])]
+
+    def __str__(self):
+        return f"Task {self.stage_key} [{self.status}]"
+
+
 class AccessLog(models.Model):
     """Log append-only de ações sensíveis. H1 não implementa hash-chain."""
 
@@ -111,6 +204,10 @@ class AccessLog(models.Model):
         ("member_deactivate", "Member Deactivate"),
         ("permission_change", "Permission Change"),
         ("approval_config_change", "Approval Config Change"),
+        ("case_open", "Approval Case Open"),
+        ("task_approve", "Approval Task Approve"),
+        ("task_reject", "Approval Task Reject"),
+        ("case_invalidate", "Approval Case Invalidate"),
     ]
 
     user = models.ForeignKey(

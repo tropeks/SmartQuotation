@@ -152,7 +152,7 @@ def build_snapshot_payload(quotation, memorial=None) -> dict:
 
 def create_calculation_snapshot(quotation, memorial=None) -> CalculationSnapshot:
     payload = build_snapshot_payload(quotation, memorial=memorial)
-    return CalculationSnapshot.objects.create(
+    snapshot = CalculationSnapshot.objects.create(
         quotation=quotation,
         snapshot_hash=payload["snapshot_hash"],
         inputs=payload["inputs"],
@@ -160,6 +160,13 @@ def create_calculation_snapshot(quotation, memorial=None) -> CalculationSnapshot
         engine_version=payload["engine_version"],
         standard_refs=payload["standard_refs"],
     )
+    # RBAC V2 M4: recalcular a cotação invalida cases de aprovação OPEN cujo snapshot
+    # divergiu (mesma filosofia do TechnicalApproval). Import tardio: evita ciclo audit↔quotations.
+    if payload["snapshot_hash"]:
+        from apps.audit.approvals import invalidate_stale_cases
+
+        invalidate_stale_cases(quotation)
+    return snapshot
 
 
 def next_number() -> str:

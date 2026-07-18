@@ -60,13 +60,20 @@ def _stage_satisfied(quotation, stage, snapshot) -> bool:
     resolver = _STAGE_RESOLVERS.get(stage.key)
     if resolver is not None:
         return resolver(quotation, snapshot)
-    # RBAC V2 M3: um estágio CONFIGURADO no builder (tem `approver_capability`) ainda
-    # não é gateado — sua EXECUÇÃO runtime (ApprovalCase/Task) só chega em M4. Tratá-lo
-    # como satisfeito evita travar a conversão ao montar um fluxo multi-estágio. Um
-    # estágio cru, sem resolver E sem capability aprovadora, segue bloqueando (semântica
-    # F10 conservadora — Wellington Q10). M4 substitui isto por checagem baseada em case.
+    # RBAC V2 M4: um estágio configurado (com `approver_capability`) é satisfeito por uma
+    # ApprovalTask APROVADA no case ativo/concluído da cotação, casando o snapshot atual
+    # (invalidação por edição embutida: snapshot diferente → não conta). Um estágio cru,
+    # sem resolver E sem capability aprovadora, segue bloqueando (semântica F10 conservadora).
     if getattr(stage, "approver_capability", ""):
-        return True
+        from apps.audit.models import ApprovalCase, ApprovalTask
+
+        return ApprovalCase.objects.filter(
+            quotation=quotation,
+            status__in=[ApprovalCase.STATUS_OPEN, ApprovalCase.STATUS_COMPLETED],
+            snapshot_hash=snapshot.snapshot_hash,
+            tasks__stage_key=stage.key,
+            tasks__status=ApprovalTask.STATUS_APPROVED,
+        ).exists()
     return False
 
 
