@@ -1,0 +1,65 @@
+{% comment %}
+Componente Alpine compartilhado do data sheet do feixe (Config de Engenharia v1: C1/C2/C3).
+Registra `feixeSheet(cfg)` — usado por data_sheet.html e edit.html. Toda a lógica de
+conversão espelha apps/quotations/domain_params.py (fonte da verdade no back-end).
+{% endcomment %}
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('feixeSheet', (cfg) => ({
+    // ODs de tubo (mm) — espelha pricing_engine/seeds/dim_standards.json
+    OD_MM: {'1/4"':6.35,'3/8"':9.525,'1/2"':12.7,'5/8"':15.875,'3/4"':19.05,
+            '7/8"':22.225,'1"':25.4,'1.1/4"':31.75,'1.1/2"':38.1,'1.3/4"':44.45,'2"':50.8},
+    espelhoTipo: cfg.espelhoTipo || 'FLUTUANTE',
+    tipo: cfg.tipo || 'TUBO RETO',
+    tuboOdSpec: cfg.tuboOdSpec || '3/4"',
+    baffleD: cfg.baffleD ?? null,
+    baffleCutMm: cfg.baffleCutMm ?? null,
+    baffleCutPct: Number(cfg.baffleCutDefaultPct ?? 25),
+    tuboComp: cfg.tuboComp ?? null,
+    uBendRadius: cfg.uBendRadius ?? null,
+    uBendFactor: Number(cfg.uBendFactor ?? 1.5),
+    tubeStandards: cfg.tubeStandards || [],
+    tuboCompMode: 'std',   // 'std' (dropdown) | 'free' (mm livre)
+
+    // --- derivados ---
+    get isU() { return String(this.tipo || '').toUpperCase().startsWith('TUBO U'); },
+    get hasD() { const d = Number(this.baffleD); return this.baffleD !== null && this.baffleD !== '' && d > 0; },
+    // baffle cut: campo do motor = altura RESTANTE → restante = D × (1 − pct/100)
+    baffleMmFromPct() { return this.hasD ? Math.round(Number(this.baffleD) * (1 - this.baffleCutPct/100) * 10) / 10 : null; },
+    bafflePctFromMm() { const d = Number(this.baffleD); return d > 0 ? Math.round((d - Number(this.baffleCutMm)) / d * 1000) / 10 : 0; },
+    get baffleCutLevel() {
+      const p = Number(this.baffleCutPct);
+      if (isNaN(p)) return 'ok';
+      if (p < 15 || p > 45) return 'error';
+      if (p < 20 || p > 35) return 'warn';
+      return 'ok';
+    },
+    get tuboOdMm() { return this.OD_MM[this.tuboOdSpec] || 0; },
+    get uBendMin() { return Math.round(this.uBendFactor * this.tuboOdMm * 100) / 100; },
+    get uBendError() { return this.isU && Number(this.uBendRadius) > 0 && Number(this.uBendRadius) < this.uBendMin; },
+    get maxStandard() { return this.tubeStandards.length ? Math.max(...this.tubeStandards.map(Number)) : 0; },
+    get desenvolvido() { const c = Number(this.tuboComp) || 0; return this.isU ? c * 2 : c; },
+    get precisaEmenda() { return this.maxStandard > 0 && this.desenvolvido > this.maxStandard; },
+
+    // --- ações ---
+    onPctInput() { const v = this.baffleMmFromPct(); if (v !== null) this.baffleCutMm = v; },
+    onDInput() { if (this.hasD) { const v = this.baffleMmFromPct(); if (v !== null) this.baffleCutMm = v; } },
+    pickStandard(v) { if (v === '__free__') { this.tuboCompMode = 'free'; } else { this.tuboCompMode = 'std'; this.tuboComp = Number(v); } },
+
+    init() {
+      // Na carga, o mm renderizado pelo servidor é a fonte da verdade (preserva o job validado
+      // e cotações existentes). Se há D e mm, deriva o % real exibido a partir do mm.
+      if (this.hasD && this.baffleCutMm !== null && this.baffleCutMm !== '') {
+        this.baffleCutPct = this.bafflePctFromMm();
+      } else if (this.hasD) {
+        // campo vazio → usa o default do tenant (config) para preencher o mm
+        this.onPctInput();
+      }
+      // comprimento: se o valor atual não é um padrão, entra em modo livre
+      if (this.tuboComp !== null && this.tuboComp !== '' && !this.tubeStandards.map(Number).includes(Number(this.tuboComp))) {
+        this.tuboCompMode = 'free';
+      }
+    },
+  }));
+});
+</script>

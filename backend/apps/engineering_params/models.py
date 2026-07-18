@@ -155,6 +155,11 @@ class ProcessParameter(models.Model):
             raise ValidationError("ALARGAR_ESPELHO não existe como etapa em CNC.")
 
 
+def _default_tube_standard_lengths() -> list:
+    """Comprimentos comerciais de tubo padrão (mm). ENGEMATEX: 6,10 m e 12 m."""
+    return [6100, 12000]
+
+
 class TenantParamConfig(models.Model):
     """Knobs globais do tenant (singleton). fator_correcao_mo multiplica TODAS as horas (B31)."""
 
@@ -164,6 +169,13 @@ class TenantParamConfig(models.Model):
     tema_compat_mode = models.CharField(
         max_length=10, default="warn",
         choices=[("block", "Bloquear"), ("warn", "Avisar"), ("free", "Livre")])
+    # C1 — corte de chicana (baffle cut) padrão em % do Ø interno do casco. O motor consome
+    # mm (hc = OD − corte); o % é convertido para mm no front/form. Default TEMA ~25%.
+    baffle_cut_default_pct = models.DecimalField(max_digits=5, decimal_places=2, default=25.0)
+    # C2 — comprimentos comerciais de tubo padrão (mm). Lista editável; entrada livre continua.
+    tube_standard_lengths_mm = models.JSONField(default=_default_tube_standard_lengths)
+    # C3 — raio mínimo da curva em U = fator × OD do tubo (TEMA RCB-2.3, default 1,5×OD).
+    u_bend_min_radius_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.5)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

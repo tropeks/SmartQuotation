@@ -65,6 +65,20 @@ def _initial_from_defaults() -> dict:
     return d
 
 
+def _param_config_ctx() -> dict:
+    """Config de engenharia v1 (C1/C2/C3): defaults do tenant p/ o data sheet (baffle cut %,
+    comprimentos padrão de tubo, fator do raio mínimo em U)."""
+    import json as _json
+    from apps.engineering_params.models import TenantParamConfig
+    cfg = TenantParamConfig.get_solo()
+    lengths = [int(x) for x in (cfg.tube_standard_lengths_mm or []) if x]
+    return {
+        "param_config": cfg,
+        "tube_standard_lengths": lengths,
+        "tube_standard_lengths_json": _json.dumps(lengths),
+    }
+
+
 def _revision_label(revision: int) -> str:
     if 0 <= revision < 26:
         return f"Rev. {chr(ord('A') + revision)}"
@@ -249,7 +263,7 @@ def feixe_data_sheet(request):
     if tipo in dict(FeixeDataSheetForm.base_fields["tipo"].choices):
         initial["tipo"] = tipo
     form = FeixeDataSheetForm(initial=initial)
-    ctx = {"form": form, "results": _preview(default_inputs())}
+    ctx = {"form": form, "results": _preview(default_inputs()), **_param_config_ctx()}
     return render(request, "quotations/data_sheet.html", ctx)
 
 
@@ -270,7 +284,7 @@ def create_quotation(request):
     form = FeixeDataSheetForm(request.POST)
     if not form.is_valid():
         return render(request, "quotations/data_sheet.html",
-                      {"form": form, "results": _preview(default_inputs())})
+                      {"form": form, "results": _preview(default_inputs()), **_param_config_ctx()})
     customer, _ = Customer.objects.get_or_create(company_name=form.cleaned_data["customer_name"])
     q = create_feixe_quotation(customer, form.cleaned_data["title"],
                                created_by=request.user, inputs=form.to_inputs_dict())
@@ -311,11 +325,13 @@ def quotation_edit(request, pk):
             return redirect("quotations:detail", pk=q.pk)
         # inválido → re-render com erros (preview cai nos inputs originais)
         results = _preview(dict(orig.inputs or {}))
-        return render(request, "quotations/edit.html", {"form": form, "results": results, "orig": orig})
+        return render(request, "quotations/edit.html",
+                      {"form": form, "results": results, "orig": orig, **_param_config_ctx()})
 
     form = FeixeDataSheetForm(initial=FeixeDataSheetForm.initial_from_quotation(orig))
     results = _preview(dict(orig.inputs or {}))
-    return render(request, "quotations/edit.html", {"form": form, "results": results, "orig": orig})
+    return render(request, "quotations/edit.html",
+                  {"form": form, "results": results, "orig": orig, **_param_config_ctx()})
 
 
 @require_capability("quotation.read", allow_platform_staff=True)
