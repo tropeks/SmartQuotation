@@ -224,6 +224,40 @@ class ComposeViewTests(TestCase):
         maior = estimate_complete("BEU", params={"massa": 2.0, "solda": 2.0})
         self.assertGreater(maior["custo_servicos"], ref["custo_servicos"] + 1000)
 
+    def test_recompute_complete_preserva_dimensoes_do_data_sheet(self):
+        """Regressão (F1 pré-condição): recompute de cotação scope='complete' NÃO reverte à
+        geometria de referência. _recompute_complete chamava estimate_complete(desig) PELADO,
+        recomputando sobre o seed de referência; agora reconstrói dims/params/metalurgia dos
+        inputs salvos (via estimate_from_inputs), mantendo o custo do data sheet do projeto."""
+        from apps.tema_templates.services import estimate_complete, estimate_from_inputs
+        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import recompute
+        from apps.quotations.models import Customer
+
+        # dimensões deliberadamente distantes da referência (metade dos tubos)
+        cleaned = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
+                   "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
+                   "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
+                   "esp_casco_mm": 9.5, "n_passes_tubos": 2, "rt_escopo": "Parcial",
+                   "classe_feixe": "CS", "classe_casco": "CS", "fluido_corrosivo": "Tubos",
+                   "fator_correcao_mo": 1.0}
+        resultado = estimate_from_inputs("BEU", cleaned)
+        cust, _ = Customer.objects.get_or_create(company_name="ACME Ltda")
+        q = create_permutador_quotation(cust, "BEU", cleaned, resultado)
+        salvo = float(q.custo_total)
+
+        recompute(q)
+        q.refresh_from_db()
+
+        # recompute manteve o custo do data sheet (paridade com estimate_from_inputs)...
+        esperado = float(estimate_from_inputs("BEU", q.inputs)["custo_total"])
+        self.assertAlmostEqual(float(q.custo_total), esperado, delta=max(1.0, esperado * 0.001))
+        self.assertAlmostEqual(float(q.custo_total), salvo, delta=max(1.0, salvo * 0.001))
+        # ...e NÃO reverteu ao custo da geometria de referência (o bug antigo)
+        referencia = float(estimate_complete("BEU")["custo_total"])
+        self.assertGreater(abs(float(q.custo_total) - referencia), 1000.0,
+                           "recompute reverteu à geometria de referência (bug _recompute_complete)")
+
     def test_layout_aviso_tubos_demais(self):
         """#4: muitos tubos num casco pequeno gera aviso de arranjo inviável."""
         r = self._post(n_tubos=500, diametro_casco_mm=400)
