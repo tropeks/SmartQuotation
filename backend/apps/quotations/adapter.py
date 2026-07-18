@@ -7,6 +7,7 @@ Adapter Django <-> pricing_engine (ÚNICO ponto de acoplamento).
 
 pricing_engine permanece PURO (zero import Django). float -> Decimal na fronteira.
 """
+import logging
 from dataclasses import fields
 from decimal import Decimal
 from django.db import models
@@ -17,6 +18,8 @@ from pricing_engine.feixe_quote import quote_feixe
 from pricing_engine.rates import TenantCostChain, op_key
 from apps.quotations.models import QuotationItem, ItemMaterial, ItemOperation
 
+logger = logging.getLogger(__name__)
+
 _FIELD_NAMES = {f.name for f in fields(FeixeInputs)}
 ITENS_ENG_FER = {  # itens que o quote_feixe agrega como escalares
     "ENG-01": "Engenharia", "FER-01": "Ferramentas / Consumíveis",
@@ -25,6 +28,23 @@ ITENS_ENG_FER = {  # itens que o quote_feixe agrega como escalares
 
 def D(x) -> Decimal:
     return Decimal(str(round(float(x), 6)))
+
+
+def _coerce_factor_map(raw, knob_name: str) -> dict:
+    """Coage um knob dict {str: float} de forma TOLERANTE mas VISÍVEL: descarta entradas inválidas
+    com log de aviso, em vez de engolir em silêncio (Config Eng V2 §5 — falha de leitura de knob
+    sensível não pode virar default mudo). Reutilizável p/ os próximos knobs (setup_frac etc.)."""
+    out = {}
+    if not isinstance(raw, dict):
+        if raw:
+            logger.warning("knob %s ignorado: esperava dict, veio %s", knob_name, type(raw).__name__)
+        return out
+    for k, v in raw.items():
+        try:
+            out[str(k)] = float(v)
+        except (TypeError, ValueError):
+            logger.warning("knob %s: entrada inválida %r=%r descartada", knob_name, k, v)
+    return out
 
 
 def _to_float(x) -> float:
@@ -97,6 +117,9 @@ def build_cost_chain(quotation) -> TenantCostChain:
             ] = float(pp_obj.valor)
         cfg = TenantParamConfig.get_solo()
         chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
+        # knobs configuráveis (V2/F1): scrap por família + setup por parâmetro → override do motor.
+        chain.perda_por_familia = _coerce_factor_map(cfg.perda_por_familia, "perda_por_familia")
+        chain.setup_frac = _coerce_factor_map(cfg.setup_frac, "setup_frac")
     except Exception:
         pass
     return chain
