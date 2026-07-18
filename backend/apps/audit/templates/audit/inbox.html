@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Aprovações{% endblock %}
+{% block content %}
+<div class="eyebrow">Aprovações</div>
+<h1 class="q-number">APROVAÇÕES</h1>
+
+<div style="display:flex;gap:8px;margin:16px 0">
+  <a class="q-btn {% if tab != 'mine' %}primary{% endif %}" href="?tab=approve">A aprovar
+    {% if to_approve %}<span class="q-badge">{{ to_approve|length }}</span>{% endif %}</a>
+  <a class="q-btn {% if tab == 'mine' %}primary{% endif %}" href="?tab=mine">Minhas solicitações</a>
+</div>
+
+{% if tab == 'mine' %}
+  <section class="g-section">
+    <header class="g-section-head"><h3>Minhas solicitações</h3></header>
+    <div class="g-section-body">
+      {% for case in my_cases %}
+        <div style="border:1px solid var(--g-line);border-radius:8px;padding:12px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <strong>{{ case.quotation.number }} — {{ case.quotation.title }}</strong>
+            <span class="q-badge"
+              style="{% if case.status == 'completed' %}border-color:var(--g-green);color:var(--g-green){% elif case.status == 'rejected' %}border-color:var(--g-red);color:var(--g-red){% endif %}">
+              {{ case.get_status_display }}</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            {% for t in case.tasks.all %}
+              <span class="q-badge"
+                style="{% if t.status == 'approved' %}border-color:var(--g-green);color:var(--g-green){% elif t.status == 'rejected' %}border-color:var(--g-red);color:var(--g-red){% endif %}"
+                title="{{ t.reason }}">{{ t.stage_label }}: {{ t.get_status_display }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      {% empty %}
+        <p class="g-muted" style="margin:0">Você ainda não solicitou aprovações.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% else %}
+  <section class="g-section">
+    <header class="g-section-head">
+      <h3>A aprovar</h3><span class="g-muted">{{ to_approve|length }} pendência{{ to_approve|length|pluralize }}</span>
+    </header>
+    <div class="g-section-body">
+      {% for c in to_approve %}
+        <div style="border:1px solid var(--g-line);border-radius:8px;padding:12px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div>
+              <strong>{{ c.number }} — {{ c.title }}</strong>
+              <span class="g-muted" style="display:block">{{ c.customer }} · R$ {{ c.value }}</span>
+              <span class="g-muted">Estágio: <strong>{{ c.stage_label }}</strong> · Solicitante: {{ c.requested_by }}</span>
+            </div>
+          </div>
+          <div x-data="{ rejecting: false }" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:flex-start">
+            <form method="post" action="{% url 'audit:approve_task' c.task.pk %}">{% csrf_token %}
+              <button class="q-btn primary" type="submit">Aprovar</button></form>
+            <button type="button" class="q-btn" style="border-color:var(--g-red);color:var(--g-red)"
+                    @click="rejecting = !rejecting">Rejeitar</button>
+            <form method="post" action="{% url 'audit:reject_task' c.task.pk %}" x-show="rejecting" x-cloak
+                  style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">{% csrf_token %}
+              <label class="field" style="margin:0"><span>Motivo</span>
+                <input type="text" name="reason" required maxlength="500" placeholder="Motivo da rejeição"></label>
+              <button class="q-btn" type="submit" style="background:var(--g-red);border-color:var(--g-red);color:#fff">Confirmar rejeição</button>
+            </form>
+          </div>
+        </div>
+      {% empty %}
+        <p class="g-muted" style="margin:0">Nenhuma aprovação pendente para o seu papel.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

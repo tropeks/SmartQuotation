@@ -206,6 +206,23 @@
     <section id="sec-aprovacao" class="g-section" style="margin-top:16px">
       <header class="g-section-head"><h3>§4 Aprovação Técnica</h3></header>
       <div class="g-section-body">
+        {% if approval_needs_case %}
+          {# RBAC V2 M5: fluxo multi-estágio — abrir/solicitar aprovações além da técnica #}
+          <div style="border:1px dashed var(--g-line);border-radius:8px;padding:10px;margin-bottom:12px">
+            {% if approval_active_case and approval_active_case.status == 'open' %}
+              <span class="g-muted">Fluxo de aprovações em andamento.</span>
+              <a class="q-btn" href="{% url 'audit:inbox' %}">Ver aprovações</a>
+            {% else %}
+              <span class="g-muted">Este fluxo exige aprovações além da técnica.</span>
+              {% if can_request_approval %}
+                <form method="post" action="{% url 'audit:request_approval' q.pk %}" style="display:inline">
+                  {% csrf_token %}
+                  <button class="q-btn primary" type="submit">Solicitar aprovação</button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endif %}
         {% with approval=q.technical_approvals.first %}
           {% if approval and approval.is_active %}
           <div class="approval-banner">

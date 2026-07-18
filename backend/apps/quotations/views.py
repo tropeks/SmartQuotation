@@ -345,6 +345,8 @@ def quotation_detail(request, pk):
     ).exclude(crea_number="").select_related("user")
     pending_remote_request = q.approval_requests.filter(status=ApprovalRequest.STATUS_PENDING).first()
     from apps.production.services import is_convertible
+    from apps.audit import approvals as _approvals
+    active_case = _approvals.active_case(q)
     return render(request, "quotations/detail.html",
                   {
                       "q": q,
@@ -356,6 +358,10 @@ def quotation_detail(request, pk):
                       "pending_remote_request": pending_remote_request,
                       "status_options": _status_options(),
                       "status_class": _status_class(q.status),
+                      # RBAC V2 M5: fluxo multi-estágio → botão "Solicitar aprovação".
+                      "approval_needs_case": _approvals.workflow_needs_case(),
+                      "approval_active_case": active_case,
+                      "can_request_approval": user_can(request.user, "approval.request_remote"),
                   })
 
 

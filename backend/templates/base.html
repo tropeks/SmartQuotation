@@ -1,5 +1,6 @@
 {% load static %}
 {% load access_tags %}
+{% load approval_tags %}
 <!doctype html>
 <html lang="pt-br">
 <head>
@@ -28,6 +29,10 @@
         <a class="q-btn" href="{% url 'quotations:tema_entry' %}">TEMA</a>
         <a class="q-btn" href="{% url 'tema_templates:catalog' %}">Catálogo</a>
         <a class="q-btn" href="{% url 'tema_templates:data_sheet' %}">Permutador</a>
+        {% user_can request.user "approval.panel_read" as can_inbox %}
+        {% if can_inbox %}
+          <a class="q-btn" href="{% url 'audit:inbox' %}">Aprovações {% inbox_badge request.user %}</a>
+        {% endif %}
         {% user_can request.user "access.manage" as can_manage_access %}
         {% if can_manage_access %}
           <a class="q-btn" href="{% url 'access:config' %}">Acessos</a>

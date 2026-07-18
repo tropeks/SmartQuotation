@@ -17,8 +17,9 @@ case → editar/recalcular a cotação invalida o case (mesmo mecanismo do Techn
 SoD (G3): o solicitante não aprova a própria, salvo se NENHUM outro usuário for qualificado
 (escape auditado em metadata.self_approved).
 """
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 
 from apps.audit.models import ApprovalCase, ApprovalTask
@@ -84,6 +85,7 @@ def open_case(quotation, requested_by, request=None):
             "quotation_id": quotation.pk,
             "stages": [s.key for s in stages],
         })
+    _bump_inbox_version()
     return case
 
 
@@ -114,6 +116,7 @@ def invalidate_stale_cases(quotation, request=None):
             case.status = ApprovalCase.STATUS_INVALIDATED
             case.closed_at = timezone.now()
             case.save(update_fields=["status", "closed_at", "updated_at"])
+            _bump_inbox_version()
             if request is not None:
                 log_access(request, "case_invalidate", case, {"quotation_id": quotation.pk})
 
@@ -223,6 +226,7 @@ def approve_task(quotation, task_id, approver_profile, request=None):
             "quotation_id": quotation.pk, "case_id": case.pk,
             "stage_key": task.stage_key, "self_approved": self_approved,
         })
+    _bump_inbox_version()
     return task
 
 
@@ -256,4 +260,125 @@ def reject_task(quotation, task_id, approver_profile, reason, request=None):
             "quotation_id": quotation.pk, "case_id": case.pk,
             "stage_key": task.stage_key, "reason": reason,
         })
+    _bump_inbox_version()
     return task
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inbox (RBAC V2 M5): tasks que eu posso decidir agora + contagem por papel (badge).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _open_valid_cases(quotation=None):
+    """Cases OPEN com snapshot ainda casando (não-stale). Iteração cabe na escala do tenant."""
+    qs = ApprovalCase.objects.filter(status=ApprovalCase.STATUS_OPEN).select_related("quotation")
+    if quotation is not None:
+        qs = qs.filter(quotation=quotation)
+    for case in qs:
+        if not _case_is_stale(case.quotation, case):
+            yield case
+
+
+def inbox_tasks_for(profile):
+    """Tasks do ESTÁGIO CORRENTE de cases ativos que `profile` pode decidir agora."""
+    if profile is None or not getattr(profile, "is_active", False):
+        return []
+    tasks = []
+    for case in _open_valid_cases():
+        task = current_task(case)
+        if task is not None and is_qualified(profile, task):
+            tasks.append(task)
+    return tasks
+
+
+def cases_requested_by(profile, limit=50):
+    """Cases que `profile` abriu (aba 'Minhas solicitações'), mais recentes primeiro."""
+    if profile is None:
+        return ApprovalCase.objects.none()
+    return (
+        ApprovalCase.objects.filter(requested_by=profile)
+        .select_related("quotation")
+        .prefetch_related("tasks")
+        .order_by("-created_at")[:limit]
+    )
+
+
+def _inbox_version_key():
+    return f"access:inbox:ver:{connection.schema_name}"
+
+
+def _bump_inbox_version():
+    """Invalida (por versão) os contadores de inbox cacheados do schema — eventos de case."""
+    key = _inbox_version_key()
+    try:
+        cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, None)
+
+
+def _inbox_count_key(role_key, version):
+    return f"access:inbox:{connection.schema_name}:{version}:{role_key}"
+
+
+def inbox_count_for_role(role_key):
+    """Nº de tasks correntes que o papel `role_key` pode decidir (fila idêntica por papel)."""
+    if not role_key:
+        return 0
+    from apps.access.enforcement import role_can
+
+    count = 0
+    for case in _open_valid_cases():
+        task = current_task(case)
+        if task is not None and task.approver_capability and role_can(role_key, task.approver_capability):
+            count += 1
+    return count
+
+
+def _capability_holder_emails(capability):
+    """E-mails dos usuários ativos cujo papel possui `capability` (destino da notificação).
+
+    Fecha o resto do #86: o alvo do e-mail vem da CAPABILITY do estágio corrente, não de
+    uma lista de papéis hard-coded (audit/services.py:78 usava role__in fixo)."""
+    from apps.access.enforcement import role_can
+    from apps.accounts.models import UserProfile
+
+    emails = []
+    for profile in UserProfile.objects.filter(is_active=True).select_related("user"):
+        if role_can(profile.role, capability) and (profile.user.email or "").strip():
+            emails.append(profile.user.email)
+    return sorted(set(emails))
+
+
+def notify_current_stage_approvers(case, request=None):
+    """Notifica por e-mail os aprovadores qualificados do estágio corrente do case (G4)."""
+    from django.core.mail import EmailMessage
+
+    task = current_task(case)
+    if task is None or not task.approver_capability:
+        return []
+    recipients = _capability_holder_emails(task.approver_capability)
+    if not recipients:
+        return []
+    q = case.quotation
+    EmailMessage(
+        subject=f"[SmartQuotation] Aprovação pendente: {task.stage_label} — {q.number}",
+        body=(
+            f"Cotação: {q.number}\nTítulo: {q.title}\n"
+            f"Estágio: {task.stage_label}\n"
+            f"Solicitante: {getattr(case.requested_by, 'full_name', '-')}"
+        ),
+        to=recipients,
+    ).send(fail_silently=True)
+    return recipients
+
+
+def inbox_count_for_role_cached(role_key):
+    """G15: 1 contagem por (schema, papel), cacheada; invalidada por bump de versão."""
+    if not role_key:
+        return 0
+    version = cache.get(_inbox_version_key(), 0)
+    key = _inbox_count_key(role_key, version)
+    val = cache.get(key)
+    if val is None:
+        val = inbox_count_for_role(role_key)
+        cache.set(key, val, 30)  # TTL de segurança; bump de versão é a invalidação precisa
+    return val
