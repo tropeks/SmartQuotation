@@ -11,8 +11,10 @@ recusa desligar a ÚLTIMA `access.manage=True` (senão o tenant se tranca fora).
 """
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Max
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
@@ -30,8 +32,14 @@ from apps.access.capabilities import (
 )
 from apps.access.compliance import TECHNICAL_SIGN_CAP
 from apps.access.enforcement import invalidate_matrix_cache, require_capability
-from apps.access.models import ApprovalStage, RolePermission
+from apps.access.models import ApprovalStage, ApprovalWorkflow, RolePermission
 from apps.access.role_templates import TEMPLATE_VERSION, get_template, role_templates
+from apps.access.workflow_templates import (
+    CUSTOM_SIGN_SLOTS,
+    get_workflow_template,
+    seed_workflow,
+    workflow_templates,
+)
 from apps.accounts.models import Role, UserProfile
 from apps.audit.services import log_access
 
@@ -600,3 +608,227 @@ def role_delete(request):
         "users_moved": moved,
     })
     return redirect(f"{_roles_url()}?notice=deleted")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RBAC V2 M3 — Builder de fluxo de aprovação (ApprovalWorkflow + ApprovalStage).
+# Gate `access.manage` (config de aprovações, como o toggle de estágios do F10).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _workflow_url():
+    return reverse("access:workflow")
+
+
+def _cap_holder_names(capability):
+    """Nomes dos papéis que HOJE possuem `capability` (aprovadores efetivos do estágio)."""
+    if not capability:
+        return []
+    keys = list(
+        RolePermission.objects.filter(capability=capability, allowed=True)
+        .values_list("role", flat=True)
+    )
+    names = dict(Role.objects.filter(key__in=keys).values_list("key", "name"))
+    return [names.get(k, k) for k in keys]
+
+
+def _used_custom_slots(workflow):
+    return set(
+        ApprovalStage.objects.filter(workflow=workflow, approver_capability__in=CUSTOM_SIGN_SLOTS)
+        .values_list("approver_capability", flat=True)
+    )
+
+
+def _next_custom_slot(workflow):
+    used = _used_custom_slots(workflow)
+    for slot in CUSTOM_SIGN_SLOTS:
+        if slot not in used:
+            return slot
+    return None
+
+
+def _workflow_stage_view(stage, *, idx, total):
+    holders = _cap_holder_names(stage.approver_capability)
+    return {
+        "pk": stage.pk,
+        "key": stage.key,
+        "label": stage.label,
+        "order": stage.order,
+        "required": stage.required,
+        "is_builtin": stage.is_builtin,
+        "approver_capability": stage.approver_capability,
+        "holders": holders,
+        "unsatisfiable": bool(stage.approver_capability) and not holders,
+        "can_up": idx > 0,
+        "can_down": idx < total - 1,
+    }
+
+
+def _unique_stage_key(base):
+    key = (slugify(base) or "estagio")[:60]
+    root = key
+    i = 2
+    while ApprovalStage.objects.filter(key=key).exists():
+        suffix = f"-{i}"
+        key = f"{root[:60 - len(suffix)]}{suffix}"
+        i += 1
+    return key
+
+
+def _workflow_context(request, workflow):
+    stages = list(workflow.stages.all().order_by("order", "key"))
+    total = len(stages)
+    return {
+        "workflow": workflow,
+        "stages": [_workflow_stage_view(s, idx=i, total=total) for i, s in enumerate(stages)],
+        "templates": workflow_templates(),
+        "roles": [{"key": r.key, "name": r.name} for r in Role.ordered()],
+        "has_free_slot": _next_custom_slot(workflow) is not None,
+        "notice": request.GET.get("notice", ""),
+    }
+
+
+@login_required
+@require_capability("access.manage")
+def workflow_config(request):
+    """Página do builder do fluxo de conversão em OF (estágios ordenados)."""
+    workflow = seed_workflow()
+    return render(request, "access/workflow.html", _workflow_context(request, workflow))
+
+
+def _grant_capability_to_role(role_key, capability, user):
+    """Concede `capability` ao papel `role_key` na matriz (Nota A do plano). Idempotente."""
+    if not role_key or not Role.objects.filter(key=role_key).exists():
+        return
+    RolePermission.objects.update_or_create(
+        role=role_key, capability=capability,
+        defaults={"allowed": True, "updated_by": user},
+    )
+
+
+@require_POST
+@require_capability("access.manage")
+def workflow_apply_template(request):
+    """Aplica um WorkflowTemplate: substitui os estágios NÃO-builtin (mantém o técnico)."""
+    workflow = seed_workflow()
+    tpl = get_workflow_template((request.POST.get("template") or "").strip())
+    if tpl is None:
+        return redirect(f"{_workflow_url()}?notice=bad_template")
+    with transaction.atomic():
+        ApprovalStage.objects.filter(workflow=workflow, is_builtin=False).delete()
+        for spec in tpl["stages"]:
+            if spec["is_builtin"]:
+                ApprovalStage.objects.update_or_create(
+                    key=spec["key"],
+                    defaults={
+                        "label": spec["label"], "order": spec["order"],
+                        "required": spec["required"],
+                        "approver_capability": spec["approver_capability"],
+                        "is_builtin": True, "workflow": workflow,
+                        "updated_by": request.user,
+                    },
+                )
+            else:
+                ApprovalStage.objects.create(
+                    workflow=workflow, key=_unique_stage_key(spec["key"]),
+                    label=spec["label"], order=spec["order"], required=spec["required"],
+                    approver_capability=spec["approver_capability"], is_builtin=False,
+                    updated_by=request.user,
+                )
+        workflow.source_template = tpl["key"]
+        workflow.updated_by = request.user
+        workflow.save(update_fields=["source_template", "updated_by", "updated_at"])
+    invalidate_matrix_cache()
+    log_access(request, "approval_config_change", workflow,
+               {"action": "apply_template", "template": tpl["key"]})
+    return redirect(f"{_workflow_url()}?notice=template_applied")
+
+
+@require_POST
+@require_capability("access.manage")
+def stage_add(request):
+    """Adiciona um estágio custom (label + papel aprovador). Consome um slot custom_sign_N."""
+    workflow = seed_workflow()
+    label = (request.POST.get("label") or "").strip()
+    approver_role = (request.POST.get("approver_role") or "").strip()
+    if not label:
+        return redirect(f"{_workflow_url()}?notice=need_label")
+    slot = _next_custom_slot(workflow)
+    if slot is None:
+        return redirect(f"{_workflow_url()}?notice=no_slot")
+    max_order = workflow.stages.aggregate(m=Max("order"))["m"] or 0
+    with transaction.atomic():
+        stage = ApprovalStage.objects.create(
+            workflow=workflow, key=_unique_stage_key(label), label=label,
+            order=max_order + 10, required=True, approver_capability=slot,
+            is_builtin=False, updated_by=request.user,
+        )
+        _grant_capability_to_role(approver_role, slot, request.user)
+    invalidate_matrix_cache()
+    log_access(request, "approval_config_change", workflow,
+               {"action": "stage_add", "key": stage.key, "capability": slot,
+                "approver_role": approver_role})
+    return redirect(f"{_workflow_url()}?notice=added")
+
+
+@require_POST
+@require_capability("access.manage")
+def stage_edit(request):
+    """Edita label e/ou papel aprovador de um estágio (built-in: só o aprovador)."""
+    workflow = seed_workflow()
+    key = (request.POST.get("key") or "").strip()
+    stage = ApprovalStage.objects.filter(workflow=workflow, key=key).first()
+    if stage is None:
+        return redirect(_workflow_url())
+    label = (request.POST.get("label") or "").strip()
+    approver_role = (request.POST.get("approver_role") or "").strip()
+    with transaction.atomic():
+        if label and not stage.is_builtin:
+            stage.label = label
+            stage.updated_by = request.user
+            stage.save(update_fields=["label", "updated_by", "updated_at"])
+        _grant_capability_to_role(approver_role, stage.approver_capability, request.user)
+    invalidate_matrix_cache()
+    log_access(request, "approval_config_change", workflow,
+               {"action": "stage_edit", "key": key, "approver_role": approver_role})
+    return redirect(f"{_workflow_url()}?notice=updated")
+
+
+@require_POST
+@require_capability("access.manage")
+def stage_remove(request):
+    """Remove um estágio custom (built-in não é removível — compliance CREA)."""
+    workflow = seed_workflow()
+    key = (request.POST.get("key") or "").strip()
+    stage = ApprovalStage.objects.filter(workflow=workflow, key=key).first()
+    if stage is None:
+        return redirect(_workflow_url())
+    if stage.is_builtin:
+        return redirect(f"{_workflow_url()}?notice=builtin")
+    stage.delete()
+    log_access(request, "approval_config_change", workflow,
+               {"action": "stage_remove", "key": key})
+    return redirect(f"{_workflow_url()}?notice=removed")
+
+
+@require_POST
+@require_capability("access.manage")
+def stage_move(request):
+    """Reordena um estágio (troca `order` com o vizinho na direção up/down)."""
+    workflow = seed_workflow()
+    key = (request.POST.get("key") or "").strip()
+    direction = (request.POST.get("direction") or "").strip()
+    stages = list(workflow.stages.all().order_by("order", "key"))
+    idx = next((i for i, s in enumerate(stages) if s.key == key), None)
+    if idx is None:
+        return redirect(_workflow_url())
+    swap = idx - 1 if direction == "up" else idx + 1 if direction == "down" else None
+    if swap is None or swap < 0 or swap >= len(stages):
+        return redirect(_workflow_url())
+    a, b = stages[idx], stages[swap]
+    with transaction.atomic():
+        a.order, b.order = b.order, a.order
+        a.save(update_fields=["order", "updated_at"])
+        b.save(update_fields=["order", "updated_at"])
+    log_access(request, "approval_config_change", workflow,
+               {"action": "stage_move", "key": key, "direction": direction})
+    return redirect(f"{_workflow_url()}?notice=reordered")
