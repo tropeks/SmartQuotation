@@ -486,7 +486,11 @@ def import_knobs(request):
         return render(request, "engineering_params/_knobs_form.html", context)
 
     result = kt.import_knobs(request.user, data, request=request)
+    # F3/C: opt-in — importar também horas/rates/preços como NOVAS VIGÊNCIAS.
+    versioned = kt.import_versioned(request.user, data, request=request) \
+        if request.POST.get("versioned") else None
     context = _knobs_context(request)          # recarrega (proposta sensível pode ter surgido)
     context["import_result"] = result
+    context["import_versioned"] = versioned
     context["import_warnings"] = warnings
     return render(request, "engineering_params/_knobs_form.html", context)
