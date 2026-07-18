@@ -54,6 +54,12 @@
     <span class="g-muted">{{ roles|length }} papel{{ roles|length|pluralize:",eis" }}</span>
   </header>
   <div class="g-section-body table-scroll">
+    {% if total <= 5 %}
+      <div style="border:1px dashed var(--g-line);border-radius:8px;padding:12px;margin-bottom:12px;color:var(--g-gray-1)">
+        Você usa só os papéis padrão. Crie um papel a partir de um modelo acima para adaptar as
+        permissões ao seu processo — nada muda para os membros até você atribuí-lo.
+      </div>
+    {% endif %}
     <table class="g-table">
       <thead>
         <tr>

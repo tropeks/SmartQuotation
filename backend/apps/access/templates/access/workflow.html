@@ -53,6 +53,13 @@
     <span class="g-muted">{{ stages|length }} estágio{{ stages|length|pluralize }}</span>
   </header>
   <div class="g-section-body">
+    {% if stages|length == 1 %}
+      <div style="border:1px dashed var(--g-line);border-radius:8px;padding:12px;margin-bottom:12px;color:var(--g-gray-1)">
+        Seu fluxo tem só a aprovação técnica (CREA) — o comportamento padrão. Aplique um modelo
+        acima ou adicione um estágio abaixo para exigir aprovações extras (ex.: comercial) antes
+        da conversão em OF.
+      </div>
+    {% endif %}
     {% for s in stages %}
       <div class="g-card" style="border:1px solid var(--g-line);border-radius:8px;padding:12px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">

@@ -15,6 +15,7 @@ class AccessConfig(AppConfig):
         from django.db.models.signals import post_delete, post_save
 
         from apps.access.models import RolePermission
+        from apps.accounts.models import Role
         from apps.access.signals import invalidate_matrix_on_change
 
         post_save.connect(
@@ -26,6 +27,18 @@ class AccessConfig(AppConfig):
             invalidate_matrix_on_change,
             sender=RolePermission,
             dispatch_uid="access_rolepermission_post_delete",
+        )
+        # RBAC V2 M6: papéis como dado mudam as colunas da matriz — invalidar o cache
+        # também no save/delete de Role (não só de RolePermission).
+        post_save.connect(
+            invalidate_matrix_on_change,
+            sender=Role,
+            dispatch_uid="access_role_post_save",
+        )
+        post_delete.connect(
+            invalidate_matrix_on_change,
+            sender=Role,
+            dispatch_uid="access_role_post_delete",
         )
 
         self._warn_on_registry_drift_if_debug()
