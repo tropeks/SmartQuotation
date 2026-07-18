@@ -58,9 +58,16 @@ _STAGE_RESOLVERS = {
 
 def _stage_satisfied(quotation, stage, snapshot) -> bool:
     resolver = _STAGE_RESOLVERS.get(stage.key)
-    if resolver is None:
-        return False
-    return resolver(quotation, snapshot)
+    if resolver is not None:
+        return resolver(quotation, snapshot)
+    # RBAC V2 M3: um estágio CONFIGURADO no builder (tem `approver_capability`) ainda
+    # não é gateado — sua EXECUÇÃO runtime (ApprovalCase/Task) só chega em M4. Tratá-lo
+    # como satisfeito evita travar a conversão ao montar um fluxo multi-estágio. Um
+    # estágio cru, sem resolver E sem capability aprovadora, segue bloqueando (semântica
+    # F10 conservadora — Wellington Q10). M4 substitui isto por checagem baseada em case.
+    if getattr(stage, "approver_capability", ""):
+        return True
+    return False
 
 
 def _stage_error(stage) -> str:

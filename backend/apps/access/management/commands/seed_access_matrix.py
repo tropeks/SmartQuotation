@@ -14,6 +14,7 @@ from django_tenants.utils import get_public_schema_name, get_tenant_model, schem
 
 from apps.accounts.models import seed_roles
 from apps.access.matrix import seed_access_matrix, seed_approval_stages
+from apps.access.workflow_templates import seed_workflow
 
 
 class Command(BaseCommand):
@@ -47,6 +48,7 @@ class Command(BaseCommand):
                 seed_roles()  # papéis como dado (RBAC V2 M1) — antes da matriz
                 result = seed_access_matrix()
                 stages = seed_approval_stages()
+                seed_workflow()  # fluxo default of.convert (M3) — anexa os estágios
             total += result["created"]
             self.stdout.write(
                 f"{tenant.schema_name}: +{result['created']} permissões, "

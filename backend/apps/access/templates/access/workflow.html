@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Fluxo de aprovações{% endblock %}
+{% block content %}
+<div class="eyebrow">ADM · Tenant</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <div>
+    <h1 class="q-number">FLUXO DE APROVAÇÕES</h1>
+    <p style="max-width:72ch;color:var(--g-gray-1);margin:8px 0 0">
+      Estágios em sequência que uma cotação percorre até poder virar Ordem de Fabricação.
+      A aprovação técnica (CREA) é obrigatória por compliance e não pode ser removida. A
+      execução dos demais estágios (inbox de aprovações) chega na próxima entrega.
+    </p>
+  </div>
+  <a class="q-btn" href="{% url 'access:config' %}">Matriz completa</a>
+</div>
+
+{% if notice %}
+  <div role="status" class="toast {% if notice == 'bad_template' or notice == 'need_label' or notice == 'no_slot' or notice == 'builtin' %}toast--err{% endif %}" style="margin:16px 0">
+    {% if notice == 'template_applied' %}Modelo aplicado ao fluxo.
+    {% elif notice == 'added' %}Estágio adicionado.
+    {% elif notice == 'updated' %}Estágio atualizado.
+    {% elif notice == 'removed' %}Estágio removido.
+    {% elif notice == 'reordered' %}Ordem atualizada.
+    {% elif notice == 'need_label' %}Informe o nome do estágio.
+    {% elif notice == 'no_slot' %}Limite de estágios custom atingido (3).
+    {% elif notice == 'builtin' %}A aprovação técnica não pode ser removida.
+    {% elif notice == 'bad_template' %}Modelo inválido.
+    {% else %}{{ notice }}{% endif %}
+  </div>
+{% endif %}
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Aplicar um modelo</h3></header>
+  <div class="g-section-body">
+    <p style="color:var(--g-gray-1);margin:0 0 8px">Substitui os estágios atuais (mantém a técnica). Você pode ajustar depois.</p>
+    <form method="post" action="{% url 'access:workflow_apply_template' %}"
+          style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      {% csrf_token %}
+      <label class="field" style="margin:0">
+        <span>Modelo</span>
+        <select name="template">
+          {% for t in templates %}<option value="{{ t.key }}">{{ t.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="q-btn">Aplicar modelo</button>
+    </form>
+  </div>
+</section>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head">
+    <h3>Estágios</h3>
+    <span class="g-muted">{{ stages|length }} estágio{{ stages|length|pluralize }}</span>
+  </header>
+  <div class="g-section-body">
+    {% for s in stages %}
+      <div class="g-card" style="border:1px solid var(--g-line);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <strong>{{ forloop.counter }}. {{ s.label }}</strong>
+              {% if s.is_builtin %}<span class="q-badge" title="Obrigatório por compliance CREA">compliance</span>{% endif %}
+              {% if s.required %}<span class="q-badge" style="border-color:var(--g-green);color:var(--g-green)">obrigatório</span>{% endif %}
+            </div>
+            <span class="g-muted" style="display:block">
+              Aprovadores:
+              {% if s.holders %}{{ s.holders|join:", " }}{% else %}<em>nenhum papel</em>{% endif %}
+              {% if s.approver_capability %}<code style="font-size:.75em">{{ s.approver_capability }}</code>{% endif %}
+            </span>
+            {% if s.unsatisfiable %}
+              <div role="alert" style="color:var(--g-red);margin-top:4px">
+                ⚠ Nenhum papel pode aprovar este estágio — atribua um aprovador abaixo.
+              </div>
+            {% endif %}
+          </div>
+          <div style="display:flex;gap:4px">
+            {% if s.can_up %}
+              <form method="post" action="{% url 'access:stage_move' %}">{% csrf_token %}
+                <input type="hidden" name="key" value="{{ s.key }}"><input type="hidden" name="direction" value="up">
+                <button class="q-btn" type="submit" title="Subir">↑</button></form>
+            {% endif %}
+            {% if s.can_down %}
+              <form method="post" action="{% url 'access:stage_move' %}">{% csrf_token %}
+                <input type="hidden" name="key" value="{{ s.key }}"><input type="hidden" name="direction" value="down">
+                <button class="q-btn" type="submit" title="Descer">↓</button></form>
+            {% endif %}
+            {% if not s.is_builtin %}
+              <form method="post" action="{% url 'access:stage_remove' %}"
+                    onsubmit="return confirm('Remover este estágio?')">{% csrf_token %}
+                <input type="hidden" name="key" value="{{ s.key }}">
+                <button class="q-btn" type="submit" style="border-color:var(--g-red);color:var(--g-red)">Remover</button></form>
+            {% endif %}
+          </div>
+        </div>
+        <form method="post" action="{% url 'access:stage_edit' %}"
+              style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:8px">
+          {% csrf_token %}
+          <input type="hidden" name="key" value="{{ s.key }}">
+          {% if not s.is_builtin %}
+            <label class="field" style="margin:0"><span>Nome do estágio</span>
+              <input type="text" name="label" value="{{ s.label }}" maxlength="120"></label>
+          {% endif %}
+          <label class="field" style="margin:0"><span>Definir papel aprovador</span>
+            <select name="approver_role">
+              <option value="">— manter —</option>
+              {% for r in roles %}<option value="{{ r.key }}">{{ r.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <button type="submit" class="q-btn">Salvar</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="g-section" style="margin-top:16px">
+  <header class="g-section-head"><h3>Adicionar estágio</h3></header>
+  <div class="g-section-body">
+    {% if has_free_slot %}
+      <form method="post" action="{% url 'access:stage_add' %}"
+            style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        {% csrf_token %}
+        <label class="field" style="margin:0"><span>Nome do estágio</span>
+          <input type="text" name="label" maxlength="120" placeholder="Ex.: Aprovação da diretoria" required></label>
+        <label class="field" style="margin:0"><span>Papel aprovador</span>
+          <select name="approver_role">
+            <option value="">— definir depois —</option>
+            {% for r in roles %}<option value="{{ r.key }}">{{ r.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="q-btn primary">Adicionar estágio</button>
+      </form>
+    {% else %}
+      <p class="g-muted" style="margin:0">Limite de 3 estágios custom atingido — remova um para adicionar outro.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

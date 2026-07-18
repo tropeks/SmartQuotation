@@ -44,12 +44,48 @@ class RolePermission(models.Model):
         return f"{self.role} · {self.capability} {estado}"
 
 
+class ApprovalWorkflow(models.Model):
+    """
+    Fluxo de aprovação de um `action_type` (RBAC V2 M3). Na V2.0 só existe
+    `of.convert` (conversão de cotação em OF) — 1 workflow por tenant (action_type único).
+
+    Agrupa `ApprovalStage`s ordenados. `is_active=False` = fluxo desligado (cai no
+    comportamento built-in mínimo). `source_template` guarda de qual WorkflowTemplate
+    (código) o fluxo foi montado (proveniência para a UI).
+    """
+
+    ACTION_OF_CONVERT = "of.convert"
+    ACTION_CHOICES = [(ACTION_OF_CONVERT, "Conversão em OF")]
+
+    action_type = models.CharField(
+        max_length=32, choices=ACTION_CHOICES, default=ACTION_OF_CONVERT, unique=True
+    )
+    name = models.CharField(max_length=120, default="Conversão em Ordem de Fabricação")
+    is_active = models.BooleanField(default=True)
+    source_template = models.CharField(max_length=64, blank=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "fluxo de aprovação"
+        verbose_name_plural = "fluxos de aprovação"
+
+    def __str__(self):
+        return f"{self.name} ({self.action_type})"
+
+
 class ApprovalStage(models.Model):
     """
     Estágio configurável do fluxo de aprovação (gate de convertibilidade).
 
     `is_convertible` (T7) passará a exigir todos os estágios `required=True`.
     `is_builtin` protege estágios de sistema (ex.: CREA) contra remoção/edição.
+    `workflow` (M3) agrupa estágios por fluxo; null = estágio legado (pré-M3),
+    tratado como pertencente ao fluxo default de conversão.
     """
 
     key = models.CharField(max_length=64, unique=True)  # identificador estável
@@ -58,6 +94,10 @@ class ApprovalStage(models.Model):
     required = models.BooleanField(default=True)
     approver_capability = models.CharField(max_length=64, blank=True)  # code do registry
     is_builtin = models.BooleanField(default=False)
+    workflow = models.ForeignKey(
+        ApprovalWorkflow, null=True, blank=True,
+        on_delete=models.CASCADE, related_name="stages",
+    )
 
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
