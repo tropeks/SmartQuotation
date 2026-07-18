@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.accounts.models import UserProfile
+from apps.accounts.models import Role, UserProfile
 from apps.audit.models import AccessLog, ApprovalRequest, TechnicalApproval
 
 
@@ -72,10 +72,16 @@ def request_remote_approval(quotation, requested_by, notes="", request=None):
         notes=notes or "",
         notified_at=timezone.now(),
     )
+    # Destinatários = papéis que assinam o estágio técnico (trait requires_crea, desacoplado
+    # do nome — ver #86) + o gestor comercial. Para o tenant default, requires_crea == {engenheiro},
+    # então o conjunto é idêntico ao antigo hard-code. O alvo por capability-do-estágio-corrente
+    # (fim do #86) é trabalho de M4/M5; aqui só removemos o acoplamento ao nome literal do papel.
+    crea_role_keys = list(Role.objects.filter(requires_crea=True).values_list("key", flat=True))
+    notify_roles = crea_role_keys + [UserProfile.ROLE_GESTOR_COMERCIAL]
     recipients = list(
         UserProfile.objects.filter(
             is_active=True,
-            role__in=[UserProfile.ROLE_ENGENHEIRO, UserProfile.ROLE_GESTOR_COMERCIAL],
+            role__in=notify_roles,
             user__email__gt="",
         )
         .select_related("user")
@@ -118,7 +124,7 @@ def approve_presencial(quotation, approver_profile, password, request=None, art_
     if approver_profile is None:
         _log_approval_attempt(request, quotation, approver_profile, "denied", "invalid_approver")
         raise ValidationError("Nao foi possivel validar a aprovacao.")
-    if approver_profile.role != UserProfile.ROLE_ENGENHEIRO or not (approver_profile.crea_number or "").strip():
+    if not Role.key_requires_crea(approver_profile.role) or not (approver_profile.crea_number or "").strip():
         _log_approval_attempt(request, quotation, approver_profile, "denied", "invalid_approver")
         raise ValidationError("Nao foi possivel validar a aprovacao.")
     authenticated = authenticate(

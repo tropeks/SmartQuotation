@@ -8,7 +8,6 @@ no URLconf do projeto é feita pelo agente pai (após settings + migrations).
 """
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.conf import settings
 from django.test import RequestFactory
@@ -33,16 +32,16 @@ class UserProfileModelTests(TestCase):
         with self.assertRaises(ValidationError):
             profile.full_clean()
 
-    def test_engenheiro_sem_crea_falha_na_constraint(self):
-        # Bypassa o clean() e grava direto -> a CheckConstraint do banco deve barrar.
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                UserProfile.objects.create(
-                    user=self.user,
-                    full_name="Ana Eng",
-                    role=UserProfile.ROLE_ENGENHEIRO,
-                    crea_number="",
-                )
+    def test_engenheiro_sem_crea_falha_no_save(self):
+        # Bypassa o clean() e grava direto -> save() aplica o trait requires_crea (RBAC V2 M1,
+        # substitui a antiga CheckConstraint amarrada ao nome literal do papel; ver #86).
+        with self.assertRaises(ValidationError):
+            UserProfile.objects.create(
+                user=self.user,
+                full_name="Ana Eng",
+                role=UserProfile.ROLE_ENGENHEIRO,
+                crea_number="",
+            )
 
     def test_engenheiro_com_crea_ok(self):
         profile = UserProfile.objects.create(
@@ -372,7 +371,7 @@ class TenantMemberInvitationTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(User.objects.filter(username="novo.eng@tenant.com").exists())
-        self.assertContains(response, "Engenheiro requer n", status_code=400)
+        self.assertContains(response, "Este papel requer n", status_code=400)
 
     def test_non_admin_cannot_invite_member(self):
         self.client.force_login(self.non_admin_user)

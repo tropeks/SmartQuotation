@@ -12,6 +12,7 @@ não sobrescreve customizações já feitas por admins — só preenche lacunas.
 from django.core.management.base import BaseCommand
 from django_tenants.utils import get_public_schema_name, get_tenant_model, schema_context
 
+from apps.accounts.models import seed_roles
 from apps.access.matrix import seed_access_matrix, seed_approval_stages
 
 
@@ -43,6 +44,7 @@ class Command(BaseCommand):
         total = 0
         for tenant in tenants:
             with schema_context(tenant.schema_name):
+                seed_roles()  # papéis como dado (RBAC V2 M1) — antes da matriz
                 result = seed_access_matrix()
                 stages = seed_approval_stages()
             total += result["created"]

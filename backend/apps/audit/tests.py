@@ -93,13 +93,19 @@ class TechnicalApprovalTests(TenantTestCase):
 
     def test_aprovacao_presencial_sem_crea_nega(self):
         sem_crea_user = User.objects.create_user(username="eng-sem-crea", password="123")
+        # Estado corrompido (CREA só com espaços): o save()/clean() do UserProfile agora
+        # barra isso na criação (trait requires_crea + .strip(), RBAC V2 M1). Injetamos via
+        # .update() (bypassa a validação de modelo) para exercitar o guard defensivo de
+        # approve_presencial, que continua negando CREA em branco em runtime.
         sem_crea = UserProfile.objects.create(
             user=sem_crea_user,
             full_name="Eng Sem CREA",
             role=UserProfile.ROLE_ENGENHEIRO,
-            crea_number="   ",
+            crea_number="SP-000",
             crea_state="SP",
         )
+        UserProfile.objects.filter(pk=sem_crea.pk).update(crea_number="   ")
+        sem_crea.refresh_from_db()
 
         resp = self.client.post(reverse("audit:approve_presencial", args=[self.quotation.pk]), {
             "approved_by": sem_crea.pk,
