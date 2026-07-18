@@ -11,7 +11,13 @@
       default) apenas <strong>avisa</strong> — não bloqueia.
     </p>
   </div>
-  <a class="q-btn ghost" href="{% url 'engineering_params:calibration' %}">← Calibração</a>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="q-btn ghost" href="{% url 'engineering_params:calibration' %}">← Calibração</a>
+    <a class="q-btn ghost" href="{% url 'engineering_params:export_knobs' %}?commercial=0"
+       title="Só a camada física (knobs), sem rates/preços">Exportar (física)</a>
+    <a class="q-btn" href="{% url 'engineering_params:export_knobs' %}"
+       title="Inclui a camada COMERCIAL (rates/preços) — arquivo confidencial">Exportar template ⭳</a>
+  </div>
 </header>
 
 <div style="margin-top:16px">

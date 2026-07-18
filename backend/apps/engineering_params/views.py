@@ -447,3 +447,20 @@ def reject_knob(request, pk):
     context = _knobs_context(request)
     context["proposal_rejected"] = True
     return render(request, "engineering_params/_knobs_form.html", context)
+
+
+@_PODE_EDITAR_RATE
+def export_knobs(request):
+    """Exporta o golden template da config de engenharia (JSON download). Inclui a camada
+    COMERCIAL por default (?commercial=0 exclui) — o arquivo é confidencial quando a inclui."""
+    import json
+    from django.http import HttpResponse
+    from apps.engineering_params import knob_template as kt
+
+    include_commercial = request.GET.get("commercial", "1") != "0"
+    tenant = getattr(getattr(request, "tenant", None), "schema_name", "") or ""
+    tpl = kt.export_template(include_commercial=include_commercial, source_tenant=tenant)
+    payload = json.dumps(tpl, ensure_ascii=False, indent=2)
+    resp = HttpResponse(payload, content_type="application/json")
+    resp["Content-Disposition"] = f'attachment; filename="knobs_template_{tenant or "tenant"}.json"'
+    return resp
