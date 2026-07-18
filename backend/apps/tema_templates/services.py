@@ -126,7 +126,13 @@ def tenant_cost_chain():
             chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
             if r.rate_hm is not None:
                 chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
-        chain.fator_correcao_mo = float(TenantParamConfig.get_solo().fator_correcao_mo)
+        cfg = TenantParamConfig.get_solo()
+        chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
+        # knob configurável (V2/F1): scrap por família → override do motor. É AQUI que a perda
+        # pega no custeio (estimate_complete usa dims_override). Coerção visível reusa o adapter.
+        from apps.quotations.adapter import _coerce_factor_map
+        chain.perda_por_familia = _coerce_factor_map(cfg.perda_por_familia, "perda_por_familia")
+        chain.setup_frac = _coerce_factor_map(cfg.setup_frac, "setup_frac")
     except Exception:
         pass
     return chain

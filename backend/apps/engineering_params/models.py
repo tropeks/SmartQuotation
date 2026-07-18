@@ -160,6 +160,25 @@ def _default_tube_standard_lengths() -> list:
     return [6100, 12000]
 
 
+def _default_perda_por_familia() -> dict:
+    """Scrap (fator bruto/líquido) por família geométrica — semeia do default do motor
+    (pricing_engine.beu_geometry.PERDA_POR_FAMILIA, os valores do Wellington). É o PONTO DE
+    PARTIDA editável do tenant; o motor lê o override via TenantCostChain.perda_por_familia
+    (Config de Engenharia V2 / F1). Import tardio p/ não acoplar o load do model ao motor."""
+    from pricing_engine.beu_geometry import PERDA_POR_FAMILIA
+    return dict(PERDA_POR_FAMILIA)
+
+
+def _default_setup_frac() -> dict:
+    """Fração de setup fixo por parâmetro físico — semeia do default do motor
+    (pricing_engine.permutador_quote._SETUP_FRAC). Editável pelo tenant; o motor lê o override via
+    TenantCostChain.setup_frac e escala as HORAS no caminho paramétrico (razão≠1). Import tardio.
+    NOTA p/ UI (PR-C): é o setup do MODELO paramétrico (escala horas por driver físico), DISTINTO
+    do ComponentOperation.setup_fixo (setup por operação no roteiro de partes) — nomear separado."""
+    from pricing_engine.permutador_quote import _SETUP_FRAC
+    return dict(_SETUP_FRAC)
+
+
 class TenantParamConfig(models.Model):
     """Knobs globais do tenant (singleton). fator_correcao_mo multiplica TODAS as horas (B31)."""
 
@@ -176,6 +195,14 @@ class TenantParamConfig(models.Model):
     tube_standard_lengths_mm = models.JSONField(default=_default_tube_standard_lengths)
     # C3 — raio mínimo da curva em U = fator × OD do tubo (TEMA RCB-2.3, default 1,5×OD).
     u_bend_min_radius_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.5)
+    # V2/F1 — scrap por família {família: fator bruto/líquido}. Override do PERDA_POR_FAMILIA do
+    # motor; o adapter copia p/ TenantCostChain.perda_por_familia. Só afeta o custeio no caminho
+    # com dims_override (data sheet); a referência/gate 0,0% não lê perda (ver PLAN F1 do motor).
+    perda_por_familia = models.JSONField(default=_default_perda_por_familia)
+    # V2/F1 — setup fixo por parâmetro {param: fração 0..1}. Override do _SETUP_FRAC do motor; o
+    # adapter copia p/ TenantCostChain.setup_frac. Escala horas no caminho paramétrico (razão≠1) →
+    # move o custeio do data sheet real. No referência (razão 1,0) o setup se cancela (gate 0,0%).
+    setup_frac = models.JSONField(default=_default_setup_frac)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

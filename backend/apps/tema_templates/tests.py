@@ -789,3 +789,97 @@ class DataSheetRBACTests(TestCase):
         resp = self.client.post("/tema/permutador/", self._PAYLOAD)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(Quotation.objects.filter(scope="complete").count(), 1)
+
+
+class KnobsConfigTests(TestCase):
+    """Config Eng V2 / F1 (Bloco B): os knobs perda_por_familia e setup_frac do TenantParamConfig
+    chegam ao motor via TenantCostChain e movem o custeio.
+
+    Achado do fluxo (documentado): a PERDA por família só é lida quando espelho/perfurado/disco
+    entram no dims_override; o data sheet atual só sobrescreve TUBOS+VIROLA, então a perda é
+    inerte no data sheet padrão HOJE (morde quando a geometria do espelho/chicana for parametrizada,
+    ou já via override explícito). O SETUP, ao contrário, escala as horas sempre que o projeto
+    difere da referência (razão≠1) — é o knob com efeito imediato no data sheet real."""
+
+    # data sheet IGUAL à referência do BEU: razão 1,0 nos drivers que o teste perturba (tubos,
+    # chicanas). reference_inputs('BEU') dá n_tubos=68, n_chicanas=1 e baseline de RT = "Total".
+    _REF = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
+            "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 1,
+            "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
+            "esp_casco_mm": 9.5, "n_passes_tubos": 2, "rt_escopo": "Total",
+            "classe_feixe": "CS", "classe_casco": "CS", "fluido_corrosivo": "Tubos",
+            "fator_correcao_mo": 1.0}
+    # projeto MAIOR que a referência (136 tubos → razão 2,0 em 'tubos'): o setup passa a morder.
+    _MAIOR = {**_REF, "n_tubos": 136}
+
+    def test_defaults_semeiam_do_motor(self):
+        from pricing_engine.beu_geometry import PERDA_POR_FAMILIA
+        from pricing_engine.permutador_quote import _SETUP_FRAC
+        cfg = TenantParamConfig.get_solo()
+        self.assertEqual(cfg.perda_por_familia, dict(PERDA_POR_FAMILIA))
+        self.assertEqual(cfg.setup_frac, dict(_SETUP_FRAC))
+
+    def test_tenant_cost_chain_copia_os_knobs(self):
+        from apps.tema_templates.services import tenant_cost_chain
+        cfg = TenantParamConfig.get_solo()
+        cfg.perda_por_familia = {"espelho": 2.5}
+        cfg.setup_frac = {"tubos": 0.9}
+        cfg.save()
+        chain = tenant_cost_chain()
+        self.assertEqual(chain.perda("espelho", 1.40), 2.5)
+        self.assertEqual(chain.setup("tubos", 0.20), 0.9)
+
+    def test_build_cost_chain_copia_os_knobs(self):
+        from apps.quotations.adapter import build_cost_chain
+        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.models import Customer
+        from apps.tema_templates.services import estimate_from_inputs
+        cfg = TenantParamConfig.get_solo()
+        cfg.perda_por_familia = {"espelho": 2.5}
+        cfg.setup_frac = {"tubos": 0.9}
+        cfg.save()
+        cust, _ = Customer.objects.get_or_create(company_name="ACME")
+        q = create_permutador_quotation(cust, "BEU", self._REF,
+                                        estimate_from_inputs("BEU", self._REF))
+        chain = build_cost_chain(q)
+        self.assertEqual(chain.perda("espelho", 1.40), 2.5)
+        self.assertEqual(chain.setup("tubos", 0.20), 0.9)
+
+    def test_setup_knob_move_mo_no_data_sheet_e2e(self):
+        """E2E DB→adapter→motor: com projeto ≠ referência (razão 2,0), mudar o setup dos tubos
+        muda as horas de MO da cotação. Setup MAIOR amortece a razão → MENOS MO."""
+        from apps.tema_templates.services import estimate_from_inputs
+        base = estimate_from_inputs("BEU", self._MAIOR)["custo_mao_obra"]
+        cfg = TenantParamConfig.get_solo()
+        cfg.setup_frac = {**cfg.setup_frac, "tubos": 0.9}
+        cfg.save()
+        alto = estimate_from_inputs("BEU", self._MAIOR)["custo_mao_obra"]
+        self.assertLess(alto, base)
+
+    def test_setup_gate_safe_no_referencia_e2e(self):
+        """No referência (razão 1,0), mexer no setup NÃO muda o custo (o setup se cancela)."""
+        from apps.tema_templates.services import estimate_from_inputs
+        base = estimate_from_inputs("BEU", self._REF)["custo_total"]
+        cfg = TenantParamConfig.get_solo()
+        cfg.setup_frac = {**cfg.setup_frac, "tubos": 0.9, "chicanas": 0.9}
+        cfg.save()
+        self.assertEqual(estimate_from_inputs("BEU", self._REF)["custo_total"], base)
+
+    def test_perda_knob_move_material_via_override(self):
+        """E2E DB→chain→motor: com dims_override do espelho, subir a perda sobe o material.
+        (Prova a fiação da perda; o data sheet padrão não sobrescreve o espelho — ver docstring.)"""
+        from apps.tema_templates.services import tenant_cost_chain
+        from pricing_engine.permutador_quote import quote_completo
+        ov = {"ESPELHO FIXO": {"OD": 475, "ESP.": 34}}
+        base = quote_completo("BEU", cost_chain=tenant_cost_chain(), dims_override=ov)["custo_material"]
+        cfg = TenantParamConfig.get_solo()
+        cfg.perda_por_familia = {**cfg.perda_por_familia, "espelho": 2.5}
+        cfg.save()
+        maior = quote_completo("BEU", cost_chain=tenant_cost_chain(), dims_override=ov)["custo_material"]
+        self.assertGreater(maior, base)
+
+    def test_coercao_descarta_entrada_invalida_com_aviso(self):
+        from apps.quotations.adapter import _coerce_factor_map
+        m = _coerce_factor_map({"espelho": "2.5", "ruim": "abc", "x": None}, "perda_por_familia")
+        self.assertEqual(m, {"espelho": 2.5})
+        self.assertEqual(_coerce_factor_map(["nao", "dict"], "perda_por_familia"), {})
