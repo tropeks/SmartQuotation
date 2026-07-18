@@ -28,13 +28,27 @@ _DEFAULT_ESPELHO_FLUTUANTE_OD_MM = FeixeInputs().espelho_flutuante_od_mm
 class FeixeDataSheetForm(forms.Form):
     title = forms.CharField(label="Título da cotação", max_length=500)
     customer_name = forms.CharField(label="Cliente", max_length=255)
-    tipo = forms.ChoiceField(label="Tipo de feixe", choices=TIPO)
+    tipo = forms.ChoiceField(
+        label="Tipo de feixe", choices=TIPO,
+        widget=forms.Select(attrs={"x-model": "tipo"}),
+    )
     # tubos
     n_tubos = forms.IntegerField(label="Nº de tubos", min_value=1)
     tubo_material = forms.CharField(label="Material do tubo", max_length=50)
-    tubo_od_spec = forms.ChoiceField(label="OD do tubo", choices=OD_TUBO)
+    tubo_od_spec = forms.ChoiceField(
+        label="OD do tubo", choices=OD_TUBO,
+        widget=forms.Select(attrs={"x-model": "tuboOdSpec"}),
+    )
     tubo_wall_spec = forms.ChoiceField(label="Parede (BWG)", choices=BWG)
-    tubo_comp_mm = forms.FloatField(label="Comprimento (mm)")
+    tubo_comp_mm = forms.FloatField(
+        label="Comprimento (mm)",
+        widget=forms.NumberInput(attrs={"x-model.number": "tuboComp"}),
+    )
+    # C3 — raio da curva em U (só feixe em U). Validado contra fator×OD (TEMA RCB-2.3).
+    u_bend_radius_mm = forms.FloatField(
+        label="Raio da curva em U (mm)", required=False,
+        widget=forms.NumberInput(attrs={"x-model.number": "uBendRadius"}),
+    )
     # espelhos
     espelho_tipo = forms.ChoiceField(
         label="Espelho — fixo × flutuante", choices=ESPELHO_TIPO, required=False,
@@ -50,9 +64,17 @@ class FeixeDataSheetForm(forms.Form):
     espelho_esp_bruta_mm = forms.FloatField(label="Espessura espelho (mm)")
     # chicanas
     chicana_qty = forms.IntegerField(label="Nº de chicanas", min_value=0)
-    chicana_od_mm = forms.FloatField(label="OD chicana (mm)")
+    chicana_od_mm = forms.FloatField(
+        label="OD chicana ≈ Ø interno casco (mm)",
+        widget=forms.NumberInput(attrs={"x-model.number": "baffleD", "@input": "onDInput()"}),
+    )
     chicana_esp_mm = forms.FloatField(label="Espessura chicana (mm)")
-    chicana_cut_remaining_mm = forms.FloatField(label="Corte chicana — altura restante (mm)")
+    # C1 — armazenado/consumido em mm pelo motor (hc = OD − corte). No front o valor é
+    # calculado a partir do corte em % do Ø interno do casco (baffle cut).
+    chicana_cut_remaining_mm = forms.FloatField(
+        label="Corte chicana — altura restante (mm)",
+        widget=forms.NumberInput(attrs={"x-model.number": "baffleCutMm"}),
+    )
     # tirantes
     tirante_qty = forms.IntegerField(label="Nº de tirantes", min_value=0)
     tirante_material = forms.CharField(label="Material do tirante", max_length=50, required=False)
@@ -77,6 +99,7 @@ class FeixeDataSheetForm(forms.Form):
 
     _INPUT_KEYS = (
         "tipo", "n_tubos", "tubo_material", "tubo_od_spec", "tubo_wall_spec", "tubo_comp_mm",
+        "u_bend_radius_mm",
         "espelho_tipo", "espelho_material", "espelho_od_mm", "espelho_flutuante_od_mm",
         "espelho_esp_bruta_mm",
         "chicana_qty", "chicana_od_mm", "chicana_esp_mm", "chicana_cut_remaining_mm",

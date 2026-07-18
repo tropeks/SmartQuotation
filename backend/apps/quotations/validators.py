@@ -98,6 +98,9 @@ def validate_metalurgia(quotation) -> list[dict]:
     # Folga periférica do feixe de reposição (RCB-4.3) — some ao mesmo aviso.
     avisos.extend(validate_folga_feixe(quotation))
 
+    # Raio mínimo da curva em U (RCB-2.3): fator × OD, fator vindo do TenantParamConfig (C3).
+    avisos.extend(validate_u_bend_radius(quotation))
+
     # Compatibilidade TEMA (reuso) quando as letras estão disponíveis.
     if ctx["front"] or ctx["shell"] or ctx["rear"]:
         try:
@@ -115,6 +118,39 @@ def _to_float(x) -> float:
         return float(x)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _is_u_feixe(inputs: dict) -> bool:
+    tipo = (inputs.get("tipo") or "").upper()
+    return tipo.startswith("TUBO U") or tipo == "TUBO U"
+
+
+def validate_u_bend_radius(quotation) -> list[dict]:
+    """Raio mínimo da curva em U (TEMA RCB-2.3): raio ≥ fator × OD do tubo. O fator é
+    configurável por tenant (TenantParamConfig.u_bend_min_radius_factor, C3). Só se aplica a
+    feixe em U e quando o raio da curva foi informado no data sheet."""
+    from apps.quotations.domain_params import u_bend_min_radius_mm
+
+    inputs = quotation.inputs or {}
+    if not _is_u_feixe(inputs):
+        return []
+    raio = _to_float(inputs.get("u_bend_radius_mm"))
+    od = _to_float(inputs.get("tubo_od_mm") or inputs.get("od_tubo_mm"))
+    if raio <= 0 or od <= 0:
+        return []
+    try:
+        from apps.engineering_params.models import TenantParamConfig
+        factor = float(TenantParamConfig.get_solo().u_bend_min_radius_factor)
+    except Exception:
+        factor = 1.5
+    minimo = u_bend_min_radius_mm(od, factor)
+    if raio < minimo:
+        return [{"nivel": "block", "codigo": "U_BEND_RAIO_MINIMO",
+                 "mensagem": (
+                     f"Raio da curva em U ({raio:.1f} mm) abaixo do mínimo TEMA RCB-2.3: "
+                     f"{factor:g}×OD = {minimo:.1f} mm (OD {od:.1f} mm). Aumente o raio ou "
+                     f"reduza o OD do tubo.")}]
+    return []
 
 
 def _contexto_feixe(quotation) -> dict:

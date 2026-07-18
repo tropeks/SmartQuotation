@@ -29,6 +29,9 @@
       <div class="field col-2"><label>{{ form.tubo_od_spec.label }}</label>{{ form.tubo_od_spec }}</div>
       <div class="field col-2"><label>{{ form.tubo_wall_spec.label }}</label>{{ form.tubo_wall_spec }}</div>
       <div class="field col-3"><label>{{ form.tubo_comp_mm.label }}</label>{{ form.tubo_comp_mm }}</div>
+      {# C3 — raio da curva em U (só feixe em U). Renderizado aqui p/ round-trip na edição
+         (sem o helper Alpine rico do data sheet — parity de UX é follow-up v1.1). #}
+      <div class="field col-3"><label>{{ form.u_bend_radius_mm.label }}</label>{{ form.u_bend_radius_mm }}</div>
     </div></div>
   </section>
 
