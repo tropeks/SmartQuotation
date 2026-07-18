@@ -63,6 +63,9 @@ class ApprovalWorkflow(models.Model):
     name = models.CharField(max_length=120, default="Conversão em Ordem de Fabricação")
     is_active = models.BooleanField(default=True)
     source_template = models.CharField(max_length=64, blank=True)
+    # SoD (G3): o solicitante não aprova a própria cotação. Default ON; o escape
+    # (auto-aprovação auditada) só vale quando NENHUM outro usuário é qualificado (M4).
+    self_approval_blocked = models.BooleanField(default=True)
 
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(

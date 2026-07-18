@@ -1912,18 +1912,18 @@ class ApprovalStageGateTests(TenantTestCase):
         stage.save(update_fields=["required"])
         self.assertTrue(services.is_convertible(self.quotation))
 
-    def test_estagio_configurado_com_capability_nao_bloqueia_em_m3(self):
-        # RBAC V2 M3: um estágio do builder (com approver_capability) fica CONFIGURADO mas
-        # sua execução (case/task) só chega em M4 -> não gateia ainda (evita travar a
-        # conversão ao montar o fluxo). Difere do estágio cru sem capability, que bloqueia.
+    def test_estagio_configurado_sem_task_aprovada_bloqueia_m4(self):
+        # RBAC V2 M4: um estágio não-técnico (com approver_capability) só é satisfeito por
+        # uma ApprovalTask APROVADA no case ativo. Sem case/task, bloqueia — mesmo com a
+        # aprovação técnica ok. (A satisfação via task é coberta em apps.audit.tests_approvals.)
         from apps.access.models import ApprovalStage
 
         approve_quotation(self.quotation, self.engineer)  # técnico satisfeito
         ApprovalStage.objects.create(
-            key="comercial-m3", label="Aprovação comercial", order=20,
+            key="comercial-m4", label="Aprovação comercial", order=20,
             required=True, is_builtin=False, approver_capability="approval.commercial_sign",
         )
-        self.assertTrue(services.is_convertible(self.quotation))
+        self.assertFalse(services.is_convertible(self.quotation))
 
     def test_fallback_sem_estagios_semeados_exige_tecnico(self):
         """Schema legado sem estágios semeados: cai no técnico built-in sintético."""
