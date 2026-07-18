@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'create' %}Novo papel{% else %}Editar papel{% endif %}{% endblock %}
+{% block content %}
+<div class="eyebrow">ADM · Tenant · Papéis</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+  <h1 class="q-number">{% if mode == 'create' %}NOVO PAPEL{% else %}EDITAR · {{ role.name }}{% endif %}</h1>
+  <a class="q-btn" href="{% url 'access:roles' %}">Voltar</a>
+</div>
+
+{% if error %}
+  <div role="alert" class="toast toast--err" style="margin:16px 0">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="{% url form_action %}" class="g-form" style="margin-top:16px">
+  {% csrf_token %}
+  {% if mode == 'edit' %}<input type="hidden" name="key" value="{{ edit_key }}">{% endif %}
+  {% if source_template %}<input type="hidden" name="source_template" value="{{ source_template }}">{% endif %}
+
+  <section class="g-section" style="margin-bottom:16px">
+    <header class="g-section-head"><h3>Identificação</h3></header>
+    <div class="g-section-body">
+      <label class="field col-6">
+        <span>Nome do papel</span>
+        <input type="text" name="name" value="{{ role.name }}" maxlength="80" required
+               placeholder="Ex.: Diretor Comercial" id="id_role_name">
+      </label>
+      {% if not editable_key and role.key %}
+        <label class="field col-6">
+          <span>Identificador (key)</span>
+          <input type="text" value="{{ role.key }}" disabled>
+        </label>
+      {% endif %}
+      <label class="field col-12">
+        <span>Descrição</span>
+        <input type="text" name="description" value="{{ role.description }}" maxlength="255"
+               placeholder="O que este papel faz">
+      </label>
+      <label class="field col-6" style="flex-direction:row;align-items:center;gap:8px">
+        <input type="checkbox" name="requires_crea" {% if role.requires_crea %}checked{% endif %}>
+        <span>Exige CREA <span class="g-muted">(necessário para assinar a aprovação técnica)</span></span>
+      </label>
+      <label class="field col-6" style="flex-direction:row;align-items:center;gap:8px">
+        <input type="checkbox" name="is_admin_like" {% if role.is_admin_like %}checked{% endif %}>
+        <span>Papel administrativo</span>
+      </label>
+      {% if is_seeded %}
+        <p class="g-muted col-12" style="margin:4px 0 0">Este é um papel padrão do sistema — pode
+          editar nome, traits e permissões, mas ele não pode ser excluído.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="g-section" style="margin-bottom:16px">
+    <header class="g-section-head">
+      <h3>Permissões</h3>
+      <span class="g-muted">marque as capabilities deste papel</span>
+    </header>
+    <div class="g-section-body">
+      {% for group in cap_groups %}
+        <fieldset style="border:0;padding:0;margin:0 0 12px">
+          <legend style="font-weight:500;margin-bottom:6px">{{ group.label }}</legend>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px">
+            {% for cap in group.caps %}
+              <label class="field" style="flex-direction:row;align-items:flex-start;gap:8px;margin:0">
+                <input type="checkbox" name="cap" value="{{ cap.code }}" {% if cap.checked %}checked{% endif %}>
+                <span>
+                  {{ cap.label }}
+                  {% if cap.is_dangerous %}<span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">sensível</span>{% endif %}
+                  <span class="g-muted" style="display:block;font-weight:400">{{ cap.description }}</span>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div style="display:flex;gap:8px">
+    <button type="submit" class="q-btn primary">{% if mode == 'create' %}Criar papel{% else %}Salvar alterações{% endif %}</button>
+    <a class="q-btn" href="{% url 'access:roles' %}">Cancelar</a>
+  </div>
+</form>
+
+{% if mode == 'edit' and not is_seeded %}
+  <section class="g-section" style="margin-top:24px;border-color:var(--g-red)"
+           x-data="{ confirm: false }">
+    <header class="g-section-head"><h3 style="color:var(--g-red)">Excluir papel</h3></header>
+    <div class="g-section-body">
+      {% if active_users %}
+        <p style="margin:0 0 8px">Há <strong>{{ active_users }}</strong> usuário(s) ativo(s) com este
+          papel. Escolha para qual papel movê-los antes de excluir.</p>
+      {% else %}
+        <p class="g-muted" style="margin:0 0 8px">Nenhum usuário ativo com este papel.</p>
+      {% endif %}
+      <button type="button" class="q-btn" style="border-color:var(--g-red);color:var(--g-red)"
+              @click="confirm = !confirm">Excluir este papel…</button>
+      <form method="post" action="{% url 'access:role_delete' %}" x-show="confirm" x-cloak
+            style="margin-top:12px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        {% csrf_token %}
+        <input type="hidden" name="key" value="{{ edit_key }}">
+        {% if active_users %}
+          <label class="field" style="margin:0">
+            <span>Mover {{ active_users }} usuário(s) para</span>
+            <select name="reassign_to" required>
+              <option value="">Selecione…</option>
+              {% for t in reassign_targets %}<option value="{{ t.key }}">{{ t.name }}</option>{% endfor %}
+            </select>
+          </label>
+        {% endif %}
+        <button type="submit" class="q-btn primary" style="background:var(--g-red);border-color:var(--g-red)">
+          Confirmar exclusão</button>
+      </form>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

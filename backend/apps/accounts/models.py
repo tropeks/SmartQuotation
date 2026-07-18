@@ -66,6 +66,22 @@ class Role(models.Model):
             return False
         return cls.objects.filter(key=role_key, requires_crea=True).exists()
 
+    @classmethod
+    def ordered(cls):
+        """Papéis do tenant p/ colunas/dropdowns: built-ins na ordem canônica (a mesma
+        de DEFAULT_ROLES), papéis custom depois, por nome. Fonte única da ordenação (M2)."""
+        canonical = {spec["key"]: i for i, spec in enumerate(DEFAULT_ROLES)}
+        roles = list(cls.objects.all())
+        roles.sort(
+            key=lambda r: (0, canonical[r.key]) if r.key in canonical else (1, r.name.lower())
+        )
+        return roles
+
+    @classmethod
+    def choices(cls):
+        """[(key, name)] na ordem canônica — para ChoiceField/dropdowns dinâmicos (M2)."""
+        return [(r.key, r.name) for r in cls.ordered()]
+
 
 class UserProfile(models.Model):
     ROLE_VIEWER = "viewer"

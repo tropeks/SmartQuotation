@@ -3,7 +3,15 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from apps.accounts.models import UserProfile
+from apps.accounts.models import Role, UserProfile
+
+
+def role_field_choices():
+    """Choices de papel para dropdowns, dinâmicas por tenant (RBAC V2 M2).
+
+    Lê os papéis do schema ativo (built-in + custom). Fallback para o enum estático
+    UserProfile.ROLE se a tabela ainda não tiver papéis (schema não semeado)."""
+    return Role.choices() or list(UserProfile.ROLE)
 
 
 class LoginForm(forms.Form):
@@ -27,6 +35,10 @@ class UserProfileForm(forms.ModelForm):
         model = UserProfile
         fields = ["full_name", "role", "crea_number", "crea_state", "phone", "is_active"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"].choices = role_field_choices()
+
 
 class MemberInviteForm(forms.Form):
     email = forms.EmailField(
@@ -46,6 +58,10 @@ class MemberInviteForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={"placeholder": "Obrigatório para engenheiro"}),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"].choices = role_field_choices()
     crea_state = forms.CharField(
         label="UF do CREA",
         max_length=2,
@@ -97,3 +113,7 @@ class MemberRoleChangeForm(forms.Form):
     role = forms.ChoiceField(label="Papel", choices=UserProfile.ROLE)
     crea_number = forms.CharField(label="Número do CREA", max_length=30, required=False)
     crea_state = forms.CharField(label="UF do CREA", max_length=2, required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"].choices = role_field_choices()

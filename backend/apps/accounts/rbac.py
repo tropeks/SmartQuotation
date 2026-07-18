@@ -23,11 +23,30 @@ ROLE_GROUPS = {
 
 
 def ensure_groups():
-    """Cria os Groups de cada role (idempotente). Retorna {role: Group}."""
+    """Cria os Groups dos roles built-in (idempotente). Retorna {role: Group}."""
     grupos = {}
     for role, nome in ROLE_GROUPS.items():
         grupos[role], _ = Group.objects.get_or_create(name=nome)
     return grupos
+
+
+def ensure_role_group(role_key):
+    """
+    Group do Django para QUALQUER papel (built-in ou custom, RBAC V2 M2). Idempotente.
+
+    Built-ins usam o nome canônico de ROLE_GROUPS; papéis custom usam o `name` da Role
+    (fallback: a própria key). Evita o KeyError de `ensure_groups()[key]` quando o papel
+    não é um dos 5 built-in. O enforcement real é a matriz RolePermission — o Group serve
+    de espelho/compat; por isso um nome estável por papel basta.
+    """
+    from apps.accounts.models import Role
+
+    nome = ROLE_GROUPS.get(role_key)
+    if nome is None:
+        role = Role.objects.filter(key=role_key).first()
+        nome = role.name if role and role.name else role_key
+    group, _ = Group.objects.get_or_create(name=nome)
+    return group
 
 
 def user_role(user):

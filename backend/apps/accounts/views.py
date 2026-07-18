@@ -20,8 +20,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.accounts.forms import LoginForm, MemberInviteForm, MemberRoleChangeForm
-from apps.accounts.models import UserProfile
-from apps.accounts.rbac import ensure_groups, require_role
+from apps.accounts.models import Role, UserProfile
+from apps.accounts.rbac import ensure_groups, ensure_role_group, require_role
 from apps.accounts.rbac import has_tenant_membership
 from apps.access.enforcement import require_capability
 from apps.audit.models import TechnicalApproval
@@ -153,15 +153,27 @@ def _members_context(request):
             | Q(crea_number__icontains=query)
         )
 
+    active_members = members.filter(is_active=True).count()
+    inactive_members = members.filter(is_active=False).count()
+    engineers = members.filter(role=UserProfile.ROLE_ENGENHEIRO).count()
+
+    # Rótulo humano do papel (built-in ou custom, RBAC V2 M2): materializa a lista e
+    # anexa `role_label` — get_role_display() só conhece os choices estáticos do enum.
+    role_choices = Role.choices()
+    label_map = dict(role_choices)
+    members = list(members)
+    for m in members:
+        m.role_label = label_map.get(m.role, m.role)
+
     return {
         "members": members,
         "search": query,
-        "active_members": members.filter(is_active=True).count(),
-        "inactive_members": members.filter(is_active=False).count(),
-        "engineers": members.filter(role=UserProfile.ROLE_ENGENHEIRO).count(),
+        "active_members": active_members,
+        "inactive_members": inactive_members,
+        "engineers": engineers,
         "invite_form": MemberInviteForm(),
         "invitation_result": None,
-        "role_choices": UserProfile.ROLE,
+        "role_choices": role_choices,
     }
 
 
@@ -187,7 +199,7 @@ def change_member_role_view(request, pk):
     old_role = profile.role
     new_role = form.cleaned_data["role"]
     profile.role = new_role
-    if new_role == UserProfile.ROLE_ENGENHEIRO:
+    if Role.key_requires_crea(new_role):  # trait, não o nome literal (#86)
         profile.crea_number = form.cleaned_data.get("crea_number") or profile.crea_number
         profile.crea_state = (form.cleaned_data.get("crea_state") or profile.crea_state or "").upper()
 
@@ -201,7 +213,7 @@ def change_member_role_view(request, pk):
         return render(request, template, context, status=400)
 
     profile.save()
-    role_group = ensure_groups()[new_role]
+    role_group = ensure_role_group(new_role)
     profile.user.groups.set([role_group])
     log_access(request, "role_change", profile, {"old_role": old_role, "new_role": new_role})
 
@@ -272,7 +284,7 @@ def invite_member_view(request):
                 status=400,
             )
         profile.save()
-        role_group = ensure_groups()[profile.role]
+        role_group = ensure_role_group(profile.role)
         user.groups.set([role_group])
 
     context = {
