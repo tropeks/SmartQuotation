@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+from apps.accounts.models import Role
+
 
 class TechnicalApproval(models.Model):
     """Aprovação técnica vinculada ao snapshot de cálculo de uma cotação.
@@ -39,8 +41,8 @@ class TechnicalApproval(models.Model):
         profile = self.approved_by
         if not profile:
             return
-        if profile.role != "engenheiro":
-            raise ValidationError({"approved_by": "Aprovação técnica exige perfil engenheiro."})
+        if not Role.key_requires_crea(profile.role):
+            raise ValidationError({"approved_by": "Aprovação técnica exige papel com CREA."})
         if not (profile.crea_number or "").strip():
             raise ValidationError({"crea_number": "Aprovação técnica exige CREA do engenheiro."})
 
