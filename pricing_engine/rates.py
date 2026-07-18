@@ -34,10 +34,27 @@ class TenantCostChain:
     fator_correcao_mo: float = 1.0
     fator_preco: float = 1.0          # markup final
     impostos_pct: float = 0.0         # % sobre preço (ICMS+PIS+COFINS...)
+    # ── knobs de engenharia CONFIGURÁVEIS (Config de Engenharia V2 / F1, Bloco A) ──
+    # Override, por tenant, de constantes que hoje moram no motor. VAZIO = usa o default de
+    # módulo (PERDA_POR_FAMILIA em beu_geometry, _SETUP_FRAC em permutador_quote) → o gate 0,0%
+    # do permutador fica intacto. O motor lê via .perda()/.setup() com o default passado no ponto
+    # de uso (evita import circular rates↔permutador_quote). Semântica em permutador_quote.
+    perda_por_familia: dict[str, float] = field(default_factory=dict)   # família -> fator bruto/líquido
+    setup_frac: dict[str, float] = field(default_factory=dict)          # param físico -> fração de setup
 
     def __post_init__(self):
         self.rate_hh = {op_key(k): v for k, v in self.rate_hh.items()}
         self.rate_hm = {op_key(k): v for k, v in self.rate_hm.items()}
+
+    def perda(self, familia: str, default: float) -> float:
+        """Fator bruto/líquido da família: override do tenant se houver, senão o default do motor."""
+        v = self.perda_por_familia.get(familia)
+        return float(v) if v is not None else default
+
+    def setup(self, param: str, default: float) -> float:
+        """Fração de setup fixo do parâmetro: override do tenant se houver, senão o default do motor."""
+        v = self.setup_frac.get(param)
+        return float(v) if v is not None else default
 
     def hh(self, operacao: str, default: float = 0.0) -> float:
         key = op_key(operacao)

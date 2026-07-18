@@ -108,13 +108,31 @@ def _param_da_op(o):
     return _DRIVER_PARAM.get(o.get("driver"))
 
 
-def _escala_op(o, params):
-    """Fator efetivo de horas da op: setup + (1-setup)×razão_do_parâmetro. 1,0 no referência."""
+def _setup_frac(param, cost_chain):
+    """Fração de setup do parâmetro: override do tenant (cost_chain) sobre o default de módulo."""
+    default = _SETUP_FRAC.get(param, 0.15)
+    if cost_chain is not None and hasattr(cost_chain, "setup"):
+        return cost_chain.setup(param, default)
+    return default
+
+
+def _perda_eff(familia, cost_chain):
+    """Fator bruto/líquido da família: override do tenant (cost_chain) sobre o default de módulo."""
+    default = perda_familia(familia)
+    if cost_chain is not None and hasattr(cost_chain, "perda"):
+        return cost_chain.perda(familia, default)
+    return default
+
+
+def _escala_op(o, params, cost_chain=None):
+    """Fator efetivo de horas da op: setup + (1-setup)×razão_do_parâmetro. 1,0 no referência.
+    A fração de setup é configurável por tenant (cost_chain.setup); no referência (razão 1,0) o
+    setup se cancela → setup + (1-setup)·1 = 1,0 para qualquer valor → gate 0,0% intacto."""
     p = _param_da_op(o)
     if not p:
         return 1.0
     razao = float((params or {}).get(p, 1.0))
-    setup = _SETUP_FRAC.get(p, 0.15)
+    setup = _setup_frac(p, cost_chain)
     return setup + (1.0 - setup) * razao
 
 
@@ -255,15 +273,16 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                     if m["familia"] in ("espelho", "perfurado", "disco"):
                         # peça circular cortada de chapa: usa a perda da FAMÍLIA (40% do
                         # Wellington), não a do gabarito — o bruto do gabarito embute folga de
-                        # forjado, não o scrap de corte. #agy review12 #2.
-                        perda_eff = perda_familia(m["familia"])
+                        # forjado, não o scrap de corte. #agy review12 #2. Configurável por tenant
+                        # (cost_chain.perda); só afeta o caminho com dims_override (gate 0,0% intacto).
+                        perda_eff = _perda_eff(m["familia"], cost_chain)
                     elif liq_seed:
                         # perda AUTO-CALIBRADA = bruto_seed / geometria_seed: reproduz o bruto do
                         # seed na referência e escala sem dupla contagem — #agy review7 1.B.
                         perda_eff = m["peso_bruto"] / (liq_seed * qtd)
                     else:
                         perda_eff = ((m["peso_bruto"] / m["peso_liq"]) if m.get("peso_liq")
-                                     else perda_familia(m["familia"]))
+                                     else _perda_eff(m["familia"], cost_chain))
                     # perda nunca < 1,0 (não se cria matéria) — guarda contra peso_liq do seed
                     # maior que o bruto em alguns itens (#agy review8).
                     peso_bruto = liq_new * qtd * max(perda_eff, 1.0)
@@ -283,7 +302,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
     custo_mo = custo_servico = 0.0
     custo_por_param = {}
     for o in ops:
-        eff = _escala_op(o, params_eff)                # setup + (1-setup)×razão (1,0 no ref)
+        eff = _escala_op(o, params_eff, cost_chain)    # setup + (1-setup)×razão (1,0 no ref)
         pnome = _param_da_op(o) or "fixo"
         # fator de liga metalúrgica POR LADO (#3 + bimetálico): MO e serviços de solda do lado
         lado = _lado_da_op(o, corrosivo)
