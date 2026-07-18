@@ -280,13 +280,19 @@ def _recompute_parts(quotation) -> None:
 
 def _recompute_complete(quotation) -> None:
     """Recomputa um permutador completo (scope='complete') por designação TEMA, reusando o
-    motor via tema_templates.estimate_complete e repersistindo a EAP por seção (mesma forma
-    de services.create_permutador_quotation). SEGURO: se a designação não é custeável, é
-    NO-OP (preserva o snapshot atual em vez de zerar a cotação)."""
-    from apps.tema_templates.services import estimate_complete
+    motor via tema_templates.estimate_from_inputs e repersistindo a EAP por seção (mesma forma
+    de services.create_permutador_quotation).
 
-    desig = (quotation.inputs or {}).get("designacao")
-    resultado = estimate_complete(desig) if desig else None
+    Reconstrói dims_override/params/metalurgia a partir do data sheet salvo em quotation.inputs
+    (paridade com a view data_sheet e com quotation_revise). ANTES chamava estimate_complete(desig)
+    PELADO, o que revertia a cotação à geometria/metalurgia de REFERÊNCIA a cada recompute.
+    SEGURO: designação ausente/não custeável ou inputs inválidos → estimate_from_inputs devolve
+    None → NO-OP (preserva o snapshot atual em vez de zerar/reverter a cotação)."""
+    from apps.tema_templates.services import estimate_from_inputs
+
+    inputs = quotation.inputs or {}
+    desig = inputs.get("designacao")
+    resultado = estimate_from_inputs(desig, inputs) if desig else None
     if not resultado:
         return
 
