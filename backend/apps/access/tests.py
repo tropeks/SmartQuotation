@@ -58,6 +58,8 @@ class CapabilityRegistryTests(SimpleTestCase):
             "approval.custom_sign_2",
             "approval.custom_sign_3",
             "role.manage",
+            # Config de Engenharia V2 — F2: aprovar propostas de knobs sensíveis (SoD).
+            "knob.approve",
         }
         self.assertEqual(capability_codes(), esperadas)
 

@@ -248,3 +248,42 @@ class RateSuggestion(models.Model):
 
     def __str__(self):
         return f'{self.operacao} Δ{self.delta_pct}% N={self.n_samples} [{self.status}]'
+
+
+class KnobChangeProposal(models.Model):
+    """Proposta de mudança em LOTE dos knobs SENSÍVEIS do TenantParamConfig (Config Eng V2 / F2).
+
+    Dupla validação com SoD: um usuário PROPÕE (capability rate.edit), outro APROVA (knob.approve).
+    Generaliza o padrão pending→applied do RateSuggestion + separação de funções. NÃO reusa o
+    ApprovalCase (acoplado a Quotation NOT NULL) — é o Bloco B 'lite'. Só 1 pendente por vez.
+
+    payload = {campo: {"before": {chave: fator}, "after": {chave: fator}}} — before capturado no
+    momento da proposta (base da checagem de staleness); after = valores propostos.
+    """
+    STATUS_PENDING = "pending"
+    STATUS_APPLIED = "applied"
+    STATUS_REJECTED = "rejected"
+    STATUS = [(STATUS_PENDING, "Pendente"), (STATUS_APPLIED, "Aplicada"), (STATUS_REJECTED, "Rejeitada")]
+
+    payload = models.JSONField()
+    status = models.CharField(max_length=20, choices=STATUS, default=STATUS_PENDING, db_index=True)
+    requested_by = models.ForeignKey(
+        get_user_model(), null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="knob_proposals_requested")
+    resolved_by = models.ForeignKey(
+        get_user_model(), null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="knob_proposals_resolved")
+    self_approved = models.BooleanField(default=False)  # escape de SoD auditado (sole-qualified)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["status"], condition=models.Q(status="pending"),
+                name="uniq_knob_proposal_pending"),
+        ]
+
+    def __str__(self):
+        return f"KnobChangeProposal #{self.pk} [{self.status}]"

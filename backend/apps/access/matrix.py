@@ -64,6 +64,9 @@ DEFAULT_MATRIX = {
     "cost_discovery.write": frozenset({E, A}),
     "rate.change": frozenset({E, G, A}),
     "rate.edit": frozenset({E, A}),
+    # V2/F2 — aprovar propostas de knobs sensíveis (SoD; propor é rate.edit). Mesma turma
+    # de rate.change {E,G,A} → qualquer par forma SoD válido; sole-qualified usa escape auditado.
+    "knob.approve": frozenset({E, G, A}),
     "proposal.write": frozenset({E, A}),
     "tema_template.write": frozenset({E, A}),
     "material.read": frozenset({O, E, G, A}),
