@@ -5,6 +5,8 @@ app_name = 'engineering_params'
 
 urlpatterns = [
     path('engenharia/calibracao/', views.calibration, name='calibration'),
+    path('engenharia/knobs/', views.knobs, name='knobs'),
+    path('engenharia/knobs/salvar/', views.save_knobs, name='save_knobs'),
     path('engenharia/calibracao/rates/<int:pk>/', views.save_rate, name='save_rate'),
     path('engenharia/calibracao/rates/<int:pk>/preview/', views.preview_rate_impact, name='preview_rate_impact'),
     path('engenharia/calibracao/process-parameters/<int:pk>/', views.save_process_parameter, name='save_process_parameter'),
