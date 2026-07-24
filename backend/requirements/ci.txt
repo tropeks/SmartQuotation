@@ -19,4 +19,4 @@ python-docx>=1.2.0
 # Mesmo range de base.txt — o lock é quem fixa a versão exata (69.0 nos dois).
 weasyprint>=62.0
 # static files: WhiteNoiseMiddleware é carregado em settings/base.py (todos os ambientes)
-whitenoise>=6.6
+whitenoise>=6.12.0
