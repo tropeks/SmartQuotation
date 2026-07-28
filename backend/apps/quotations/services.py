@@ -97,12 +97,24 @@ def build_snapshot_payload(quotation, memorial=None) -> dict:
                 }
                 for mp in item.materiais.order_by("codigo_mp", "id")
             ],
+            # HORAS E TAXAS ENTRAM NO HASH (M1). Guardar só o `custo` deixava o
+            # snapshot cego a `custo = horas × taxa`: dava para partir as horas pela
+            # metade e dobrar a taxa que o custo — e portanto o hash — não mudava, e a
+            # assinatura técnica continuava casando. A Ordem de Fabricação copia as
+            # HORAS para o chão de fábrica (production/services.py), então o que o
+            # engenheiro assinou e o que a fábrica executa divergiam em silêncio.
             "operacoes": [
                 {
                     "codigo_op": op.codigo_op,
                     "descricao": op.descricao,
                     "metodo": op.metodo,
                     "custo": str(op.custo),
+                    "horas_hh": str(op.horas_hh),
+                    "horas_hm": str(op.horas_hm),
+                    "taxa_hora": str(op.taxa_hora),
+                    "taxa_hora_hm": str(op.taxa_hora_hm),
+                    "custo_direto": op.custo_direto,
+                    "origem": op.origem,
                     "aplicavel": op.aplicavel,
                 }
                 for op in item.operacoes.order_by("codigo_op", "id")

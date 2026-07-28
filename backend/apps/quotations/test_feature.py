@@ -307,7 +307,7 @@ class FeatureViewsTests(TenantTestCase):
         novo_custo = mat.custo + Decimal("1000.00")
         resp = self.client.post(
             reverse("quotations:eap_item_save", args=[item.pk]),
-            {f"material_custo_{mat.pk}": str(novo_custo)},
+            {"motivo": "Ajuste manual — teste de regressão.", f"material_custo_{mat.pk}": str(novo_custo)},
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Override salvo")
@@ -346,7 +346,7 @@ class FeatureViewsTests(TenantTestCase):
         novo_custo = op.custo + Decimal("250.00")
         resp = self.client.post(
             reverse("quotations:eap_item_save", args=[item.pk]),
-            {f"op_custo_{op.pk}": str(novo_custo)},
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_custo_{op.pk}": str(novo_custo)},
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -386,7 +386,7 @@ class FeatureViewsTests(TenantTestCase):
         nova_hh = op.horas_hh + Decimal("5.00")
         resp = self.client.post(
             reverse("quotations:eap_item_save", args=[item.pk]),
-            {f"op_horas_hh_{op.pk}": str(nova_hh), f"op_horas_hm_{op.pk}": str(op.horas_hm)},
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hh_{op.pk}": str(nova_hh), f"op_horas_hm_{op.pk}": str(op.horas_hm)},
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -416,7 +416,7 @@ class FeatureViewsTests(TenantTestCase):
         n_before = AccessLog.objects.count()
         self.client.post(
             reverse("quotations:eap_item_save", args=[item.pk]),
-            {f"op_horas_hh_{op.pk}": str(nova_hh), f"op_horas_hm_{op.pk}": str(op.horas_hm)},
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hh_{op.pk}": str(nova_hh), f"op_horas_hm_{op.pk}": str(op.horas_hm)},
         )
 
         self.assertGreater(AccessLog.objects.count(), n_before)
