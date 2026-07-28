@@ -1,5 +1,5 @@
 {% comment %}Badge numérico do inbox (poller HTMX). Sem pendências = sem badge.{% endcomment %}
 <span id="inbox-badge"
       hx-get="{% url 'audit:inbox_badge' %}" hx-trigger="every 5s" hx-swap="outerHTML">
-  {% if count %}<span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">{{ count }}</span>{% endif %}
+  {% if count %}<span class="q-pill q-pill--warn">{{ count }}</span>{% endif %}
 </span>

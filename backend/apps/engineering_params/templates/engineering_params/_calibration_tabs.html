@@ -50,8 +50,10 @@
               <td class="id">{{ suggestion.operacao }}</td>
               <td class="mono num">{{ suggestion.current_rate_hh }}</td>
               <td class="mono num">{{ suggestion.actual_mean_rate }}</td>
-              <td class="num" style="color:{% if suggestion.delta_pct > 0 %}var(--g-green){% else %}var(--g-red){% endif %};font-weight:var(--w-bold)">
-                {% if suggestion.delta_pct > 0 %}+{% endif %}{{ suggestion.delta_pct }}%
+              <td class="num">
+                <span class="q-pill {% if suggestion.delta_pct > 0 %}q-pill--ok{% else %}q-pill--bad{% endif %}">
+                  {% if suggestion.delta_pct > 0 %}+{% endif %}{{ suggestion.delta_pct }}%
+                </span>
               </td>
               <td class="mono num">{{ suggestion.n_samples }}</td>
               <td>
@@ -119,7 +121,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">Sem taxas vigentes.</td>
+            <td colspan="5" class="g-muted" style="padding:24px;text-align:center">Sem taxas vigentes.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -173,7 +175,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">Sem parâmetros vigentes.</td>
+            <td colspan="6" class="g-muted" style="padding:24px;text-align:center">Sem parâmetros vigentes.</td>
           </tr>
           {% endfor %}
         </tbody>

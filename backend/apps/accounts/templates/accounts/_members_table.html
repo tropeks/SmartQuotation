@@ -5,10 +5,10 @@
   </header>
   <div class="g-section-body">
     {% if role_change_error %}
-      <div style="margin-bottom:16px;color:var(--g-red)">{{ role_change_error }}</div>
+      <div class="g-err" style="margin-bottom:16px">{{ role_change_error }}</div>
     {% endif %}
     {% if deactivate_error %}
-      <div style="margin-bottom:16px;color:var(--g-red)">{{ deactivate_error }}</div>
+      <div class="g-err" style="margin-bottom:16px">{{ deactivate_error }}</div>
     {% endif %}
   </div>
   <div class="g-section-body table-scroll">
@@ -34,9 +34,9 @@
             <td>{{ member.role_label|default:member.role }}</td>
             <td>
               {% if member.is_active %}
-                <span class="q-badge" style="border-color:var(--g-green);color:var(--g-green)">Ativo</span>
+                <span class="q-pill q-pill--ok">Ativo</span>
               {% else %}
-                <span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">Inativo</span>
+                <span class="q-pill q-pill--bad">Inativo</span>
               {% endif %}
             </td>
             <td>
