@@ -189,3 +189,49 @@ re-assinatura. (Irrelevante hoje — a base é toda de teste.)
 - VERIFY: `tests_eap_guardrail` + `test_feature` = **35 OK**; com `apps.production` = **151 OK**
 - Gates do motor: feixe −2,9% · BEU/BEM 0,00% · knobs — todos OK
 - REVIEW: CSO (2 críticos + 5) e codex (2 P1 válidos, 1 refutado, 4 P2)
+
+---
+
+# Sprint M1.4 + M1.7 — coerência do que chega à fábrica
+
+Mesma família do M1: o número que vai para o chão de fábrica diverge do aprovado e
+nada reclama. Fechados juntos porque são baratos e ficariam abertos enquanto eu
+construísse feature nova.
+
+## M1.7 — peso do cabeçalho × peso das linhas
+
+A OF copia **duas** coisas: `quotation.peso_bruto_kg` no cabeçalho
+(`production/services.py:169`) e `mp.peso_bruto_kg` em cada material (`:192`). Editar o
+peso de um material no drawer gravava a linha e deixava o total parado.
+
+RED mediu: cabeçalho **1.280,96 kg**, linhas somando **1.780,96 kg**. Meia tonelada de
+diferença no mesmo equipamento.
+
+Correção: `_rollup_peso()` ressoma bruto e líquido junto do roll-up de custo.
+
+## M1.4 — "restaurado" que não restaura
+
+`eap_op_restore` repunha as HORAS sugeridas e gravava `origem="seed"`, mas a taxa
+manual sobrevivia. RED mediu: custo restaurado **R$ 1.600** contra **R$ 1.200** do
+motor — 33% acima, carimbado como se fosse do motor.
+
+Correção: `taxa_hora_sugerida` e `taxa_hora_hm_sugerida` entram no `ItemOperation`
+(migration `0009`), o adapter as guarda nos 3 pontos onde já guardava as horas, e o
+restore repõe as quatro. Agora `origem="seed"` é verdade.
+
+## Um bug que só apareceu porque o teste de estabilidade existia
+
+O roll-up de peso somava valores de **3 casas** (`ItemMaterial`) num campo de **2**
+(`Quotation`). Em memória `1780.960`, no banco `1780.96` — e como o snapshot serializa
+com `str()`, o hash mudava a **cada requisição**, mesmo sem edição: snapshot e e-mail
+em laço, exatamente o ruído que o CSO tinha mandado eliminar.
+
+A sondagem mostrou o hash convergindo enquanto a contagem de snapshots crescia — foi
+essa contradição que denunciou. Sem `test_post_sem_alteracao_nao_vira_snapshot_nem_email`,
+isso ia para produção silencioso. Correção: `.quantize(Decimal("0.01"))` no roll-up.
+
+## VERIFY
+
+- `tests_eap_coerencia` + `tests_eap_guardrail` + `test_feature`: **39 OK**
+- Gates do motor: feixe −2,9% · permutador BEU/BEM 0,00% — OK
+- `makemigrations --check`: sem pendência

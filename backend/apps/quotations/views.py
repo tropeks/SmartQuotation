@@ -495,6 +495,31 @@ def _log_field_edit(request, resource, field, before, after, motivo=""):
                {"field": field, "before": str(before), "after": str(after), "motivo": motivo})
 
 
+def _rollup_peso(quotation):
+    """Ressoma o peso da cotação a partir das linhas de material.
+
+    `peso_bruto_kg` é editável no drawer e a Ordem de Fabricação copia DUAS coisas: o
+    peso do cabeçalho da cotação e o peso de cada material (production/services.py:169
+    e :192). Sem esta soma, editar o peso de uma linha deixava a OF com o cabeçalho
+    antigo e as linhas novas — dois pesos diferentes para o mesmo equipamento, sem nada
+    reclamar.
+    """
+    from decimal import Decimal
+
+    from apps.quotations.models import ItemMaterial
+
+    # Quantizar é obrigatório, não cosmético: ItemMaterial guarda 3 casas e Quotation
+    # guarda 2. Sem arredondar aqui, o valor em memória ("1780.960") difere do que o
+    # banco devolve ("1780.96") — e como o snapshot serializa com str(), o hash mudava
+    # a CADA requisição mesmo sem edição nenhuma, gerando snapshot e e-mail em laço.
+    linhas = ItemMaterial.objects.filter(item__quotation=quotation)
+    centavo = Decimal("0.01")
+    quotation.peso_bruto_kg = sum(
+        (m.peso_bruto_kg for m in linhas), Decimal("0")).quantize(centavo)
+    quotation.peso_liquido_kg = sum(
+        (m.peso_liquido_kg for m in linhas), Decimal("0")).quantize(centavo)
+
+
 MOTIVO_MAX = 500
 
 
@@ -702,8 +727,10 @@ def eap_item_save(request, pk):
         q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
         q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
         q.custo_total = q.custo_material + q.custo_mo
+        _rollup_peso(q)
         # computed_at NÃO é tocado de propósito: sinaliza que o motor não rodou.
-        q.save(update_fields=["custo_material", "custo_mo", "custo_total", "updated_at"])
+        q.save(update_fields=["custo_material", "custo_mo", "custo_total",
+                              "peso_bruto_kg", "peso_liquido_kg", "updated_at"])
 
         # Fecha o vazamento: novo snapshot invalida a assinatura sobre o custo antigo.
         _selo_de_estado(q, request, motivo, hash_antes)
@@ -746,15 +773,24 @@ def eap_op_restore(request, pk):
         hash_antes = build_snapshot_payload(op.item.quotation).get("snapshot_hash")
 
         antes_hh, antes_hm = op.horas_hh, op.horas_hm
+        antes_taxa_hh, antes_taxa_hm = op.taxa_hora, op.taxa_hora_hm
         if op.horas_hh_sugerida is not None:
             op.horas_hh = op.horas_hh_sugerida
         if op.horas_hm_sugerida is not None:
             op.horas_hm = op.horas_hm_sugerida
+        # A taxa também volta: repor só as horas e manter a taxa manual devolvia um
+        # custo que NÃO era o do motor, carimbado como se fosse ("seed").
+        if op.taxa_hora_sugerida is not None:
+            op.taxa_hora = op.taxa_hora_sugerida
+        if op.taxa_hora_hm_sugerida is not None:
+            op.taxa_hora_hm = op.taxa_hora_hm_sugerida
         op.origem = "seed"
-        op.save(update_fields=["horas_hh", "horas_hm", "origem"])
+        op.save(update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "origem"])
         op.recalc_custo()
         _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh, motivo)
         _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm, motivo)
+        _log_field_edit(request, op, "taxa_hora", antes_taxa_hh, op.taxa_hora, motivo)
+        _log_field_edit(request, op, "taxa_hora_hm", antes_taxa_hm, op.taxa_hora_hm, motivo)
 
         item = op.item
         item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
@@ -765,7 +801,9 @@ def eap_op_restore(request, pk):
         q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
         q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
         q.custo_total = q.custo_material + q.custo_mo
-        q.save(update_fields=["custo_material", "custo_mo", "custo_total", "updated_at"])
+        _rollup_peso(q)
+        q.save(update_fields=["custo_material", "custo_mo", "custo_total",
+                              "peso_bruto_kg", "peso_liquido_kg", "updated_at"])
 
         # Restaurar a sugestão do motor também muda o custo — mesmo selo.
         _selo_de_estado(q, request, motivo, hash_antes)
