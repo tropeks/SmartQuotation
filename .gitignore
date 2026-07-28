@@ -34,3 +34,6 @@ graphify-out/
 .orch_evidence.txt
 .orch_baseline_test.log
 .orch_*
+
+# Uploads em runtime (bridge do Telegram, anexos) — não versionar binários
+uploads/

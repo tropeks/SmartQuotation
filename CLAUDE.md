@@ -42,6 +42,9 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
   apps/proposals/      # proposta DOCX/PDF (template configurável + editável por caso)
   apps/cost_discovery/ # wizard A1-c: cadeia de custos (seed top-down + back-solve de calibração)
   static/css/design-system-g.css   # Design System G·Refined Bauhaus (UX_SPEC v2)
+                                   # ⚠️ SERÁ SUBSTITUÍDO pela pele do Vitali (Tasy Neumorphic)
+                                   # em sprint futura — decisão do Rom (2026-07-28).
+                                   # Ver docs/DESIGN_IDENTIDADE_VISUAL.md antes de investir em UI.
 
 # Cadeia de custos: o adapter monta TenantCostChain do banco (MaterialPrice por forma,
 # fator_correcao_mo, markup, impostos) e injeta no motor. O back-solve calibra o fator de
