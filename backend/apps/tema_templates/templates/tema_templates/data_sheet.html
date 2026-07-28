@@ -4,7 +4,7 @@
 {% block content %}
 <div class="eyebrow">TEMA · Permutador Completo</div>
 <h1 class="q-number">DATA SHEET</h1>
-<p style="color:var(--g-gray-1)">Informe as dimensões reais do projeto — o custo de material é
+<p class="g-muted">Informe as dimensões reais do projeto — o custo de material é
 <b>recomputado pela geometria</b> (não é replay do caso de referência). Custeável: {{ costable|join:", " }}.</p>
 
 <section class="g-section" style="margin-top:8px">
@@ -16,7 +16,7 @@
         <label>
           <span class="eyebrow">{{ field.label }}</span>
           {{ field }}
-          {% if field.errors %}<span style="color:var(--g-red);font-size:.8rem">{{ field.errors|join:" " }}</span>{% endif %}
+          {% if field.errors %}<span class="g-err" style="font-size:.8rem">{{ field.errors|join:" " }}</span>{% endif %}
         </label>
         {% endfor %}
       </div>
@@ -32,7 +32,7 @@
 </section>
 
 {% if cotacao %}
-<section class="g-section" style="margin-top:12px;border-color:var(--g-green)">
+<section class="g-section" style="margin-top:12px">
   <div class="g-section-body">
     ✅ Cotação <b>{{ cotacao.number }}</b> salva para <b>{{ cotacao.customer.company_name }}</b>
     — proposta gerada (rascunho), preço R$ {{ cotacao.preco_com_impostos|brl }}.
@@ -41,10 +41,10 @@
 {% endif %}
 
 {% if avisos %}
-<section class="g-section" style="margin-top:12px;border-color:var(--g-orange)">
+<section class="g-section" style="margin-top:12px">
   <div class="g-section-body">
     {% for a in avisos %}
-    <div class="g-note" style="padding:10px 12px;border-left:3px solid var(--g-orange)">⚠️ {{ a }}</div>
+    <div class="g-note--warn">⚠️ {{ a }}</div>
     {% endfor %}
   </div>
 </section>
@@ -59,15 +59,15 @@
         <th style="text-align:left">Norma / Fonte</th></tr></thead>
       <tbody>
       {% for e in memorial %}
-        <tr style="border-top:1px solid var(--g-line)">
+        <tr style="border-top:1px solid var(--p-rule)">
           <td>{{ e.item }}{% if e.status %} <b>[{{ e.status }}]</b>{% endif %}</td>
           <td class="mono">{{ e.valor }}</td>
-          <td style="font-size:.85rem">{{ e.norma }}{% if e.fonte %}<br><span style="color:var(--g-gray-1)">{{ e.fonte }}</span>{% endif %}</td>
+          <td style="font-size:.85rem">{{ e.norma }}{% if e.fonte %}<br><span class="g-muted">{{ e.fonte }}</span>{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
-    <p style="font-size:.8rem;color:var(--g-gray-1);margin-top:8px">Anexo de apoio à certificação — não substitui o
+    <p class="g-muted" style="font-size:.8rem;margin-top:8px">Anexo de apoio à certificação — não substitui o
       memorial do PE responsável. Itens de estimativa estão marcados.</p>
   </div>
 </section>
@@ -77,7 +77,7 @@
 <section class="g-section" style="margin-top:12px">
   <div class="g-section-head" style="display:flex;align-items:center;gap:12px">
     <span>Custo · {{ custo.designacao_tema }}</span>
-    <span class="mono" style="font-size:1.3rem;font-weight:800;color:var(--g-orange)">R$ {{ custo.custo_total|brl }}</span>
+    <span class="g-num" style="font-size:1.3rem;font-weight:800">R$ {{ custo.custo_total|brl }}</span>
   </div>
   <div class="g-section-body">
     <table class="g-table">
@@ -86,8 +86,8 @@
         <tr><td>Mão de obra (× F.C. {{ custo.fator_correcao_mo }})</td>
           <td class="num mono">R$ {{ custo.custo_mao_obra|brl }}</td></tr>
         <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|brl }}</td></tr>
-        <tr style="border-top:2px solid var(--g-ink)"><td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|brl }}</b></td></tr>
-        <tr><td>Preço de venda c/ impostos</td><td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|brl }}</td></tr>
+        <tr style="border-top:2px solid var(--p-ink)"><td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|brl }}</b></td></tr>
+        <tr><td>Preço de venda c/ impostos</td><td class="num g-num">R$ {{ custo.preco_com_impostos|brl }}</td></tr>
       </tbody>
     </table>
     <div class="eyebrow" style="margin-top:14px">Custo por driver físico</div>
@@ -97,7 +97,7 @@
       {% endfor %}
     </tbody></table>
 
-    <div class="g-note" style="margin-top:10px;padding:10px 12px;border-left:3px solid var(--g-green)">
+    <div class="g-note" style="margin-top:10px">
       <b>✓ Material + mão de obra + serviços escalam por driver físico.</b> Cada operação
       escala por um parâmetro (nº de tubos, nº de chicanas, comprimento, <b>diâmetro</b>,
       metros de solda, massa, área, volume) com parcela de <b>setup fixo</b>. Ensaios (raio-X,
