@@ -17,22 +17,15 @@ Ordenado por gravidade, não por ordem de descoberta.
   fábrica recebia **0,01 h** onde o engenheiro assinara **8,00 h**, e **0,001 kg** onde
   eram **730 kg**. Fallback para o banco quando a chave não existe no snapshot — sem ele,
   cotação aprovada antes do M1 deixaria de converter.
+- **S3.1** — a conciliação passou a medir pelas **OFs entregues** no período
+  (`OrdemFabricacao.completed_at`), não pelas cotações criadas. Antes, uma cotação criada
+  em março e entregue em junho caía no balde errado e enviesava o fator nas duas pontas.
+  OF ainda em produção fica de fora de propósito: aquelas horas continuam sendo gastas.
 - **M1.4**, **M1.7** (commit `abd06ed`) · **S2.3** (commit `f1c4b37`).
 
 ---
 
 ## 🟡 Quebra ou distorce em situação real
-
-### S3.1 — a conciliação usa a data errada
-`backend/apps/cost_discovery/management/commands/conciliar_horas.py`
-
-O período filtra por `Quotation.created_at`, mas a pergunta certa é *"quais OFs foram
-ENTREGUES neste período"* — é contra elas que as horas da folha foram gastas. Uma cotação
-criada em março e entregue em junho entra no balde errado, e o fator sai enviesado.
-
-Depende de a OF ter data de conclusão confiável: verificar `apps/production` antes.
-
-Contrato: `docs/discovery/SPRINT_S3_ANCORA_FOLHA.md`
 
 ### M1.3 — permutador pressurizado sem memorial dá 500 na EAP
 `backend/apps/quotations/services.py:77`

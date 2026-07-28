@@ -41,6 +41,30 @@ class Reconciliacao:
         return self.fator is not None
 
 
+def cotacoes_entregues_em(desde, ate):
+    """Cotações cuja Ordem de Fabricação foi CONCLUÍDA dentro do período.
+
+    A pergunta certa não é "quais cotações foram criadas nestas datas" — é contra o que a
+    fábrica ENTREGOU que as horas da folha foram gastas. Uma cotação criada em março e
+    entregue em junho cai no balde errado se a filtragem for pela criação, e o fator sai
+    enviesado nas duas pontas: faltam horas de um lado, sobram do outro.
+
+    OF ainda em produção fica de fora de propósito: as horas dela continuam sendo gastas,
+    então atribuí-las a um período fechado inventaria consumo que ainda não terminou.
+    """
+    from apps.production.models import STATUS_CONCLUIDA, OrdemFabricacao
+    from apps.quotations.models import Quotation
+
+    if desde > ate:
+        return Quotation.objects.none()
+
+    pks = (OrdemFabricacao.objects
+           .filter(status=STATUS_CONCLUIDA,
+                   completed_at__date__gte=desde, completed_at__date__lte=ate)
+           .values_list("quotation_id", flat=True))
+    return Quotation.objects.filter(pk__in=list(pks))
+
+
 def horas_estimadas_de(quotations):
     """Soma HH + HM da EAP persistida das cotações dadas.
 

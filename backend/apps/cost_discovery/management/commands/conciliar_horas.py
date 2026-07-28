@@ -13,8 +13,8 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.cost_discovery.reconciliacao import (horas_estimadas_de, limites_conhecidos,
-                                               reconciliar)
+from apps.cost_discovery.reconciliacao import (cotacoes_entregues_em, horas_estimadas_de,
+                                               limites_conhecidos, reconciliar)
 
 
 class Command(BaseCommand):
@@ -35,21 +35,19 @@ class Command(BaseCommand):
             raise CommandError(f"--{rotulo} precisa ser AAAA-MM-DD") from e
 
     def handle(self, *args, **opts):
-        from apps.quotations.models import Quotation
-
         desde = self._data(opts["desde"], "desde")
         ate = self._data(opts["ate"], "ate")
         if ate < desde:
             raise CommandError("O período termina antes de começar.")
 
-        cotacoes = Quotation.objects.filter(created_at__date__gte=desde,
-                                            created_at__date__lte=ate)
+        # Pelas OFs ENTREGUES no período — é contra elas que a folha foi gasta (S3.1).
+        cotacoes = cotacoes_entregues_em(desde, ate)
         estimadas = horas_estimadas_de(cotacoes)
         r = reconciliar(opts["horas_pagas"], estimadas,
                         ofs=list(cotacoes.values_list("number", flat=True)))
 
         self.stdout.write(f"Período ............ {desde:%d/%m/%Y} a {ate:%d/%m/%Y}")
-        self.stdout.write(f"Cotações no período  {len(r.ofs)}")
+        self.stdout.write(f"OFs entregues ...... {len(r.ofs)}")
         self.stdout.write(f"Horas ORÇADAS ...... {r.horas_estimadas:,.2f} h")
         self.stdout.write(f"Horas PAGAS ........ {r.horas_pagas:,.2f} h")
 
