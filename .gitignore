@@ -37,3 +37,6 @@ graphify-out/
 
 # Uploads em runtime (bridge do Telegram, anexos) — não versionar binários
 uploads/
+
+# Log de execução da suíte — artefato local, nunca versionar
+backend/suite.log

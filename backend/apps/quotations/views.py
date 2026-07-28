@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.views.decorators.http import require_POST
-from django.http import HttpResponseBadRequest, JsonResponse
+from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.accounts.models import UserProfile
@@ -617,17 +617,28 @@ def eap_item_save(request, pk):
             "Informe o motivo do ajuste manual — ele fica registrado na auditoria."
         )
 
-    item = get_object_or_404(
-        QuotationItem.objects.select_related("quotation").prefetch_related("materiais", "operacoes"),
-        pk=pk,
-    )
     from decimal import Decimal
 
     # Tudo numa transação só, com a cotação travada: o roll-up é recalculado por SOMA
     # lendo as linhas, então dois editores simultâneos gravariam totais divergentes —
     # cada um somando um estado que o outro já mudou (last-write-wins sobre a soma).
+    #
+    # O item e suas relações são carregados DEPOIS do lock, de propósito: carregar antes
+    # deixaria a segunda requisição esperando na fila com um prefetch tirado do estado
+    # anterior e, ao ser liberada, somando linhas que o primeiro editor já mudou — o
+    # lock não serve de nada se o cache que ele protege foi lido antes dele.
     with transaction.atomic():
-        Quotation.objects.select_for_update().get(pk=item.quotation_id)
+        quotation_id = QuotationItem.objects.values_list(
+            "quotation_id", flat=True).filter(pk=pk).first()
+        if quotation_id is None:
+            raise Http404("Item de cotação inexistente.")
+        Quotation.objects.select_for_update().get(pk=quotation_id)
+
+        item = get_object_or_404(
+            QuotationItem.objects.select_related("quotation")
+            .prefetch_related("materiais", "operacoes"),
+            pk=pk,
+        )
         from apps.quotations.services import build_snapshot_payload
         hash_antes = build_snapshot_payload(item.quotation).get("snapshot_hash")
 
@@ -722,11 +733,15 @@ def eap_op_restore(request, pk):
             "Informe o motivo da restauração — ela também altera o custo da cotação."
         )
 
-    op = get_object_or_404(
-        ItemOperation.objects.select_related("item__quotation"), pk=pk)
-
     with transaction.atomic():
-        Quotation.objects.select_for_update().get(pk=op.item.quotation_id)
+        quotation_id = ItemOperation.objects.values_list(
+            "item__quotation_id", flat=True).filter(pk=pk).first()
+        if quotation_id is None:
+            raise Http404("Operação inexistente.")
+        Quotation.objects.select_for_update().get(pk=quotation_id)
+
+        op = get_object_or_404(
+            ItemOperation.objects.select_related("item__quotation"), pk=pk)
         from apps.quotations.services import build_snapshot_payload
         hash_antes = build_snapshot_payload(op.item.quotation).get("snapshot_hash")
 

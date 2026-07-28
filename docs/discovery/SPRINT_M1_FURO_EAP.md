@@ -149,3 +149,43 @@ o mesmo e único recurso como primeira operação.
 
 - `apps.quotations.tests_eap_guardrail` + `test_feature` + `apps.production`: **151 OK**
 - Gates do motor: feixe (Δ −2,9%), permutador BEU/BEM (Δ 0,00%), knobs — **todos OK**
+
+## Segunda passada — o que o codex achou depois do CSO
+
+| Sev | Achado | Desfecho |
+|---|---|---|
+| P1 | Lock adquirido **depois** do `prefetch_related`: a segunda requisição espera na fila com um cache lido antes do lock e soma linhas que o primeiro editor já mudou | **corrigido** — o item passa a ser carregado dentro da transação, depois do lock |
+| P1 | `suite.log` (10.150 linhas, rodada com falhas) foi commitado por `git add -A` | **corrigido** — removido do índice e no `.gitignore` |
+| P1 | "Quatro testes em `tests.py` postam sem motivo e esperam 200" | **refutado** — não existe POST para `eap_item_save`/`eap_op_restore` em `tests.py`; as linhas citadas não correspondem |
+| P2 | Aviso de deploy impreciso: incluir horas no payload **não** reescreve snapshots existentes; a invalidação só ocorre quando um snapshot novo é criado | **procede** — corrigido abaixo |
+| P2 | `engine_version` continua `calc-snapshot-v1` com o schema de `operacoes` mudado | registrado (M1.5) |
+| P2 | Override marca `origem="manual"` mesmo sem mudança numérica, porque o form envia todos os campos | registrado (M1.6) |
+
+### Correção do aviso de deploy
+
+O aviso anterior estava errado. Não há backfill nem migração: os snapshots já gravados
+**permanecem intactos**, com o formato antigo. A divergência só aparece quando um snapshot
+novo é criado para aquela cotação — aí o hash muda e a aprovação vigente deixa de casar.
+Na prática: cotações paradas continuam válidas; cotações editadas passam a exigir
+re-assinatura. (Irrelevante hoje — a base é toda de teste.)
+
+## Backlog aberto pela sprint
+
+- **M1.1** conversão lê custos do banco vivo, não do snapshot congelado
+- **M1.2** `QuotationAdmin` edita `custo_*`/`fator_preco` sem selo (exige `is_staff`)
+- **M1.3** permutador pressurizado sem memorial ASME montável → 500 na edição da EAP
+- **M1.4** `eap_op_restore` repõe só as horas mas grava `origem="seed"` mesmo com taxa
+  manual preservada — o custo "restaurado" pode continuar diferente do motor, agora
+  rotulado como motor
+- **M1.5** bumpar `engine_version` quando o schema do payload muda
+- **M1.6** só marcar `origem="manual"` quando o valor realmente mudou
+- **M1.7** `peso_bruto_kg` é editável e entra no snapshot, mas não há roll-up de peso na
+  cotação — a OF pode receber peso total antigo com materiais de peso novo
+
+## EVIDENCE
+
+- RED: 7 falhas provando o exploit · 3 passando (guard-rails existentes protegidos)
+- GREEN: 15/15 no `tests_eap_guardrail`
+- VERIFY: `tests_eap_guardrail` + `test_feature` = **35 OK**; com `apps.production` = **151 OK**
+- Gates do motor: feixe −2,9% · BEU/BEM 0,00% · knobs — todos OK
+- REVIEW: CSO (2 críticos + 5) e codex (2 P1 válidos, 1 refutado, 4 P2)
