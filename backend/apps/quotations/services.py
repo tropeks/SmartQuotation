@@ -71,8 +71,26 @@ def _snapshot_standard_refs(memorial: list) -> list:
 
 
 def _requires_memorial(quotation) -> bool:
+    """Permutador completo COM pressão de projeto real exige memorial ASME.
+
+    A coerção para float não é preciosismo: `memorial_asme` decide se há pressão fazendo
+    `float(...)`, e este guard decidia por truthiness do JSON cru. Os dois discordavam
+    para qualquer valor truthy mas não coercível — `"50,0"`, `"50 bar"`, ou `"0"` como
+    string — e o guard passava a EXIGIR um memorial que o construtor não tinha como
+    montar. Resultado: RuntimeError, e desde que a edição da EAP emite snapshot, 500 ao
+    editar uma cotação legada.
+
+    Valor não coercível ou ≤ 0 significa que não há pressão de projeto utilizável, e sem
+    ela não existe memória de pressão a escrever. O compliance continua de pé onde ele
+    faz sentido: pressão numérica positiva segue exigindo o memorial.
+    """
     inputs = quotation.inputs or {}
-    return quotation.scope == "complete" and bool(inputs.get("pressao_projeto_bar"))
+    if quotation.scope != "complete":
+        return False
+    try:
+        return float(inputs.get("pressao_projeto_bar") or 0) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 def build_snapshot_payload(quotation, memorial=None) -> dict:

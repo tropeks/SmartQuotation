@@ -21,24 +21,17 @@ Ordenado por gravidade, não por ordem de descoberta.
   (`OrdemFabricacao.completed_at`), não pelas cotações criadas. Antes, uma cotação criada
   em março e entregue em junho caía no balde errado e enviesava o fator nas duas pontas.
   OF ainda em produção fica de fora de propósito: aquelas horas continuam sendo gastas.
+- **M1.3** — o memorial ASME agora **degrada em vez de desaparecer**. Eram três defeitos
+  somados: o guard decidia "tem pressão?" por truthiness do JSON cru enquanto o construtor
+  decidia por `float()` (então `"50,0"` exigia um memorial impossível de montar);
+  `corrosao_mm` era o único campo guardado por `is not None`, deixando `""` chegar em
+  `float("")`; e o `try` cobria o corpo inteiro, então falha numa etapa opcional tardia
+  descartava um memorial essencial já pronto. Só a pressão é essencial — o resto degrada.
 - **M1.4**, **M1.7** (commit `abd06ed`) · **S2.3** (commit `f1c4b37`).
 
 ---
 
 ## 🟡 Quebra ou distorce em situação real
-
-### M1.3 — permutador pressurizado sem memorial dá 500 na EAP
-`backend/apps/quotations/services.py:77`
-
-`build_snapshot_payload` levanta `RuntimeError` quando o escopo é `complete` com
-`pressao_projeto_bar` e o memorial ASME não monta. Como o M1 passou a emitir snapshot em
-toda edição da EAP, essa classe de cotação agora **quebra ao editar** — caminho que
-funcionava antes, porque antes o override não construía snapshot nenhum.
-
-Fail-closed (a transação reverte, nada é gravado), então não é bypass. Mas inutiliza o
-drawer para permutador pressurizado.
-
-Contrato: `docs/discovery/SPRINT_M1_FURO_EAP.md`
 
 ### M1.2 — o admin do Django edita custo sem selo
 `backend/apps/quotations/admin.py:11-21`
