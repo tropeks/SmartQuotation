@@ -156,9 +156,9 @@ o mesmo e único recurso como primeira operação.
 |---|---|---|
 | P1 | Lock adquirido **depois** do `prefetch_related`: a segunda requisição espera na fila com um cache lido antes do lock e soma linhas que o primeiro editor já mudou | **corrigido** — o item passa a ser carregado dentro da transação, depois do lock |
 | P1 | `suite.log` (10.150 linhas, rodada com falhas) foi commitado por `git add -A` | **corrigido** — removido do índice e no `.gitignore` |
-| P1 | "Quatro testes em `tests.py` postam sem motivo e esperam 200" | **refutado** — não existe POST para `eap_item_save`/`eap_op_restore` em `tests.py`; as linhas citadas não correspondem |
+| P1 | "Quatro testes em `tests.py` postam sem motivo e esperam 200" | **procede** — eu havia refutado por engano; ver nota abaixo. Corrigido em `8e6d8d3` |
 | P2 | Aviso de deploy impreciso: incluir horas no payload **não** reescreve snapshots existentes; a invalidação só ocorre quando um snapshot novo é criado | **procede** — corrigido abaixo |
-| P2 | `engine_version` continua `calc-snapshot-v1` com o schema de `operacoes` mudado | registrado (M1.5) |
+| P2 | `engine_version` continua `calc-snapshot-v1` com o schema de `operacoes` mudado | **corrigido** — `calc-snapshot-v2` |
 | P2 | Override marca `origem="manual"` mesmo sem mudança numérica, porque o form envia todos os campos | registrado (M1.6) |
 
 ### Correção do aviso de deploy
@@ -188,7 +188,18 @@ re-assinatura. (Irrelevante hoje — a base é toda de teste.)
 - GREEN: 15/15 no `tests_eap_guardrail`
 - VERIFY: `tests_eap_guardrail` + `test_feature` = **35 OK**; com `apps.production` = **151 OK**
 - Gates do motor: feixe −2,9% · BEU/BEM 0,00% · knobs — todos OK
-- REVIEW: CSO (2 críticos + 5) e codex (2 P1 válidos, 1 refutado, 4 P2)
+- REVIEW: CSO (2 críticos + 5) e codex (**3 P1 válidos**, 4 P2)
+
+### Nota — o P1 que refutei por engano
+
+O codex apontou que quatro testes em `tests.py` postavam sem `motivo` e esperavam 200.
+Fiz `grep` pelo símbolo `eap_item_save`, não achei nada, e refutei em público. O `grep`
+era o instrumento errado: aqueles testes chamam a rota por **URL literal**
+(`f"/cotacoes/eap/item/{pk}/salvar/"`), então o nome da view não aparece no arquivo. A
+suíte completa depois quebrou exatamente nas linhas citadas.
+
+Ausência de símbolo não é ausência de chamada. Neste repo, quem verifica cobertura de
+rota tem de procurar pela **rota**, não pelo nome da função.
 
 ---
 

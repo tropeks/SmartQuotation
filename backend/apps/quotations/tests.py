@@ -192,7 +192,9 @@ class FeixeQuotationTests(TenantTestCase):
         snaps = CalculationSnapshot.objects.filter(quotation=q)
         self.assertEqual(snaps.count(), 1)
         snap = snaps.get()
-        self.assertEqual(snap.engine_version, "calc-snapshot-v1")
+        # Literal de propósito: bumpar a versão do motor tem de passar por aqui. O v2
+        # veio com horas/taxas dentro do payload (M1) — schema novo, versão nova.
+        self.assertEqual(snap.engine_version, "calc-snapshot-v2")
         self.assertEqual(snap.inputs["quotation"]["number"], q.number)
         self.assertIn("totals", snap.outputs)
         self.assertEqual(snap.outputs["totals"]["custo_total"], str(q.custo_total))
