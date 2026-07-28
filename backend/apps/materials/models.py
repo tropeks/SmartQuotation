@@ -5,6 +5,7 @@ Catálogo de materiais (TENANT schema).
   Base de custo: peso BRUTO (Opção A — cobra perdas). Ver pricing_engine.
 """
 from django.db import models
+from django.utils import timezone
 from encrypted_model_fields.fields import EncryptedCharField
 
 
@@ -24,6 +25,57 @@ class Material(models.Model):
         return f"{self.sigla} ({self.tipo})"
 
 
+class MaterialPriceManager(models.Manager):
+    """Resolve "qual preço vale nesta data" — em UM lugar só.
+
+    A mesma pergunta estava respondida em três (`materials/views.py`,
+    `quotations/adapter.py`, `cost_discovery/services.py`) e as respostas divergiam: as
+    duas do custeio iteravam sem `order_by` e deixavam o último registro do queryset
+    vencer, então com duas vigências válidas no mesmo dia o preço que entrava no
+    orçamento dependia da ordem em que o banco devolvesse as linhas.
+
+    Regra (mesma de `RateManager.vigente`): `valid_from <= data` e (`valid_until` nulo
+    ou `>= data`); em sobreposição vence o `valid_from` mais recente, desempatando pelo
+    cadastro mais novo.
+    """
+
+    def _vigentes_qs(self, on_date=None):
+        on_date = on_date or timezone.now().date()
+        return (
+            self.get_queryset()
+            .filter(valid_from__lte=on_date)
+            .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=on_date))
+        )
+
+    def vigente(self, material, forma, on_date=None):
+        """O preço vigente de (material, forma) numa data, ou None."""
+        return (
+            self._vigentes_qs(on_date)
+            .filter(material=material, forma=forma)
+            .order_by("-valid_from", "-created_at", "-id")
+            .first()
+        )
+
+    def mapa_vigente(self, on_date=None):
+        """{(sigla_maiúscula, forma_minúscula): Decimal} — um preço por par.
+
+        É o formato que a cadeia de custos do motor consome. Ordena crescente e deixa o
+        mais recente sobrescrever, então o último a entrar no dict é o vigente.
+        """
+        from decimal import Decimal, InvalidOperation
+
+        mapa = {}
+        for preco in (self._vigentes_qs(on_date)
+                      .select_related("material")
+                      .order_by("valid_from", "created_at", "id")):
+            try:
+                valor = Decimal(str(preco.preco_brl_kg))
+            except (TypeError, ValueError, InvalidOperation):
+                continue
+            mapa[(preco.material.sigla.upper(), preco.forma.lower())] = valor
+        return mapa
+
+
 class MaterialPrice(models.Model):
     FORMA = [("chapa", "Chapa"), ("tubo", "Tubo"), ("barra", "Barra"),
              ("forjado", "Forjado"), ("fundido", "Fundido")]
@@ -34,6 +86,8 @@ class MaterialPrice(models.Model):
     valid_from = models.DateField()
     valid_until = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = MaterialPriceManager()
 
     class Meta:
         indexes = [models.Index(fields=["material", "forma", "valid_from"])]

@@ -120,3 +120,32 @@ inerte até ele responder.
 - **S2.1** tela dentro do produto (nasce com a pele do Vitali)
 - **S2.2** ligar o custo/hora ao motor — **bloqueado em w-014**
 - **S2.3** extrair `MaterialPriceManager.vigente()` e matar as 3 duplicatas divergentes
+
+---
+
+## S2.3 — corrigido junto: qual preço vale hoje era indeterminado
+
+Registrei este item como dívida e resolvi corrigir no mesmo passo, porque ao olhar de
+perto não era duplicação: era **bug de precificação**.
+
+A pergunta "qual preço de material vale hoje?" estava respondida em três lugares:
+
+| Onde | Como resolvia |
+|---|---|
+| `materials/views.py:33` | correto — maior `valid_from`, desempate por `created_at` |
+| `quotations/adapter.py:88` | **iterava sem `order_by`**, último do queryset vencia |
+| `cost_discovery/services.py:34` | idem |
+
+Ou seja: com **duas vigências válidas na mesma data**, o preço que entrava no orçamento
+dependia da ordem em que o Postgres devolvesse as linhas. Não é divergência de estilo —
+preço de material é a maior parcela do custo de um feixe, e a tela mostrava um número
+enquanto o motor podia custear com outro.
+
+**Correção:** `MaterialPriceManager` com `.vigente(material, forma, on_date)` e
+`.mapa_vigente(on_date)`, seguindo a mesma regra de `RateManager`. Os três chamadores
+passam a usar o manager. O `on_date` também destrava reproduzir uma cotação antiga com o
+preço que valia naquele dia.
+
+O teste que prova cria a vigência **nova primeiro**, para que a antiga sobrescreva na
+ordem natural do banco — sem a correção, o motor custeia com R$ 7,00 quando o vigente é
+R$ 12,00.

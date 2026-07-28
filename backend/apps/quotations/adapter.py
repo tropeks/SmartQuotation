@@ -87,14 +87,11 @@ def build_cost_chain(quotation) -> TenantCostChain:
     # preços de material vigentes (cifrados) por (sigla, forma)
     try:
         from apps.materials.models import MaterialPrice
-        hoje = date.today()
-        for mp in MaterialPrice.objects.select_related("material").filter(valid_from__lte=hoje):
-            if mp.valid_until and mp.valid_until < hoje:
-                continue
-            try:
-                chain.material_price[(mp.material.sigla.upper(), mp.forma.lower())] = float(mp.preco_brl_kg)
-            except (TypeError, ValueError):
-                continue
+        # Resolução única em MaterialPriceManager: antes, iterar sem order_by deixava
+        # o último registro do queryset vencer — com duas vigências válidas no mesmo
+        # dia, o preço que entrava no orçamento era o que o banco devolvesse por último.
+        chain.material_price.update(
+            {chave: float(valor) for chave, valor in MaterialPrice.objects.mapa_vigente().items()})
     except Exception:
         pass
     # fator de correção de MO (knob calibrado pelo back-solve)
