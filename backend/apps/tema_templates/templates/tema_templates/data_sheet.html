@@ -32,7 +32,7 @@
 </section>
 
 {% if cotacao %}
-<section class="g-section" style="margin-top:12px">
+<section class="g-section g-section--ok" style="margin-top:12px">
   <div class="g-section-body">
     ✅ Cotação <b>{{ cotacao.number }}</b> salva para <b>{{ cotacao.customer.company_name }}</b>
     — proposta gerada (rascunho), preço R$ {{ cotacao.preco_com_impostos|brl }}.
@@ -41,7 +41,7 @@
 {% endif %}
 
 {% if avisos %}
-<section class="g-section" style="margin-top:12px">
+<section class="g-section g-section--warn" style="margin-top:12px">
   <div class="g-section-body">
     {% for a in avisos %}
     <div class="g-note--warn">⚠️ {{ a }}</div>
@@ -97,7 +97,7 @@
       {% endfor %}
     </tbody></table>
 
-    <div class="g-note" style="margin-top:10px">
+    <div class="g-note--ok" style="margin-top:10px">
       <b>✓ Material + mão de obra + serviços escalam por driver físico.</b> Cada operação
       escala por um parâmetro (nº de tubos, nº de chicanas, comprimento, <b>diâmetro</b>,
       metros de solda, massa, área, volume) com parcela de <b>setup fixo</b>. Ensaios (raio-X,

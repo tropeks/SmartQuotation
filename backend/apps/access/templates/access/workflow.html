@@ -95,7 +95,7 @@
               <form method="post" action="{% url 'access:stage_remove' %}"
                     onsubmit="return confirm('Remover este estágio?')">{% csrf_token %}
                 <input type="hidden" name="key" value="{{ s.key }}">
-                <button class="q-btn" type="submit">Remover</button></form>
+                <button class="q-btn q-btn--danger" type="submit">Remover</button></form>
             {% endif %}
           </div>
         </div>

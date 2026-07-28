@@ -156,6 +156,14 @@ a:focus-visible, button:focus-visible, .q-btn:focus-visible,
   border-left:3px solid var(--p-bad); border-radius:0 var(--p-radius) var(--p-radius) 0;
   padding:var(--s4) var(--s8); margin:var(--s4) 0;
 }
+/* Confirmação positiva — "cotação salva", "combinação compatível". Sem ela, as
+   confirmações caem em texto neutro e o usuário não recebe retorno de que deu certo. */
+.g-note--ok {
+  display:block; font-family:var(--p-sans); font-size:12px; line-height:1.5;
+  color:var(--p-ok); background:var(--p-ok-soft);
+  border-left:3px solid var(--p-ok); border-radius:0 var(--p-radius) var(--p-radius) 0;
+  padding:var(--s4) var(--s8); margin:var(--s4) 0;
+}
 .g-muted { color:var(--p-ink-3); }
 /* Erro inline de formulário — substitui os color:var(--g-red) espalhados */
 .g-err { display:block; color:var(--p-bad); font-family:var(--p-sans); font-size:11.5px;
@@ -265,6 +273,13 @@ td.g-num, th.g-num { display:table-cell; text-align:right; }
 .g-section-head h3::before { content:''; display:inline-block; width:14px; height:3px;
   background:var(--p-bp); vertical-align:middle; margin-right:var(--s4); }
 .g-section-body { padding:var(--s10); }
+/* Seção com estado. O data sheet marcava a seção de "cotação salva" com borda verde e
+   a de avisos com borda laranja, por style= inline. Ao tirar o inline, as duas ficaram
+   iguais a qualquer outra seção e o retorno de sucesso sumiu. Aqui a aresta esquerda
+   carrega o estado, coerente com .comp-card e .q-selo. */
+.g-section--ok { border-left:3px solid var(--p-ok); }
+.g-section--warn { border-left:3px solid var(--p-warn); }
+.g-section--bad { border-left:3px solid var(--p-bad); }
 /* Cartão simples (fantasma em access/workflow.html) */
 .g-card { background:var(--p-paper); border:1px solid var(--p-rule-2);
   border-radius:var(--p-radius); padding:var(--s8); margin-bottom:var(--s6); }
@@ -338,6 +353,15 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
 .q-btn.ghost:hover { background:var(--p-paper-2); }
 .q-btn.mini { padding:2px var(--s4); font-size:10px; }
 .q-btn:disabled { opacity:0.5; cursor:not-allowed; }
+/* Ação destrutiva. Faltava no contrato da Prancha, e a falta era regressão: excluir
+   papel, remover estágio e rejeitar aprovação eram vermelhos por style= inline e
+   ficaram indistinguíveis de "Cancelar" quando o inline saiu. Botão que apaga coisa
+   tem de parecer que apaga. Contorno, não preenchimento — o preenchido fica para o
+   passo de confirmação, que é onde o peso visual pertence. */
+.q-btn--danger { color:var(--p-bad); border-color:var(--p-bad); background:var(--p-paper); }
+.q-btn--danger:hover { background:var(--p-bad-soft); border-color:var(--p-bad); color:var(--p-bad); }
+.q-btn--danger.primary { background:var(--p-bad); border-color:var(--p-bad); color:var(--p-paper); }
+.q-btn--danger.primary:hover { background:#8E211D; border-color:#8E211D; color:var(--p-paper); }
 /* Botão em loading (HTMX). .htmx-request NUNCA aparece em class= — é injetada em
    runtime e estas duas regras servem 20 templates. Não remover. */
 .btn-spin { display:none; width:14px; height:14px; margin-left:var(--s3);
@@ -380,6 +404,12 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
   font-weight:500; font-size:15px; color:var(--p-ink); }
 .comp-card .res .l { font-family:var(--p-cond); font-size:10px; font-weight:600;
   text-transform:uppercase; letter-spacing:var(--ls-eyebrow); color:var(--p-ink-3); }
+/* A aresta do .comp-card é verde por default. Sem estes modificadores, o card de
+   "aprovação pendente" do dashboard sai verde — o pior tipo de defeito visual, o que
+   afirma o contrário do estado real. */
+.comp-card--warn { border-left-color:var(--p-warn); }
+.comp-card--bad { border-left-color:var(--p-bad); }
+.comp-card--neutral { border-left-color:var(--p-rule-2); }
 
 /* ============================================================
    TABELA — a malha é a informação. Fio de 1px, nunca borda difusa.

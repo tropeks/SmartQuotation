@@ -93,7 +93,7 @@
       {% else %}
         <p class="g-muted" style="margin:0 0 8px">Nenhum usuário ativo com este papel.</p>
       {% endif %}
-      <button type="button" class="q-btn"
+      <button type="button" class="q-btn q-btn--danger"
               @click="confirm = !confirm">Excluir este papel…</button>
       <form method="post" action="{% url 'access:role_delete' %}" x-show="confirm" x-cloak
             style="margin-top:12px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
@@ -108,7 +108,7 @@
             </select>
           </label>
         {% endif %}
-        <button type="submit" class="q-btn primary">
+        <button type="submit" class="q-btn q-btn--danger primary">
           Confirmar exclusão</button>
       </form>
     </div>

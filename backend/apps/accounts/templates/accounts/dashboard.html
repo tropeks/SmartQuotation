@@ -59,7 +59,7 @@
       <header class="g-section-head"><h3>§2 Aprovações Pendentes</h3></header>
       <div class="g-section-body">
         {% for quotation in pending_approvals %}
-          <div class="comp-card" style="margin-bottom:12px">
+          <div class="comp-card comp-card--warn" style="margin-bottom:12px">
             <div class="name">{{ quotation.title }}<small>{{ quotation.number }} · {{ quotation.customer.company_name }}</small></div>
             <div class="res">
               <div><div class="l">Status</div><div class="v">{{ quotation.get_status_display }}</div></div>

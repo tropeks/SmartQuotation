@@ -51,13 +51,13 @@
           <div x-data="{ rejecting: false }" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:flex-start">
             <form method="post" action="{% url 'audit:approve_task' c.task.pk %}">{% csrf_token %}
               <button class="q-btn primary" type="submit">Aprovar</button></form>
-            <button type="button" class="q-btn"
+            <button type="button" class="q-btn q-btn--danger"
                     @click="rejecting = !rejecting">Rejeitar</button>
             <form method="post" action="{% url 'audit:reject_task' c.task.pk %}" x-show="rejecting" x-cloak
                   style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">{% csrf_token %}
               <label class="field" style="margin:0"><span>Motivo</span>
                 <input type="text" name="reason" required maxlength="500" placeholder="Motivo da rejeição"></label>
-              <button class="q-btn" type="submit">Confirmar rejeição</button>
+              <button class="q-btn q-btn--danger primary" type="submit">Confirmar rejeição</button>
             </form>
           </div>
         </div>
