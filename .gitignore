@@ -34,3 +34,9 @@ graphify-out/
 .orch_evidence.txt
 .orch_baseline_test.log
 .orch_*
+
+# Uploads em runtime (bridge do Telegram, anexos) — não versionar binários
+uploads/
+
+# Log de execução da suíte — artefato local, nunca versionar
+backend/suite.log

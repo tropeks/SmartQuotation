@@ -14,7 +14,11 @@ def _d(x) -> Decimal:
     return Decimal(str(round(float(x or 0), 2)))
 
 
-ENGINE_VERSION = "calc-snapshot-v1"
+# v2 (M1): `outputs.items.operacoes` passou a carregar horas, taxas, custo_direto e
+# origem. Sem o bump, snapshots de formatos diferentes se identificavam igual e quem
+# comparasse épocas distintas não teria como saber que o schema mudou. A versão é
+# metadado — não entra no hash de identidade, então bumpar não invalida nada.
+ENGINE_VERSION = "calc-snapshot-v2"
 
 
 def _normalize_snapshot_value(value):
@@ -68,8 +72,26 @@ def _snapshot_standard_refs(memorial: list) -> list:
 
 
 def _requires_memorial(quotation) -> bool:
+    """Permutador completo COM pressão de projeto real exige memorial ASME.
+
+    A coerção para float não é preciosismo: `memorial_asme` decide se há pressão fazendo
+    `float(...)`, e este guard decidia por truthiness do JSON cru. Os dois discordavam
+    para qualquer valor truthy mas não coercível — `"50,0"`, `"50 bar"`, ou `"0"` como
+    string — e o guard passava a EXIGIR um memorial que o construtor não tinha como
+    montar. Resultado: RuntimeError, e desde que a edição da EAP emite snapshot, 500 ao
+    editar uma cotação legada.
+
+    Valor não coercível ou ≤ 0 significa que não há pressão de projeto utilizável, e sem
+    ela não existe memória de pressão a escrever. O compliance continua de pé onde ele
+    faz sentido: pressão numérica positiva segue exigindo o memorial.
+    """
     inputs = quotation.inputs or {}
-    return quotation.scope == "complete" and bool(inputs.get("pressao_projeto_bar"))
+    if quotation.scope != "complete":
+        return False
+    try:
+        return float(inputs.get("pressao_projeto_bar") or 0) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 def build_snapshot_payload(quotation, memorial=None) -> dict:
@@ -97,12 +119,24 @@ def build_snapshot_payload(quotation, memorial=None) -> dict:
                 }
                 for mp in item.materiais.order_by("codigo_mp", "id")
             ],
+            # HORAS E TAXAS ENTRAM NO HASH (M1). Guardar só o `custo` deixava o
+            # snapshot cego a `custo = horas × taxa`: dava para partir as horas pela
+            # metade e dobrar a taxa que o custo — e portanto o hash — não mudava, e a
+            # assinatura técnica continuava casando. A Ordem de Fabricação copia as
+            # HORAS para o chão de fábrica (production/services.py), então o que o
+            # engenheiro assinou e o que a fábrica executa divergiam em silêncio.
             "operacoes": [
                 {
                     "codigo_op": op.codigo_op,
                     "descricao": op.descricao,
                     "metodo": op.metodo,
                     "custo": str(op.custo),
+                    "horas_hh": str(op.horas_hh),
+                    "horas_hm": str(op.horas_hm),
+                    "taxa_hora": str(op.taxa_hora),
+                    "taxa_hora_hm": str(op.taxa_hora_hm),
+                    "custo_direto": op.custo_direto,
+                    "origem": op.origem,
                     "aplicavel": op.aplicavel,
                 }
                 for op in item.operacoes.order_by("codigo_op", "id")

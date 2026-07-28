@@ -4,7 +4,7 @@ ENGEMATEX → pricing_engine/seeds/flanges_wn.json.
 Peso (kgf/peça, aço-carbono) por CLASSE de pressão × NPS × SCHEDULE. Resposta do Wellington
 (A3): o motor deve puxar o peso real do flange por Ø × rating, em vez de chutar — senão erra
 o peso final e as horas de solda dos bocais. Fonte: blocos "PESO DE FLANGES WELDING NECK 'WN'
-X#" (face RF). Confirmado exato vs gabarito: 8\" SCH80 600# = 56 kg; 10\" SCH40 600# = 86,8 kg.
+X#" (face RF). Confirmado exato vs referencial: 8\" SCH80 600# = 56 kg; 10\" SCH40 600# = 86,8 kg.
 """
 import glob, json, os, re
 
@@ -85,7 +85,7 @@ def main():
     print(f"  classes: {sorted(tabela.keys())}")
     for cl in sorted(tabela):
         print(f"    {cl}: {len(tabela[cl])} NPS")
-    # checagens contra o gabarito
+    # checagens contra o referencial
     def look(cl, nps, sch):
         return tabela.get(cl, {}).get(nps, {}).get(sch)
     c8 = look('600#', '8"', '80')

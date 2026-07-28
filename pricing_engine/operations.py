@@ -4,7 +4,7 @@ Fórmulas de horas por operação — fiéis às fórmulas da planilha ENGEMATEX
 Cada função recebe geometria + ProcessParameter e devolve HORAS (homem-hora).
 ROUNDUP da planilha = math.ceil. O fator de correção de MO é aplicado pelo chamador.
 
-Implementadas aqui: operações cost-driver validáveis contra o gabarito.
+Implementadas aqui: operações cost-driver validáveis contra o referencial.
 As step-functions (usinar/traçar) ficam como TABELA DE FAIXA editável (RESOLVIDO Q2) —
 representadas por `faixa()`; valores default lidos da planilha.
 """

@@ -48,7 +48,7 @@ injetável hoje — são **constantes de módulo** lidas internamente (ver §5).
 - **REBAIXADO** — `FOLGA_POR_CABECOTE` (`permutador_layout.py:23`): hoje só gera **aviso**, não custeia
   nem bloqueia (`permutador_layout.py:45`). Mispricing zero → valor de knob baixo. Despriorizar.
 - **FORA** — ~~`CALIB` (tampo 2:1 = 4/π)~~: é constante de **fit** nossa, calibrada a 1 ponto do
-  gabarito (`beu_geometry.py:41`), não decisão de engenharia do Wellington. Expor = quebrar a
+  referencial (`beu_geometry.py:41`), não decisão de engenharia do Wellington. Expor = quebrar a
   reconciliação 0,0% sem ganho, e vira dívida de migração no Bloco C quando o tampo for modelado direito.
 - **FORA (não expor)** — `_param_da_op` (`permutador_quote.py:85`): casa por **keyword no label do seed**
   ("RAIO X", "HIDROST"…). Renomear uma operação re-classifica o driver silenciosamente. Estrutural demais.

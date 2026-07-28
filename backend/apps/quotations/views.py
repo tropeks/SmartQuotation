@@ -4,9 +4,10 @@ Vertical slice: criar feixe -> recompute (preview ao vivo) -> salvar -> detalhe 
 """
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
 from django.views.decorators.http import require_POST
-from django.http import HttpResponseBadRequest, JsonResponse
+from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.accounts.models import UserProfile
@@ -485,12 +486,136 @@ def _parse_decimal(raw, fallback):
         return fallback
 
 
-def _log_field_edit(request, resource, field, before, after):
+def _log_field_edit(request, resource, field, before, after, motivo=""):
     """Trilha de auditoria (quem/quando/campo/valor-anterior) de um override manual
     do drawer EAP — reusa o AccessLog do app `audit` (action='edit')."""
     if before == after:
         return
-    log_access(request, "edit", resource, {"field": field, "before": str(before), "after": str(after)})
+    log_access(request, "edit", resource,
+               {"field": field, "before": str(before), "after": str(after), "motivo": motivo})
+
+
+def _rollup_peso(quotation):
+    """Ressoma o peso da cotação a partir das linhas de material.
+
+    `peso_bruto_kg` é editável no drawer e a Ordem de Fabricação copia DUAS coisas: o
+    peso do cabeçalho da cotação e o peso de cada material (production/services.py:169
+    e :192). Sem esta soma, editar o peso de uma linha deixava a OF com o cabeçalho
+    antigo e as linhas novas — dois pesos diferentes para o mesmo equipamento, sem nada
+    reclamar.
+    """
+    from decimal import Decimal
+
+    from apps.quotations.models import ItemMaterial
+
+    # Quantizar é obrigatório, não cosmético: ItemMaterial guarda 3 casas e Quotation
+    # guarda 2. Sem arredondar aqui, o valor em memória ("1780.960") difere do que o
+    # banco devolve ("1780.96") — e como o snapshot serializa com str(), o hash mudava
+    # a CADA requisição mesmo sem edição nenhuma, gerando snapshot e e-mail em laço.
+    linhas = ItemMaterial.objects.filter(item__quotation=quotation)
+    centavo = Decimal("0.01")
+    quotation.peso_bruto_kg = sum(
+        (m.peso_bruto_kg for m in linhas), Decimal("0")).quantize(centavo)
+    quotation.peso_liquido_kg = sum(
+        (m.peso_liquido_kg for m in linhas), Decimal("0")).quantize(centavo)
+
+
+MOTIVO_MAX = 500
+
+
+def _motivo_obrigatorio(request):
+    """Motivo do override manual. Sem ele, a edição não é gravada.
+
+    Decisão do Wellington (2026-07-24): ajuste manual na EAP é um dos quatro vetores de
+    vazamento de margem, e é o único que hoje ninguém revisa. Exigir a justificativa é o
+    que transforma o override de invisível em auditável.
+
+    Truncado em MOTIVO_MAX: o motivo é copiado UMA VEZ POR CAMPO alterado no AccessLog
+    (até 4 por operação), então um texto grande amplifica ~200× dentro da própria tabela
+    que serve de prova deste controle.
+    """
+    return (request.POST.get("motivo") or "").strip()[:MOTIVO_MAX]
+
+
+def _selo_de_estado(quotation, request, motivo, hash_antes=None):
+    """Fecha o vazamento: registra o novo estado e avisa quem é dono da margem.
+
+    Um override manual muda o custo SEM passar pelo motor. Como `_case_is_stale` e
+    `_technical_approval_satisfied` comparam contra o ÚLTIMO CalculationSnapshot gravado,
+    sem um snapshot novo o hash não muda — e a assinatura técnica continua casando com um
+    custo que já não é o assinado. Era assim que uma cotação aprovada virava Ordem de
+    Fabricação com a margem vazada.
+
+    `create_calculation_snapshot` já chama `invalidate_stale_cases`, então emitir o
+    snapshot basta para derrubar a convertibilidade até alguém re-assinar.
+
+    NÃO toca `computed_at` de propósito: esse campo sinaliza "o motor rodou", e override
+    manual não é o motor (guard-rail de eap_item_save). São sinais diferentes —
+    `computed_at` = o motor rodou; snapshot = o estado mudou.
+    """
+    from apps.quotations.services import build_snapshot_payload, create_calculation_snapshot
+
+    if hash_antes is not None and build_snapshot_payload(quotation).get("snapshot_hash") == hash_antes:
+        # Esta requisição não mudou nada (POST sem alterar campo, ou edição que
+        # devolveu o valor original). Gravar snapshot e notificar aqui só produziria
+        # ruído: a tabela cresceria sem limite e o gestor aprenderia a ignorar o
+        # alerta — matando justamente o controle que esta sprint criou.
+        #
+        # A comparação é ANTES × DEPOIS desta requisição, não contra o último
+        # snapshot gravado: o roll-up por soma pode divergir do total do motor por
+        # arredondamento, e comparar com o snapshot antigo trataria esse desvio
+        # pré-existente como se fosse edição.
+        return
+
+    tinha_aprovacao = quotation.technical_approvals.filter(revoked_at__isnull=True).exists()
+    create_calculation_snapshot(quotation)
+    if tinha_aprovacao:
+        # Fora da transação: o round-trip SMTP não pode segurar o lock da cotação,
+        # e um rollback não pode deixar e-mail enviado sobre estado revertido.
+        transaction.on_commit(
+            lambda: _notificar_dono_da_margem(quotation, request, motivo))
+
+
+def _notificar_dono_da_margem(quotation, request, motivo):
+    """Avisa quem aprova a margem que um custo já assinado foi alterado no braço.
+
+    Só dispara quando havia aprovação vigente: em rascunho não há margem aprovada para
+    vazar, e notificar cada iteração do orçamentista viraria ruído.
+    """
+    from django.core.mail import EmailMessage
+
+    from apps.audit.approvals import _capability_holder_emails
+
+    # Dono da margem + quem assinou. A assinatura de um engenheiro acabou de ser
+    # invalidada por outra pessoa: ele precisa saber, senão descobre só na conversão.
+    destinatarios = set(_capability_holder_emails("approval.commercial_sign"))
+    for aprovacao in quotation.technical_approvals.filter(
+            revoked_at__isnull=True).select_related("approved_by__user"):
+        email = (getattr(getattr(aprovacao.approved_by, "user", None), "email", "") or "").strip()
+        if email:
+            destinatarios.add(email)
+    destinatarios = sorted(destinatarios)
+    if not destinatarios:
+        # Sem destinatário o controle simplesmente não acontece — registra para
+        # não virar falha silenciosa.
+        log_access(request, "edit", quotation,
+                   {"notificacao": "sem destinatario", "motivo": motivo})
+        return []
+    autor = getattr(getattr(request, "user", None), "profile", None)
+    EmailMessage(
+        subject=f"[SmartQuotation] Custo alterado após aprovação — {quotation.number}",
+        body=(
+            f"A cotação {quotation.number} ({quotation.title}) teve custo alterado "
+            f"manualmente na EAP depois de aprovada.\n\n"
+            f"Quem alterou: {getattr(autor, 'full_name', '-')}\n"
+            f"Motivo informado: {motivo or '-'}\n"
+            f"Custo total agora: R$ {quotation.custo_total}\n\n"
+            f"A aprovação técnica foi invalidada: a cotação não converte em Ordem de "
+            f"Fabricação até ser revista e re-assinada."
+        ),
+        to=destinatarios,
+    ).send(fail_silently=True)
+    return destinatarios
 
 
 @require_capability("quotation.write")
@@ -511,74 +636,111 @@ def eap_item_save(request, pk):
     (horas_hh/horas_hm) e o custo é DERIVADO on-the-fly (horas × taxa_hora) via
     `ItemOperation.recalc_custo()` — não é mais um campo editável nesse caso.
     """
-    item = get_object_or_404(
-        QuotationItem.objects.select_related("quotation").prefetch_related("materiais", "operacoes"),
-        pk=pk,
-    )
+    motivo = _motivo_obrigatorio(request)
+    if not motivo:
+        return HttpResponseBadRequest(
+            "Informe o motivo do ajuste manual — ele fica registrado na auditoria."
+        )
+
     from decimal import Decimal
 
-    for mat in item.materiais.all():
-        campos = []
-        peso_key = f"material_peso_{mat.pk}"
-        custo_key = f"material_custo_{mat.pk}"
-        if peso_key in request.POST:
-            antes = mat.peso_bruto_kg
-            mat.peso_bruto_kg = _parse_decimal(request.POST.get(peso_key), mat.peso_bruto_kg)
-            campos.append("peso_bruto_kg")
-            _log_field_edit(request, mat, "peso_bruto_kg", antes, mat.peso_bruto_kg)
-        if custo_key in request.POST:
-            antes = mat.custo
-            mat.custo = _parse_decimal(request.POST.get(custo_key), mat.custo)
-            campos.append("custo")
-            _log_field_edit(request, mat, "custo", antes, mat.custo)
-        if campos:
-            mat.save(update_fields=campos)
+    # Tudo numa transação só, com a cotação travada: o roll-up é recalculado por SOMA
+    # lendo as linhas, então dois editores simultâneos gravariam totais divergentes —
+    # cada um somando um estado que o outro já mudou (last-write-wins sobre a soma).
+    #
+    # O item e suas relações são carregados DEPOIS do lock, de propósito: carregar antes
+    # deixaria a segunda requisição esperando na fila com um prefetch tirado do estado
+    # anterior e, ao ser liberada, somando linhas que o primeiro editor já mudou — o
+    # lock não serve de nada se o cache que ele protege foi lido antes dele.
+    with transaction.atomic():
+        quotation_id = QuotationItem.objects.values_list(
+            "quotation_id", flat=True).filter(pk=pk).first()
+        if quotation_id is None:
+            raise Http404("Item de cotação inexistente.")
+        Quotation.objects.select_for_update().get(pk=quotation_id)
 
-    for op in item.operacoes.all():
-        if op.custo_direto:
-            custo_key = f"op_custo_{op.pk}"
+        item = get_object_or_404(
+            QuotationItem.objects.select_related("quotation")
+            .prefetch_related("materiais", "operacoes"),
+            pk=pk,
+        )
+        from apps.quotations.services import build_snapshot_payload
+        hash_antes = build_snapshot_payload(item.quotation).get("snapshot_hash")
+
+        for mat in item.materiais.all():
+            campos = []
+            peso_key = f"material_peso_{mat.pk}"
+            custo_key = f"material_custo_{mat.pk}"
+            if peso_key in request.POST:
+                antes = mat.peso_bruto_kg
+                mat.peso_bruto_kg = _parse_decimal(request.POST.get(peso_key), mat.peso_bruto_kg)
+                campos.append("peso_bruto_kg")
+                _log_field_edit(request, mat, "peso_bruto_kg", antes, mat.peso_bruto_kg, motivo)
             if custo_key in request.POST:
-                antes = op.custo
-                op.custo = _parse_decimal(request.POST.get(custo_key), op.custo)
-                op.save(update_fields=["custo"])
-                _log_field_edit(request, op, "custo", antes, op.custo)
-        else:
-            hh_key = f"op_horas_hh_{op.pk}"
-            hm_key = f"op_horas_hm_{op.pk}"
-            taxa_hh_key = f"op_taxa_hh_{op.pk}"
-            taxa_hm_key = f"op_taxa_hm_{op.pk}"
-            if (hh_key in request.POST or hm_key in request.POST
-                    or taxa_hh_key in request.POST or taxa_hm_key in request.POST):
-                antes_hh, antes_hm = op.horas_hh, op.horas_hm
-                antes_taxa_hh, antes_taxa_hm = op.taxa_hora, op.taxa_hora_hm
-                op.horas_hh = _parse_decimal(request.POST.get(hh_key), op.horas_hh)
-                op.horas_hm = _parse_decimal(request.POST.get(hm_key), op.horas_hm)
-                # Taxa da hora-homem/hora-máquina também é editável: o default vem do
-                # cadastro (motor/template), mas o orçamentista pode sobrescrever o VALOR
-                # da hora aqui — sem isso, editar horas-HM×taxa_hora_hm=0 não movia o total.
-                op.taxa_hora = _parse_decimal(request.POST.get(taxa_hh_key), op.taxa_hora)
-                op.taxa_hora_hm = _parse_decimal(request.POST.get(taxa_hm_key), op.taxa_hora_hm)
-                # Override MANUAL: marca a proveniência SEM tocar na sugestão do motor
-                # (horas_*_sugerida), para o UI mostrar sugerido↔digitado e permitir restaurar.
-                op.origem = "manual"
-                op.save(update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "origem"])
-                op.recalc_custo()
-                _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh)
-                _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm)
-                _log_field_edit(request, op, "taxa_hora", antes_taxa_hh, op.taxa_hora)
-                _log_field_edit(request, op, "taxa_hora_hm", antes_taxa_hm, op.taxa_hora_hm)
+                antes = mat.custo
+                mat.custo = _parse_decimal(request.POST.get(custo_key), mat.custo)
+                campos.append("custo")
+                _log_field_edit(request, mat, "custo", antes, mat.custo, motivo)
+            if campos:
+                mat.save(update_fields=campos)
 
-    # Roll-up SOMENTE por soma (SEM motor): item = soma das rows; cotação = soma dos itens.
-    item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
-    item.custo_mo = sum((o.custo for o in item.operacoes.all() if o.aplicavel), Decimal("0"))
-    item.save(update_fields=["custo_material", "custo_mo"])
+        for op in item.operacoes.all():
+            if op.custo_direto:
+                custo_key = f"op_custo_{op.pk}"
+                if custo_key in request.POST:
+                    antes = op.custo
+                    op.custo = _parse_decimal(request.POST.get(custo_key), op.custo)
+                    op.save(update_fields=["custo"])
+                    _log_field_edit(request, op, "custo", antes, op.custo, motivo)
+            else:
+                hh_key = f"op_horas_hh_{op.pk}"
+                hm_key = f"op_horas_hm_{op.pk}"
+                taxa_hh_key = f"op_taxa_hh_{op.pk}"
+                taxa_hm_key = f"op_taxa_hm_{op.pk}"
+                if (hh_key in request.POST or hm_key in request.POST
+                        or taxa_hh_key in request.POST or taxa_hm_key in request.POST):
+                    antes_hh, antes_hm = op.horas_hh, op.horas_hm
+                    antes_taxa_hh, antes_taxa_hm = op.taxa_hora, op.taxa_hora_hm
+                    op.horas_hh = _parse_decimal(request.POST.get(hh_key), op.horas_hh)
+                    op.horas_hm = _parse_decimal(request.POST.get(hm_key), op.horas_hm)
+                    # Taxa da hora-homem/hora-máquina também é editável: o default vem do
+                    # cadastro (motor/template), mas o orçamentista pode sobrescrever o VALOR
+                    # da hora aqui — sem isso, editar horas-HM×taxa_hora_hm=0 não movia o total.
+                    op.taxa_hora = _parse_decimal(request.POST.get(taxa_hh_key), op.taxa_hora)
+                    op.taxa_hora_hm = _parse_decimal(request.POST.get(taxa_hm_key), op.taxa_hora_hm)
+                    # Override MANUAL: marca a proveniência SEM tocar na sugestão do motor
+                    # (horas_*_sugerida), para o UI mostrar sugerido↔digitado e permitir restaurar.
+                    #
+                    # Só marca se algum número MUDOU de fato. O formulário envia todos os
+                    # campos de todas as operações, então marcar incondicionalmente
+                    # carimbava "manual" em linha intocada — o que mudava o hash,
+                    # invalidava a assinatura e notificava o gestor sem edição nenhuma.
+                    if (op.horas_hh, op.horas_hm, op.taxa_hora, op.taxa_hora_hm) != (
+                            antes_hh, antes_hm, antes_taxa_hh, antes_taxa_hm):
+                        op.origem = "manual"
+                    op.save(update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "origem"])
+                    op.recalc_custo()
+                    _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh, motivo)
+                    _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm, motivo)
+                    _log_field_edit(request, op, "taxa_hora", antes_taxa_hh, op.taxa_hora, motivo)
+                    _log_field_edit(request, op, "taxa_hora_hm", antes_taxa_hm, op.taxa_hora_hm, motivo)
 
-    q = item.quotation
-    q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
-    q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
-    q.custo_total = q.custo_material + q.custo_mo
-    # computed_at NÃO é tocado de propósito: sinaliza que o motor não rodou.
-    q.save(update_fields=["custo_material", "custo_mo", "custo_total", "updated_at"])
+        # Roll-up SOMENTE por soma (SEM motor): item = soma das rows; cotação = soma dos itens.
+        item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
+        item.custo_mo = sum((o.custo for o in item.operacoes.all() if o.aplicavel), Decimal("0"))
+        item.save(update_fields=["custo_material", "custo_mo"])
+
+        q = item.quotation
+        q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
+        q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
+        q.custo_total = q.custo_material + q.custo_mo
+        _rollup_peso(q)
+        # computed_at NÃO é tocado de propósito: sinaliza que o motor não rodou.
+        q.save(update_fields=["custo_material", "custo_mo", "custo_total",
+                              "peso_bruto_kg", "peso_liquido_kg", "updated_at"])
+
+        # Fecha o vazamento: novo snapshot invalida a assinatura sobre o custo antigo.
+        _selo_de_estado(q, request, motivo, hash_antes)
 
     # Recarrega o item persistido antes do re-render para o drawer refletir o
     # estado canônico do banco, sem depender de caches/instâncias mutadas.
@@ -599,29 +761,59 @@ def eap_op_restore(request, pk):
     from decimal import Decimal
     from apps.quotations.models import ItemOperation
 
-    op = get_object_or_404(
-        ItemOperation.objects.select_related("item__quotation"), pk=pk)
-    antes_hh, antes_hm = op.horas_hh, op.horas_hm
-    if op.horas_hh_sugerida is not None:
-        op.horas_hh = op.horas_hh_sugerida
-    if op.horas_hm_sugerida is not None:
-        op.horas_hm = op.horas_hm_sugerida
-    op.origem = "seed"
-    op.save(update_fields=["horas_hh", "horas_hm", "origem"])
-    op.recalc_custo()
-    _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh)
-    _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm)
+    motivo = _motivo_obrigatorio(request)
+    if not motivo:
+        return HttpResponseBadRequest(
+            "Informe o motivo da restauração — ela também altera o custo da cotação."
+        )
 
-    item = op.item
-    item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
-    item.custo_mo = sum((o.custo for o in item.operacoes.all() if o.aplicavel), Decimal("0"))
-    item.save(update_fields=["custo_material", "custo_mo"])
+    with transaction.atomic():
+        quotation_id = ItemOperation.objects.values_list(
+            "item__quotation_id", flat=True).filter(pk=pk).first()
+        if quotation_id is None:
+            raise Http404("Operação inexistente.")
+        Quotation.objects.select_for_update().get(pk=quotation_id)
 
-    q = item.quotation
-    q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
-    q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
-    q.custo_total = q.custo_material + q.custo_mo
-    q.save(update_fields=["custo_material", "custo_mo", "custo_total", "updated_at"])
+        op = get_object_or_404(
+            ItemOperation.objects.select_related("item__quotation"), pk=pk)
+        from apps.quotations.services import build_snapshot_payload
+        hash_antes = build_snapshot_payload(op.item.quotation).get("snapshot_hash")
+
+        antes_hh, antes_hm = op.horas_hh, op.horas_hm
+        antes_taxa_hh, antes_taxa_hm = op.taxa_hora, op.taxa_hora_hm
+        if op.horas_hh_sugerida is not None:
+            op.horas_hh = op.horas_hh_sugerida
+        if op.horas_hm_sugerida is not None:
+            op.horas_hm = op.horas_hm_sugerida
+        # A taxa também volta: repor só as horas e manter a taxa manual devolvia um
+        # custo que NÃO era o do motor, carimbado como se fosse ("seed").
+        if op.taxa_hora_sugerida is not None:
+            op.taxa_hora = op.taxa_hora_sugerida
+        if op.taxa_hora_hm_sugerida is not None:
+            op.taxa_hora_hm = op.taxa_hora_hm_sugerida
+        op.origem = "seed"
+        op.save(update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "origem"])
+        op.recalc_custo()
+        _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh, motivo)
+        _log_field_edit(request, op, "horas_hm", antes_hm, op.horas_hm, motivo)
+        _log_field_edit(request, op, "taxa_hora", antes_taxa_hh, op.taxa_hora, motivo)
+        _log_field_edit(request, op, "taxa_hora_hm", antes_taxa_hm, op.taxa_hora_hm, motivo)
+
+        item = op.item
+        item.custo_material = sum((m.custo for m in item.materiais.all()), Decimal("0"))
+        item.custo_mo = sum((o.custo for o in item.operacoes.all() if o.aplicavel), Decimal("0"))
+        item.save(update_fields=["custo_material", "custo_mo"])
+
+        q = item.quotation
+        q.custo_material = sum((i.custo_material for i in q.itens.all()), Decimal("0"))
+        q.custo_mo = sum((i.custo_mo for i in q.itens.all()), Decimal("0"))
+        q.custo_total = q.custo_material + q.custo_mo
+        _rollup_peso(q)
+        q.save(update_fields=["custo_material", "custo_mo", "custo_total",
+                              "peso_bruto_kg", "peso_liquido_kg", "updated_at"])
+
+        # Restaurar a sugestão do motor também muda o custo — mesmo selo.
+        _selo_de_estado(q, request, motivo, hash_antes)
 
     item.refresh_from_db()
     return render(request, "quotations/_eap_item_drawer.html", {"item": item, "saved": True})

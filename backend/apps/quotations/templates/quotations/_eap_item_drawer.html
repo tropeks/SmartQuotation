@@ -86,6 +86,8 @@
                     title="Restaurar a sugestão do motor para esta operação"
                     hx-post="{% url 'quotations:eap_op_restore' op.pk %}"
                     hx-target="#eap-drawer-form" hx-swap="outerHTML"
+                    {# restaurar também altera o custo: leva o motivo junto, senão 400 #}
+                    hx-include="[name='motivo']"
                     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>↺ sugestão</button>
             {% else %}
             <span class="drawer-origem-chip g-muted" title="Valor sugerido — aceite ou digite outro">{% if op.origem == 'template' %}sugerido (template){% else %}sugerido (motor){% endif %}</span>
@@ -99,6 +101,19 @@
     {% else %}
     <p class="g-muted">Sem operações neste item.</p>
     {% endif %}
+  </section>
+
+  {# Justificativa obrigatória: ajuste manual na EAP é um dos vetores de vazamento de
+     margem, e era o único que ninguém revisava. Sem o motivo a view devolve 400. #}
+  <section class="drawer-motivo">
+    <label for="eap-motivo-{{ item.pk }}">Motivo do ajuste <span aria-hidden="true">*</span></label>
+    <p class="g-note" id="eap-motivo-ajuda-{{ item.pk }}">Fica registrado na auditoria junto
+      do valor anterior. Se a cotação já estiver aprovada, o gestor comercial é avisado e a
+      assinatura técnica passa a exigir revisão.</p>
+    <textarea id="eap-motivo-{{ item.pk }}" name="motivo" rows="2" required
+              maxlength="500" form="eap-drawer-form"
+              aria-describedby="eap-motivo-ajuda-{{ item.pk }}"
+              placeholder="Ex.: cliente renegociou o escopo de solda; combinado em ata."></textarea>
   </section>
 
   <div class="drawer-actions">

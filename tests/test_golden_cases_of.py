@@ -4,11 +4,11 @@ OF-3399 (REFAP, feixe tubular U) — orçamentos manuscritos reais que também s
 dos aliases de material cobertos por tests/test_material_alias.py (B.3003H14, A-266
 etc.) e do valor de custo_transporte=800.0 usado em tests/test_transporte_input.py.
 
-Diferente de caso_136_tubos (calibrado -2,9% vs um gabarito estruturado em planilha),
+Diferente de caso_136_tubos (calibrado -2,9% vs um referencial estruturado em planilha),
 estes dois casos vêm de rascunhos manuscritos onde só um subconjunto dos campos é
 legível com confiança (ver docstrings de caso_of_3672/caso_of_3399 em feixe_inputs.py).
 Por isso os testes de cotação aqui são de REGRESSÃO/SNAPSHOT (travam o valor atual do
-motor para os inputs conhecidos, sem inventar um gabarito financeiro que o rascunho não
+motor para os inputs conhecidos, sem inventar um referencial financeiro que o rascunho não
 permite confirmar), não uma validação ±X% contra o total do orçamento real.
 """
 from pricing_engine.feixe_inputs import caso_of_3672, caso_of_3399

@@ -87,14 +87,11 @@ def build_cost_chain(quotation) -> TenantCostChain:
     # preços de material vigentes (cifrados) por (sigla, forma)
     try:
         from apps.materials.models import MaterialPrice
-        hoje = date.today()
-        for mp in MaterialPrice.objects.select_related("material").filter(valid_from__lte=hoje):
-            if mp.valid_until and mp.valid_until < hoje:
-                continue
-            try:
-                chain.material_price[(mp.material.sigla.upper(), mp.forma.lower())] = float(mp.preco_brl_kg)
-            except (TypeError, ValueError):
-                continue
+        # Resolução única em MaterialPriceManager: antes, iterar sem order_by deixava
+        # o último registro do queryset vencer — com duas vigências válidas no mesmo
+        # dia, o preço que entrava no orçamento era o que o banco devolvesse por último.
+        chain.material_price.update(
+            {chave: float(valor) for chave, valor in MaterialPrice.objects.mapa_vigente().items()})
     except Exception:
         pass
     # fator de correção de MO (knob calibrado pelo back-solve)
@@ -190,7 +187,8 @@ def _recompute_feixe(quotation) -> None:
                     custo_direto=(op.horas_hh == 0 and op.horas_hm == 0),
                     aplicavel=op.aplicavel,
                     origem="seed",
-                    horas_hh_sugerida=D(op.horas_hh), horas_hm_sugerida=D(op.horas_hm))
+                    horas_hh_sugerida=D(op.horas_hh), horas_hm_sugerida=D(op.horas_hm),
+                    taxa_hora_sugerida=D(op.rate_hh), taxa_hora_hm_sugerida=D(op.rate_hm))
         custo_material += D(it.custo_material)
         custo_mo += D(it.custo_mo)
 
@@ -269,7 +267,8 @@ def _recompute_parts(quotation) -> None:
                 ItemOperation.objects.create(
                     item=qi, codigo_op=co.codigo_op[:40], descricao=co.descricao[:255],
                     metodo=co.metodo, custo=Decimal("0"), custo_direto=False, aplicavel=False,
-                    origem="template", horas_hh_sugerida=Decimal("0"), horas_hm_sugerida=Decimal("0"))
+                    origem="template", horas_hh_sugerida=Decimal("0"), horas_hm_sugerida=Decimal("0"),
+                    taxa_hora_sugerida=Decimal("0"), taxa_hora_hm_sugerida=Decimal("0"))
                 continue
             horas_hh = driver_val * float(pp.valor) + float(co.setup_fixo)
             custo_op = D(horas_hh * float(rate.rate_hh) * fator_mo)
@@ -279,7 +278,8 @@ def _recompute_parts(quotation) -> None:
                 aplicavel=co.aplicavel_default,
                 horas_hh=D(horas_hh), horas_hm=Decimal("0"),
                 taxa_hora=D(rate.rate_hh), taxa_hora_hm=D(rate.rate_hm or 0),
-                origem="template", horas_hh_sugerida=D(horas_hh), horas_hm_sugerida=Decimal("0"))
+                origem="template", horas_hh_sugerida=D(horas_hh), horas_hm_sugerida=Decimal("0"),
+                taxa_hora_sugerida=D(rate.rate_hh), taxa_hora_hm_sugerida=D(rate.rate_hm or 0))
             item_mo += custo_op
 
         qi.custo_material = item_mat

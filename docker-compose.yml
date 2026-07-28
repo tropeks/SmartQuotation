@@ -6,6 +6,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-smartquotation}
       POSTGRES_USER: ${POSTGRES_USER:-sq}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sq}
+    # Sem socket Unix: neste host o container não consegue criar /var/run/postgresql/.s.PGSQL.*
+    # (permission denied -> "could not create any Unix-domain sockets" -> restart loop). O
+    # acesso é por TCP de qualquer forma. Mesmo contorno já usado pelo Postgres de produção.
+    command: postgres -c unix_socket_directories=
     ports:
       - "5436:5432"            # 5436 p/ não colidir com Vitali (5435)
     volumes:

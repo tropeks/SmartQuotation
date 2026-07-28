@@ -9,12 +9,12 @@ MVP: cotação de **feixe tubular** de trocadores de calor. Design partner: ENGE
 pricing_engine/        # MOTOR de custeio — Python PURO (zero Django). Não editar p/ web.
   EAP/WBS: Cotacao → Item → {MateriaPrima, Operacao}
   64 operações + 17 componentes paramétricos, fiéis à planilha ENGEMATEX.
-  ProcessParameter (física → horas) ≠ Rate (custo → R$). Validado a -2,9% vs gabarito real.
+  ProcessParameter (física → horas) ≠ Rate (custo → R$). Validado a -2,9% vs referencial real.
   quote_feixe(FeixeInputs) → Cotacao.   Custo = peso BRUTO (cobra perdas) + bruto/líquido/perda.
   permutador_quote.py → PERMUTADOR COMPLETO GENÉRICO por designação TEMA (BEU, BEM, ...).
   quote_completo(designacao, cost_chain) compõe matéria-prima (peso geométrico×preço; itens
-  comerciais=catálogo) + mão-de-obra (FC escala) + serviços. Validado a 0,0% vs gabarito:
-  BEU R$ 128.160, BEM R$ 119.295. Seeds {d}_{materiais,operacoes,ground_truth}.json gerados
+  comerciais=catálogo) + mão-de-obra (FC escala) + serviços. Validado a 0,0% vs referencial:
+  BEU R$ 128.160, BEM R$ 119.295. Seeds {d}_{materiais,operacoes,referencial}.json gerados
   por scripts/extract_permutador.py. beu_quote.quote_beu = wrapper compat. beu_geometry.py=pesos
   (ρ por material via materials.density; tampo 2:1 = CALIB 4/π, calibração não fórmula física).
   Parametria v2: dims_override recomputa peso pela geometria; params={parâmetro: razão} escala
@@ -42,6 +42,9 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
   apps/proposals/      # proposta DOCX/PDF (template configurável + editável por caso)
   apps/cost_discovery/ # wizard A1-c: cadeia de custos (seed top-down + back-solve de calibração)
   static/css/design-system-g.css   # Design System G·Refined Bauhaus (UX_SPEC v2)
+                                   # ⚠️ SERÁ SUBSTITUÍDO pela pele do Vitali (Tasy Neumorphic)
+                                   # em sprint futura — decisão do Rom (2026-07-28).
+                                   # Ver docs/DESIGN_IDENTIDADE_VISUAL.md antes de investir em UI.
 
 # Cadeia de custos: o adapter monta TenantCostChain do banco (MaterialPrice por forma,
 # fator_correcao_mo, markup, impostos) e injeta no motor. O back-solve calibra o fator de

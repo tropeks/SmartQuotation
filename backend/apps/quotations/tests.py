@@ -1,6 +1,6 @@
 """
 Testes do app quotations + adapter pricing_engine.
-Teste-chave: uma cotação persistida reproduz o gabarito ENGEMATEX (caso 136 tubos).
+Teste-chave: uma cotação persistida reproduz o referencial ENGEMATEX (caso 136 tubos).
 """
 from decimal import Decimal
 from django.conf import settings
@@ -97,9 +97,9 @@ class FeixeQuotationTests(TenantTestCase):
 
         self.assertEqual(returned, Decimal("200.00"))
         self.assertEqual(op.custo, Decimal("200.00"))
-    def test_cotacao_persistida_reproduz_gabarito(self):
+    def test_cotacao_persistida_reproduz_referencial(self):
         q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
-        # gabarito real ENGEMATEX: custo 35.353, preço c/imp 44.192 (gate ±10%)
+        # referencial real ENGEMATEX: custo 35.353, preço c/imp 44.192 (gate ±10%)
         self.assertAlmostEqual(float(q.custo_total), 35353, delta=35353 * 0.10)
         self.assertAlmostEqual(float(q.preco_com_impostos), 44192, delta=44192 * 0.10)
         # custo = material + MO
@@ -192,7 +192,9 @@ class FeixeQuotationTests(TenantTestCase):
         snaps = CalculationSnapshot.objects.filter(quotation=q)
         self.assertEqual(snaps.count(), 1)
         snap = snaps.get()
-        self.assertEqual(snap.engine_version, "calc-snapshot-v1")
+        # Literal de propósito: bumpar a versão do motor tem de passar por aqui. O v2
+        # veio com horas/taxas dentro do payload (M1) — schema novo, versão nova.
+        self.assertEqual(snap.engine_version, "calc-snapshot-v2")
         self.assertEqual(snap.inputs["quotation"]["number"], q.number)
         self.assertIn("totals", snap.outputs)
         self.assertEqual(snap.outputs["totals"]["custo_total"], str(q.custo_total))
@@ -700,7 +702,7 @@ class ItemOperationProvenanceTests(TenantTestCase):
         nova = (sugerida or Decimal("0")) + Decimal("7.00")
         resp = self.client.post(
             f"/cotacoes/eap/item/{op.item.pk}/salvar/",
-            {f"op_horas_hh_{op.pk}": str(nova)})
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hh_{op.pk}": str(nova)})
         self.assertEqual(resp.status_code, 200)
         op.refresh_from_db()
         self.assertEqual(op.origem, "manual")
@@ -718,8 +720,8 @@ class ItemOperationProvenanceTests(TenantTestCase):
         _q, op = self._op_horaria()
         sugerida = op.horas_hh_sugerida
         self.client.post(f"/cotacoes/eap/item/{op.item.pk}/salvar/",
-                         {f"op_horas_hh_{op.pk}": str((sugerida or Decimal("0")) + Decimal("9"))})
-        resp = self.client.post(f"/cotacoes/eap/op/{op.pk}/restaurar/")
+                         {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hh_{op.pk}": str((sugerida or Decimal("0")) + Decimal("9"))})
+        resp = self.client.post(f"/cotacoes/eap/op/{op.pk}/restaurar/", {"motivo": "Restauração — teste de regressão."})
         self.assertEqual(resp.status_code, 200)
         op.refresh_from_db()
         self.assertEqual(op.horas_hh, sugerida)
@@ -764,7 +766,7 @@ class ItemOperationTaxaEditavelTests(TenantTestCase):
 
         resp = self.client.post(
             f"/cotacoes/eap/item/{item.pk}/salvar/",
-            {f"op_taxa_hh_{op.pk}": str(nova_taxa)})
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_taxa_hh_{op.pk}": str(nova_taxa)})
         self.assertEqual(resp.status_code, 200)
 
         op.refresh_from_db(); item.refresh_from_db(); q.refresh_from_db()
@@ -791,7 +793,7 @@ class ItemOperationTaxaEditavelTests(TenantTestCase):
 
         resp = self.client.post(
             f"/cotacoes/eap/item/{item.pk}/salvar/",
-            {f"op_horas_hm_{op.pk}": str(novas_horas_hm),
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hm_{op.pk}": str(novas_horas_hm),
              f"op_taxa_hm_{op.pk}": str(nova_taxa_hm)})
         self.assertEqual(resp.status_code, 200)
 

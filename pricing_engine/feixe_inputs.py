@@ -96,7 +96,7 @@ class FeixeInputs:
 
 
 def caso_136_tubos() -> FeixeInputs:
-    """Caso de validação (gabarito: custo R$ 35.353)."""
+    """Caso de validação (referencial: custo R$ 35.353)."""
     return FeixeInputs()
 
 

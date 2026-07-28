@@ -4,7 +4,7 @@ Fórmulas de peso geométrico para componentes de casco/cabeçote (Permutador co
 ρ é a densidade do material em kgf/mm³ — passada por componente (default = aço-carbono
 7,85e-6; inox SS-300 ≈ 8,0e-6 etc. via pricing_engine.materials.density). Cada função
 devolve o peso LÍQUIDO (kgf) de UMA peça. O peso BRUTO (base de custo, Opção A) = líquido
-× (1 + perda). Validadas contra o gabarito BEU/BEM da planilha ENGEMATEX.
+× (1 + perda). Validadas contra o referencial BEU/BEM da planilha ENGEMATEX.
 
 Famílias geometrizáveis: tubo · chapa_retangular (virola/divisora) · anel (flange
 principal, anel de reforço) · pipe (pescoço de bocal) · disco (espelho/blank redondo,
@@ -20,7 +20,7 @@ RHO = 7.85e-6  # kgf/mm³ (aço-carbono) — default quando a densidade do mater
 
 # fator de perda (bruto/líquido) por família — valores do Wellington (B): espelho e chicana
 # (disco circular furado, recortado de chapa) perdem ~40%; tampo 20%; tubo/chapa 10%.
-# (Componentes com dado de gabarito usam a perda real auto-calibrada; isto é o típico/fallback.)
+# (Componentes com dado de referencial usam a perda real auto-calibrada; isto é o típico/fallback.)
 PERDA_POR_FAMILIA = {
     "espelho": 1.40, "perfurado": 1.40, "disco": 1.40, "tampo_2_1": 1.20, "anel": 1.15,
     "chapa_retangular": 1.10, "tubo": 1.10, "pipe": 1.10,
@@ -35,7 +35,7 @@ def perda_familia(familia) -> float:
 # CALIBRAÇÃO do tampo 2:1 (semielíptico), NÃO um fator de desenvolvimento físico.
 # Vale exatamente 4/π = 1,2732. Como peso_tampo usa (π/4·od²·esp·ρ)·CALIB, o π/4 e o
 # CALIB se cancelam → o tampo é tratado como uma CHAPA QUADRADA de lado od_disco
-# (od_disco²·esp·ρ). É uma calibração empírica que casa o gabarito ENGEMATEX (tampo
+# (od_disco²·esp·ρ). É uma calibração empírica que casa o referencial ENGEMATEX (tampo
 # OD_DISCO 680,9 × esp 9,5 → 34,58 kgf líq); NÃO modela a aba reta (straight flange)
 # nem o estiramento ASME. Limitação conhecida: calibrado a 1 ponto. Ver achado #3.
 CALIB_TAMPO_2_1 = 4.0 / math.pi  # ≈ 1,2732

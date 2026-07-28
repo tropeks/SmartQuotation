@@ -142,6 +142,35 @@ def is_convertible(quotation) -> bool:
     return True
 
 
+def _do_snapshot(bloco, chave, fallback):
+    """Valor do snapshot, caindo no banco vivo quando a chave não existe.
+
+    O fallback não é frouxidão: snapshots gravados ANTES do M1 não têm horas, taxas nem
+    `custo_direto` no bloco de operações. Sem ele, converter uma cotação antiga quebraria
+    — e falhar a conversão de algo já aprovado é pior que copiar do banco, que é o que
+    sempre se fez. Conforme os snapshots novos substituem os antigos, o fallback deixa de
+    ser exercitado sozinho.
+    """
+    from decimal import Decimal, InvalidOperation
+
+    if not isinstance(bloco, dict) or chave not in bloco:
+        return fallback
+    valor = bloco[chave]
+    if isinstance(valor, bool) or valor is None:
+        return valor if valor is not None else fallback
+    try:
+        return Decimal(str(valor))
+    except (InvalidOperation, TypeError, ValueError):
+        return fallback
+
+
+def _linhas_do_snapshot(snapshot):
+    """{codigo_item: bloco} do snapshot, para casar com as linhas vivas pelo código."""
+    outputs = getattr(snapshot, "outputs", None) or {}
+    itens = outputs.get("items") or []
+    return {i.get("codigo_item"): i for i in itens if isinstance(i, dict)}
+
+
 @transaction.atomic
 def convert_quotation_to_of(quotation, created_by=None, request=None) -> OrdemFabricacao:
     """Converte uma cotação aprovada em Ordem de Fabricação (deep-copy da EAP)."""
@@ -150,6 +179,10 @@ def convert_quotation_to_of(quotation, created_by=None, request=None) -> OrdemFa
     # OrdemFabricacao is the DB-level backstop.
     quotation = Quotation.objects.select_for_update().select_related("customer").get(pk=quotation.pk)
     snapshot = _assert_convertible(quotation)
+
+    _outputs = getattr(snapshot, "outputs", None) or {}
+    totais = _outputs.get("totals") or {}
+    linhas_snap = _linhas_do_snapshot(snapshot)
 
     of = OrdemFabricacao.objects.create(
         number=next_of_number(),
@@ -162,51 +195,68 @@ def convert_quotation_to_of(quotation, created_by=None, request=None) -> OrdemFa
         title=quotation.title,
         scope=quotation.scope,
         status=STATUS_ABERTA,
-        custo_material=quotation.custo_material,
-        custo_mo=quotation.custo_mo,
-        custo_total=quotation.custo_total,
-        preco_com_impostos=quotation.preco_com_impostos,
-        peso_bruto_kg=quotation.peso_bruto_kg,
-        peso_liquido_kg=quotation.peso_liquido_kg,
+        # M1.1: os totais vêm do SNAPSHOT — o mesmo JSON congelado cujo hash a assinatura
+        # técnica valida — e não dos objetos vivos do banco. Antes, o gate conferia o hash
+        # mas a OF era montada com o estado corrente: bastava um caminho gravar custo sem
+        # emitir snapshot para a fábrica receber número diferente do assinado, com a ART
+        # casando. Agora o que vai para o chão de fábrica é, por construção, o que foi
+        # aprovado.
+        custo_material=_do_snapshot(totais, "custo_material", quotation.custo_material),
+        custo_mo=_do_snapshot(totais, "custo_mo", quotation.custo_mo),
+        custo_total=_do_snapshot(totais, "custo_total", quotation.custo_total),
+        preco_com_impostos=_do_snapshot(totais, "preco_com_impostos",
+                                        quotation.preco_com_impostos),
+        peso_bruto_kg=_do_snapshot(totais, "peso_bruto_kg", quotation.peso_bruto_kg),
+        peso_liquido_kg=_do_snapshot(totais, "peso_liquido_kg", quotation.peso_liquido_kg),
         created_by=created_by,
     )
 
-    # Deep-copy EAP rows
+    # Deep-copy da EAP. Os VALORES vêm do snapshot assinado (M1.1); a iteração continua
+    # sobre as linhas vivas porque é delas que sai `source_item_id` (rastreabilidade) e
+    # porque o snapshot é cópia fiel das mesmas linhas — casadas aqui pelo código.
     for i, item in enumerate(quotation.itens.prefetch_related("materiais", "operacoes").all()):
+        snap_item = linhas_snap.get(item.codigo_item) or {}
+        snap_mats = {m.get("codigo_mp"): m for m in (snap_item.get("materiais") or [])
+                     if isinstance(m, dict)}
+        snap_ops = {o.get("codigo_op"): o for o in (snap_item.get("operacoes") or [])
+                    if isinstance(o, dict)}
+
         of_item = OFItem.objects.create(
             ordem=of,
             codigo_item=item.codigo_item,
             descricao=item.descricao,
-            custo_material=item.custo_material,
-            custo_mo=item.custo_mo,
+            custo_material=_do_snapshot(snap_item, "custo_material", item.custo_material),
+            custo_mo=_do_snapshot(snap_item, "custo_mo", item.custo_mo),
             sort_order=item.sort_order,
             source_item_id=item.pk,
         )
         for mp in item.materiais.all():
+            snap_mp = snap_mats.get(mp.codigo_mp) or {}
             OFMaterial.objects.create(
                 item=of_item,
                 codigo_mp=mp.codigo_mp,
                 descricao=mp.descricao,
                 material=mp.material,
                 forma=mp.forma,
-                peso_bruto_kg=mp.peso_bruto_kg,
-                peso_liquido_kg=mp.peso_liquido_kg,
-                preco_kgf=mp.preco_kgf,
-                custo=mp.custo,
+                peso_bruto_kg=_do_snapshot(snap_mp, "peso_bruto_kg", mp.peso_bruto_kg),
+                peso_liquido_kg=_do_snapshot(snap_mp, "peso_liquido_kg", mp.peso_liquido_kg),
+                preco_kgf=_do_snapshot(snap_mp, "preco_kgf", mp.preco_kgf),
+                custo=_do_snapshot(snap_mp, "custo", mp.custo),
             )
         for seq, op in enumerate(item.operacoes.all()):
+            snap_op = snap_ops.get(op.codigo_op) or {}
             OFOperation.objects.create(
                 item=of_item,
                 codigo_op=op.codigo_op,
                 descricao=op.descricao,
                 metodo=op.metodo,
-                custo=op.custo,
-                horas_hh=op.horas_hh,
-                horas_hm=op.horas_hm,
-                taxa_hora=op.taxa_hora,
-                taxa_hora_hm=op.taxa_hora_hm,
-                custo_direto=op.custo_direto,
-                aplicavel=op.aplicavel,
+                custo=_do_snapshot(snap_op, "custo", op.custo),
+                horas_hh=_do_snapshot(snap_op, "horas_hh", op.horas_hh),
+                horas_hm=_do_snapshot(snap_op, "horas_hm", op.horas_hm),
+                taxa_hora=_do_snapshot(snap_op, "taxa_hora", op.taxa_hora),
+                taxa_hora_hm=_do_snapshot(snap_op, "taxa_hora_hm", op.taxa_hora_hm),
+                custo_direto=_do_snapshot(snap_op, "custo_direto", op.custo_direto),
+                aplicavel=_do_snapshot(snap_op, "aplicavel", op.aplicavel),
                 sequence=seq,
             )
 
@@ -217,6 +267,11 @@ def convert_quotation_to_of(quotation, created_by=None, request=None) -> OrdemFa
             "snapshot_hash": snapshot.snapshot_hash,
         })
 
+    # O snapshot guarda os totais com a precisão que o motor produziu (o payload é montado
+    # antes do round-trip ao banco), enquanto as colunas têm 2 casas. Recarregar devolve o
+    # objeto igual ao que ficou persistido, em vez de um híbrido com mais casas do que a
+    # OF realmente tem. Ver BACKLOG M1.8.
+    of.refresh_from_db()
     return of
 
 

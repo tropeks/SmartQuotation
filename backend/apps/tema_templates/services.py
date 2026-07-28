@@ -1,6 +1,6 @@
 """Ponte composição TEMA ↔ motor de custeio do permutador completo (pricing_engine).
 
-Designações TEMA com custeio paramétrico validado contra gabarito ENGEMATEX:
+Designações TEMA com custeio paramétrico validado contra referencial ENGEMATEX:
   BEU (bonnet + casco 1 passe + feixe em U)        — Δ 0,0% vs R$ 128.160
   BEM (bonnet + casco 1 passe + cabeçote fixo)     — Δ 0,0% vs R$ 119.295
 Derivado dinamicamente dos seeds presentes (pricing_engine/seeds/{d}_materiais.json).
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pricing_engine.permutador_quote import designacoes_disponiveis
 
-# designações cujo custeio paramétrico já foi validado contra gabarito real
+# designações cujo custeio paramétrico já foi validado contra referencial real
 COSTABLE = set(designacoes_disponiveis())
 
 # fator multiplicador de horas de caldeiraria/solda por classe metalúrgica (#3 agy).
@@ -178,7 +178,7 @@ def reference_inputs(designacao: str):
     }
 
 
-# escopo de radiografia → multiplicador do raio-X (param 'rt'). Referência do gabarito = Total
+# escopo de radiografia → multiplicador do raio-X (param 'rt'). Referência do referencial = Total
 # (100%, confirmado Wellington 2026-06-13) → baseline 1,0. Parcial (10%) ~1/3 (setup domina, não
 # é linear); Isento mantém só UT/LP. Relações preservadas da calibração anterior (÷3). #B agy.
 RT_FATOR = {"Total": 1.0, "Parcial": 0.33, "Isento": 0.1}
@@ -308,7 +308,7 @@ def rt_exposicoes_info(cleaned):
     from pricing_engine.rt_exposicoes import exposicoes_equipamento, FILME_UTIL_MM
     try:
         L = float(cleaned.get("comprimento_casco_mm") or 0)
-        D = float(cleaned.get("diametro_casco_mm") or 0)
+        D = _num(cleaned.get("diametro_casco_mm"))
         if not (L and D):
             return []
         r = exposicoes_equipamento(L, D)
@@ -317,6 +317,23 @@ def rt_exposicoes_info(cleaned):
                 f"útil {FILME_UTIL_MM:g}mm, validado pelo PE]"]
     except (TypeError, ValueError):
         return []
+
+
+def _num(valor, default=0.0):
+    """Coerção tolerante para o memorial ASME: lixo vira o default, não exceção.
+
+    Só a PRESSÃO é essencial — sem ela não há memória de pressão a escrever. Todo o resto
+    (temperatura, diâmetro, espessura, corrosão) é acessório: um valor inválido nesses
+    campos deve tirar a entrada que depende dele, nunca derrubar o memorial inteiro. Era
+    o que acontecia: um `temperatura_projeto_c` com texto zerava a memória de cálculo de
+    um vaso de pressão.
+    """
+    if valor is None or valor == "":
+        return default
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return default
 
 
 def memorial_asme(designacao, cleaned):
@@ -329,10 +346,12 @@ def memorial_asme(designacao, cleaned):
         if not p:
             return []
         casco = cleaned.get("classe_casco", "CS")
-        temp = float(cleaned.get("temperatura_projeto_c") or 40)
+        temp = _num(cleaned.get("temperatura_projeto_c"), 40.0)
         D = float(cleaned.get("diametro_casco_mm") or 0)
-        esp = float(cleaned.get("esp_casco_mm") or 0)
-        CA = float(cleaned.get("corrosao_mm") if cleaned.get("corrosao_mm") is not None else 3.0)
+        esp = _num(cleaned.get("esp_casco_mm"))
+        # `or` em vez de `is not None`: era o único campo onde string vazia chegava
+        # em float("") e derrubava o memorial inteiro. Ausente ou vazio → 3,0 mm.
+        CA = _num(cleaned.get("corrosao_mm"), 3.0)
         e = eficiencia_junta(cleaned.get("rt_escopo", "Total"))
         liga = liga_para_asme(casco)
         if liga:
@@ -360,27 +379,38 @@ def memorial_asme(designacao, cleaned):
                 memo.append({"item": "Espessura mínima do tampo 2:1 (UG-32)",
                              "norma": "ASME VIII Div.1 UG-32", "fonte": fonte or "—",
                              "valor": f"t_mín={tt:.1f}mm; t_req={tt + CA:.1f}mm (c/ corrosão {CA:g}mm)"})
-        # flange de corpo (Apêndice 2)
-        from pricing_engine.flange_corpo import t_min_flange_corpo
-        geo = _flange_corpo_seed(designacao)
-        if geo and s:
-            bore, od, esp_ref = geo
-            tf = t_min_flange_corpo(p, bore, od, s)
-            if tf is not None:
-                st = "REFORÇAR" if tf > esp_ref else "OK"
-                memo.append({"item": "Flange de corpo (Apêndice 2)",
-                             "norma": "ASME VIII Div.1 Ap. 2", "status": st,
-                             "valor": f"t_mín≈{tf:.0f}mm; referência do gabarito {esp_ref:g}mm "
-                                      f"(gaxeta espiralada padrão m=3,0/y=69, validada PE)"})
-        # radiografia por nº de exposições (Seção V Art.2)
-        from pricing_engine.rt_exposicoes import exposicoes_equipamento
-        L = float(cleaned.get("comprimento_casco_mm") or 0)
-        if L and D:
-            r = exposicoes_equipamento(L, D)
-            memo.append({"item": "Radiografia — exposições (Seção V Art.2)",
-                         "norma": "ASME Seção V Art.2",
-                         "valor": f"~{r['total']} exposições ({r['longitudinal']} long + "
-                                  f"{r['circunferencial']} circ) — estimativa"})
+        # Flange de corpo (Apêndice 2) — ETAPA OPCIONAL, com try próprio.
+        # Antes, o `except` de baixo cobria o corpo inteiro: uma falha de coerção aqui
+        # ou na radiografia DESCARTAVA o memorial essencial já montado, devolvendo lista
+        # vazia. Memorial com menos entradas é informação; vazio é falha.
+        try:
+            from pricing_engine.flange_corpo import t_min_flange_corpo
+            geo = _flange_corpo_seed(designacao)
+            if geo and s:
+                bore, od, esp_ref = geo
+                tf = t_min_flange_corpo(p, bore, od, s)
+                if tf is not None:
+                    st = "REFORÇAR" if tf > esp_ref else "OK"
+                    memo.append({"item": "Flange de corpo (Apêndice 2)",
+                                 "norma": "ASME VIII Div.1 Ap. 2", "status": st,
+                                 "valor": f"t_mín≈{tf:.0f}mm; referência do referencial {esp_ref:g}mm "
+                                          f"(gaxeta espiralada padrão m=3,0/y=69, validada PE)"})
+        except (TypeError, ValueError):
+            pass
+
+        # Radiografia por nº de exposições (Seção V Art.2) — ETAPA OPCIONAL, try próprio.
+        try:
+            from pricing_engine.rt_exposicoes import exposicoes_equipamento
+            L = _num(cleaned.get("comprimento_casco_mm"))
+            if L and D:
+                r = exposicoes_equipamento(L, D)
+                memo.append({"item": "Radiografia — exposições (Seção V Art.2)",
+                             "norma": "ASME Seção V Art.2",
+                             "valor": f"~{r['total']} exposições ({r['longitudinal']} long + "
+                                      f"{r['circunferencial']} circ) — estimativa"})
+        except (TypeError, ValueError):
+            pass
+
         return memo
     except (TypeError, ValueError):
         return []
@@ -408,7 +438,7 @@ def _flange_corpo_seed(designacao):
 
 def flange_corpo_avisos(designacao, cleaned):
     """Alerta do flange de corpo (ASME VIII Apêndice 2): se a espessura mínima exigida pela
-    pressão de projeto exceder a referência do gabarito, avisa que precisa reforçar. Vazio = ok.
+    pressão de projeto exceder a referência do referencial, avisa que precisa reforçar. Vazio = ok.
     Usa a tensão admissível S da metalurgia do casco (cadastro do tenant → fallback)."""
     from pricing_engine.flange_corpo import t_min_flange_corpo
     from pricing_engine.asme import interp_s, tensao_admissivel, CLASSE_SPEC
@@ -430,7 +460,7 @@ def flange_corpo_avisos(designacao, cleaned):
         t_req = t_min_flange_corpo(p, bore, od, s)
         if t_req and t_req > esp_ref:
             return [f"⚠️ Flange de corpo: espessura mínima estimada (ASME VIII Apêndice 2) ="
-                    f" {t_req:.0f}mm > referência do gabarito {esp_ref:g}mm. Reforce o flange de"
+                    f" {t_req:.0f}mm > referência do referencial {esp_ref:g}mm. Reforce o flange de"
                     f" corpo p/ esta pressão ({p:g}bar). [gaxeta espiralada padrão"
                     f" m=3,0/y=69, validada pelo PE; ajuste por caso se a gaxeta diferir]"]
         return []

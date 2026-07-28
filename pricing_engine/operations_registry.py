@@ -8,7 +8,7 @@ cálculo do custo. 3 formatos:
   - serviço-fixo: custo = valor_fixo × aplicável
 
 Rates (R$/h) aqui são os valores da planilha ENGEMATEX, usados para validar contra o
-gabarito. No produto vêm da cadeia de custos do tenant (wizard A1-c), editáveis.
+referencial. No produto vêm da cadeia de custos do tenant (wizard A1-c), editáveis.
 """
 from __future__ import annotations
 import math

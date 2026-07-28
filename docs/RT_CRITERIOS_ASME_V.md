@@ -54,7 +54,7 @@ chão de fábrica da ENGEMATEX (a confirmar com @WellToMcAt):
 
 - ✅ **Resolve**: confirma que **extensão (UW-11) + eficiência E (UW-12) são da Seção VIII** — o
   motor está alinhado à norma nesse ponto.
-- ⛔ **Não resolve**: o **escopo de RT do gabarito** (Total vs Parcial) — é dado do *projeto*
+- ⛔ **Não resolve**: o **escopo de RT do referencial** (Total vs Parcial) — é dado do *projeto*
   (desenho/contrato), não da norma. Continua pendente do @WellToMcAt.
 
 ---

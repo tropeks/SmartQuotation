@@ -33,16 +33,16 @@ usinagem/solda/inspeção/exame LP-RX-phased array/transporte). O próprio manus
 bundla TODAS essas linhas num único bloco "MO" (boxed R$ 213.500,00 na página 8,
 checagem intermediária 195.560,00 [pág. 3-7] + 17.940,00 [pág. 8] = 213.500,00); por
 isso as 205 linhas transcritas entram como tipo="mao_obra", secao="fabricacao" — mesma
-convenção do gabarito original, não a separação mão_obra/serviço do BEU/BEM (que é uma
+convenção do referencial original, não a separação mão_obra/serviço do BEU/BEM (que é uma
 classificação de PLANILHA, não deste manuscrito). Os 9 itens lump-sum do RESUMO da
 página 8 que NÃO têm detalhamento em operações (projeto térmico, projeto mecânico,
 desenho, PIT, PS, ferramentas, expandidores, data book, consumível de soldagem) entram
 como tipo="servico", secao="finalizacao".
 
 Sem cost_chain (quote_completo(..., cost_chain=None)) e sem params, o motor usa
-preco_gabarito direto e eff=1,0 para toda operação — custo_mao_obra e custo_servicos
+preco_referencial direto e eff=1,0 para toda operação — custo_mao_obra e custo_servicos
 reproduzem a soma dos valores transcritos exatamente, sem depender de horas/rate/driver
-(não usados nesta validação, apenas preco_gabarito). Resultado: MO motor R$ 212.310,00
+(não usados nesta validação, apenas preco_referencial). Resultado: MO motor R$ 212.310,00
 vs âncora R$ 213.500,00 (delta -0,56%); custo_total motor R$ 734.612,13 vs âncora
 R$ 733.510,00 (delta +0,15%) — ambos VERDES, bem dentro da banda ideal (<=5%).
 
@@ -80,7 +80,7 @@ def test_of3683_MP_dentro_do_gate():
     """MP do motor (Σ peso_bruto × price_kgf dos 54 itens transcritos) vs a âncora real
     R$ 481.528,00. Como o seed usa peso e price_kgf DERIVADOS do próprio manuscrito
     (não recalculados por um modelo geométrico independente — este é um job avulso,
-    sem gabarito TEMA calibrado como BEU/BEM), o resultado reproduz a soma do
+    sem referencial TEMA calibrado como BEU/BEM), o resultado reproduz a soma do
     orçamento real quase exatamente (delta ~0,0016%)."""
     real = _ANCHORS["OF-3683"]["subtotais"]["MP"]
     mp = _cot_of3683()["custo_material"]
@@ -99,7 +99,7 @@ def test_of3683_MP_dentro_da_banda_ideal():
 # ---- MO (mão-de-obra, páginas 3-8) vs a âncora real R$ 213.500,00 ----
 
 def test_of3683_MO_dentro_do_gate():
-    """MO do motor (Σ preco_gabarito das 205 linhas transcritas de of3683_operacoes.json,
+    """MO do motor (Σ preco_referencial das 205 linhas transcritas de of3683_operacoes.json,
     tipo=mao_obra) vs a âncora real R$ 213.500,00. Sem cost_chain/params, eff=1,0 para toda
     operação — custo_mao_obra reproduz a soma dos valores manuscritos quase diretamente
     (delta ~ -0,56%, ruído de leitura de ~205 linhas manuscritas densas)."""

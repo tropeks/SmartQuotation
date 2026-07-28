@@ -7,7 +7,7 @@ Combina blocos pra "gerar" o trocador. Cotação parcial (só feixe) cai natural
 
 Compatibilidade entre letras = configurável (block/warn/free em TenantConfig — RESOLVIDO).
 Custeio: o FEIXE já é computado pelo pricing_engine; casco/cabeçote (custeio paramétrico)
-é a próxima milestone (operações + gabarito BEU já extraídos em seeds/beu_ground_truth.json).
+é a próxima milestone (operações + referencial BEU já extraídos em seeds/beu_referencial.json).
 """
 from django.db import models
 

@@ -59,7 +59,7 @@ class Quotation(models.Model):
     # --- avisos de validação (metalurgia/térmica/geometria) empilhados no recompute ---
     avisos = models.JSONField(default=list, blank=True)    # [{nivel, codigo, mensagem}]
 
-    # --- formação de preço (config do tenant; default reproduz gabarito) ---
+    # --- formação de preço (config do tenant; default reproduz referencial) ---
     fator_preco = models.DecimalField(max_digits=8, decimal_places=5, default=Decimal("1.01377"))
     impostos_pct = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal("23.303"))
 
@@ -157,6 +157,11 @@ class ItemOperation(models.Model):
     origem = models.CharField(max_length=10, choices=ORIGEM, default="seed")
     horas_hh_sugerida = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     horas_hm_sugerida = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    # A taxa também é editável no drawer, então também precisa de sugestão guardada:
+    # sem isso, restaurar repunha as horas mas mantinha a taxa manual e ainda marcava
+    # origem="seed" — o custo continuava diferente do motor com o rótulo do motor.
+    taxa_hora_sugerida = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    taxa_hora_hm_sugerida = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def recalc_custo(self):
         if self.custo_direto:
