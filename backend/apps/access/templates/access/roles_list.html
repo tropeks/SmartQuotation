@@ -5,7 +5,7 @@
 <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
   <div>
     <h1 class="q-number">PAPÉIS</h1>
-    <p style="max-width:72ch;color:var(--g-gray-1);margin:8px 0 0">
+    <p class="g-muted" style="max-width:72ch;margin:8px 0 0">
       Papéis são dados do tenant: crie papéis a partir de um modelo ou do zero, ajuste
       as capabilities de cada um e atribua-os aos membros. {{ total }} de {{ max_roles }} papéis.
     </p>
@@ -37,7 +37,7 @@
     {% if at_limit %}
       <p class="g-muted" style="margin:0">Limite de {{ max_roles }} papéis atingido — exclua um papel para criar outro.</p>
     {% else %}
-      <p style="color:var(--g-gray-1);margin:0 0 12px">Comece de um modelo (copia as permissões) ou do zero:</p>
+      <p class="g-muted" style="margin:0 0 12px">Comece de um modelo (copia as permissões) ou do zero:</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         {% for tpl in templates %}
           <a class="q-btn" href="{% url 'access:role_new' %}?template={{ tpl.key }}">{{ tpl.name }}</a>
@@ -55,7 +55,7 @@
   </header>
   <div class="g-section-body table-scroll">
     {% if total <= 5 %}
-      <div style="border:1px dashed var(--g-line);border-radius:8px;padding:12px;margin-bottom:12px;color:var(--g-gray-1)">
+      <div class="g-note--warn">
         Você usa só os papéis padrão. Crie um papel a partir de um modelo acima para adaptar as
         permissões ao seu processo — nada muda para os membros até você atribuí-lo.
       </div>
@@ -80,7 +80,7 @@
             </th>
             <td>{{ r.origin }}{% if r.is_seeded %} <span class="q-badge">padrão</span>{% endif %}</td>
             <td style="text-align:center">
-              {% if r.requires_crea %}<span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">CREA</span>{% endif %}
+              {% if r.requires_crea %}<span class="q-pill q-pill--bad">CREA</span>{% endif %}
               {% if r.is_admin_like %}<span class="q-badge">admin</span>{% endif %}
             </td>
             <td style="text-align:center">{{ r.active_users }}</td>

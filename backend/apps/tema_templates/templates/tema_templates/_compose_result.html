@@ -1,11 +1,10 @@
 {% load money %}
 {% if designacao %}
-<section class="g-section" style="margin-top:12px;
-    {% if bloqueado %}border-color:var(--g-red){% endif %}">
+<section class="g-section" style="margin-top:12px">
   <div class="g-section-head" style="display:flex;align-items:center;gap:12px">
     <span>Designação TEMA</span>
-    <span class="mono" style="font-size:1.4rem;font-weight:800;color:var(--g-orange)">{{ designacao }}</span>
-    {% if bloqueado %}<span class="q-badge" style="background:var(--g-red);color:#fff">BLOQUEADO</span>{% endif %}
+    <span class="g-code" style="font-size:1.4rem;font-weight:800">{{ designacao }}</span>
+    {% if bloqueado %}<span class="q-pill q-pill--bad">BLOQUEADO</span>{% endif %}
   </div>
   <div class="g-section-body">
     <div class="eyebrow">Blocos componentes</div>
@@ -14,18 +13,17 @@
     {% if avisos %}
       <div class="eyebrow">Compatibilidade · modo <b>{{ mode }}</b></div>
       {% for a in avisos %}
-        <div class="g-note" style="margin-top:6px;padding:10px 12px;border-left:3px solid
-          {% if mode == 'block' %}var(--g-red){% elif mode == 'warn' %}var(--g-orange){% else %}var(--g-gray-1){% endif %}">
+        <div class="g-note{% if mode == 'block' %} g-note--block{% elif mode == 'warn' %} g-note--warn{% endif %}">
           {% if mode == 'block' %}⛔{% elif mode == 'warn' %}⚠️{% else %}ℹ️{% endif %} {{ a }}
         </div>
       {% endfor %}
       {% if mode == 'block' %}
-        <p style="margin-top:12px;color:var(--g-red)">Combinação bloqueada pela política do tenant.</p>
+        <p class="g-note--block" style="margin-top:12px">Combinação bloqueada pela política do tenant.</p>
       {% elif mode == 'free' %}
-        <p style="margin-top:12px;color:var(--g-gray-1)">Modo livre: avisos informativos, composição permitida.</p>
+        <p class="g-muted" style="margin-top:12px">Modo livre: avisos informativos, composição permitida.</p>
       {% endif %}
     {% else %}
-      <div class="g-note" style="padding:10px 12px;border-left:3px solid var(--g-green)">
+      <div class="g-note">
         ✓ Combinação compatível.
       </div>
     {% endif %}
@@ -37,23 +35,23 @@
         <tr><td>Matéria-prima</td><td class="num mono">R$ {{ custo.custo_material|brl }}</td></tr>
         <tr><td>Mão de obra</td><td class="num mono">R$ {{ custo.custo_mao_obra|brl }}</td></tr>
         <tr><td>Serviços / terceiros</td><td class="num mono">R$ {{ custo.custo_servicos|brl }}</td></tr>
-        <tr style="border-top:2px solid var(--g-ink)">
+        <tr style="border-top:2px solid var(--p-ink)">
           <td><b>Custo total</b></td><td class="num mono"><b>R$ {{ custo.custo_total|brl }}</b></td></tr>
         <tr><td>Preço de venda c/ impostos</td>
-          <td class="num mono" style="color:var(--g-orange)">R$ {{ custo.preco_com_impostos|brl }}</td></tr>
+          <td class="num g-num">R$ {{ custo.preco_com_impostos|brl }}</td></tr>
       </tbody>
     </table>
-    <p style="margin-top:6px;font-size:.82rem;color:var(--g-gray-1)">
+    <p class="g-muted" style="margin-top:6px;font-size:.82rem">
       {{ custo.n_materiais }} materiais · {{ custo.n_operacoes }} operações ·
       F.C. mão-de-obra {{ custo.fator_correcao_mo }} · markup {{ custo.fator_preco }}.
       Validado a −0,3% do gabarito ENGEMATEX.</p>
     {% elif designacao and not bloqueado %}
-    <p style="margin-top:14px;font-size:.85rem;color:var(--g-gray-1)">
+    <p class="g-muted" style="margin-top:14px;font-size:.85rem">
       ℹ️ Custeio paramétrico completo disponível para: {{ costable|join:", " }}.
       Demais designações cotam o feixe; casco/cabeçote em validação.</p>
     {% endif %}
   </div>
 </section>
 {% else %}
-<p style="margin-top:12px;color:var(--g-gray-1)">Selecione as três letras para validar.</p>
+<p class="g-muted" style="margin-top:12px">Selecione as três letras para validar.</p>
 {% endif %}
