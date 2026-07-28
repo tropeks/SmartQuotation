@@ -305,6 +305,26 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
 /* ============================================================
    CAMPO — a única herança de relevo. Afunda porque se deposita algo nele.
    ============================================================ */
+/* O controle é estilizado pelo ELEMENTO, não só por classe.
+   Descoberto no screenshot do "depois": o data sheet — a tela mais densa de entrada
+   do produto — renderizava campos com o visual padrão do navegador. Os formulários
+   do Django emitem `<input>` cru via `{{ field }}`, sem `.g-input` e sem estar dentro
+   de `.field`, então a única herança de relevo que a Prancha guarda do Vitali
+   simplesmente não aparecia justamente onde ela mais importa.
+   Excluídos os que não são caixa de texto: botão, checkbox, rádio e arquivo têm
+   affordance própria e escavá-los seria mentira visual. */
+.g-main input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=reset]):not([type=file]),
+.g-main select, .g-main textarea {
+  border:1px solid var(--p-rule-2); border-radius:var(--p-radius);
+  padding:var(--s3) var(--s6); font-family:var(--p-mono); font-size:12.5px;
+  background:var(--p-field); color:var(--p-ink); box-shadow:var(--p-sunken);
+  transition:border-color .12s ease, box-shadow .12s ease; max-width:100%;
+}
+.g-main input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=reset]):not([type=file]):focus,
+.g-main select:focus, .g-main textarea:focus {
+  outline:none; border-color:var(--p-bp); box-shadow:var(--p-focus);
+}
+
 .g-form { display:grid; grid-template-columns:repeat(12,1fr); gap:var(--s8); }
 .field { display:flex; flex-direction:column; gap:var(--s2); }
 .field.col-2{grid-column:span 2}.field.col-3{grid-column:span 3}

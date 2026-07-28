@@ -13,7 +13,7 @@
       {% csrf_token %}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
         {% for field in form %}
-        <label>
+        <label class="field">
           <span class="eyebrow">{{ field.label }}</span>
           {{ field }}
           {% if field.errors %}<span class="g-err" style="font-size:.8rem">{{ field.errors|join:" " }}</span>{% endif %}
@@ -22,7 +22,7 @@
       </div>
       <p style="margin-top:14px"><button class="q-btn primary" type="submit">Recalcular custo</button></p>
       <div style="margin-top:10px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-        <label style="flex:1;min-width:200px">Cliente
+        <label class="field" style="flex:1;min-width:200px"><span class="eyebrow">Cliente</span>
           <input type="text" name="cliente" placeholder="Razão social do cliente">
         </label>
         <button class="q-btn" type="submit" name="salvar" value="1">Salvar cotação + gerar proposta</button>
