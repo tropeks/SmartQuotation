@@ -313,16 +313,24 @@ utilitário de cor — é **componente semântico**, para o template dizer *o qu
 | Classe | Substitui hoje |
 |---|---|
 | `.q-pill` + `--ok` `--warn` `--bad` `--hot` `--neutral` | `.approval-state--*` inline, badges de `audit/inbox.html`, pílula de proveniência de preço |
-| `.q-note--warn` / `.q-note--block` | ternários de `mode` em `_compose_result.html`, blocos de aviso do data sheet |
+| `.g-note--warn` / `.g-note--block` | ternários de `mode` em `_compose_result.html`, blocos de aviso do data sheet |
 | `.g-err` | os `color:var(--g-red)` espalhados por erro de formulário |
 | `.g-num` | valor monetário hoje pintado de laranja (`data_sheet`, `_compose_result`) |
 | `.g-code` | `codigo_item` / letra TEMA hoje em laranja |
 
 **Onde o laranja perde o emprego.** Hoje `--g-orange` é cor de link (`a` global), de foco, de
 rótulo de revisão, de código de item, da barra de `.g-section-head` e de preço. Na Prancha
-tudo isso vira `--p-bp` (azul) ou tinta neutra. O laranja fica só onde já era **aviso de
-verdade**: os blocos `warn`/`block` do `_compose_result.html` e do data sheet — mais os dois
-usos novos (override manual e selo divergente).
+tudo isso vira `--p-bp` (azul) ou tinta neutra.
+
+**E o laranja não herda os avisos de engenharia.** Uma versão anterior desta seção dizia que
+ele "fica onde já era aviso de verdade" — isso contradizia a regra da §2 e estava errado.
+Aviso de engenharia (*geometria inviável*, *corte fora de TEMA*) é **outra coisa** que risco de
+margem; se os dois usarem `--p-hot`, o sinal dilui e o produto perde o instrumento. Bloco de
+aviso usa `--p-warn` (âmbar); bloco impeditivo usa `--p-bad`.
+
+**`--p-hot` tem exatamente dois empregos, e nenhum a mais:** valor de origem manual e selo
+divergente. Que `.q-pill--warn` e `.g-note--warn` dividam o âmbar é o esperado — mesmo
+significado em componentes diferentes é precisamente o que "cor semântica" quer dizer.
 
 Caso que exige decisão explícita e **não** é automático: a pílula **"Pendente"** de aprovação
 (`detail.html:245`) é laranja hoje. Isso é *estado de fluxo*, não risco de margem → vai para

@@ -137,24 +137,25 @@ a:focus-visible, button:focus-visible, .q-btn:focus-visible,
    ============================================================ */
 .g-note { font-family:var(--p-mono); font-size:11px; color:var(--p-ink-3);
   margin:var(--s2) 0; line-height:1.5; }
-/* Modificadores de bloco de aviso. Aqui — e só aqui, fora de risco de margem —
-   o laranja continua empregado: é onde já era aviso de verdade (§7 do spec). */
-.g-note--warn, .q-note--warn {
+/* Modificadores de bloco de aviso.
+   ÂMBAR, não laranja. Aviso de engenharia ("geometria inviável", "corte fora de
+   TEMA") é outra coisa que risco de margem: se os dois usarem --p-hot, o sinal
+   dilui e o produto perde o instrumento. --p-hot é reservado, sem exceção, a
+   origem manual e margem em risco. Que .q-pill--warn e .g-note--warn dividam o
+   âmbar é o esperado — é o mesmo significado em componentes diferentes, que é
+   justamente o que "cor semântica" quer dizer. */
+.g-note--warn {
   display:block; font-family:var(--p-sans); font-size:12px; line-height:1.5;
-  color:var(--p-hot); background:var(--p-hot-soft);
-  border-left:3px solid var(--p-hot); border-radius:0 var(--p-radius) var(--p-radius) 0;
+  color:var(--p-warn); background:var(--p-warn-soft);
+  border-left:3px solid var(--p-warn); border-radius:0 var(--p-radius) var(--p-radius) 0;
   padding:var(--s4) var(--s8); margin:var(--s4) 0;
 }
-.g-note--block, .q-note--block {
+.g-note--block {
   display:block; font-family:var(--p-sans); font-size:12px; line-height:1.5; font-weight:500;
   color:var(--p-bad); background:var(--p-bad-soft);
   border-left:3px solid var(--p-bad); border-radius:0 var(--p-radius) var(--p-radius) 0;
   padding:var(--s4) var(--s8); margin:var(--s4) 0;
 }
-/* Alias: o spec cita o componente como .q-note em §7 e como .g-note em §6.3.
-   Os dois nomes respondem para não deixar um template órfão. */
-.q-note { font-family:var(--p-mono); font-size:11px; color:var(--p-ink-3);
-  margin:var(--s2) 0; line-height:1.5; }
 .g-muted { color:var(--p-ink-3); }
 /* Erro inline de formulário — substitui os color:var(--g-red) espalhados */
 .g-err { display:block; color:var(--p-bad); font-family:var(--p-sans); font-size:11.5px;
@@ -267,10 +268,6 @@ td.g-num, th.g-num { display:table-cell; text-align:right; }
 /* Cartão simples (fantasma em access/workflow.html) */
 .g-card { background:var(--p-paper); border:1px solid var(--p-rule-2);
   border-radius:var(--p-radius); padding:var(--s8); margin-bottom:var(--s6); }
-/* Aviso informativo em bloco */
-.notice { display:block; background:var(--p-bp-soft); border-left:3px solid var(--p-bp);
-  border-radius:0 var(--p-radius) var(--p-radius) 0; padding:var(--s4) var(--s8);
-  font-size:12px; color:var(--p-ink-2); margin:var(--s4) 0; }
 /* Prévia de impacto (engineering_params/_impact_preview.html) */
 .impact-preview { background:var(--p-paper-2); border:1px solid var(--p-rule);
   border-radius:var(--p-radius-sm); padding:var(--s4) var(--s6);
