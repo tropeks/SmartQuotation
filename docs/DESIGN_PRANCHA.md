@@ -238,6 +238,71 @@ Consertar junto, porque a reescrita passa por cima deles de qualquer jeito:
 
 ---
 
+## 6.3 Contrato duro da reescrita (levantado, não presumido)
+
+O CSS tem 527 linhas, 164 classes, 28 custom properties. **139 classes são consumidas por
+template.** O que segue é o que a reescrita não pode quebrar.
+
+### Armadilhas que não aparecem no HTML
+
+- **`.q-status--{draft,review,approved,sent,won,lost}` são montadas em Python**, no dict
+  `_STATUS_PILL_CLASSES` de `apps/quotations/views.py:52-57`, e injetadas por contexto. Não
+  existem como texto literal em template nenhum. Renomear no CSS sem tocar no `views.py`
+  quebra **seis estados de UI em silêncio**.
+- **Classes aplicadas por binding do Alpine** (`:class="{...}"`): `.active`, `.open`,
+  `.drawer--open`, `.is-invalid`, `.toast--err`. O nome é contrato mesmo sem aparecer no HTML
+  estático.
+- **`.htmx-request` nunca aparece em `class=`** — é injetada em runtime pelo HTMX. As duas
+  regras (`.btn-spin` e `.q-btn`) servem **20 templates**. Se sumirem, toda ação HTMX perde o
+  "carregando" e fica clicável em duplicidade. Regressão silenciosa clássica.
+
+### Nomes genéricos reescopados — cuidado redobrado
+
+`.val` `.lbl` `.num` `.id` `.name` `.meta` `.l` `.u` `.v` `.n` `.res` `.rev` `.delta` são
+reaproveitados por componentes **não relacionados**, cada um reescopado por seletor descendente
+(`.stat .val`, `.price-line .val`, `.param-grid .val`…) com tamanho e peso diferentes. Mudar
+uma dessas globalmente atinge vários componentes de uma vez.
+
+### Acessibilidade que já existe e não pode regredir
+
+1. `:focus-visible` cobrindo `a`, `button`, `.q-btn`, `[tabindex]`, `[role="tab"]`,
+   `[role="button"]`, mais `.eap-row:focus-visible`.
+2. `.skip-link` — o par classe + `id="conteudo"` (em `base.html:50`) é o contrato; mexer em um
+   sem o outro quebra o salto.
+3. Foco dedicado em input (genérico e o refinado do login).
+4. **`@media (pointer: coarse)` com alvo mínimo de 44 px** em `.q-btn`, rail, `.g-tab` e links
+   de tabela. É WCAG 2.5.5/2.5.8 implementado por *media feature*, não por largura — some sem
+   o desktop mudar de aparência.
+5. `[x-cloak]{display:none!important}` — sem ele, flash de componente Alpine cru.
+
+**Lacuna atual:** não existe `prefers-reduced-motion`, e o `@keyframes spin` não é guardado.
+Aproveitar a reescrita para corrigir.
+
+### Órfãs — pode descartar
+
+`.approval-banner--revoked` · `.async-progress` (widget inteiro) · `.g3-minimap .progress` e
+subárvore · `.comp-status--*` · `.login-wrap .errors` · `.q-badge--neutral`.
+
+### Fantasmas — usadas em template, nunca definidas
+
+`.q-input` `.g-input` `.q-modal*` `.approval-state*` `.login-card` `.g-card` `.notice`
+`.pricing-basis-badge` `.impact-preview` `.drawer-origem-chip` e outras vivem só de `style=`
+inline. **Não definir nenhuma com semântica que colida** — há um `.g-input` fantasma que é
+campo de texto em 4 templates.
+
+### Mudanças deliberadas (não são preservação — declarar no PR)
+
+Três casos onde "consertar" muda o visual. Faço, e digo que fiz:
+
+- **`.col-8`** existe em dois templates mas nunca foi definida — hoje cai no auto-placement e
+  ocupa **1 coluna, não 8**. Definir corrige um layout que está errado desde sempre.
+- **`--shadow-card`** é referenciada em `proposals/_history_and_email.html:40` e não existe:
+  aquele modal hoje é chapado. Passa a ter sombra.
+- **`.is-disabled`** (data sheet, via Alpine) é hoje um **no-op visual** — o campo não muda de
+  aparência quando desabilitado. Passa a mudar.
+
+---
+
 ## 7. Componentes que absorvem o estilo inline
 
 O levantamento achou **149 ocorrências de `style=` com cor em 39 templates**. Não dá para
