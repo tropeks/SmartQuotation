@@ -700,7 +700,7 @@ class ItemOperationProvenanceTests(TenantTestCase):
         nova = (sugerida or Decimal("0")) + Decimal("7.00")
         resp = self.client.post(
             f"/cotacoes/eap/item/{op.item.pk}/salvar/",
-            {f"op_horas_hh_{op.pk}": str(nova)})
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hh_{op.pk}": str(nova)})
         self.assertEqual(resp.status_code, 200)
         op.refresh_from_db()
         self.assertEqual(op.origem, "manual")
@@ -718,8 +718,8 @@ class ItemOperationProvenanceTests(TenantTestCase):
         _q, op = self._op_horaria()
         sugerida = op.horas_hh_sugerida
         self.client.post(f"/cotacoes/eap/item/{op.item.pk}/salvar/",
-                         {f"op_horas_hh_{op.pk}": str((sugerida or Decimal("0")) + Decimal("9"))})
-        resp = self.client.post(f"/cotacoes/eap/op/{op.pk}/restaurar/")
+                         {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hh_{op.pk}": str((sugerida or Decimal("0")) + Decimal("9"))})
+        resp = self.client.post(f"/cotacoes/eap/op/{op.pk}/restaurar/", {"motivo": "Restauração — teste de regressão."})
         self.assertEqual(resp.status_code, 200)
         op.refresh_from_db()
         self.assertEqual(op.horas_hh, sugerida)
@@ -764,7 +764,7 @@ class ItemOperationTaxaEditavelTests(TenantTestCase):
 
         resp = self.client.post(
             f"/cotacoes/eap/item/{item.pk}/salvar/",
-            {f"op_taxa_hh_{op.pk}": str(nova_taxa)})
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_taxa_hh_{op.pk}": str(nova_taxa)})
         self.assertEqual(resp.status_code, 200)
 
         op.refresh_from_db(); item.refresh_from_db(); q.refresh_from_db()
@@ -791,7 +791,7 @@ class ItemOperationTaxaEditavelTests(TenantTestCase):
 
         resp = self.client.post(
             f"/cotacoes/eap/item/{item.pk}/salvar/",
-            {f"op_horas_hm_{op.pk}": str(novas_horas_hm),
+            {"motivo": "Ajuste manual — teste de regressão.", f"op_horas_hm_{op.pk}": str(novas_horas_hm),
              f"op_taxa_hm_{op.pk}": str(nova_taxa_hm)})
         self.assertEqual(resp.status_code, 200)
 
