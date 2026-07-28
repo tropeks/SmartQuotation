@@ -8,7 +8,7 @@
       hx-swap="outerHTML">
   {% csrf_token %}
   <div class="drawer-item-head">
-    <div class="drawer-code mono">{{ item.codigo_item }}</div>
+    <div class="drawer-code mono g-code">{{ item.codigo_item }}</div>
     <h4>{{ item.descricao }}</h4>
     {% if saved %}<div class="drawer-saved g-muted" role="status">Override salvo · roll-up atualizado.</div>{% endif %}
   </div>
@@ -27,7 +27,7 @@
       <tbody>
         {% for mp in item.materiais.all %}
         <tr>
-          <td class="mono">{{ mp.codigo_mp }}</td>
+          <td class="mono g-code">{{ mp.codigo_mp }}</td>
           <td>{{ mp.descricao }}</td>
           <td class="num"><input class="g-input drawer-num" type="text" inputmode="decimal"
                  name="material_peso_{{ mp.pk }}" value="{{ mp.peso_bruto_kg }}"
@@ -50,10 +50,21 @@
     <table class="g-table drawer-table">
       <thead><tr><th>Operação</th><th>Descrição</th><th>Método</th><th class="num">Horas HH</th><th class="num">Taxa HH (R$/h)</th><th class="num">Horas HM</th><th class="num">Taxa HM (R$/h)</th><th class="num">Custo (R$)</th></tr></thead>
       <tbody>
+        {% comment %}Marca de proveniência (DESIGN_PRANCHA §5.2). Aqui a origem é DIRETA:
+           ItemOperation.origem ∈ {seed→motor, template→catálogo, manual→ajuste manual}.
+           É a mesma marca da linha da EAP, que agrega estas origens no nível do item.{% endcomment %}
         {% for op in item.operacoes.all %}
-        <tr>
-          <td class="mono">{{ op.codigo_op }}</td>
-          <td>{{ op.descricao }}</td>
+        <tr{% if op.origem == 'manual' %} class="eap-row--manual"{% endif %}>
+          <td class="mono g-code">{{ op.codigo_op }}</td>
+          <td>
+            {% if op.origem == 'manual' %}
+              <span class="pv pv--manual" role="img" aria-label="Origem: ajuste manual" title="Ajuste manual"></span>
+            {% elif op.origem == 'template' %}
+              <span class="pv pv--catalogo" role="img" aria-label="Origem: catálogo/template" title="Catálogo / template"></span>
+            {% else %}
+              <span class="pv pv--motor" role="img" aria-label="Origem: motor de custeio" title="Motor de custeio"></span>
+            {% endif %}{{ op.descricao }}
+          </td>
           <td class="g-muted">{{ op.metodo|default:"—" }}</td>
           {% if op.custo_direto %}
           <td class="num"><span class="g-muted">—</span></td>
@@ -81,7 +92,7 @@
           <td class="num"><span class="val mono num{% if not op.custo %} g-muted{% endif %}"
                  aria-label="Custo derivado da operação {{ op.descricao }}">R$ {{ op.custo|brl }}</span>
             {% if op.origem == 'manual' %}
-            <span class="drawer-origem-chip drawer-manual-badge" title="Valor editado manualmente (sobrescreve a sugestão do motor){% if op.horas_hh_sugerida != None %} · sugerido: {{ op.horas_hh_sugerida }}{% endif %}">editado</span>
+            <span class="q-pill q-pill--hot" title="Valor editado manualmente (sobrescreve a sugestão do motor){% if op.horas_hh_sugerida != None %} · sugerido: {{ op.horas_hh_sugerida }}{% endif %}">editado</span>
             <button type="button" class="q-btn ghost drawer-restore"
                     title="Restaurar a sugestão do motor para esta operação"
                     hx-post="{% url 'quotations:eap_op_restore' op.pk %}"
@@ -90,7 +101,7 @@
                     hx-include="[name='motivo']"
                     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>↺ sugestão</button>
             {% else %}
-            <span class="drawer-origem-chip g-muted" title="Valor sugerido — aceite ou digite outro">{% if op.origem == 'template' %}sugerido (template){% else %}sugerido (motor){% endif %}</span>
+            <span class="q-pill q-pill--neutral" title="Valor sugerido — aceite ou digite outro">{% if op.origem == 'template' %}sugerido (template){% else %}sugerido (motor){% endif %}</span>
             {% endif %}
           </td>
           {% endif %}
