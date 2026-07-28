@@ -18,7 +18,7 @@
           <td>{{ of.created_at|date:"d/m/Y" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma OF ainda.</td></tr>
+        <tr><td colspan="6" class="g-muted" style="padding:24px;text-align:center">Nenhuma OF ainda.</td></tr>
         {% endfor %}
       </tbody>
     </table>

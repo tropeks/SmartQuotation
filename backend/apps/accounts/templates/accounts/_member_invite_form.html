@@ -5,7 +5,7 @@
   </header>
   <div class="g-section-body">
     {% if invitation_result %}
-      <div style="margin-bottom:16px;padding:16px;border:1px solid var(--g-green);background:rgba(46,125,50,.08)">
+      <div class="g-note--warn" style="margin-bottom:16px">
         <strong>{{ invitation_result.full_name }}</strong> foi criado como {{ invitation_result.role_label }}.<br>
         <span class="g-muted">Copie agora e entregue ao membro:</span><br>
         Login: <code>{{ invitation_result.email }}</code><br>
@@ -20,7 +20,7 @@
           hx-swap="outerHTML">
       {% csrf_token %}
       {% if invite_form.non_field_errors %}
-        <div style="margin-bottom:16px;color:var(--g-red)">
+        <div class="g-err" style="margin-bottom:16px">
           {{ invite_form.non_field_errors }}
         </div>
       {% endif %}
@@ -28,37 +28,37 @@
       <label class="field col-6">
         <span>{{ invite_form.email.label }}</span>
         {{ invite_form.email }}
-        {% if invite_form.email.errors %}<small style="color:var(--g-red)">{{ invite_form.email.errors|join:", " }}</small>{% endif %}
+        {% if invite_form.email.errors %}<small class="g-err">{{ invite_form.email.errors|join:", " }}</small>{% endif %}
       </label>
 
       <label class="field col-6">
         <span>{{ invite_form.full_name.label }}</span>
         {{ invite_form.full_name }}
-        {% if invite_form.full_name.errors %}<small style="color:var(--g-red)">{{ invite_form.full_name.errors|join:", " }}</small>{% endif %}
+        {% if invite_form.full_name.errors %}<small class="g-err">{{ invite_form.full_name.errors|join:", " }}</small>{% endif %}
       </label>
 
       <label class="field col-4">
         <span>{{ invite_form.role.label }}</span>
         {{ invite_form.role }}
-        {% if invite_form.role.errors %}<small style="color:var(--g-red)">{{ invite_form.role.errors|join:", " }}</small>{% endif %}
+        {% if invite_form.role.errors %}<small class="g-err">{{ invite_form.role.errors|join:", " }}</small>{% endif %}
       </label>
 
       <label class="field col-4">
         <span>{{ invite_form.crea_number.label }}</span>
         {{ invite_form.crea_number }}
-        {% if invite_form.crea_number.errors %}<small style="color:var(--g-red)">{{ invite_form.crea_number.errors|join:", " }}</small>{% endif %}
+        {% if invite_form.crea_number.errors %}<small class="g-err">{{ invite_form.crea_number.errors|join:", " }}</small>{% endif %}
       </label>
 
       <label class="field col-4">
         <span>{{ invite_form.crea_state.label }}</span>
         {{ invite_form.crea_state }}
-        {% if invite_form.crea_state.errors %}<small style="color:var(--g-red)">{{ invite_form.crea_state.errors|join:", " }}</small>{% endif %}
+        {% if invite_form.crea_state.errors %}<small class="g-err">{{ invite_form.crea_state.errors|join:", " }}</small>{% endif %}
       </label>
 
       <label class="field col-8">
         <span>{{ invite_form.phone.label }}</span>
         {{ invite_form.phone }}
-        {% if invite_form.phone.errors %}<small style="color:var(--g-red)">{{ invite_form.phone.errors|join:", " }}</small>{% endif %}
+        {% if invite_form.phone.errors %}<small class="g-err">{{ invite_form.phone.errors|join:", " }}</small>{% endif %}
       </label>
 
       <div class="field col-4" style="justify-content:flex-end;align-items:flex-start">

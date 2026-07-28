@@ -65,7 +65,7 @@
                 <input type="checkbox" name="cap" value="{{ cap.code }}" {% if cap.checked %}checked{% endif %}>
                 <span>
                   {{ cap.label }}
-                  {% if cap.is_dangerous %}<span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">sensível</span>{% endif %}
+                  {% if cap.is_dangerous %}<span class="q-pill q-pill--bad">sensível</span>{% endif %}
                   <span class="g-muted" style="display:block;font-weight:400">{{ cap.description }}</span>
                 </span>
               </label>
@@ -83,9 +83,9 @@
 </form>
 
 {% if mode == 'edit' and not is_seeded %}
-  <section class="g-section" style="margin-top:24px;border-color:var(--g-red)"
+  <section class="g-section" style="margin-top:24px"
            x-data="{ confirm: false }">
-    <header class="g-section-head"><h3 style="color:var(--g-red)">Excluir papel</h3></header>
+    <header class="g-section-head"><h3>Excluir papel</h3></header>
     <div class="g-section-body">
       {% if active_users %}
         <p style="margin:0 0 8px">Há <strong>{{ active_users }}</strong> usuário(s) ativo(s) com este
@@ -93,7 +93,7 @@
       {% else %}
         <p class="g-muted" style="margin:0 0 8px">Nenhum usuário ativo com este papel.</p>
       {% endif %}
-      <button type="button" class="q-btn" style="border-color:var(--g-red);color:var(--g-red)"
+      <button type="button" class="q-btn q-btn--danger"
               @click="confirm = !confirm">Excluir este papel…</button>
       <form method="post" action="{% url 'access:role_delete' %}" x-show="confirm" x-cloak
             style="margin-top:12px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
@@ -108,7 +108,7 @@
             </select>
           </label>
         {% endif %}
-        <button type="submit" class="q-btn primary" style="background:var(--g-red);border-color:var(--g-red)">
+        <button type="submit" class="q-btn q-btn--danger primary">
           Confirmar exclusão</button>
       </form>
     </div>

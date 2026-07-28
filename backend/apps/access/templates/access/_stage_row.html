@@ -17,7 +17,7 @@ approver_capability, error).
       <span class="g-muted" style="display:block;font-weight:400">Aprovador: {{ stage.approver_capability }}</span>
     {% endif %}
     {% if stage.error %}
-      <div role="alert" style="margin-top:4px;color:var(--g-red)">{{ stage.error }}</div>
+      <div role="alert" class="g-err" style="margin-top:4px">{{ stage.error }}</div>
     {% endif %}
   </th>
   <td style="text-align:center">

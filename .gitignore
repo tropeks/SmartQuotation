@@ -38,5 +38,10 @@ graphify-out/
 # Uploads em runtime (bridge do Telegram, anexos) — não versionar binários
 uploads/
 
-# Log de execução da suíte — artefato local, nunca versionar
+# Log de rodada da suíte — artefato local, já foi commitado por engano uma vez
+suite.log
 backend/suite.log
+
+# Baseline visual: PNG é artefato de verificação, regenerável pelo harness
+docs/visual/**/*.png
+docs/visual/**/*.log

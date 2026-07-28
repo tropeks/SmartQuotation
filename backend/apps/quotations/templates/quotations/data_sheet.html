@@ -56,10 +56,10 @@
       </div>
       <div class="field col-3" x-show="tuboCompMode !== 'free'">
         <label>Comprimento (mm)</label>
-        <div class="q-input" style="background:var(--g-gray-3);display:flex;align-items:center" x-text="tuboComp"></div>
+        <div class="q-input g-input--derivado" style="display:flex;align-items:center" x-text="tuboComp"></div>
       </div>
       <div class="field col-6" x-show="precisaEmenda" x-cloak>
-        <p class="g-note" style="color:var(--g-red);margin:0">
+        <p class="g-note--block">
           ⚠ Desenvolvido do tubo (<span x-text="desenvolvido"></span> mm<span x-show="isU"> · U = 2× a perna</span>)
           passa do maior comprimento padrão (<span x-text="maxStandard"></span> mm): <b>vai precisar de emenda</b>.
         </p>
@@ -67,7 +67,7 @@
       {# C3 — raio da curva em U (só feixe em U) #}
       <div class="field col-3" x-show="isU" x-cloak>
         <label>{{ form.u_bend_radius_mm.label }}</label>{{ form.u_bend_radius_mm }}
-        <p class="g-note" style="margin:4px 0 0" :style="uBendError ? 'color:var(--g-red)' : ''"
+        <p class="g-note" :class="uBendError ? 'g-note--block' : ''"
            x-show="tuboOdMm > 0">
           Mín. TEMA RCB-2.3: <span x-text="uBendFactor"></span>×OD =
           <span x-text="uBendMin"></span> mm<span x-show="uBendError"><b> — raio abaixo do mínimo!</b></span>
@@ -101,8 +101,8 @@
         <input class="q-input" type="number" step="0.1" min="0" max="60"
                x-model.number="baffleCutPct" @input="onPctInput()"
                aria-label="Baffle cut em percentual do diâmetro">
-        <p class="g-note" style="margin:4px 0 0"
-           :style="baffleCutLevel === 'error' ? 'color:var(--g-red)' : (baffleCutLevel === 'warn' ? 'color:var(--g-amber,#b8860b)' : '')">
+        <p class="g-note"
+           :class="baffleCutLevel === 'error' ? 'g-note--block' : (baffleCutLevel === 'warn' ? 'g-note--warn' : '')">
           <span x-text="baffleCutPct"></span>% → <span x-text="baffleCutMm"></span> mm (altura restante)
           <span x-show="baffleCutLevel === 'error'"><b> — fora da faixa 15–45%</b></span>
           <span x-show="baffleCutLevel === 'warn'"> — fora da boa prática 20–35%</span>
@@ -115,9 +115,9 @@
         <input class="q-input" type="number" step="0.1" name="chicana_cut_remaining_mm"
                id="{{ form.chicana_cut_remaining_mm.id_for_label }}"
                x-model.number="baffleCutMm" :readonly="hasD"
-               :style="hasD ? 'background:var(--g-gray-3)' : ''"
+               :class="{ 'g-input--derivado': hasD }"
                aria-label="Altura restante do corte de chicana em mm">
-        <p class="g-note" style="margin:4px 0 0;color:var(--g-amber,#b8860b)" x-show="!hasD" x-cloak>
+        <p class="g-note--warn" x-show="!hasD" x-cloak>
           Informe o OD da chicana para usar o corte em %.
         </p>
       </div>

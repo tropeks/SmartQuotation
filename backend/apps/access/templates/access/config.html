@@ -5,7 +5,7 @@
 <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
   <div>
     <h1 class="q-number">NÍVEIS DE ACESSO</h1>
-    <p style="max-width:72ch;color:var(--g-gray-1);margin:8px 0 0">
+    <p class="g-muted" style="max-width:72ch;margin:8px 0 0">
       Configure quais papéis podem cada capability. As mudanças valem imediatamente
       para todo o tenant (enforcement fail-closed). Marque/desmarque para conceder/revogar.
     </p>
@@ -47,7 +47,7 @@
       <h3>Fluxo de aprovações</h3>
       <span class="g-muted">{{ stages|length }} estágio{{ stages|length|pluralize }}</span>
     </header>
-    <p style="max-width:72ch;color:var(--g-gray-1);margin:0 0 8px;padding:0 12px">
+    <p class="g-muted" style="max-width:72ch;margin:0 0 8px;padding:0 12px">
       Estágios obrigatórios travam a conversão de cotação em Ordem de Fabricação:
       uma cotação só é convertível quando TODOS os estágios obrigatórios estão
       satisfeitos. A aprovação técnica (CREA) é obrigatória por compliance e não

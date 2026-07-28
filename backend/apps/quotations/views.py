@@ -2,6 +2,8 @@
 Views do data sheet do feixe — session auth + HTMX (recálculo ao vivo).
 Vertical slice: criar feixe -> recompute (preview ao vivo) -> salvar -> detalhe (EAP + preço).
 """
+import re
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -57,6 +59,187 @@ _STATUS_PILL_CLASSES = {
     "won": "q-status--won",
     "lost": "q-status--lost",
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CARIMBO — bloco de título de prancha (DESIGN_PRANCHA §5.1)
+#
+# O carimbo é COMPOSIÇÃO do que já existe, não campo novo. O que a investigação
+# achou, campo a campo (relatado no PR):
+#
+#   CLIENTE ................. Quotation.customer.company_name          EXISTE
+#   TAG DO EQUIPAMENTO ...... NÃO EXISTE em lugar nenhum do model/inputs
+#   DESIGNAÇÃO TEMA ......... inputs["designacao"] — SÓ scope='complete'
+#   EQUIPAMENTO ............. Quotation.title + get_scope_display      EXISTE
+#   NORMA DE PROJETO ........ CalculationSnapshot.standard_refs — só permutador
+#                             PRESSURIZADO gera memorial ASME; feixe sai vazio
+#   PRESSÃO · TEMPERATURA ... inputs["pressao_projeto_bar"/"temperatura_projeto_c"]
+#                             — SÓ scope='complete' (o data sheet do feixe não pergunta)
+#   RESPONSÁVEL TÉCNICO ..... TechnicalApproval ativa (approved_by + CREA). O
+#                             `engineer_responsavel` do QuotationEntryForm NÃO é
+#                             persistido — quem assina é a única fonte real.
+#   EMISSÃO ................. Quotation.created_at                     EXISTE
+#   ORIGEM DO PROJETO ....... NÃO EXISTE (novo × reposição é o `tipo de projeto`
+#                             ainda não implementado — PLAN_TIPO_PROJETO_V2).
+#
+# Campo ausente degrada para "—" COM o rótulo presente: carimbo com menos campos
+# é informação; carimbo com campo mentiroso é defeito.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Cláusula/parágrafo no fim da referência normativa ("ASME VIII Div.1 UG-27" →
+# "ASME VIII Div.1"). O carimbo nomeia o CÓDIGO; a cláusula fica no memorial.
+_CLAUSULA_NORMA_RE = re.compile(r"\s+(UG-\S+|UW-\S+|UCS-\S+|Ap\.\s*\d+|Apêndice\s*\d+)\s*$")
+
+
+def _fmt_num_ptbr(value) -> str:
+    """Número do carimbo em pt-BR, sem casa decimal supérflua (10.0 → '10')."""
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    texto = f"{f:.0f}" if f == int(f) else f"{f:g}"
+    return texto.replace(".", ",")
+
+
+def _norma_de_projeto(snapshot) -> str:
+    """Norma de projeto = famílias distintas das referências normativas do snapshot.
+
+    `CalculationSnapshot.standard_refs` é [{item, norma, fonte}] e só é preenchido
+    quando há memorial ASME (permutador com pressão de projeto). Sem isso, vazio —
+    e o carimbo mostra "—" em vez de inventar "ASME VIII" para todo mundo.
+    """
+    if snapshot is None:
+        return ""
+    familias = []
+    for ref in snapshot.standard_refs or []:
+        if not isinstance(ref, dict):
+            continue
+        norma = (ref.get("norma") or "").strip()
+        if not norma:
+            continue
+        familia = _CLAUSULA_NORMA_RE.sub("", norma).strip()
+        if familia and familia not in familias:
+            familias.append(familia)
+    return " · ".join(familias)
+
+
+def _pressao_temperatura(inputs) -> str:
+    """"P · T" das condições de projeto. Só o data sheet do PERMUTADOR pergunta isso."""
+    partes = []
+    pressao = (inputs or {}).get("pressao_projeto_bar")
+    temperatura = (inputs or {}).get("temperatura_projeto_c")
+    if pressao not in (None, ""):
+        partes.append(f"{_fmt_num_ptbr(pressao)} bar")
+    if temperatura not in (None, ""):
+        partes.append(f"{_fmt_num_ptbr(temperatura)} °C")
+    return " · ".join(partes)
+
+
+def _responsavel_tecnico(approval) -> str:
+    """Responsável técnico = quem ASSINOU (TechnicalApproval ativa) + CREA."""
+    if approval is None:
+        return ""
+    profile = approval.approved_by
+    nome = (getattr(profile, "full_name", "") or "").strip()
+    crea = "/".join(p for p in (approval.crea_state, approval.crea_number) if p)
+    return " · ".join(p for p in (nome, f"CREA {crea}" if crea else "") if p)
+
+
+def _carimbo(quotation, approval, snapshot) -> dict:
+    """Valores já resolvidos das 9 células do carimbo (string vazia = célula '—')."""
+    inputs = quotation.inputs or {}
+    return {
+        "cliente": quotation.customer.company_name if quotation.customer_id else "",
+        "tag": "",                                   # não capturado em lugar nenhum
+        "designacao": (inputs.get("designacao") or "").strip(),
+        "equipamento": quotation.title,
+        "escopo": quotation.get_scope_display(),
+        "norma": _norma_de_projeto(snapshot),
+        "pressao_temperatura": _pressao_temperatura(inputs),
+        "responsavel": _responsavel_tecnico(approval),
+        "emissao": quotation.created_at,
+        "origem_projeto": "",                        # novo × reposição: não implementado
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SELO — instrumento de confiança (DESIGN_PRANCHA §5.3)
+#
+# Três estados, e o do meio é o que justifica a tela existir:
+#   ok ............. assinatura ativa cobrindo o snapshot vigente → converte
+#   divergente ..... existe assinatura ativa, mas o cálculo MUDOU depois dela
+#   sem-aprovacao .. nenhuma assinatura ativa
+#
+# A comparação de hash NÃO é reimplementada aqui: quem decide é
+# `apps.audit.approvals._technical_satisfied` — a MESMA função que o gate de
+# conversão consulta (production.services._technical_approval_satisfied usa a
+# regra idêntica). Este módulo só acrescenta "existe assinatura ativa?", que é
+# pergunta de apresentação (separar "divergente" de "sem aprovação"), não regra
+# de negócio. TODO: promover `_technical_satisfied` a API pública do app audit.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_SELO_TEXTO = {
+    "ok": ("Cálculo assinado", "A aprovação técnica cobre o cálculo vigente. Conversão em OF liberada."),
+    "divergente": ("Assinatura divergente", "O cálculo mudou depois da assinatura. A aprovação não cobre "
+                                            "estes números e a conversão em OF está bloqueada."),
+    "sem-aprovacao": ("Sem aprovação técnica", "Nenhuma assinatura ativa para esta cotação. "
+                                               "Converter em OF fica bloqueado até a aprovação."),
+}
+
+
+def _selo(quotation, approval, snapshot) -> dict:
+    from apps.audit import approvals as _approvals
+
+    if approval is None:
+        estado = "sem-aprovacao"
+    elif _approvals._technical_satisfied(quotation):
+        estado = "ok"
+    else:
+        estado = "divergente"
+    titulo, detalhe = _SELO_TEXTO[estado]
+    return {
+        "estado": estado,
+        "titulo": titulo,
+        "detalhe": detalhe,
+        "hash_assinado": approval.calculation_snapshot_hash if approval else "",
+        "hash_vigente": snapshot.snapshot_hash if snapshot else "",
+        "approval": approval,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PROVENIÊNCIA da linha da EAP (DESIGN_PRANCHA §5.2)
+#
+# `origem` vive na OPERAÇÃO (ItemOperation, N2); a linha da EAP é o ITEM (N1).
+# REGRA ADOTADA: prevalece a origem mais "forte" entre as operações do item —
+# manual > template > seed. Basta UMA operação com override manual para o item
+# inteiro ser marcado como manual: o total do item passou a depender de digitação
+# humana, e é exatamente isso que a marca precisa denunciar (o oposto — exigir
+# que TODAS sejam manuais — esconderia justamente o caso do vazamento de margem).
+# Item sem nenhuma operação (só matéria-prima) é `catalogo`: o custo vem do preço
+# vigente do material, não do motor.
+#
+# `importado` (4ª marca do spec) não tem fonte no model hoje — ItemOperation.ORIGEM
+# só admite seed/template/manual. Fica definido no CSS mas não é emitido por esta
+# tela; a legenda só lista o que pode aparecer.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_PV_PESO = {"seed": 1, "template": 2, "manual": 3}
+_PV_CLASSE = {"seed": "motor", "template": "catalogo", "manual": "manual"}
+_PV_ROTULO = {
+    "motor": "Motor de custeio",
+    "catalogo": "Catálogo / preço vigente",
+    "manual": "Ajuste manual",
+    "importado": "Importado",
+}
+
+
+def _item_proveniencia(item) -> str:
+    origens = [op.origem for op in item.operacoes.all()]
+    if not origens:
+        return "catalogo"
+    mais_forte = max(origens, key=lambda o: _PV_PESO.get(o, 0))
+    return _PV_CLASSE.get(mais_forte, "motor")
 
 
 def _initial_from_defaults() -> dict:
@@ -338,7 +521,12 @@ def quotation_edit(request, pk):
 @require_capability("quotation.read", allow_platform_staff=True)
 def quotation_detail(request, pk):
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
-    itens = (q.itens.prefetch_related("materiais", "operacoes")).all()
+    itens = list(q.itens.prefetch_related("materiais", "operacoes").all())
+    # Marca de proveniência por linha da EAP (§5.2) — anexada à instância para o
+    # template não precisar de lógica; a regra está em `_item_proveniencia`.
+    for item in itens:
+        item.pv = _item_proveniencia(item)
+        item.pv_rotulo = _PV_ROTULO[item.pv]
     has_active_of = q.ordens_fabricacao.exclude(status="cancelada").exists()
     approval_engineers = UserProfile.objects.filter(
         role=UserProfile.ROLE_ENGENHEIRO,
@@ -347,11 +535,22 @@ def quotation_detail(request, pk):
     pending_remote_request = q.approval_requests.filter(status=ApprovalRequest.STATUS_PENDING).first()
     from apps.production.services import is_convertible
     from apps.audit import approvals as _approvals
+    from apps.audit.services import latest_snapshot_for
     active_case = _approvals.active_case(q)
+    # Aprovação técnica ATIVA (não revogada) mais recente + snapshot vigente:
+    # alimentam tanto o selo (§5.3) quanto o responsável técnico do carimbo (§5.1).
+    active_approval = q.technical_approvals.filter(
+        revoked_at__isnull=True).select_related("approved_by").first()
+    snapshot = latest_snapshot_for(q)
     return render(request, "quotations/detail.html",
                   {
                       "q": q,
                       "itens": itens,
+                      "carimbo": _carimbo(q, active_approval, snapshot),
+                      "selo": _selo(q, active_approval, snapshot),
+                      "pricing_basis_pill": (
+                          "q-pill--ok" if q.pricing_basis == "validado_custo" else "q-pill--neutral"
+                      ),
                       "has_active_of": has_active_of,
                       "is_convertible": is_convertible(q),
                       "can_convert": user_can(request.user, "of.convert"),

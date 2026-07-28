@@ -8,13 +8,13 @@ Re-renderizada pelo toggle_permission (hx-swap=outerHTML no <tr id="cap-row-..."
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       <span>{{ cap.label }}</span>
       {% if cap.is_dangerous %}
-        <span class="q-badge" style="border-color:var(--g-red);color:var(--g-red)">sensível</span>
+        <span class="q-pill q-pill--bad">sensível</span>
       {% endif %}
     </div>
     <span class="g-muted" style="display:block;font-weight:400">{{ cap.description }}</span>
     <code class="g-muted" style="font-size:.75em">{{ cap.code }}</code>
     {% if cap.error %}
-      <div role="alert" style="margin-top:4px;color:var(--g-red)">{{ cap.error }}</div>
+      <div role="alert" class="g-err" style="margin-top:4px">{{ cap.error }}</div>
     {% endif %}
   </th>
   {% for cell in cap.cells %}

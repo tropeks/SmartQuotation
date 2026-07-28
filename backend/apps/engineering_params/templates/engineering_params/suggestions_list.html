@@ -35,8 +35,10 @@
           <td class="num">{{ s.confidence|floatformat:1 }}%</td>
           <td class="num">R$ {{ s.current_rate_hh|brl }}</td>
           <td class="num">R$ {{ s.actual_mean_rate|brl }}</td>
-          <td class="num" style="color:{% if s.delta_pct > 0 %}var(--g-green){% else %}var(--g-red){% endif %};font-weight:var(--w-bold)">
-            {% if s.delta_pct > 0 %}+{% endif %}{{ s.delta_pct }}%
+          <td class="num">
+            <span class="q-pill {% if s.delta_pct > 0 %}q-pill--ok{% else %}q-pill--bad{% endif %}">
+              {% if s.delta_pct > 0 %}+{% endif %}{{ s.delta_pct }}%
+            </span>
           </td>
           <td style="display:flex;gap:var(--s4)">
             <form method="post" action="{% url 'engineering_params:suggestion_apply' s.pk %}" style="margin:0">

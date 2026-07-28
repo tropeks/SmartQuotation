@@ -5,7 +5,7 @@
 <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
   <div>
     <h1 class="q-number">FLUXO DE APROVAÇÕES</h1>
-    <p style="max-width:72ch;color:var(--g-gray-1);margin:8px 0 0">
+    <p class="g-muted" style="max-width:72ch;margin:8px 0 0">
       Estágios em sequência que uma cotação percorre até poder virar Ordem de Fabricação.
       A aprovação técnica (CREA) é obrigatória por compliance e não pode ser removida. A
       execução dos demais estágios (inbox de aprovações) chega na próxima entrega.
@@ -32,7 +32,7 @@
 <section class="g-section" style="margin-top:16px">
   <header class="g-section-head"><h3>Aplicar um modelo</h3></header>
   <div class="g-section-body">
-    <p style="color:var(--g-gray-1);margin:0 0 8px">Substitui os estágios atuais (mantém a técnica). Você pode ajustar depois.</p>
+    <p class="g-muted" style="margin:0 0 8px">Substitui os estágios atuais (mantém a técnica). Você pode ajustar depois.</p>
     <form method="post" action="{% url 'access:workflow_apply_template' %}"
           style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
       {% csrf_token %}
@@ -54,20 +54,20 @@
   </header>
   <div class="g-section-body">
     {% if stages|length == 1 %}
-      <div style="border:1px dashed var(--g-line);border-radius:8px;padding:12px;margin-bottom:12px;color:var(--g-gray-1)">
+      <div class="g-note--warn">
         Seu fluxo tem só a aprovação técnica (CREA) — o comportamento padrão. Aplique um modelo
         acima ou adicione um estágio abaixo para exigir aprovações extras (ex.: comercial) antes
         da conversão em OF.
       </div>
     {% endif %}
     {% for s in stages %}
-      <div class="g-card" style="border:1px solid var(--g-line);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div class="g-card">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
           <div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <strong>{{ forloop.counter }}. {{ s.label }}</strong>
               {% if s.is_builtin %}<span class="q-badge" title="Obrigatório por compliance CREA">compliance</span>{% endif %}
-              {% if s.required %}<span class="q-badge" style="border-color:var(--g-green);color:var(--g-green)">obrigatório</span>{% endif %}
+              {% if s.required %}<span class="q-pill q-pill--ok">obrigatório</span>{% endif %}
             </div>
             <span class="g-muted" style="display:block">
               Aprovadores:
@@ -75,7 +75,7 @@
               {% if s.approver_capability %}<code style="font-size:.75em">{{ s.approver_capability }}</code>{% endif %}
             </span>
             {% if s.unsatisfiable %}
-              <div role="alert" style="color:var(--g-red);margin-top:4px">
+              <div role="alert" class="g-err" style="margin-top:4px">
                 ⚠ Nenhum papel pode aprovar este estágio — atribua um aprovador abaixo.
               </div>
             {% endif %}
@@ -95,7 +95,7 @@
               <form method="post" action="{% url 'access:stage_remove' %}"
                     onsubmit="return confirm('Remover este estágio?')">{% csrf_token %}
                 <input type="hidden" name="key" value="{{ s.key }}">
-                <button class="q-btn" type="submit" style="border-color:var(--g-red);color:var(--g-red)">Remover</button></form>
+                <button class="q-btn q-btn--danger" type="submit">Remover</button></form>
             {% endif %}
           </div>
         </div>

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="eyebrow">OF · Detalhe</div>
 <h1 class="q-number">{{ of.number }}</h1>
-<p class="mono" style="color:var(--g-gray-1)">{{ of.customer_name }} · {{ of.get_status_display }}</p>
+<p class="mono g-muted">{{ of.customer_name }} · {{ of.get_status_display }}</p>
 
 <div class="stat-row" style="margin-top:12px">
   <div class="stat"><div class="lbl">Custo Total</div><div class="val mono">R$ {{ of.custo_total|brl:0 }}</div><div class="delta">mat {{ of.custo_material|brl:0 }} + MO {{ of.custo_mo|brl:0 }}</div></div>
@@ -196,7 +196,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" style="color:var(--g-gray-1)">Nenhum item de inspeção gerado.</td></tr>
+        <tr><td colspan="8" class="g-muted">Nenhum item de inspeção gerado.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -207,7 +207,7 @@
         <button class="q-btn primary" type="submit">Gerar ITP</button>
       </form>
       {% else %}
-      <span class="mono" style="color:var(--g-gray-1)">ITP ainda não gerado.</span>
+      <span class="mono g-muted">ITP ainda não gerado.</span>
       {% endif %}
     </div>
     {% endif %}
@@ -229,7 +229,7 @@
           <td class="num mono">{{ obs.observed_rate|brl }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="4" style="color:var(--g-gray-1)">Nenhuma operação apontada.</td></tr>
+        <tr><td colspan="4" class="g-muted">Nenhuma operação apontada.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -259,7 +259,7 @@
       <tbody>
         {% for it in itens %}
         <tr>
-          <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
+          <td class="g-code">{{ it.codigo_item }}</td>
           <td>{{ it.descricao }}</td>
           <td class="num">R$ {{ it.custo_material|brl:0 }}</td>
           <td class="num">R$ {{ it.custo_mo|brl:0 }}</td>

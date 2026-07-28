@@ -15,17 +15,15 @@
     <header class="g-section-head"><h3>Minhas solicitações</h3></header>
     <div class="g-section-body">
       {% for case in my_cases %}
-        <div style="border:1px solid var(--g-line);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div class="g-card">
           <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
             <strong>{{ case.quotation.number }} — {{ case.quotation.title }}</strong>
-            <span class="q-badge"
-              style="{% if case.status == 'completed' %}border-color:var(--g-green);color:var(--g-green){% elif case.status == 'rejected' %}border-color:var(--g-red);color:var(--g-red){% endif %}">
+            <span class="q-pill {% if case.status == 'completed' %}q-pill--ok{% elif case.status == 'rejected' %}q-pill--bad{% else %}q-pill--neutral{% endif %}">
               {{ case.get_status_display }}</span>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
             {% for t in case.tasks.all %}
-              <span class="q-badge"
-                style="{% if t.status == 'approved' %}border-color:var(--g-green);color:var(--g-green){% elif t.status == 'rejected' %}border-color:var(--g-red);color:var(--g-red){% endif %}"
+              <span class="q-pill {% if t.status == 'approved' %}q-pill--ok{% elif t.status == 'rejected' %}q-pill--bad{% else %}q-pill--neutral{% endif %}"
                 title="{{ t.reason }}">{{ t.stage_label }}: {{ t.get_status_display }}</span>
             {% endfor %}
           </div>
@@ -42,7 +40,7 @@
     </header>
     <div class="g-section-body">
       {% for c in to_approve %}
-        <div style="border:1px solid var(--g-line);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div class="g-card">
           <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
             <div>
               <strong>{{ c.number }} — {{ c.title }}</strong>
@@ -53,13 +51,13 @@
           <div x-data="{ rejecting: false }" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:flex-start">
             <form method="post" action="{% url 'audit:approve_task' c.task.pk %}">{% csrf_token %}
               <button class="q-btn primary" type="submit">Aprovar</button></form>
-            <button type="button" class="q-btn" style="border-color:var(--g-red);color:var(--g-red)"
+            <button type="button" class="q-btn q-btn--danger"
                     @click="rejecting = !rejecting">Rejeitar</button>
             <form method="post" action="{% url 'audit:reject_task' c.task.pk %}" x-show="rejecting" x-cloak
                   style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">{% csrf_token %}
               <label class="field" style="margin:0"><span>Motivo</span>
                 <input type="text" name="reason" required maxlength="500" placeholder="Motivo da rejeição"></label>
-              <button class="q-btn" type="submit" style="background:var(--g-red);border-color:var(--g-red);color:#fff">Confirmar rejeição</button>
+              <button class="q-btn q-btn--danger primary" type="submit">Confirmar rejeição</button>
             </form>
           </div>
         </div>

@@ -11,11 +11,13 @@
        approvalModalOpen: false,
        confirmOpen: false,
        saving: false,
-       toast: '',
        form: { title: '{{ q.title|escapejs }}' },
        orig: { title: '{{ q.title|escapejs }}' },
        startEdit() { this.form.title = this.orig.title; this.confirmOpen = false; this.isEditing = true; },
        cancelEdit() { this.form.title = this.orig.title; this.isEditing = false; },
+       // Toast: usa o HOST GLOBAL do base.html (.toast-host, evento 'toast'), em vez
+       // de um `.q-toast` próprio — que era 100% inline e não existe no design system.
+       notify(msg, type) { window.dispatchEvent(new CustomEvent('toast', { detail: { msg, type } })); },
        async saveMeta() {
          this.saving = true;
          try {
@@ -28,11 +30,9 @@
            if (resp.ok) {
              this.orig.title = this.form.title;
              this.isEditing = false;
-             this.toast = 'Alterações salvas.';
-             setTimeout(() => { this.toast = ''; }, 3000);
+             this.notify('Alterações salvas.', 'ok');
            } else {
-             this.toast = 'Erro ao salvar as alterações.';
-             setTimeout(() => { this.toast = ''; }, 4000);
+             this.notify('Erro ao salvar as alterações.', 'err');
            }
          } finally { this.saving = false; }
        }
@@ -45,27 +45,83 @@
     <span class="current">{{ q.number }}</span>
   </nav>
 
-  <header class="q-header">
-    <div class="row1">
+  {% comment %}CARIMBO (DESIGN_PRANCHA §5.1) — substitui o antigo `.q-header`.
+     Malha regrada de 4 colunas com os metadados que o engenheiro já lê nesse formato.
+     Célula sem dado no sistema mostra "—" COM o rótulo: carimbo com menos campos é
+     informação; carimbo com campo mentiroso é defeito. Os valores vêm resolvidos da
+     view (`carimbo`), onde está documentado, campo a campo, o que existe e o que não.{% endcomment %}
+  <header class="q-carimbo">
+    <div class="q-carimbo-top">
       <div class="id-block">
         <div class="breadcrumb-q">COT-03 · Detalhe</div>
         <h1 class="number">
           <a href="{% url 'quotations:list' %}" class="q-back" aria-label="Voltar para lista de cotações">←</a>
           {{ q.number }} <span class="rev">Rev. {{ q.revision }}</span>
         </h1>
-        <div class="subtitle"><b>{{ q.customer.company_name }}</b> · {{ q.title }}<span class="equip">{{ q.get_scope_display }} · {{ q.get_status_display }}</span></div>
       </div>
-      <div class="status-block">
+      <div class="q-carimbo-estado">
         {% include "quotations/_status_dropdown.html" %}
-        <div class="meta">Computado {{ q.computed_at|date:"d/m/Y H:i" }}</div>
+        <span class="q-pill {{ pricing_basis_pill }}"
+              title="{% if q.pricing_basis == 'referencial' %}Preço formado por markup/calibração histórica — ainda não validado contra estrutura de custo real.{% else %}Preço validado contra estrutura de custo/preço mínimo do tenant.{% endif %}">{{ q.get_pricing_basis_display }}</span>
+        <span class="g-note">Computado {{ q.computed_at|date:"d/m/Y H:i"|default:"—" }}</span>
       </div>
     </div>
+
+    <div class="q-carimbo-grid">
+      <div class="q-carimbo-cell q-carimbo-cell--wide">
+        <div class="k">Cliente</div>
+        <div class="v v--txt">{{ carimbo.cliente|default:"—" }}</div>
+      </div>
+      <div class="q-carimbo-cell">
+        <div class="k">TAG do equipamento</div>
+        {# Não existe campo de TAG no model nem em `inputs`. Degrada explícito. #}
+        <div class="v">{{ carimbo.tag|default:"—" }}</div>
+      </div>
+      <div class="q-carimbo-cell">
+        <div class="k">Designação TEMA</div>
+        {# Só cotação de equipamento completo carrega `inputs.designacao`. #}
+        <div class="v">{{ carimbo.designacao|default:"—" }}</div>
+      </div>
+
+      <div class="q-carimbo-cell q-carimbo-cell--wide">
+        <div class="k">Equipamento</div>
+        {# Espelha `form.title` p/ o carimbo acompanhar a edição inline ao vivo. #}
+        <div class="v v--txt" x-text="form.title">{{ carimbo.equipamento }}</div>
+        <div class="k">{{ carimbo.escopo }}</div>
+      </div>
+      <div class="q-carimbo-cell">
+        <div class="k">Norma de projeto</div>
+        {# Vem de CalculationSnapshot.standard_refs (memorial ASME). Feixe puro: vazio. #}
+        <div class="v">{{ carimbo.norma|default:"—" }}</div>
+      </div>
+      <div class="q-carimbo-cell">
+        <div class="k">Pressão · Temperatura</div>
+        {# Condições de projeto só são perguntadas no data sheet do permutador. #}
+        <div class="v">{{ carimbo.pressao_temperatura|default:"—" }}</div>
+      </div>
+
+      <div class="q-carimbo-cell q-carimbo-cell--wide">
+        <div class="k">Responsável técnico</div>
+        {# Quem ASSINOU (TechnicalApproval ativa). Sem assinatura não há responsável. #}
+        <div class="v v--txt">{{ carimbo.responsavel|default:"—" }}</div>
+      </div>
+      <div class="q-carimbo-cell">
+        <div class="k">Emissão</div>
+        <div class="v">{{ carimbo.emissao|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+      <div class="q-carimbo-cell">
+        <div class="k">Origem do projeto</div>
+        {# Novo × reposição ainda não é capturado (PLAN_TIPO_PROJETO_V2, não implementado). #}
+        <div class="v">{{ carimbo.origem_projeto|default:"—" }}</div>
+      </div>
+    </div>
+
     {% comment %}Ações normais (fora do modo edição). "Revisar" = edição inline de metadados
        (este item). "Nova Revisão" = fluxo antigo do motor (recompute + nova revisão).{% endcomment %}
-    <div class="q-actions" x-show="!isEditing">
+    <div class="q-carimbo-actions q-actions" x-show="!isEditing">
       <button type="button" class="q-btn" @click="confirmOpen = true">Revisar</button>
       {% if q.scope == "complete" %}
-      <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline; margin: 0;">
+      <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline;margin:0">
         {% csrf_token %}
         <button type="submit" class="q-btn">Nova Revisão</button>
       </form>
@@ -83,31 +139,48 @@
       </div>
     </div>
     {# Ações do modo edição inline. #}
-    <div class="q-actions" x-show="isEditing" x-cloak>
+    <div class="q-carimbo-actions q-actions" x-show="isEditing" x-cloak>
       <button type="button" class="q-btn primary" @click="saveMeta()" :disabled="saving"
               x-text="saving ? 'Salvando…' : 'Salvar Alterações'">Salvar Alterações</button>
       <button type="button" class="q-btn" @click="cancelEdit()">Cancelar Revisão</button>
     </div>
   </header>
 
+  {% comment %}SELO (DESIGN_PRANCHA §5.3) — instrumento de confiança, sempre visível.
+     Sai da aba "Aprovações" de propósito: "divergente" (o cálculo mudou depois da
+     assinatura) é o estado que o produto existe para denunciar, e estado escondido
+     atrás de aba não denuncia nada. A verdade do hash vem de `apps.audit`, não daqui.{% endcomment %}
+  <div class="q-selo q-selo--{{ selo.estado }}" role="status">
+    <span class="band" aria-hidden="true"></span>
+    <span class="ic" aria-hidden="true">{% if selo.estado == 'ok' %}✓{% elif selo.estado == 'divergente' %}⚠{% else %}!{% endif %}</span>
+    <div class="tx">
+      <strong>{{ selo.titulo }}</strong>
+      <div class="g-muted">
+        {{ selo.detalhe }}
+        {% if selo.approval %}
+        <br>Assinado por {{ selo.approval.approved_by.full_name }} · CREA {{ selo.approval.crea_state }}/{{ selo.approval.crea_number }} · {{ selo.approval.approved_at|date:"d/m/Y H:i" }}
+        {% endif %}
+      </div>
+    </div>
+    {# No estado divergente os DOIS hashes aparecem lado a lado: é a evidência. #}
+    <div class="hash">
+      {% if selo.hash_assinado %}assinado {{ selo.hash_assinado|slice:":10" }}{% endif %}
+      {% if selo.estado == 'divergente' %}{% if selo.hash_assinado %} · {% endif %}vigente {{ selo.hash_vigente|slice:":10"|default:"—" }}{% endif %}
+    </div>
+  </div>
+
   {# Modal de confirmação para entrar em modo de revisão/edição. #}
   <div x-show="confirmOpen" x-cloak class="q-modal-overlay"
-       style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50"
        @click.self="confirmOpen = false" @keydown.escape.window="confirmOpen = false">
-    <div class="q-modal g-section" role="dialog" aria-modal="true" aria-label="Confirmar modo de revisão"
-         style="max-width:420px;width:90%;background:var(--g-bg,#fff);padding:20px;border-radius:8px">
-      <h3 style="margin-top:0">Entrar em modo de revisão?</h3>
+    <div class="q-modal" role="dialog" aria-modal="true" aria-label="Confirmar modo de revisão">
+      <h3>Entrar em modo de revisão?</h3>
       <p>Deseja entrar em modo de revisão/edição dos metadados desta cotação?</p>
-      <div class="q-modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <div class="q-modal-actions">
         <button type="button" class="q-btn" @click="confirmOpen = false">Cancelar</button>
         <button type="button" class="q-btn primary" @click="startEdit()">Confirmar</button>
       </div>
     </div>
   </div>
-
-  {# Toast de sucesso/erro. #}
-  <div x-show="toast" x-cloak class="q-toast" x-text="toast"
-       style="position:fixed;bottom:24px;right:24px;background:var(--g-ink,#222);color:#fff;padding:12px 18px;border-radius:6px;z-index:60"></div>
 
   <div class="g-tabs" role="tablist" aria-label="Seções da cotação">
     <button type="button" role="tab" class="g-tab" :class="{ active: tab === 'resumo' }" :aria-selected="tab === 'resumo'" @click="tab = 'resumo'">Resumo</button>
@@ -141,9 +214,8 @@
           <div class="param">
             <div class="lbl">Proveniência do Preço</div>
             <div class="val">
-              <span title="{% if q.pricing_basis == 'referencial' %}Preço formado por markup/calibração histórica — ainda não validado contra estrutura de custo real.{% else %}Preço validado contra estrutura de custo/preço mínimo do tenant.{% endif %}"
-                    style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;
-                           {% if q.pricing_basis == 'referencial' %}background:var(--g-gray-2,#e5e5e5);color:var(--g-ink,#222){% else %}background:var(--g-green,#1b7a43);color:#fff{% endif %}">
+              <span class="q-pill {{ pricing_basis_pill }}"
+                    title="{% if q.pricing_basis == 'referencial' %}Preço formado por markup/calibração histórica — ainda não validado contra estrutura de custo real.{% else %}Preço validado contra estrutura de custo/preço mínimo do tenant.{% endif %}">
                 {{ q.get_pricing_basis_display }}
               </span>
             </div>
@@ -160,19 +232,20 @@
       <header class="g-section-head"><h3>§2 Estrutura Analítica</h3></header>
       <div class="g-section-body" style="padding:0">
         {% comment %}Linhas clicáveis: abrem o drawer com os materiais/MO (N2) daquele item.
-           hx-get injeta o parcial no corpo do drawer; @click abre o slide-over.{% endcomment %}
+           hx-get injeta o parcial no corpo do drawer; @click abre o slide-over.
+           `it.pv` = marca de proveniência do ITEM (§5.2) — regra em views._item_proveniencia.{% endcomment %}
         <table class="g-table">
           <thead><tr><th>Código</th><th>Item</th><th class="num">Material</th><th class="num">Mão de Obra</th><th class="num">Total</th></tr></thead>
           <tbody>
             {% for it in itens %}
-            <tr class="eap-row" tabindex="0" role="button"
+            <tr class="eap-row{% if it.pv == 'manual' %} eap-row--manual{% endif %}" tabindex="0" role="button"
                 aria-label="Abrir detalhe de {{ it.descricao }}"
                 hx-get="{% url 'quotations:eap_item_drawer' it.pk %}"
                 hx-target="#eap-drawer-body" hx-swap="innerHTML"
                 @click="eapDrawerOpen = true"
                 @keydown.enter="eapDrawerOpen = true">
-              <td class="mono" style="color:var(--g-orange)">{{ it.codigo_item }}</td>
-              <td>{{ it.descricao }}</td>
+              <td class="mono g-code">{{ it.codigo_item }}</td>
+              <td><span class="pv pv--{{ it.pv }}" role="img" aria-label="Origem: {{ it.pv_rotulo }}" title="{{ it.pv_rotulo }}"></span>{{ it.descricao }}</td>
               <td class="num{% if not it.custo_material %} g-muted{% endif %}">R$ {{ it.custo_material|brl:0 }}</td>
               <td class="num{% if not it.custo_mo %} g-muted{% endif %}">R$ {{ it.custo_mo|brl:0 }}</td>
               <td class="num{% if not it.custo_total %} g-muted{% endif %}">R$ {{ it.custo_total|brl:0 }}</td>
@@ -180,6 +253,12 @@
             {% endfor %}
           </tbody>
         </table>
+      </div>
+      {# Legenda das marcas de origem. `importado` não é emitido por esta tela (ver views). #}
+      <div class="g-section-body eap-legenda g-muted">
+        <span><span class="pv pv--motor" aria-hidden="true"></span>Motor de custeio</span>
+        <span><span class="pv pv--catalogo" aria-hidden="true"></span>Catálogo / preço vigente</span>
+        <span><span class="pv pv--manual" aria-hidden="true"></span>Ajuste manual — o número saiu do domínio do motor</span>
       </div>
     </section>
   </div>
@@ -190,8 +269,8 @@
       <div class="g-section-body">
         <div class="price-line" style="margin-top:0">
           <span class="lbl">Preço de Venda</span>
-          <span class="val mono">R$ {{ q.preco_com_impostos|brl }}</span>
-          <span class="pricing-basis-badge pricing-basis-badge--{{ q.pricing_basis }}">{{ q.get_pricing_basis_display }}</span>
+          <span class="val mono g-num">R$ {{ q.preco_com_impostos|brl }}</span>
+          <span class="q-pill {{ pricing_basis_pill }}">{{ q.get_pricing_basis_display }}</span>
         </div>
         <div class="price-sub">
           <span>Sem impostos: R$ {{ q.preco_sem_impostos|brl }}</span>
@@ -208,7 +287,7 @@
       <div class="g-section-body">
         {% if approval_needs_case %}
           {# RBAC V2 M5: fluxo multi-estágio — abrir/solicitar aprovações além da técnica #}
-          <div style="border:1px dashed var(--g-line);border-radius:8px;padding:10px;margin-bottom:12px">
+          <div class="g-note">
             {% if approval_active_case and approval_active_case.status == 'open' %}
               <span class="g-muted">Fluxo de aprovações em andamento.</span>
               <a class="q-btn" href="{% url 'audit:inbox' %}">Ver aprovações</a>
@@ -223,34 +302,34 @@
             {% endif %}
           </div>
         {% endif %}
-        {% with approval=q.technical_approvals.first %}
-          {% if approval and approval.is_active %}
-          <div class="approval-banner">
-            <div class="lt">
-              <div class="check">✓</div>
-              <div>
-                <strong>Aprovação técnica ativa</strong>
-                <span class="approval-state approval-state--ok" style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-left:6px;background:var(--g-green,#1b7a43);color:#fff">Aprovada</span>
-                <div class="meta">{{ approval.approved_by.full_name }} · CREA {{ approval.crea_state }}/{{ approval.crea_number }} · {{ approval.approved_at|date:"d/m/Y H:i" }}</div>
-              </div>
-            </div>
-            <div class="rt">hash {{ approval.calculation_snapshot_hash|slice:":10" }}</div>
+
+        {% comment %}O estado da assinatura é o SELO lá em cima (§5.3) — aqui fica só o
+           registro documental de quem assinou e sobre qual cálculo.{% endcomment %}
+        <div class="param-grid">
+          <div class="param">
+            <div class="lbl">Estado</div>
+            <div class="val"><span class="q-pill {% if selo.estado == 'ok' %}q-pill--ok{% elif selo.estado == 'divergente' %}q-pill--hot{% else %}q-pill--warn{% endif %}">{{ selo.titulo }}</span></div>
           </div>
-          {% else %}
-          <div class="approval-banner approval-banner--pending">
-            <div class="lt">
-              <div class="check">!</div>
-              <div>
-                <strong>Aprovação pendente</strong>
-                <span class="approval-state approval-state--pending" style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-left:6px;background:var(--g-orange,#c85a1e);color:#fff">Pendente</span>
-                <div class="meta">Ainda não existe aprovação técnica ativa para esta cotação. Converter em OF fica bloqueado até a aprovação.</div>
-              </div>
-            </div>
+          <div class="param">
+            <div class="lbl">Assinada por</div>
+            <div class="val">{% if selo.approval %}{{ selo.approval.approved_by.full_name }} · CREA {{ selo.approval.crea_state }}/{{ selo.approval.crea_number }}{% else %}—{% endif %}</div>
           </div>
-          {% endif %}
-        {% endwith %}
+          <div class="param">
+            <div class="lbl">Data da assinatura</div>
+            <div class="val mono">{% if selo.approval %}{{ selo.approval.approved_at|date:"d/m/Y H:i" }}{% else %}—{% endif %}</div>
+          </div>
+          <div class="param">
+            <div class="lbl">Hash assinado</div>
+            <div class="val mono g-code">{{ selo.hash_assinado|slice:":16"|default:"—" }}</div>
+          </div>
+          <div class="param">
+            <div class="lbl">Hash vigente</div>
+            <div class="val mono g-code">{{ selo.hash_vigente|slice:":16"|default:"—" }}</div>
+          </div>
+        </div>
+
         {% if pending_remote_request %}
-        <p style="margin-top:12px;color:var(--g-gray-1)">
+        <p class="g-muted" style="margin-top:12px">
           Solicitação remota pendente desde {{ pending_remote_request.created_at|date:"d/m/Y H:i" }}.
         </p>
         {% endif %}
@@ -269,29 +348,27 @@
   </div>
 
   <div x-show="approvalModalOpen" x-cloak class="q-modal-overlay"
-       style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50"
        @click.self="approvalModalOpen = false" @keydown.escape.window="approvalModalOpen = false">
-    <div class="q-modal g-section" role="dialog" aria-modal="true" aria-label="Aprovação presencial"
-         style="max-width:420px;width:90%;background:var(--g-bg,#fff);padding:20px;border-radius:8px">
-      <h3 style="margin-top:0">Aprovação presencial</h3>
+    <div class="q-modal" role="dialog" aria-modal="true" aria-label="Aprovação presencial">
+      <h3>Aprovação presencial</h3>
       <form method="post" action="{% url 'audit:approve_presencial' q.pk %}"
             hx-post="{% url 'audit:approve_presencial' q.pk %}"
             hx-target="#approval-presencial-feedback"
             hx-swap="innerHTML"
             hx-on::after-request="if (event.detail.successful) { approvalModalOpen = false; htmx.ajax('GET', '{% url 'audit:convertibility_panel' q.pk %}', '#convertibility-panel'); }">
-        <div id="approval-presencial-feedback" style="min-height:20px;margin-bottom:8px;color:var(--g-orange,#c85a1e)"></div>
+        <div id="approval-presencial-feedback" class="g-err" role="alert" style="min-height:20px;margin-bottom:8px"></div>
         {% csrf_token %}
         <label for="approved_by" style="display:block;margin-bottom:6px">Engenheiro responsável</label>
-        <select id="approved_by" name="approved_by" class="g-input" style="width:100%;margin-bottom:12px" required>
+        <select id="approved_by" name="approved_by" class="g-input" required style="width:100%;margin-bottom:12px">
           {% for engineer in approval_engineers %}
           <option value="{{ engineer.pk }}">{{ engineer.full_name }} · CREA {{ engineer.crea_state }}/{{ engineer.crea_number }}</option>
           {% endfor %}
         </select>
         <label for="approval-password" style="display:block;margin-bottom:6px">Senha de acesso</label>
-        <input id="approval-password" type="password" name="password" class="g-input" style="width:100%;margin-bottom:12px" required
-               autocomplete="current-password">
+        <input id="approval-password" type="password" name="password" class="g-input" required
+               autocomplete="current-password" style="width:100%;margin-bottom:12px">
         <input type="hidden" name="notes" value="Aprovação presencial registrada pela UI da cotação.">
-        <div class="q-modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <div class="q-modal-actions">
           <button type="button" class="q-btn" @click="approvalModalOpen = false">Cancelar</button>
           <button type="submit" class="q-btn primary">Confirmar Aprovação</button>
         </div>
@@ -304,12 +381,12 @@
       <header class="g-section-head"><h3>§5 Proposta Comercial</h3></header>
       <div class="g-section-body">
         {% for p in q.proposals.all %}
-          <p><a href="{% url 'proposals:detail' p.pk %}" class="mono" style="color:var(--g-orange)">{{ p.number }}</a>
+          <p><a href="{% url 'proposals:detail' p.pk %}" class="mono">{{ p.number }}</a>
              · {{ p.get_status_display }}
              {% if p.pdf_path %}· <a href="{% url 'proposals:download' p.pk 'pdf' %}">PDF</a>
              · <a href="{% url 'proposals:download' p.pk 'docx' %}">DOCX</a>{% endif %}</p>
         {% empty %}
-          <p style="color:var(--g-gray-1)">Nenhuma proposta ainda. Gere a partir do template configurável.</p>
+          <p class="g-muted">Nenhuma proposta ainda. Gere a partir do template configurável.</p>
         {% endfor %}
       </div>
     </section>
@@ -318,10 +395,10 @@
       <header class="g-section-head"><h3>§6 Ordem de Fabricação</h3></header>
       <div class="g-section-body">
         {% for of in q.ordens_fabricacao.all %}
-          <p><a href="{% url 'production:detail' of.pk %}" class="mono" style="color:var(--g-orange)">{{ of.number }}</a>
+          <p><a href="{% url 'production:detail' of.pk %}" class="mono">{{ of.number }}</a>
              · {{ of.get_status_display }}</p>
         {% empty %}
-          <p style="color:var(--g-gray-1)">Nenhuma OF ainda.</p>
+          <p class="g-muted">Nenhuma OF ainda.</p>
         {% endfor %}
       </div>
     </section>

@@ -1,11 +1,11 @@
 {% load money %}
-<div id="{{ target_id }}" class="impact-preview" style="margin-top:8px;padding:8px 12px;border-radius:var(--radius-sm, 6px);background:var(--g-gray-4, #f4f4f4)">
+<div id="{{ target_id }}" class="impact-preview" style="margin-top:8px">
   {% if error %}
-  <span class="g-note" style="color:var(--g-red)">{{ error }}</span>
+  <span class="g-err">{{ error }}</span>
   {% elif impact %}
   <strong>Impacto simulado</strong> (golden case OF-3672) —
   custo R$ {{ impact.custo_total_atual|brl }} → R$ {{ impact.custo_total_proposto|brl }}
-  <span style="color:{% if impact.delta_custo > 0 %}var(--g-red){% elif impact.delta_custo < 0 %}var(--g-green){% else %}var(--g-gray-1){% endif %};font-weight:var(--w-bold)">
+  <span class="q-pill {% if impact.delta_custo > 0 %}q-pill--bad{% elif impact.delta_custo < 0 %}q-pill--ok{% else %}q-pill--neutral{% endif %}">
     ({% if impact.delta_custo > 0 %}+{% endif %}R$ {{ impact.delta_custo|brl }} / {% if impact.delta_pct > 0 %}+{% endif %}{{ impact.delta_pct|floatformat:2 }}%)
   </span>
   <span class="g-note">Preço: R$ {{ impact.preco_atual|brl }} → R$ {{ impact.preco_proposto|brl }}</span>

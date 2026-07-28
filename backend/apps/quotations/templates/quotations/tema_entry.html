@@ -3,7 +3,7 @@
 {% block content %}
 <div class="eyebrow">TEMA · Nova</div>
 <h1 class="q-number">NOVA COTAÇÃO TEMA</h1>
-<p style="color:var(--g-gray-1)">O que você quer cotar? Escolha o escopo para seguir ao data sheet correto.</p>
+<p class="g-muted">O que você quer cotar? Escolha o escopo para seguir ao data sheet correto.</p>
 
 {# F4 — Fase 1: só Equipamento completo e Feixe tubular.
    TODO Fase 2: adicionar cartão "Partes avulsas" (scope='parts') → quotations:parts_new. #}
@@ -13,7 +13,7 @@
   <section class="g-section">
     <header class="g-section-head"><h3>Equipamento completo</h3></header>
     <div class="g-section-body">
-      <p style="color:var(--g-gray-1)">Permutador completo por designação TEMA (cabeçote · casco · feixe).
+      <p class="g-muted">Permutador completo por designação TEMA (cabeçote · casco · feixe).
         Você compõe front · casco · traseiro e ajusta o data sheet paramétrico.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
         <a class="q-btn primary" href="{% url 'tema_templates:compose' %}">Compor equipamento completo</a>
@@ -25,7 +25,7 @@
   <section class="g-section">
     <header class="g-section-head"><h3>Feixe tubular</h3></header>
     <div class="g-section-body">
-      <p style="color:var(--g-gray-1)">Somente o feixe tubular. Escolha o tipo de feixe para abrir o data sheet.</p>
+      <p class="g-muted">Somente o feixe tubular. Escolha o tipo de feixe para abrir o data sheet.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px" x-show="!feixe">
         <button type="button" class="q-btn primary" @click="feixe = true">Cotar feixe tubular</button>
       </div>
