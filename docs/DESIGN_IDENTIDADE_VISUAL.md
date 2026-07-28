@@ -68,7 +68,7 @@ sombras, vira um cartão cinza qualquer.
 
 ## 3. Implementação de referência já no ar
 
-Os dois formulários construídos em 2026-07-28 **já usam a pele nova** e servem de gabarito
+Os dois formulários construídos em 2026-07-28 **já usam a pele nova** e servem de referencial
 vivo — copiar de lá é mais rápido que reler o Tailwind do Vitali:
 
 - `~/dev/sq-form/templates/base.html` → tokens + botões + campos, em CSS puro (sem Tailwind)

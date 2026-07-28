@@ -47,8 +47,8 @@ Para calcular o tubo reto desenvolvido a partir do U.
 Como arquiteto, minha recomendação é adotar já a separação **"equipamento completo × partes"** (o dado já existe no banco). Fase 1 oferece **apenas**: *equipamento completo* e *feixe tubular* (reto/U). Partes avulsas (só cabeçote, só casco, tampa…) ficam para a **Fase 2**, e cada nova designação TEMA custeável exige um job real de calibração (ver Q7).
 **Preciso saber:** confirma o escopo da Fase 1 = {completo, feixe} só?
 
-### Q7 — F7: designações TEMA custeáveis — 🔎 caracterizado, falta o gabarito
-Hoje só **BEU** e **BEM** têm custeio validado (0,0% vs gabarito). Nova designação precisa de **job real fechado** para gerar o seed (pesos/horas vêm do gabarito, não da norma).
+### Q7 — F7: designações TEMA custeáveis — 🔎 caracterizado, falta o referencial
+Hoje só **BEU** e **BEM** têm custeio validado (0,0% vs referencial). Nova designação precisa de **job real fechado** para gerar o seed (pesos/horas vêm do referencial, não da norma).
 **🔎 Pesquisa (Fable, com fonte):** BEU = removível mais econômico/comum; BEM = mais barato (espelho fixo, serviço limpo); **AES** = padrão refinaria p/ fouling; NEN = alta pressão. Custo típico **BEM < BEU < AES**.
 **Preciso saber:** quais designações você precisa a seguir (AES? outras?) e **um orçamento fechado real de cada** para eu gerar o seed de calibração.
 

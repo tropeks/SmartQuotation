@@ -3,7 +3,7 @@ Flange de corpo (girth flange casco↔cabeçote) — espessura mínima por ASME 
 Apêndice Mandatório 2 (regras de flange aparafusado), tipo ANEL SOLTO sem pescoço.
 
 É o flange "FLANGE PRINCIPAL" (família anel) dos seeds BEU/BEM — custom, não-catálogo. O motor
-estima a espessura exigida pela pressão/diâmetro/material e ALERTA se a referência do gabarito
+estima a espessura exigida pela pressão/diâmetro/material e ALERTA se a referência do referencial
 não cobrir a condição de projeto (espelha o A1 do casco, UG-27).
 
 LIMITAÇÃO (declarada na UI): gaxeta e parafusos usam DEFAULTS de engenharia (gaxeta espiralada

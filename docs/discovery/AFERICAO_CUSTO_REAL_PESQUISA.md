@@ -4,7 +4,7 @@
 criar mecanismos para aferir melhor e conseguir os dados; e pesquisar se a indústria já tem algo."
 
 > **Disciplina de vocabulário (correção do Wellington, mesmo dia):** todos os números de
-> literatura citados aqui são **referenciais externos**, não gabaritos. Servem para diagnosticar
+> literatura citados aqui são **referenciais externos**, não referenciais. Servem para diagnosticar
 > desvio, não para afirmar verdade sobre a ENGEMATEX.
 
 ---

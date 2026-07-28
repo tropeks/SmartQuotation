@@ -12,7 +12,7 @@
 ## 1. Visão geral
 
 Motor de custeio **paramétrico** para permutadores de calor casco-tubo (caldeiraria média/pesada),
-design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimensões/materiais do projeto.
+design partner **ENGEMATEX**. Reproduz os referenciais reais e responde às dimensões/materiais do projeto.
 
 - **H1 técnico:** feixe tubular + BEU/BEM operando com EAP persistida por cotação.
 - **H1 auditável:** aprovação técnica CREA, `CalculationSnapshot` com hash e trilha mínima (#46) ✅.
@@ -25,7 +25,7 @@ design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimens�
   H2.7a abriu o SAP B1 manual/admin-only com healthcheck e export manual da OF.
 - **Fora do H1:** vaso/PVElite completo, JWT/MFA, Equipment/Component formal e integrações ERP.
 
-| Equipamento | Motor | Gabarito | Erro |
+| Equipamento | Motor | Referencial | Erro |
 |---|---:|---:|:--:|
 | Feixe tubular (136 tubos) | — | venda R$ 44.192 | −2,9% |
 | **BEU** (bonnet + casco 1 passe + feixe-U) | R$ 128.160 | R$ 128.160 | **0,0%** |
@@ -61,7 +61,7 @@ design partner **ENGEMATEX**. Reproduz os gabaritos reais e responde às dimens�
 | A2 fluido corrosivo (Tubos/Casco/Ambos → metalurgia do cabeçote/espelho) | ✅ |
 | A3 flanges WN (peso real por Ø×rating×schedule) | ✅ |
 | Calibrações (scrap 40%/20%/10%, ICMS por dentro, RT escopo) | ✅ |
-| **RT do gabarito = Total (100%)** | ✅ (#27) |
+| **RT do referencial = Total (100%)** | ✅ (#27) |
 | **Tabelas S → ASME II-D MÉTRICA 2025 (edição licenciada)** + rastreabilidade | ✅ (#28–29) |
 | **Inconel 625 e Monel 400 como classes separadas** | ✅ (#30) |
 | **Cadastro de ligas editável por tenant** (sem deploy) | ✅ (#31) |
@@ -99,7 +99,7 @@ Cada valor de tensão admissível S carrega **norma + edição + tabela + linha*
 | **Catálogo de ligas do DB ASME** — `seed_ligas_from_db` importa 3213 chapas como inativas | ✅ (#41) |
 
 > Sprint #41 (multi-agente Hermes): refutação cross-engine pegou **2 bugs reais** de input cru
-> (revise + API estimate passavam dimensões cruas → motor devolvia custo do gabarito; R$297k de
+> (revise + API estimate passavam dimensões cruas → motor devolvia custo do referencial; R$297k de
 > diferença num caso). Fix: `tema_templates.services.estimate_from_inputs(designacao, inputs)`.
 
 ---
@@ -165,7 +165,7 @@ Os 7 itens foram **chancelados pelo engenheiro responsável**. Os defaults deixa
 ## 5. Limitações honestas (declaradas na UI e no código)
 
 1. Os defaults da seção 4 estão **validados pelo PE** (2026-06-19); fatores de **setup, preço e scrap** seguem editáveis por caso.
-2. A escala é **calibrada a 1 job real** por designação (sem 2º gabarito p/ validar linearidade).
+2. A escala é **calibrada a 1 job real** por designação (sem 2º referencial p/ validar linearidade).
 3. Verificações ASME são **alertas de apoio**, não substituem o memorial de cálculo do PE.
 4. O H2.3 é um assistente de calibração: ele sugere novos índices, mas a aplicação continua exigindo ação humana autorizada.
 

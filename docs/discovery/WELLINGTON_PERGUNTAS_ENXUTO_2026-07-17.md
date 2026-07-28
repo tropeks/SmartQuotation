@@ -9,7 +9,7 @@ o sistema não tem como adivinhar. São 3 coisas.
 
 ## 1. Orçamento real de designação TEMA nova (o pedido principal)
 
-Hoje o motor custeia **BEU** e **BEM** batendo 0,0% com o gabarito real. Para custear qualquer
+Hoje o motor custeia **BEU** e **BEM** batendo 0,0% com o referencial real. Para custear qualquer
 **outra** designação (AES, NEN, BEP…) com a mesma precisão, eu preciso de **um orçamento real
 já fechado** dessa designação — porque as horas de solda, usinagem e o peso vêm do trabalho
 real, não da norma. Sem um job real, eu só chutaria.

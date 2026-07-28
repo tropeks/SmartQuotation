@@ -403,7 +403,7 @@ class ComposeViewTests(TestCase):
         self.assertAlmostEqual(gross_up_icms(9.0), 1.0 / (1.0 - 0.09), places=6)
 
     def test_rt_escopo_escala_ensaios(self):
-        """B (Wellington): RT total > parcial > isento. O gabarito é Total (100%) = baseline,
+        """B (Wellington): RT total > parcial > isento. O referencial é Total (100%) = baseline,
         então Total ≈ referência e os escopos menores custam menos (raio-X param 'rt')."""
         from apps.tema_templates.services import estimate_complete, _physical_params
         ref = estimate_complete("BEU")
@@ -414,7 +414,7 @@ class ComposeViewTests(TestCase):
         isento = estimate_complete("BEU", params=_physical_params("BEU", {**base, "rt_escopo": "Isento"}))
         self.assertGreater(total["custo_servicos"], parcial["custo_servicos"])
         self.assertGreater(parcial["custo_servicos"], isento["custo_servicos"])
-        # Total é o baseline do gabarito → custo de serviços ≈ referência (≤1% de diferença)
+        # Total é o baseline do referencial → custo de serviços ≈ referência (≤1% de diferença)
         self.assertAlmostEqual(total["custo_servicos"], ref["custo_servicos"],
                                delta=ref["custo_servicos"] * 0.01)
 
@@ -487,14 +487,14 @@ class ComposeViewTests(TestCase):
 class PermutadorEngineTests(TestCase):
     """Motor de custeio do permutador completo (via serviço, com cadeia de custos do tenant)."""
 
-    GABARITO = {"BEU": 128160.0, "BEM": 119295.0}
+    REFERENCIAL = {"BEU": 128160.0, "BEM": 119295.0}
 
-    def test_estimate_complete_reconcilia_gabarito(self):
+    def test_estimate_complete_reconcilia_referencial(self):
         from apps.tema_templates.services import estimate_complete
-        for desig, gab in self.GABARITO.items():
+        for desig, ref in self.REFERENCIAL.items():
             q = estimate_complete(desig)
             self.assertIsNotNone(q, desig)
-            self.assertAlmostEqual(q["custo_total"], gab, delta=gab * 0.10)
+            self.assertAlmostEqual(q["custo_total"], ref, delta=ref * 0.10)
             self.assertEqual(q["designacao_tema"], desig)
             self.assertGreater(q["custo_material"], 0)
             self.assertGreater(q["custo_mao_obra"], 0)
@@ -589,13 +589,13 @@ class LigaCadastroTests(TestCase):
 class FlangeCorpoTests(TestCase):
     """Flange de corpo (ASME VIII Apêndice 2) — módulo puro de espessura mínima."""
 
-    def test_t_min_sobe_com_pressao_e_bate_gabarito(self):
+    def test_t_min_sobe_com_pressao_e_bate_referencial(self):
         from pricing_engine.flange_corpo import t_min_flange_corpo, fator_Y
         self.assertGreater(fator_Y(1076 / 914), 10)        # anel fino → Y alto
         t10 = t_min_flange_corpo(10, 914, 1076, 138)       # SA-105 S=138
         t30 = t_min_flange_corpo(30, 914, 1076, 138)
         self.assertGreater(t30, t10)                       # mais pressão → mais espesso
-        # o flange real do gabarito (104mm) corresponde a ~28 bar: 30 bar dá ~109mm
+        # o flange real do referencial (104mm) corresponde a ~28 bar: 30 bar dá ~109mm
         self.assertGreater(t30, 104)
 
     def test_s_menor_exige_flange_mais_espesso(self):

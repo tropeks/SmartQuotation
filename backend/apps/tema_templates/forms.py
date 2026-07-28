@@ -25,7 +25,7 @@ class PermutadorDataSheetForm(forms.Form):
     n_chicanas = forms.IntegerField(label="Nº de chicanas", min_value=1)
     # nº de passes dos tubos (escala os rasgos de partição do espelho/cabeçote)
     n_passes_tubos = forms.IntegerField(label="Nº de passes (tubos)", min_value=1, initial=2)
-    # escopo de radiografia (B Wellington): multiplica o raio-X; ref do gabarito = Total 100%
+    # escopo de radiografia (B Wellington): multiplica o raio-X; ref do referencial = Total 100%
     rt_escopo = forms.ChoiceField(
         label="Escopo de radiografia", initial="Total",
         choices=[("Total", "Total (100%)"), ("Parcial", "Parcial (10%)"), ("Isento", "Isento")])

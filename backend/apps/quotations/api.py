@@ -49,7 +49,7 @@ class PermutadorEstimateView(APIView):
             raise ValidationError({"designacao": "Campo obrigatório."})
 
         # reconstrói dims_override/params/metalurgia das dimensões recebidas (como o data sheet),
-        # senão o motor ignoraria as dimensões e devolveria o custo do gabarito (seed).
+        # senão o motor ignoraria as dimensões e devolveria o custo do referencial (seed).
         from apps.tema_templates.services import estimate_from_inputs
         resultado = estimate_from_inputs(designacao, dict(data))
 

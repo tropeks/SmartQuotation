@@ -1,6 +1,6 @@
 """Ponte composição TEMA ↔ motor de custeio do permutador completo (pricing_engine).
 
-Designações TEMA com custeio paramétrico validado contra gabarito ENGEMATEX:
+Designações TEMA com custeio paramétrico validado contra referencial ENGEMATEX:
   BEU (bonnet + casco 1 passe + feixe em U)        — Δ 0,0% vs R$ 128.160
   BEM (bonnet + casco 1 passe + cabeçote fixo)     — Δ 0,0% vs R$ 119.295
 Derivado dinamicamente dos seeds presentes (pricing_engine/seeds/{d}_materiais.json).
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pricing_engine.permutador_quote import designacoes_disponiveis
 
-# designações cujo custeio paramétrico já foi validado contra gabarito real
+# designações cujo custeio paramétrico já foi validado contra referencial real
 COSTABLE = set(designacoes_disponiveis())
 
 # fator multiplicador de horas de caldeiraria/solda por classe metalúrgica (#3 agy).
@@ -178,7 +178,7 @@ def reference_inputs(designacao: str):
     }
 
 
-# escopo de radiografia → multiplicador do raio-X (param 'rt'). Referência do gabarito = Total
+# escopo de radiografia → multiplicador do raio-X (param 'rt'). Referência do referencial = Total
 # (100%, confirmado Wellington 2026-06-13) → baseline 1,0. Parcial (10%) ~1/3 (setup domina, não
 # é linear); Isento mantém só UT/LP. Relações preservadas da calibração anterior (÷3). #B agy.
 RT_FATOR = {"Total": 1.0, "Parcial": 0.33, "Isento": 0.1}
@@ -370,7 +370,7 @@ def memorial_asme(designacao, cleaned):
                 st = "REFORÇAR" if tf > esp_ref else "OK"
                 memo.append({"item": "Flange de corpo (Apêndice 2)",
                              "norma": "ASME VIII Div.1 Ap. 2", "status": st,
-                             "valor": f"t_mín≈{tf:.0f}mm; referência do gabarito {esp_ref:g}mm "
+                             "valor": f"t_mín≈{tf:.0f}mm; referência do referencial {esp_ref:g}mm "
                                       f"(gaxeta espiralada padrão m=3,0/y=69, validada PE)"})
         # radiografia por nº de exposições (Seção V Art.2)
         from pricing_engine.rt_exposicoes import exposicoes_equipamento
@@ -408,7 +408,7 @@ def _flange_corpo_seed(designacao):
 
 def flange_corpo_avisos(designacao, cleaned):
     """Alerta do flange de corpo (ASME VIII Apêndice 2): se a espessura mínima exigida pela
-    pressão de projeto exceder a referência do gabarito, avisa que precisa reforçar. Vazio = ok.
+    pressão de projeto exceder a referência do referencial, avisa que precisa reforçar. Vazio = ok.
     Usa a tensão admissível S da metalurgia do casco (cadastro do tenant → fallback)."""
     from pricing_engine.flange_corpo import t_min_flange_corpo
     from pricing_engine.asme import interp_s, tensao_admissivel, CLASSE_SPEC
@@ -430,7 +430,7 @@ def flange_corpo_avisos(designacao, cleaned):
         t_req = t_min_flange_corpo(p, bore, od, s)
         if t_req and t_req > esp_ref:
             return [f"⚠️ Flange de corpo: espessura mínima estimada (ASME VIII Apêndice 2) ="
-                    f" {t_req:.0f}mm > referência do gabarito {esp_ref:g}mm. Reforce o flange de"
+                    f" {t_req:.0f}mm > referência do referencial {esp_ref:g}mm. Reforce o flange de"
                     f" corpo p/ esta pressão ({p:g}bar). [gaxeta espiralada padrão"
                     f" m=3,0/y=69, validada pelo PE; ajuste por caso se a gaxeta diferir]"]
         return []

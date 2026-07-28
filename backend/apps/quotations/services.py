@@ -14,6 +14,9 @@ def _d(x) -> Decimal:
     return Decimal(str(round(float(x or 0), 2)))
 
 
+# BACKLOG M1.5 (docs/BACKLOG.md): o schema de `outputs.items.operacoes` ganhou horas,
+# taxas, custo_direto e origem no M1, mas a versão não foi bumpada — snapshots de
+# formatos diferentes se identificam igual.
 ENGINE_VERSION = "calc-snapshot-v1"
 
 

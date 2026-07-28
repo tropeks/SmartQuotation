@@ -59,7 +59,7 @@ class Quotation(models.Model):
     # --- avisos de validação (metalurgia/térmica/geometria) empilhados no recompute ---
     avisos = models.JSONField(default=list, blank=True)    # [{nivel, codigo, mensagem}]
 
-    # --- formação de preço (config do tenant; default reproduz gabarito) ---
+    # --- formação de preço (config do tenant; default reproduz referencial) ---
     fator_preco = models.DecimalField(max_digits=8, decimal_places=5, default=Decimal("1.01377"))
     impostos_pct = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal("23.303"))
 

@@ -1,6 +1,6 @@
 """
 Gate do motor de PERMUTADOR COMPLETO — valida TODAS as designações com seed presente
-(BEU, BEM, ...) contra seus gabaritos ENGEMATEX. Falha se qualquer custo total regredir
+(BEU, BEM, ...) contra seus referenciais ENGEMATEX. Falha se qualquer custo total regredir
 > ±10% ou se a geometria de algum material grande divergir > 15% do peso da planilha.
 
 Rodar: python -m tests.validate_permutador_completo
@@ -73,21 +73,21 @@ _REFERENCIAS = {"beu", "bem"}
 
 
 def validar(designacao):
-    g = _load(f"{designacao.lower()}_ground_truth.json")
-    gabarito = g["custo_total_com_impostos"]
+    g = _load(f"{designacao.lower()}_referencial.json")
+    referencial = g["custo_total_com_impostos"]
     eh_ref = designacao.lower() in _REFERENCIAS
     checados, gerros, gdoc = check_geometria(designacao)
     q = quote_completo(designacao)
     custo = q["custo_total"]
-    delta = (custo - gabarito) / gabarito
+    delta = (custo - referencial) / referencial
 
     print(f"\n{'─'*72}\n[{designacao}] {g.get('descricao','')}")
     for s, v in sorted(q["por_secao"].items()):
         print(f"    {s:20} R$ {v:>12,.2f}")
     print(f"    {'─'*46}")
     print(f"    Material R$ {q['custo_material']:>11,.2f} · MO R$ {q['custo_mao_obra']:>11,.2f} · Serviços R$ {q['custo_servicos']:>11,.2f}")
-    print(f"    CUSTO TOTAL  R$ {custo:>11,.2f}   gabarito R$ {gabarito:>11,.2f}   Δ {delta:+.2%}")
-    print(f"    Venda c/imp  R$ {q['preco_com_impostos']:>11,.2f}   gabarito R$ {g['preco_venda_com_impostos']:>11,.2f}")
+    print(f"    CUSTO TOTAL  R$ {custo:>11,.2f}   referencial R$ {referencial:>11,.2f}   Δ {delta:+.2%}")
+    print(f"    Venda c/imp  R$ {q['preco_com_impostos']:>11,.2f}   referencial R$ {g['preco_venda_com_impostos']:>11,.2f}")
     marca = "✗" if eh_ref else "⚠"
     sufixo = "" if eh_ref else "  (aviso: job backtest, não bloqueia — follow-up)"
     print(f"    Geometria: {checados} itens grandes, {len(gerros)} divergências >{TOL_GEOM:.0%}{sufixo}")
@@ -101,22 +101,22 @@ def validar(designacao):
     return ok, delta, len(gerros)
 
 
-def _tem_ground_truth(designacao):
-    return os.path.exists(os.path.join(SEEDS, f"{designacao.lower()}_ground_truth.json"))
+def _tem_referencial(designacao):
+    return os.path.exists(os.path.join(SEEDS, f"{designacao.lower()}_referencial.json"))
 
 
 def main():
     todas = designacoes_disponiveis()
-    # Nem toda designação com seed de MATERIAIS tem gabarito TOTAL (MO+serviços) —
+    # Nem toda designação com seed de MATERIAIS tem referencial TOTAL (MO+serviços) —
     # ex.: OF3683 é job avulso com seed de MP apenas (ver test_golden_of3683.py para
     # o backtest de MP dele). Este gate só valida o custo TOTAL, então pula quem não
-    # tiver ground_truth em vez de quebrar a suíte.
-    designacoes = [d for d in todas if _tem_ground_truth(d)]
+    # tiver referencial em vez de quebrar a suíte.
+    designacoes = [d for d in todas if _tem_referencial(d)]
     puladas = [d for d in todas if d not in designacoes]
     print("=" * 72)
     print(f"VALIDAÇÃO — PERMUTADOR COMPLETO · designações: {', '.join(designacoes)}")
     if puladas:
-        print(f"  (puladas, sem ground_truth de custo TOTAL: {', '.join(puladas)})")
+        print(f"  (puladas, sem referencial de custo TOTAL: {', '.join(puladas)})")
     print("=" * 72)
     resultados = [(d, *validar(d)) for d in designacoes]
     todas_ok = all(r[1] for r in resultados)

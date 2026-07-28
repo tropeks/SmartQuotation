@@ -377,12 +377,12 @@ caldeiraria pesada:
 
 O que muda entre elas para o CUSTEIO: cabeçote dianteiro (A tem canal+tampa removível = mais peças
 usinadas que o bonnet B), traseiro (M fixo = simples; S flutuante = anel bipartido, contra-flange,
-mais usinagem; U = curvamento + gabarito), e a consequência em feixe removível vs fixo (horas de
+mais usinagem; U = curvamento + referencial), e a consequência em feixe removível vs fixo (horas de
 montagem/teste). Ordem típica de custo: BEM < BEU < AES.
 
 **Ainda precisa do Wellington (inalterado):** QUAIS designações a ENGEMATEX quer custear a seguir e
 **um orçamento real fechado de cada uma** para o seed de calibração — a norma diz o que muda
-fisicamente, mas os pesos/horas do motor vêm de gabarito (decisão de arquitetura correta; a
+fisicamente, mas os pesos/horas do motor vêm de referencial (decisão de arquitetura correta; a
 pesquisa não substitui).
 
 Fontes: [Wermac — TEMA designations](https://www.wermac.org/equipment/heatexchanger_part5.html) · [Kasko — TEMA types BEM/AES/BEU](https://www.kaskomakine.com/blogs/shell-and-tube-heat-exchanger-tema-types) · [Mihir's Handbook — AEL/BEM/AES/AEU/AKU](https://chemicalprocessengineering.com/shell-and-tube-heat-exchangers-tema-types-ael-bem-aes-aeu-aku/) · [Enerquip — TEMA types](https://www.enerquip.com/tema-types-explained/) · [XLG — BEU/BKU/NEN/DEU](https://xlg-heattransfer.com/tema-designation-heat-exchangers-guide/)

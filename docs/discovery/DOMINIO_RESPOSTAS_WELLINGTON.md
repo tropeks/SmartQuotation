@@ -71,13 +71,14 @@ Fonte: `wellington-costing-eto-sprints-2026-07-16.md`
 
 ### ⚠️ Vocabulário (correção do Wellington, 2026-07-27)
 
-**Não é "referencial". É "referencial".** Gabarito significa resposta certa; chamar assim embute a
-premissa de que o preço histórico está correto — que é justamente o que ele não está. O termo
-correto para o orçamento fechado que usamos na calibração é **referencial**.
+**Não é "g‑a‑b‑a‑r‑i‑t‑o". É "referencial".** A palavra evitada significa *resposta certa*; chamar assim
+embute a premissa de que o preço histórico está correto — que é justamente o que ele não
+está. O termo correto para o orçamento fechado que usamos na calibração é **referencial**.
 
-> Dívida técnica registrada: o repo usa "referencial" em ~89 pontos (.py/.md/.yml), `ground_truth`
-> em 9 pontos de código e 3 seeds `*_ground_truth.json`. `ground_truth` é o pior deles —
-> afirma verdade. Renomear para `*_referencial.json` / `referencial`.
+> ✅ **Dívida quitada em 2026-07-28 (S5).** O repo usava "referencial" em ~90 pontos e
+> `ground_truth` em código e em 4 seeds — este último era o pior, porque *ground truth*
+> afirma verdade fundamental sobre um número que é só referência. Renomeados para
+> `referencial` / `*_referencial.json`, inclusive nos nomes dos jobs de CI.
 
 ### ⚠️ Consequência que precisa ficar registrada
 

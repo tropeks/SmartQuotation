@@ -5,7 +5,7 @@ from pricing_engine.feixe_quote import quote_feixe
 from pricing_engine.rates import engematex_seed
 
 
-def test_default_custo_transporte_preserva_gabarito():
+def test_default_custo_transporte_preserva_referencial():
     inp = caso_136_tubos()
     assert inp.custo_transporte == 1600.0
 

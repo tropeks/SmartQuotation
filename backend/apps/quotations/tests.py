@@ -1,6 +1,6 @@
 """
 Testes do app quotations + adapter pricing_engine.
-Teste-chave: uma cotação persistida reproduz o gabarito ENGEMATEX (caso 136 tubos).
+Teste-chave: uma cotação persistida reproduz o referencial ENGEMATEX (caso 136 tubos).
 """
 from decimal import Decimal
 from django.conf import settings
@@ -97,9 +97,9 @@ class FeixeQuotationTests(TenantTestCase):
 
         self.assertEqual(returned, Decimal("200.00"))
         self.assertEqual(op.custo, Decimal("200.00"))
-    def test_cotacao_persistida_reproduz_gabarito(self):
+    def test_cotacao_persistida_reproduz_referencial(self):
         q = create_feixe_quotation(self.customer, "Feixe 136 tubos")
-        # gabarito real ENGEMATEX: custo 35.353, preço c/imp 44.192 (gate ±10%)
+        # referencial real ENGEMATEX: custo 35.353, preço c/imp 44.192 (gate ±10%)
         self.assertAlmostEqual(float(q.custo_total), 35353, delta=35353 * 0.10)
         self.assertAlmostEqual(float(q.preco_com_impostos), 44192, delta=44192 * 0.10)
         # custo = material + MO

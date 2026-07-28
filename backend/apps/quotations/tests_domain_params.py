@@ -30,7 +30,7 @@ class BaffleCutConversionTests(SimpleTestCase):
         self.assertAlmostEqual(baffle_cut_mm_to_pct(mm, d), 28.0, places=1)
 
     def test_job_de_referencia_fica_em_faixa_fisica(self):
-        # Gabarito real: restante 300 mm, OD interno casco ~416,8 mm → ~28% de corte,
+        # Referencial real: restante 300 mm, OD interno casco ~416,8 mm → ~28% de corte,
         # dentro da faixa TEMA (15–45%). Guarda contra a fórmula errada do plano (que daria ~75%).
         pct = baffle_cut_mm_to_pct(300.0, 416.8)
         self.assertTrue(15.0 <= pct <= 45.0, f"corte {pct}% fora da faixa física")

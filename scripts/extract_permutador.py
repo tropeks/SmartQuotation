@@ -4,7 +4,7 @@ Uso:  python extract_permutador.py BEU
       python extract_permutador.py BEM
 
 Produz em pricing_engine/seeds/:
-  {d}_ground_truth.json  — todos os blocos + totais (gabarito de custo)
+  {d}_referencial.json  — todos os blocos + totais (referencial de custo)
   {d}_materiais.json     — blocos das seções de matéria-prima (geometrizáveis + catálogo)
   {d}_operacoes.json     — blocos de fabricação/finalização (mão-de-obra vs serviço)
 
@@ -17,7 +17,7 @@ import glob, json, os, sys
 import openpyxl
 
 SEEDS = os.path.join(os.path.dirname(__file__), "..", "pricing_engine", "seeds")
-GABARITOS = {  # totais lidos da planilha (custo c/ imp, venda c/ imp, venda s/ imp, F.C., ICMS)
+REFERENCIAIS = {  # totais lidos da planilha (custo c/ imp, venda c/ imp, venda s/ imp, F.C., ICMS)
     "BEU": dict(custo=128160.0, venda_com=160200.0, venda_sem=146103.0, fc=1.25, icms=9.0,
                 peso_liq=3016.0, peso_bruto=None, desc="BEU (bonnet + casco 1 passe + feixe em U)"),
     "BEM": dict(custo=119295.0, venda_com=149119.0, venda_sem=135997.0, fc=1.25, icms=9.0,
@@ -228,7 +228,7 @@ def extrair(designacao):
             o = {"code": f"{(secao or 'OP')[:3].upper()}-{base}-{code_seen[base]}",
                  "row": i, "secao": secao, "label": label, "bloco": _bloco(designacao, i),
                  "tipo": "mao_obra" if is_labor else "servico",
-                 "preco_gabarito": preco, "ajuste": round(float(ajuste), 2),
+                 "preco_referencial": preco, "ajuste": round(float(ajuste), 2),
                  "driver": drv, "grupo": grupo, "driver_ref": drv_ref}
             if is_labor:
                 o["horas"] = round(float(horas), 3)
@@ -240,7 +240,7 @@ def extrair(designacao):
 
 def main():
     d = (sys.argv[1] if len(sys.argv) > 1 else "BEU").upper()
-    g = GABARITOS[d]
+    g = REFERENCIAIS[d]
     src, ground, materiais, operacoes = extrair(d)
     soma = round(sum(b["preco"] for b in ground), 2)
     por_secao = {}
@@ -259,14 +259,14 @@ def main():
     doc_m = {"fonte": os.path.basename(src), "designacao_tema": d,
              "n_materiais": len(materiais), "materiais": materiais}
 
-    for nome, doc in ((f"{d.lower()}_ground_truth.json", doc_g),
+    for nome, doc in ((f"{d.lower()}_referencial.json", doc_g),
                       (f"{d.lower()}_operacoes.json", doc_o),
                       (f"{d.lower()}_materiais.json", doc_m)):
         with open(os.path.join(SEEDS, nome), "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False, indent=2)
 
     print(f"[{d}] {os.path.basename(src)}")
-    print(f"  blocos={len(ground)}  soma=R$ {soma:,.2f}  gabarito=R$ {g['custo']:,.2f}  Δ={(soma-g['custo'])/g['custo']:+.2%}")
+    print(f"  blocos={len(ground)}  soma=R$ {soma:,.2f}  referencial=R$ {g['custo']:,.2f}  Δ={(soma-g['custo'])/g['custo']:+.2%}")
     print(f"  materiais={len(materiais)}  operacoes={len(operacoes)} ({len(labor)} MO / {len(operacoes)-len(labor)} serviço)")
     for s, v in por_secao.items():
         print(f"    {s:20} R$ {v:>12,.2f}")

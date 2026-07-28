@@ -14,7 +14,7 @@
 | `pricing_engine/seeds/materials_pe.json` (84K) | 423 materiais + densidade |
 | `pricing_engine/seeds/dim_standards.json` (4K) | OD polegada→mm, BWG→mm |
 | `pricing_engine/seeds/feixe_operacoes_formulas.json` (20K) | 67 operações + fórmulas verbatim |
-| `pricing_engine/seeds/feixe_ground_truth.json` (8K) | custo calculado por operação (gabarito) |
+| `pricing_engine/seeds/feixe_referencial.json` (8K) | custo calculado por operação (referencial) |
 | `~/.gstack/projects/tropeks-SmartQuotation/rcosta00-main-costing-engine-spec.md` | SPEC do motor (entidades, fórmulas, ProcessParameters) |
 | `~/.gstack/projects/.../rcosta00-main-domain-feixe-planilha-analise.md` | análise bruta da planilha |
 | `~/.gstack/projects/.../rcosta00-main-design-*.md` | design doc aprovado (Approach C) |
@@ -37,8 +37,8 @@ tests/validate_permutador_completo.py ──► BEU+BEM: gate ±10% + geometria
 ```
 
 ## 📊 ESTADO DO MOTOR (validação contra caso real Petrobras RPBC)
-- Gabarito: custo R$ 35.353 · venda c/imposto R$ 44.192 (gate 10%/5min)
-- ✅ Feixe tubular: custo calculado R$ 34.344,93 vs gabarito R$ 35.353,00 (delta -2,9%)
+- Referencial: custo R$ 35.353 · venda c/imposto R$ 44.192 (gate 10%/5min)
+- ✅ Feixe tubular: custo calculado R$ 34.344,93 vs referencial R$ 35.353,00 (delta -2,9%)
 - ✅ Operações: 64 no registry, 0 erros no gate atual
 - ✅ Permutador completo: BEU R$ 128.162,69 vs R$ 128.160,00; BEM R$ 119.297,24 vs R$ 119.295,00 (delta 0,00%)
 - ✅ Geometria BEU/BEM: 18 itens grandes, 0 divergências >15%

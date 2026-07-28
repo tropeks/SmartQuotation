@@ -1,6 +1,6 @@
 """
 Harness de validação — feixe de 136 tubos (caso real Petrobras RPBC).
-Roda o pricing_engine e confere as operações-driver contra o gabarito da planilha.
+Roda o pricing_engine e confere as operações-driver contra o referencial da planilha.
 
 Uso:  python -m tests.validate_feixe   (a partir de ~/dev/SmartQuotation)
 """
@@ -29,10 +29,10 @@ cc = engematex_seed()
 GREEN, RED, RESET = "\033[32m", "\033[31m", "\033[0m"
 
 
-def check(nome, calc, gabarito, tol=0.01):
-    ok = abs(calc - gabarito) <= max(tol, abs(gabarito) * tol)
+def check(nome, calc, referencial, tol=0.01):
+    ok = abs(calc - referencial) <= max(tol, abs(referencial) * tol)
     flag = f"{GREEN}OK {RESET}" if ok else f"{RED}DIF{RESET}"
-    print(f"  [{flag}] {nome:<28} calc={calc:>10,.2f}  gabarito={gabarito:>10,.2f}")
+    print(f"  [{flag}] {nome:<28} calc={calc:>10,.2f}  referencial={referencial:>10,.2f}")
     return ok
 
 
@@ -49,8 +49,8 @@ peso_espelhos = sum(dim.disc_weight_kg(od, ESPELHO["esp"], mat.density(ESPELHO["
 print(f"  Tubos:    {peso_tubos:>8,.1f} kg  (custo R$ {peso_tubos*cc.price_kgf('SA-179','tubo'):,.0f})")
 print(f"  Espelhos: {peso_espelhos:>8,.1f} kg  (bruto, sem desconto de furos)")
 
-# --- OPERAÇÕES-DRIVER vs GABARITO ---
-print("\n--- OPERAÇÕES (fórmula vs gabarito da planilha) ---")
+# --- OPERAÇÕES-DRIVER vs REFERENCIAL ---
+print("\n--- OPERAÇÕES (fórmula vs referencial da planilha) ---")
 metodo_furar = pp.choose_drill_method(NUM_FUROS)   # 272 ≤ 600 → radial
 print(f"  (furação: {NUM_FUROS} furos ≤ {pp.DRILL_METHOD_THRESHOLD_HOLES} → método '{metodo_furar}')")
 
@@ -70,7 +70,7 @@ h = ops.soldar_horas(NUM_FUROS, "raiz")
 results.append(check("SOLDAR PASSE DE RAIZ", h * cc.hh("SOLDAR_RAIZ"), 630))
 
 h = ops.escarear_espelho_horas(NUM_FUROS)
-print(f"  [info] ESCAREAR (sem gabarito isolado): {h}h → R$ {h*cc.hh('ESCAREAR_ESPELHO'):,.0f}")
+print(f"  [info] ESCAREAR (sem referencial isolado): {h}h → R$ {h*cc.hh('ESCAREAR_ESPELHO'):,.0f}")
 
 # --- EAP / roll-up parcial (demonstração da estrutura) ---
 print("\n--- ESTRUTURA ANALÍTICA (parcial, itens-driver) ---")
@@ -93,6 +93,6 @@ print(cot.arvore())
 print("\n" + "=" * 70)
 n_ok = sum(results)
 print(f"OPERAÇÕES-DRIVER VALIDADAS: {n_ok}/{len(results)} batem com a planilha")
-print(f"GABARITO TOTAL: custo R$ 35.353 · venda c/imposto R$ 44.192 (alvo do gate 10%)")
+print(f"REFERENCIAL TOTAL: custo R$ 35.353 · venda c/imposto R$ 44.192 (alvo do gate 10%)")
 print(f"PENDENTE: implementar as 67 ops completas + impostos + eng/ferramentas p/ fechar o total")
 print("=" * 70)

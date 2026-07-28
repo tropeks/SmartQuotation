@@ -1,6 +1,6 @@
 """
 Motor de custeio GENÉRICO de permutador casco-tubo completo (qualquer designação TEMA
-cujo gabarito foi extraído: BEU, BEM, ...).
+cujo referencial foi extraído: BEU, BEM, ...).
 
 quote_completo(designacao, cost_chain) compõe a Estrutura Analítica:
   matéria-prima  = Σ peso_bruto(geometria) × preço/kgf   (itens de catálogo: preço fixo)
@@ -9,7 +9,7 @@ quote_completo(designacao, cost_chain) compõe a Estrutura Analítica:
 
 A cadeia de custos do tenant (rates.TenantCostChain) sobrescreve o fator de MO e os preços
 de material por (material × forma) — mesmo contrato do feixe. Sem ela, usa os defaults
-ENGEMATEX embutidos nos seeds (validados ao gabarito real de cada designação).
+ENGEMATEX embutidos nos seeds (validados ao referencial real de cada designação).
 
 Seeds por designação: pricing_engine/seeds/{designacao}_materiais.json + _operacoes.json.
 """
@@ -272,7 +272,7 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                     qtd = float(dims.get("QUANTIDADE", seed_dims.get("QUANTIDADE", 1)) or 1)
                     if m["familia"] in ("espelho", "perfurado", "disco"):
                         # peça circular cortada de chapa: usa a perda da FAMÍLIA (40% do
-                        # Wellington), não a do gabarito — o bruto do gabarito embute folga de
+                        # Wellington), não a do referencial — o bruto do referencial embute folga de
                         # forjado, não o scrap de corte. #agy review12 #2. Configurável por tenant
                         # (cost_chain.perda); só afeta o caminho com dims_override (gate 0,0% intacto).
                         perda_eff = _perda_eff(m["familia"], cost_chain)
@@ -315,11 +315,11 @@ def quote_completo(designacao: str = "BEU", cost_chain=None, fator_correcao_mo: 
                 rate = cost_chain.hh_any((o["code"], o["label"], op_key(o["label"])), base_rate)
                 base = horas * rate
             else:
-                base = o["preco_gabarito"] - ajuste    # parcela de MO (R$ a FC=1, ref)
+                base = o["preco_referencial"] - ajuste    # parcela de MO (R$ a FC=1, ref)
             c = base * eff * liga * fc + ajuste
             custo_mo += c
         else:
-            c = o["preco_gabarito"] * eff * liga       # serviço: escala se tiver driver físico
+            c = o["preco_referencial"] * eff * liga       # serviço: escala se tiver driver físico
             custo_servico += c
         custo_por_param[pnome] = round(custo_por_param.get(pnome, 0.0) + c, 2)
         secoes[o["secao"]] = secoes.get(o["secao"], 0.0) + c

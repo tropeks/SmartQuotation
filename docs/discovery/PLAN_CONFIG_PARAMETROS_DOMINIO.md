@@ -78,7 +78,7 @@ Dois caminhos (escolher com o Rom/Wellington):
   (só registra na proposta). Front-end: input + nota "não afeta custo nesta versão". Esforço **P**.
 - **(b) Custo real (caro):** motor passa a derivar nº de furos/área do espelho do pitch×ângulo →
   dirige horas de furação. Exige mudança no `pricing_engine` + recalibração + gate. Esforço **GG**.
-- **Recomendação:** (a) já; (b) só depois do gabarito do Wellington (Q3 do doc enxuto).
+- **Recomendação:** (a) já; (b) só depois do referencial do Wellington (Q3 do doc enxuto).
 
 ---
 

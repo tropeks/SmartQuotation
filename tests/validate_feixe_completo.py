@@ -1,5 +1,5 @@
 """
-Validação COMPLETA do feixe 136 tubos: todas as 67 operações + material vs gabarito.
+Validação COMPLETA do feixe 136 tubos: todas as 67 operações + material vs referencial.
 Uso: python -m tests.validate_feixe_completo
 """
 import os, sys, json
@@ -32,7 +32,7 @@ print(f"\n--- Custo por grupo de operação ---")
 for g, v in sorted(por_grupo.items(), key=lambda x: -x[1]):
     print(f"  {g:<14} R$ {v:>10,.2f}")
 print(f"  {'TOTAL OPS':<14} R$ {total_ops:>10,.2f}")
-print(f"  {'gabarito ops':<14} R$ {20034:>10,.2f}  (Σ CF da planilha)")
+print(f"  {'referencial ops':<14} R$ {20034:>10,.2f}  (Σ CF da planilha)")
 delta_ops = (total_ops - 20034) / 20034 * 100
 flag = GREEN if abs(delta_ops) <= 10 else (YEL if abs(delta_ops) <= 25 else RED)
 print(f"  {flag}delta ops: {delta_ops:+.1f}%{RST}")
@@ -44,13 +44,13 @@ for c in feixe_136_componentes():
     total_mat += w * c.rkg
 print(f"\n--- Material ---")
 print(f"  material (11/17 itens) R$ {total_mat:>10,.2f}")
-print(f"  gabarito material      R$ {15319:>10,.2f}  (custo 35.353 − ops 20.034)")
+print(f"  referencial material      R$ {15319:>10,.2f}  (custo 35.353 − ops 20.034)")
 
 # --- total ---
 custo_total = total_ops + total_mat
 print(f"\n--- TOTAL ---")
 print(f"  CUSTO calculado:  R$ {custo_total:>10,.2f}")
-print(f"  CUSTO gabarito:   R$ {35353:>10,.2f}")
+print(f"  CUSTO referencial:   R$ {35353:>10,.2f}")
 delta_tot = (custo_total - 35353) / 35353 * 100
 flag = GREEN if abs(delta_tot) <= 10 else (YEL if abs(delta_tot) <= 25 else RED)
 print(f"  {flag}delta total: {delta_tot:+.1f}%{RST}")
