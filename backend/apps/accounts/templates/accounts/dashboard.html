@@ -47,7 +47,7 @@
     <section id="sec-pipeline" class="g-section" style="margin-top:16px">
       <header class="g-section-head"><h3>§1 Pipeline Comercial</h3></header>
       <div class="g-section-body">
-        <p class="mono" style="margin-top:0;color:var(--g-gray-1)">DASH-01 · Command Center</p>
+        <p class="mono g-muted" style="margin-top:0">DASH-01 · Command Center</p>
         <div class="price-line" style="margin-top:0">
           <span class="lbl">Pipeline</span>
           <span class="val mono">R$ {{ pipeline_total|brl }}</span>
@@ -59,7 +59,7 @@
       <header class="g-section-head"><h3>§2 Aprovações Pendentes</h3></header>
       <div class="g-section-body">
         {% for quotation in pending_approvals %}
-          <div class="comp-card" style="margin-bottom:12px;border-left-color:var(--g-amber)">
+          <div class="comp-card" style="margin-bottom:12px">
             <div class="name">{{ quotation.title }}<small>{{ quotation.number }} · {{ quotation.customer.company_name }}</small></div>
             <div class="res">
               <div><div class="l">Status</div><div class="v">{{ quotation.get_status_display }}</div></div>
@@ -67,7 +67,7 @@
             </div>
           </div>
         {% empty %}
-          <p style="color:var(--g-gray-1)">Nenhuma aprovação pendente.</p>
+          <p class="g-muted">Nenhuma aprovação pendente.</p>
         {% endfor %}
       </div>
     </section>
@@ -90,7 +90,7 @@
               <td class="num">R$ {{ row.margin|brl }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação ainda.</td></tr>
+            <tr><td colspan="5" class="g-muted" style="padding:24px;text-align:center">Nenhuma cotação ainda.</td></tr>
             {% endfor %}
           </tbody>
         </table>

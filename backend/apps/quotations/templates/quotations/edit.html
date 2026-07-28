@@ -3,7 +3,7 @@
 {% block content %}
 <div class="eyebrow">COT · Revisar · Feixe Tubular</div>
 <h1 class="q-number">EDITAR <span class="rev">{{ orig.number }}</span></h1>
-<p style="color:var(--g-gray-1)">Ajuste os parâmetros por componente. Ao salvar, gera a <b>Rev. {{ orig.revision|add:1 }}</b> recalculada — a cotação original fica intacta.</p>
+<p class="g-muted">Ajuste os parâmetros por componente. Ao salvar, gera a <b>Rev. {{ orig.revision|add:1 }}</b> recalculada — a cotação original fica intacta.</p>
 
 <form id="ds-form" hx-post="{% url 'quotations:recompute' %}" hx-target="#results"
       hx-trigger="change delay:250ms from:#ds-form, submit"

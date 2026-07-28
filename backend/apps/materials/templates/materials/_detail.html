@@ -9,7 +9,7 @@
 <header style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:8px">
   <div>
     <h1 class="q-number">{{ material.sigla }}</h1>
-    <p class="mono" style="color:var(--g-gray-1);margin:4px 0 0">
+    <p class="mono g-muted" style="margin:4px 0 0">
       {{ material.tipo|default:"—" }} · {{ material.norma|default:"—" }} · {% if material.forma_padrao %}{{ material.forma_padrao }}{% else %}Sem forma padrão{% endif %}
     </p>
   </div>
@@ -55,7 +55,7 @@
             <td>
               {% if price.last_quote %}
                 <div class="mono">Preço usado na última cotação {{ price.last_quote.number }}</div>
-                <div class="mono" style="color:var(--g-gray-1)">R$ {{ price.last_quote.preco_kgf }}</div>
+                <div class="mono g-muted">R$ {{ price.last_quote.preco_kgf }}</div>
               {% endif %}
             </td>
             <td class="mono">{{ price.valid_from|date:"d/m/Y" }}</td>
@@ -63,7 +63,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6" style="padding:24px;text-align:center;color:var(--g-gray-1)">
+            <td colspan="6" class="g-muted" style="padding:24px;text-align:center">
               Sem preço vigente.
             </td>
           </tr>

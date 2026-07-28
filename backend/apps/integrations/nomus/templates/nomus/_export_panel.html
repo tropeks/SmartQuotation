@@ -16,7 +16,7 @@
       <td class="mono">{{ run.export_log.remote_id|default:"—" }}</td>
       <td>
         {% if run.export_log.conflict %}
-        <span class="mono" style="color:var(--g-orange)">{{ run.export_log.conflict_reason }}</span>
+        <span class="g-err">{{ run.export_log.conflict_reason }}</span>
         {% else %}
         —
         {% endif %}
@@ -25,7 +25,7 @@
       <td class="mono">{{ run.created_at|date:"d/m/Y H:i" }}</td>
     </tr>
     {% empty %}
-    <tr><td colspan="5" style="color:var(--g-gray-1)">Nenhum export Nomus registrado para esta OF.</td></tr>
+    <tr><td colspan="5" class="g-muted">Nenhum export Nomus registrado para esta OF.</td></tr>
     {% endfor %}
   </tbody>
 </table>

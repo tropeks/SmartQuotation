@@ -3,7 +3,7 @@
 {% block content %}
 <div class="eyebrow">CONFIG · Cadeia de Custos</div>
 <h1 class="q-number">CADEIA DE CUSTOS</h1>
-<p style="color:var(--g-gray-1);font-size:12px">Defina os custos da sua empresa. O motor usa estes valores
+<p class="g-muted" style="font-size:12px">Defina os custos da sua empresa. O motor usa estes valores
   para precificar — quanto mais fiéis à sua realidade, mais precisa a cotação.</p>
 
 <div class="stat-row" style="margin-top:8px">
@@ -24,7 +24,7 @@
           <td class="num">{{ s.solved_fator_mo|default:"—" }}</td>
           <td class="num">{% if s.error_pct != None %}{{ s.error_pct }}%{% else %}—{% endif %}</td>
           <td>{{ s.notes }}</td></tr>
-        {% empty %}<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--g-gray-1)">Nenhuma sessão ainda.</td></tr>
+        {% empty %}<tr><td colspan="5" class="g-muted" style="padding:20px;text-align:center">Nenhuma sessão ainda.</td></tr>
         {% endfor %}
       </tbody>
     </table>

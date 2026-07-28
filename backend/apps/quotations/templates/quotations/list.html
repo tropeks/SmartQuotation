@@ -96,7 +96,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="10" style="padding:24px;text-align:center;color:var(--g-gray-1)">Nenhuma cotação encontrada.</td>
+              <td colspan="10" class="g-muted" style="padding:24px;text-align:center">Nenhuma cotação encontrada.</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -119,7 +119,7 @@
           <div class="r4">R$ {{ row.obj.preco_com_impostos|brl }}</div>
         </a>
       {% empty %}
-        <p style="text-align:center;color:var(--g-gray-1);padding:12px">Nenhuma cotação encontrada.</p>
+        <p class="g-muted" style="text-align:center;padding:12px">Nenhuma cotação encontrada.</p>
       {% endfor %}
     </div>
   </div>
@@ -128,7 +128,7 @@
 {% if page_obj.paginator.num_pages > 1 %}
 <section class="g-section" style="margin-top:8px">
   <div class="g-section-body" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <div class="mono" style="color:var(--g-gray-1)">
+    <div class="mono g-muted">
       Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
