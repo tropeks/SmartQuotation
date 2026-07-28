@@ -710,7 +710,14 @@ def eap_item_save(request, pk):
                     op.taxa_hora_hm = _parse_decimal(request.POST.get(taxa_hm_key), op.taxa_hora_hm)
                     # Override MANUAL: marca a proveniência SEM tocar na sugestão do motor
                     # (horas_*_sugerida), para o UI mostrar sugerido↔digitado e permitir restaurar.
-                    op.origem = "manual"
+                    #
+                    # Só marca se algum número MUDOU de fato. O formulário envia todos os
+                    # campos de todas as operações, então marcar incondicionalmente
+                    # carimbava "manual" em linha intocada — o que mudava o hash,
+                    # invalidava a assinatura e notificava o gestor sem edição nenhuma.
+                    if (op.horas_hh, op.horas_hm, op.taxa_hora, op.taxa_hora_hm) != (
+                            antes_hh, antes_hm, antes_taxa_hh, antes_taxa_hm):
+                        op.origem = "manual"
                     op.save(update_fields=["horas_hh", "horas_hm", "taxa_hora", "taxa_hora_hm", "origem"])
                     op.recalc_custo()
                     _log_field_edit(request, op, "horas_hh", antes_hh, op.horas_hh, motivo)
