@@ -1,7 +1,24 @@
 # Identidade visual do SmartQuotation
 
-**Decisão (Rômulo, 2026-07-28):** o SmartQuotation adota a **mesma identidade visual do
-Vitali** — a pele *Tasy Neumorphic*. Mais agradável e com cara de produto enterprise.
+> ## ⚠️ SUPERSEDED — ver [`DESIGN_PRANCHA.md`](DESIGN_PRANCHA.md)
+>
+> **Ainda em 2026-07-28**, o Rômulo abriu a base: o Vitali passa a ser *inspiração*, não
+> cânone. O alvo agora é a **Prancha** — identidade própria, desenhada para densidade
+> numérica e proveniência do valor.
+>
+> O motivo da virada é técnico, não estético: **neumorfismo serve painel clínico de campo
+> esparso e atrapalha grade de muitas colunas**. A EAP tem 64 operações — em malha densa,
+> borda difusa apaga a grade, e aqui a grade é a informação.
+>
+> **Este documento continua valendo como registro** do que foi considerado e, principalmente,
+> do que **sobreviveu** da Tasy: o campo escavado, a disciplina de um só acento de marca, o
+> mundo único sem tema escuro e a semântica de cor tipo Primer.
+>
+> **Não implemente a partir daqui.** A §2 abaixo segue correta como descrição do Vitali, mas
+> não é mais o alvo do SmartQuotation.
+
+**Decisão original (Rômulo, 2026-07-28, manhã):** o SmartQuotation adota a **mesma identidade
+visual do Vitali** — a pele *Tasy Neumorphic*. Mais agradável e com cara de produto enterprise.
 
 **Quando:** sprint futura, sem pressa. Nada aqui bloqueia o roadmap atual (M1 do controle de
 vazamento de margem, fila de perguntas, motor). Este documento existe para a decisão não se

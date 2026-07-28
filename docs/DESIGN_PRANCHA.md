@@ -3,11 +3,10 @@
 **Decisão (Rômulo, 2026-07-28, tarde):** o SmartQuotation ganha identidade própria, com o
 Vitali como *inspiração* e não como cânone.
 
-Supersede a decisão da manhã do mesmo dia, que adotava a pele *Tasy Neumorphic* integralmente.
-Aquele registro é o `docs/DESIGN_IDENTIDADE_VISUAL.md`, que **chega com o PR #111** e ainda não
-está nesta branch — quando ele mergear, marcar lá o banner de *superseded* apontando para cá
-(item aberto no `BACKLOG.md`). Ele segue valendo como registro do que foi considerado e,
-principalmente, do que **sobreviveu** da Tasy (§2 abaixo).
+Supersede a decisão da manhã do mesmo dia, que adotava a pele *Tasy Neumorphic* integralmente —
+registrada em [`DESIGN_IDENTIDADE_VISUAL.md`](DESIGN_IDENTIDADE_VISUAL.md), que segue valendo
+como registro do que foi considerado e, principalmente, do que **sobreviveu** da Tasy (§2
+abaixo).
 
 Este documento é a **fonte da verdade dos tokens**. Quem implementa lê daqui e não inventa
 valor.
@@ -241,6 +240,22 @@ Não perder na reescrita:
 - regras de `:focus-visible` em toda superfície interativa;
 - `.skip-link`;
 - `[x-cloak]` (Alpine) e `.htmx-request` — se sumirem, aparece flash de conteúdo não inicializado.
+
+### 6.0 A proposta em PDF nunca usou a fonte da marca (verificado)
+
+Verificado dentro do container (`sq-web-proto`): há **WeasyPrint 69.0** e exatamente **três
+famílias de fonte — DejaVu Sans, DejaVu Sans Mono e DejaVu Serif**. Nada mais.
+
+Consequência: o `Archivo` que o template declarava **nunca renderizou**. A proposta que vai ao
+cliente sempre saiu em DejaVu, desde sempre, em silêncio. A declaração foi atualizada para IBM
+Plex com DejaVu explícito na cadeia — **não muda nada hoje**, mas para de mentir sobre o que
+está sendo usado e fica correta no dia em que a fonte existir.
+
+**Instalar a Plex na imagem é item à parte, e não é trivial:** `fonts-ibm-plex` não existe no
+repositório Debian da imagem base (`python:3.12-slim`), então exigiria baixar do release
+oficial. Este repositório pina dependência por hash de propósito (`--require-hashes`, imagem
+base por digest), e enfiar um download não verificado no `Dockerfile` contraria essa postura.
+Merece mudança própria, com o mesmo cuidado.
 
 ### 6.1 A proposta em PDF entra no escopo (mudei de ideia)
 
