@@ -213,9 +213,55 @@ Não perder na reescrita:
 - `.skip-link`;
 - `[x-cloak]` (Alpine) e `.htmx-request` — se sumirem, aparece flash de conteúdo não inicializado.
 
-**Fora de escopo nesta sprint:** a proposta em PDF/DOCX tem estilo próprio. Se a identidade
-nova for pra valer, o documento que chega ao cliente devia falar a mesma língua — mas o
-WeasyPrint tem regras próprias e isso é outra sprint.
+### 6.1 A proposta em PDF entra no escopo (mudei de ideia)
+
+Eu tinha deixado `proposals/proposal_pdf.html` de fora, supondo complexidade do WeasyPrint. O
+levantamento mostrou outra coisa: o arquivo é um HTML completo e independente, sem `extends` e
+sem link para o design system, com a paleta antiga **duplicada à mão em 8 valores hex**
+(`#d94e1f` na marca e no título de seção, `#16151a`, `#f4f1ea`, `#f5c542`, mais neutros).
+
+Isso significa que a troca de tokens **não vaza** para ele — nem para o bem. Deixar fora não é
+"adiar", é **estampar a identidade morta no único documento que chega ao cliente**. São 8
+linhas. Entra.
+
+### 6.2 Defeitos vivos encontrados no levantamento
+
+Consertar junto, porque a reescrita passa por cima deles de qualquer jeito:
+
+- **`--g-bg` não existe.** `detail.html:98,275` usam `var(--g-bg,#fff)`. Funcionam hoje **por
+  acidente**, só pelo fallback.
+- **`var(--g-amber,#b8860b)` já diverge** do `--g-amber:#b8851a` do CSS
+  (`data_sheet.html:105,120`). É a prova viva do risco do fallback: cor levemente diferente,
+  sem erro e sem aviso.
+- **`.approval-state--ok/--pending` não existem no CSS.** São 100% inline em `detail.html`,
+  duplicando o que `.q-status--*` já faz, com paleta e fallback próprios.
+
+---
+
+## 7. Componentes que absorvem o estilo inline
+
+O levantamento achou **149 ocorrências de `style=` com cor em 39 templates**. Não dá para
+trocar a pele e deixar isso para trás: cada um vira um órfão com a cor velha. A saída não é
+utilitário de cor — é **componente semântico**, para o template dizer *o que a coisa é*, não
+*de que cor ela é*.
+
+| Classe | Substitui hoje |
+|---|---|
+| `.q-pill` + `--ok` `--warn` `--bad` `--hot` `--neutral` | `.approval-state--*` inline, badges de `audit/inbox.html`, pílula de proveniência de preço |
+| `.q-note--warn` / `.q-note--block` | ternários de `mode` em `_compose_result.html`, blocos de aviso do data sheet |
+| `.g-err` | os `color:var(--g-red)` espalhados por erro de formulário |
+| `.g-num` | valor monetário hoje pintado de laranja (`data_sheet`, `_compose_result`) |
+| `.g-code` | `codigo_item` / letra TEMA hoje em laranja |
+
+**Onde o laranja perde o emprego.** Hoje `--g-orange` é cor de link (`a` global), de foco, de
+rótulo de revisão, de código de item, da barra de `.g-section-head` e de preço. Na Prancha
+tudo isso vira `--p-bp` (azul) ou tinta neutra. O laranja fica só onde já era **aviso de
+verdade**: os blocos `warn`/`block` do `_compose_result.html` e do data sheet — mais os dois
+usos novos (override manual e selo divergente).
+
+Caso que exige decisão explícita e **não** é automático: a pílula **"Pendente"** de aprovação
+(`detail.html:245`) é laranja hoje. Isso é *estado de fluxo*, não risco de margem → vai para
+`--p-warn` (âmbar), não para `--p-hot`.
 
 ---
 
