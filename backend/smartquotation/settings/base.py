@@ -56,6 +56,7 @@ TENANT_APPS = [
     "apps.proposals",
     "apps.production",
     "apps.cost_discovery",
+    "apps.cost_structure",
     "apps.tema_templates",
     # domínio (criados nas tasks seguintes):
     # "apps.costing",
