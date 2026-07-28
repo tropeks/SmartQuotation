@@ -211,7 +211,6 @@ td.g-num, th.g-num { display:table-cell; text-align:right; }
 .pv--catalogo { background:transparent; border-color:var(--p-ink-3); border-radius:50%; } /* círculo vazado */
 .pv--manual { background:var(--p-hot); border-color:var(--p-hot);
   border-radius:0; transform:rotate(45deg); }                                             /* losango cheio */
-.pv--importado { background:transparent; border-color:var(--p-bp); border-radius:0; }     /* quadrado vazado */
 
 /* ============================================================
    RAIL + LAYOUT
@@ -543,6 +542,14 @@ h1.q-number, h2.q-number, h1.number, h2.number { margin:0; }
   color:var(--p-ink); overflow-wrap:anywhere; }
 .q-carimbo-cell .v--txt { font-family:var(--p-sans); font-weight:500; font-size:13px;
   letter-spacing:0; }
+/* Estado e ações do carimbo. Ficaram como flex inline no template porque `.q-actions`
+   só é estilizada como `.q-header .q-actions`, e o carimbo não é `.q-header` — o
+   layout ficava sem dono. Aqui elas ganham regra e o template perde o style=. */
+.q-carimbo-estado { display:flex; flex-direction:column; align-items:flex-end;
+  gap:var(--s3); text-align:right; }
+.q-carimbo-actions { display:flex; flex-wrap:wrap; gap:var(--s3);
+  padding:var(--s6) var(--s10); border-top:1px solid var(--p-rule);
+  background:var(--p-paper-2); }
 
 /* ============================================================
    SELO (§5.3) — instrumento de confiança. Binário e crítico.

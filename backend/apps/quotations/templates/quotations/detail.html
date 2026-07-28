@@ -59,9 +59,7 @@
           {{ q.number }} <span class="rev">Rev. {{ q.revision }}</span>
         </h1>
       </div>
-      {# `.q-carimbo-estado`/`.q-carimbo-actions` ainda não têm regra no design system:
-         o flex fica inline (layout puro, sem cor) até o CSS absorver os dois nomes. #}
-      <div class="q-carimbo-estado" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <div class="q-carimbo-estado">
         {% include "quotations/_status_dropdown.html" %}
         <span class="q-pill {{ pricing_basis_pill }}"
               title="{% if q.pricing_basis == 'referencial' %}Preço formado por markup/calibração histórica — ainda não validado contra estrutura de custo real.{% else %}Preço validado contra estrutura de custo/preço mínimo do tenant.{% endif %}">{{ q.get_pricing_basis_display }}</span>
@@ -120,8 +118,7 @@
 
     {% comment %}Ações normais (fora do modo edição). "Revisar" = edição inline de metadados
        (este item). "Nova Revisão" = fluxo antigo do motor (recompute + nova revisão).{% endcomment %}
-    <div class="q-carimbo-actions q-actions" x-show="!isEditing"
-         style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px">
+    <div class="q-carimbo-actions q-actions" x-show="!isEditing">
       <button type="button" class="q-btn" @click="confirmOpen = true">Revisar</button>
       {% if q.scope == "complete" %}
       <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline;margin:0">
@@ -142,8 +139,7 @@
       </div>
     </div>
     {# Ações do modo edição inline. #}
-    <div class="q-carimbo-actions q-actions" x-show="isEditing" x-cloak
-         style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px">
+    <div class="q-carimbo-actions q-actions" x-show="isEditing" x-cloak>
       <button type="button" class="q-btn primary" @click="saveMeta()" :disabled="saving"
               x-text="saving ? 'Salvando…' : 'Salvar Alterações'">Salvar Alterações</button>
       <button type="button" class="q-btn" @click="cancelEdit()">Cancelar Revisão</button>

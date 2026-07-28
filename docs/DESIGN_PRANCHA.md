@@ -160,9 +160,30 @@ EQUIPAMENTO (2 col) │ NORMA DE PROJETO │ PRESSÃO · TEMPERATURA
 RESPONSÁVEL TÉCNICO + CREA (2 col) │ EMISSÃO │ ORIGEM DO PROJETO
 ```
 
-**Todos os campos já existem** em `quotation.inputs` e nos relacionamentos — é composição, não
-dado novo. Micro-rótulo em Condensed caixa alta; valor em Mono (ou Sans quando for texto
-corrido, ex. nome do cliente).
+Micro-rótulo em Condensed caixa alta; valor em Mono (ou Sans quando for texto corrido, ex. nome
+do cliente).
+
+> **Correção.** Uma versão anterior afirmava que "todos os campos já existem em
+> `quotation.inputs`". **Falso**, e a investigação do implementador provou. O que existe:
+
+| Célula | Fonte real | Ressalva |
+|---|---|---|
+| Cliente | `customer.company_name` | — |
+| Equipamento | `title` + `get_scope_display` | — |
+| Emissão | `created_at` | — |
+| Designação TEMA | `inputs["designacao"]` | só em `scope='complete'` |
+| Pressão · Temperatura | `inputs["pressao_projeto_bar"/"temperatura_projeto_c"]` | só em `complete` — o data sheet do feixe não pergunta |
+| Norma de projeto | `CalculationSnapshot.standard_refs` | só quando há memorial ASME |
+| Responsável técnico | `TechnicalApproval.approved_by` + CREA | é quem **assinou** |
+| **TAG do equipamento** | — | **não existe no modelo** |
+| **Origem do projeto** | — | **não existe**; é o *tipo de projeto* do `PLAN_TIPO_PROJETO_V2` |
+
+Célula sem fonte renderiza `—` **com o rótulo presente**. Carimbo com menos campos é
+informação; carimbo com campo inventado é defeito.
+
+**Defeito descoberto de raspão:** o `engineer_responsavel` do formulário de entrada
+**nunca foi persistido** — `create_feixe_quotation` não o recebe. Hoje a única fonte de
+responsável técnico é quem assinou a aprovação.
 
 ### 5.2 Marca de proveniência
 
@@ -171,10 +192,18 @@ diferença entre "o motor calculou" e "alguém digitou".
 
 | Origem | Marca | Token |
 |---|---|---|
-| Motor de custeio | círculo cheio | `--p-bp` |
-| Catálogo / preço vigente | círculo vazado | `--p-ink-3` |
-| **Ajuste manual** | **losango cheio** | **`--p-hot`** |
-| Importado | quadrado vazado | `--p-bp` |
+| Motor de custeio (`seed`) | círculo cheio | `--p-bp` |
+| Catálogo / template (`template`) | círculo vazado | `--p-ink-3` |
+| **Ajuste manual** (`manual`) | **losango cheio** | **`--p-hot`** |
+
+São **três**, não quatro. Eu havia especificado uma quarta marca (*importado*), mas
+`ItemOperacao.ORIGEM` só admite `seed | template | manual` — ela não tinha fonte e foi
+removida do CSS em vez de ficar prometendo o que a tela não entrega.
+
+**Regra de origem no nível do item:** `origem` vive na operação (N2) e a linha da EAP é o
+item (N1). Prevalece a mais forte — **manual > template > seed**. Basta *uma* operação
+manual para o item inteiro ser manual: exigir que todas fossem esconderia justamente o
+caso do vazamento de margem. Item só com matéria-prima conta como catálogo.
 
 O dado já existe: **`ItemOperacao.origem`**. Entrou no payload do snapshot no M1 e nunca
 chegou à tela. Linha com origem manual ganha fundo `--p-hot-soft` e faixa de 3 px na primeira
