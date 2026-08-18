@@ -83,18 +83,40 @@ def test_env_prod_backup_vars_have_same_default():
     )
 
 
-def test_backup_script_uses_compose_exec_not_hardcoded_container():
-    """Script must use 'docker compose exec' (service name) not a hardcoded container name."""
+def test_backup_script_supports_both_compose_and_standalone_container():
+    """Script must support BOTH docker-compose and a standalone ("avulso") container.
+
+    Production does NOT run via docker-compose (see docs/HANDOFF_MIGRACAO.md §4 and
+    docs/INFRASTRUCTURE.md): it is a standalone container named ``sq-prod-db``, so a
+    script that only knows ``docker compose exec`` never runs a real backup there
+    (this was exactly the bug in PR #112's open item). The script must therefore be
+    able to target a named container directly (configurable via DB_CONTAINER, default
+    sq-prod-db) *and* keep the docker-compose path as a fallback/alternative for
+    environments that do use compose.
+    """
     text = BACKUP_SCRIPT.read_text()
-    assert "docker exec" not in text, (
-        "backup_db.sh must not use 'docker exec' with a hardcoded container name; "
-        "use 'docker compose exec' so COMPOSE_PROJECT_NAME changes don't break it silently"
-    )
     assert "docker compose" in text or "docker-compose" in text, (
-        "backup_db.sh must use 'docker compose exec' to reference the db service by name"
+        "backup_db.sh must still support 'docker compose exec' for compose-based envs"
+    )
+    assert "DB_CONTAINER" in text, (
+        "backup_db.sh must support targeting a standalone container by name via "
+        "DB_CONTAINER, since production is not docker-compose"
+    )
+    assert "sq-prod-db" in text, (
+        "backup_db.sh must default DB_CONTAINER to 'sq-prod-db', the real production "
+        "container name"
     )
     assert "exec" in text, (
-        "backup_db.sh must use 'docker compose exec' to reference the db service by name"
+        "backup_db.sh must use '<docker> exec' (compose or standalone) to run the dump"
+    )
+
+
+def test_backup_script_mode_detection_is_overridable():
+    """BACKUP_MODE must let an operator force compose|container instead of auto-detect."""
+    text = BACKUP_SCRIPT.read_text()
+    assert "BACKUP_MODE" in text, (
+        "backup_db.sh must expose BACKUP_MODE (auto|container|compose) so an operator "
+        "can override auto-detection when it guesses wrong"
     )
 
 
@@ -201,17 +223,228 @@ def test_sourced_env_without_allexport_does_not_reach_child():
     os.unlink(child_script)
 
 
+# ---------------------------------------------------------------------------
+# Content validation: exit code 0 is NOT proof of a good backup. The known
+# gotcha is pg_dumpall pointed at the wrong port producing a ~20 byte file
+# with exit code 0 (docs/HANDOFF_MIGRACAO.md §4, memory deploy-prod-gotchas).
+# ---------------------------------------------------------------------------
+
+def test_backup_script_validates_dump_content_not_just_exit_code():
+    """Script must contain real content checks (size/line count), not just rely on $?."""
+    text = BACKUP_SCRIPT.read_text()
+    assert "wc -c" in text or "wc -l" in text, (
+        "backup_db.sh must measure the decompressed dump size/line count — exit code "
+        "alone is exactly what makes the wrong-port gotcha look like a good backup"
+    )
+    assert "BACKUP_MIN_BYTES" in text or "BACKUP_MIN_LINES" in text, (
+        "backup_db.sh must reject a dump that is smaller than a configurable minimum"
+    )
+
+
+def _make_fake_docker(
+    bin_dir: Path, *, inspect_ok: bool, payload: str, exec_exit: int = 0, info_ok: bool = True
+) -> None:
+    """Fake 'docker' binary: 'info' -> info_ok, 'inspect' -> inspect_ok, 'exec'/'compose' -> payload.
+
+    'info' must be handled explicitly because backup_db.sh probes docker usability
+    with it BEFORE asking whether the container exists (see
+    test_backup_script_fails_fast_when_docker_is_inaccessible for why that order
+    matters: 'inspect' failing for permission reasons is not the same as 'inspect'
+    failing because the container is simply absent).
+    """
+    fake_docker = bin_dir / "docker"
+    fake_docker.write_text(
+        "#!/usr/bin/env bash\n"
+        f"if [ \"$1\" = \"info\" ]; then exit {0 if info_ok else 1}; fi\n"
+        f"if [ \"$1\" = \"inspect\" ]; then exit {0 if inspect_ok else 1}; fi\n"
+        "if [ \"$1\" = \"exec\" ] || [ \"$1\" = \"compose\" ]; then\n"
+        f"  printf %s {shlex_quote(payload)}\n"
+        f"  exit {exec_exit}\n"
+        "fi\n"
+        "exit 1\n"
+    )
+    fake_docker.chmod(0o755)
+
+
+def _make_inaccessible_docker(bin_dir: Path) -> None:
+    """Fake 'docker' binary that fails on EVERY subcommand, like a permission-denied
+    or unreachable daemon would (the case the deploy VPS actually hits: the deploy
+    user is not in the 'docker' group, so unqualified 'docker ...' fails outright)."""
+    fake_docker = bin_dir / "docker"
+    fake_docker.write_text(
+        "#!/usr/bin/env bash\n"
+        "echo 'permission denied while trying to connect to the Docker daemon socket' >&2\n"
+        "exit 1\n"
+    )
+    fake_docker.chmod(0o755)
+
+
+def shlex_quote(s: str) -> str:
+    import shlex
+
+    return shlex.quote(s)
+
+
+def _run_backup_db(bin_dir: Path, backup_dir: Path, extra_env: dict) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    env["PATH"] = str(bin_dir) + ":" + env.get("PATH", "")
+    env["BACKUP_DIR"] = str(backup_dir)
+    env.setdefault("POSTGRES_USER", "sq")
+    env.setdefault("POSTGRES_DB", "smartquotation")
+    env.update(extra_env)
+    return subprocess.run(
+        ["bash", str(BACKUP_SCRIPT)], env=env, capture_output=True, text=True
+    )
+
+
+def test_backup_script_rejects_the_wrong_port_gotcha_empty_dump():
+    """Reproduce the exact known gotcha: dump 'succeeds' (exit 0) but is ~20 bytes.
+
+    This is the scenario documented in docs/HANDOFF_MIGRACAO.md §4 and the
+    deploy-prod-gotchas memory: pg_dumpall against the wrong port fails silently,
+    the pipe to gzip still exits 0, and a naive script would happily rename the
+    near-empty file into a "successful" backup. The fixed script must reject it.
+    """
+    with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
+        # ~20 bytes of "output", exit code 0 — exactly the gotcha.
+        _make_fake_docker(Path(bin_dir), inspect_ok=True, payload="x" * 20, exec_exit=0)
+
+        result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
+
+        assert result.returncode != 0, (
+            "backup_db.sh must exit non-zero when the dump is suspiciously small, "
+            f"even though the underlying command exited 0. stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+        leftover = list(Path(backup_dir).glob("*.sql.gz"))
+        assert not leftover, (
+            f"backup_db.sh must NOT leave a .sql.gz behind for a rejected (too-small) "
+            f"dump. Found: {[str(f) for f in leftover]}"
+        )
+        tmp_leftover = list(Path(backup_dir).glob("*.tmp"))
+        assert not tmp_leftover, "backup_db.sh must clean up the temp file when validation fails"
+
+
+def test_backup_script_accepts_a_realistic_dump():
+    """A dump that is large enough and mentions the expected tenant must be accepted."""
+    with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
+        payload = "\n".join(
+            f"-- dump line {i} schema engematex data" for i in range(200)
+        )
+        _make_fake_docker(Path(bin_dir), inspect_ok=True, payload=payload, exec_exit=0)
+
+        result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
+
+        assert result.returncode == 0, (
+            f"backup_db.sh must accept a realistic dump. stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+        final_files = list(Path(backup_dir).glob("*.sql.gz"))
+        assert final_files, "backup_db.sh must produce a .sql.gz file for a valid dump"
+
+
+def test_backup_script_container_mode_used_when_container_exists():
+    """When DB_CONTAINER exists (docker inspect succeeds), auto mode must use 'docker exec'."""
+    with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
+        payload = "\n".join(f"-- container dump {i} engematex" for i in range(200))
+        _make_fake_docker(Path(bin_dir), inspect_ok=True, payload=payload, exec_exit=0)
+
+        result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
+
+        assert result.returncode == 0, result.stderr
+        final_files = list(Path(backup_dir).glob("*.sql.gz"))
+        assert final_files, "backup_db.sh must produce a .sql.gz using the container path"
+
+
+def test_backup_script_falls_back_to_compose_when_container_absent():
+    """When DB_CONTAINER does not exist, auto mode must fall back to docker compose."""
+    with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
+        payload = "\n".join(f"-- compose dump {i} engematex" for i in range(200))
+        _make_fake_docker(Path(bin_dir), inspect_ok=False, payload=payload, exec_exit=0)
+
+        result = _run_backup_db(Path(bin_dir), Path(backup_dir), {})
+
+        assert result.returncode == 0, result.stderr
+        final_files = list(Path(backup_dir).glob("*.sql.gz"))
+        assert final_files, "backup_db.sh must fall back to the compose path and still succeed"
+
+
+def test_backup_script_fails_fast_when_docker_is_inaccessible():
+    """Docker inaccessible (permission/daemon) must NOT be mistaken for 'container absent'.
+
+    This is the case that matters on the real deploy VPS: the deploy user is not in
+    the 'docker' group, so 'docker inspect sq-prod-db' fails with a permission error
+    — not because the container is missing. If the script treated that failure as
+    'container absent' it would silently fall back to the compose path, which fails
+    for the exact same underlying reason (docker inaccessible), but with a confusing
+    error that talks about compose instead of the real problem (docker access). The
+    script must probe docker usability first and fail immediately with a specific,
+    actionable message instead of degrading to compose.
+    """
+    with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
+        _make_inaccessible_docker(Path(bin_dir))
+
+        result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
+
+        assert result.returncode != 0, (
+            "backup_db.sh must exit non-zero when docker itself is inaccessible. "
+            f"stdout={result.stdout!r} stderr={result.stderr!r}"
+        )
+        stderr_lower = result.stderr.lower()
+        assert "docker" in stderr_lower, (
+            f"error message must mention docker/permission, not just fail silently. "
+            f"stderr={result.stderr!r}"
+        )
+        assert "permiss" in stderr_lower or "inacess" in stderr_lower or "grupo" in stderr_lower, (
+            f"error message must point at the real cause (docker access), not compose. "
+            f"stderr={result.stderr!r}"
+        )
+        assert "compose" not in result.stderr.lower(), (
+            "backup_db.sh must NOT talk about docker compose when the real problem is "
+            f"docker being inaccessible — that would mislead the operator at 3am. "
+            f"stderr={result.stderr!r}"
+        )
+        leftover = list(Path(backup_dir).glob("*.sql.gz")) + list(Path(backup_dir).glob("*.tmp"))
+        assert not leftover, (
+            f"backup_db.sh must not leave any file behind when it fails fast. "
+            f"Found: {[str(f) for f in leftover]}"
+        )
+
+
+def test_backup_script_announces_auto_detected_mode_on_stderr():
+    """Auto mode must log WHICH mode it picked and why — silent auto-detection is
+    hard to debug from a cron log at 3am."""
+    with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
+        payload = "\n".join(f"-- dump line {i} engematex" for i in range(200))
+        _make_fake_docker(Path(bin_dir), inspect_ok=True, payload=payload, exec_exit=0)
+
+        result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
+
+        assert result.returncode == 0, result.stderr
+        assert "modo=container" in result.stderr or "modo = container" in result.stderr, (
+            f"backup_db.sh must announce the auto-detected mode on stderr. stderr={result.stderr!r}"
+        )
+
+
 if __name__ == "__main__":
     tests = [
         test_backup_script_exists,
         test_backup_script_is_executable,
         test_backup_script_contains_pg_dump,
         test_env_prod_example_has_backup_dir,
-        test_backup_script_uses_compose_exec_not_hardcoded_container,
+        test_backup_script_supports_both_compose_and_standalone_container,
+        test_backup_script_mode_detection_is_overridable,
         test_backup_script_has_set_u,
         test_cron_entry_sources_env_prod,
         test_infrastructure_doc_sources_env_with_allexport,
         test_sourced_env_without_allexport_does_not_reach_child,
+        test_backup_script_validates_dump_content_not_just_exit_code,
+        test_backup_script_rejects_the_wrong_port_gotcha_empty_dump,
+        test_backup_script_accepts_a_realistic_dump,
+        test_backup_script_container_mode_used_when_container_exists,
+        test_backup_script_falls_back_to_compose_when_container_absent,
+        test_backup_script_fails_fast_when_docker_is_inaccessible,
+        test_backup_script_announces_auto_detected_mode_on_stderr,
     ]
     failed = []
     for t in tests:

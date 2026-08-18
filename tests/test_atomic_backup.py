@@ -108,11 +108,21 @@ def _make_failing_docker(tmpdir: Path) -> str:
 
 
 def _make_succeeding_docker(tmpdir: Path) -> str:
-    """Create a fake 'docker' binary that writes a minimal valid payload and exits 0."""
+    """Create a fake 'docker' binary that writes a realistic-sized payload and exits 0.
+
+    The payload must be large enough (and mention 'engematex') to pass backup_db.sh's
+    content validation (BACKUP_MIN_BYTES/BACKUP_MIN_LINES/BACKUP_EXPECT_SCHEMA) added
+    to close the "exit 0 but ~20 byte dump" gotcha — see tests/test_backup_script.py
+    for the tests that exercise that validation directly. This fixture is only about
+    proving the atomic-write pattern (temp file + mv / trap), so it uses a payload
+    that clears validation without being the focus of these assertions.
+    """
     fake_docker = tmpdir / "docker"
     fake_docker.write_text(
         "#!/usr/bin/env bash\n"
-        "printf 'OK'\n"
+        "for i in $(seq 1 200); do\n"
+        "  echo \"-- dump line $i schema engematex data\"\n"
+        "done\n"
         "exit 0\n"
     )
     fake_docker.chmod(0o755)

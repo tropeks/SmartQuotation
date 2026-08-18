@@ -194,10 +194,16 @@ do Wellington**. Discussão registrada na sessão de 2026-07-31; o essencial:
   dependência por hash de propósito).
 - Carimbo de cotação de **feixe** fica ralo: 5 de 9 células com `—`, porque metade dos campos
   só existe em permutador completo. Decisão de produto pendente.
-- `audit.approvals._technical_satisfied` é privada e virou dependência da view de detalhe —
-  há `TODO` para promovê-la a API pública de `audit`.
-- `scripts/backup_db.sh` **não funciona em produção**: assume `docker compose`, mas a produção
-  roda em container avulso.
+- ~~`audit.approvals._technical_satisfied` é privada e virou dependência da view de detalhe —
+  há `TODO` para promovê-la a API pública de `audit`.~~ **RESOLVIDO**: promovida a
+  `audit.approvals.technical_approval_satisfied` (API pública, com docstring); call site em
+  `apps.quotations.views._selo` e o `TODO` atualizados; coberta por
+  `apps.audit.tests_approvals.TechnicalApprovalSatisfiedTests`.
+- ~~`scripts/backup_db.sh` **não funciona em produção**: assume `docker compose`, mas a
+  produção roda em container avulso.~~ **RESOLVIDO**: o script agora detecta o modo (container
+  avulso `sq-prod-db`/porta 5436 vs. docker-compose) e valida o dump **por conteúdo**
+  (tamanho/linhas/schema esperado), não só por exit code — ver `docs/INFRASTRUCTURE.md` §6 e
+  `tests/test_backup_script.py`.
 
 ---
 

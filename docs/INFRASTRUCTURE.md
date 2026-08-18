@@ -404,8 +404,14 @@ jobs:
 
 ### Backup rápido via scripts/backup_db.sh
 
-O script `scripts/backup_db.sh` executa um dump do PostgreSQL usando `docker exec` e comprime
-o resultado com gzip. Ele pode ser chamado diretamente ou agendado via cron do host.
+O script `scripts/backup_db.sh` executa um dump do PostgreSQL e comprime o resultado com gzip.
+Ele **detecta o modo de execução automaticamente**: a produção real hoje roda como container
+avulso (`sq-prod-db`, sem docker-compose, Postgres na porta **5436** — não 5432), então o script
+tenta primeiro `docker exec` num container com esse nome (`pg_dumpall`, cobre todos os schemas
+de tenant); se o container não existir, cai para `docker compose exec` (`pg_dump` de um único
+banco) para ambientes que de fato usam compose. Force um modo específico com `BACKUP_MODE=
+container` ou `BACKUP_MODE=compose` se a detecção errar. Ele pode ser chamado diretamente ou
+agendado via cron do host.
 
 ```bash
 # Uso manual
@@ -417,6 +423,17 @@ set -a && source .env.prod && set +a && ./scripts/backup_db.sh
 > **Atenção:** use `set -a` antes de `source` para que as variáveis do `.env.prod` (sem `export`)
 > sejam exportadas e herdadas pelo processo filho (`backup_db.sh`). Sem isso, com `set -u` no
 > script, `POSTGRES_USER`/`POSTGRES_DB` ficam "unbound" e o script aborta.
+
+> **Docker exige `sudo` nesta VPS** (o usuário de deploy não está no grupo `docker`). Se o cron
+> falhar por permissão, defina `DOCKER="sudo docker"` no `.env.prod` (sourced com `set -a` acima).
+
+> **Validação por conteúdo, não por exit code.** Gotcha conhecido: `pg_dumpall` apontado para a
+> porta errada falha em silêncio e produz um `.sql.gz` de ~20 bytes **com exit code 0** — um
+> backup que não roda é pior que nenhum, porque engana quem confia nele. O script mede o tamanho
+> e o número de linhas do dump descomprimido (`BACKUP_MIN_BYTES`, default 1024; `BACKUP_MIN_LINES`,
+> default 20) e confere a presença do tenant esperado (`BACKUP_EXPECT_SCHEMA`, default `engematex`)
+> antes de renomear o arquivo temporário para o nome final. Se a validação falhar, o script sai
+> com código != 0 e não deixa nenhum `.sql.gz` para trás.
 
 **Agendamento via cron do host** (crontab do usuário de deploy):
 
