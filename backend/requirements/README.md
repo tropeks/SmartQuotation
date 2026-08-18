@@ -56,6 +56,27 @@ vem na imagem, então o requisito está satisfeito e o `--require-hashes` instal
 Commite o `.txt` e o `.lock` juntos. `tests/test_requirements_lock.py` falha o CI se
 um `.lock` sumir, perder os hashes, ou divergir das versões pinadas no `.txt`.
 
+## O venv local também tem que ser 3.12
+
+O CI roda **Python 3.12** (`python-version: "3.12"` nos cinco jobs de `.github/workflows/ci.yml`)
+e a produção pina `python:3.12-slim` por hash no `backend/Dockerfile`. O venv de
+desenvolvimento tem que casar com os dois.
+
+A armadilha: `python3 -m venv .venv` usa o `python3` **do sistema**, que nesta máquina é
+3.13. Quem recria o venv com a receita genérica monta um ambiente local que não é nem o do
+CI nem o da produção — e passa a validar contra um interpretador que ninguém usa, sem
+nenhum aviso. Já aconteceu: em 2026-08-18 o venv local estava em 3.13.5 enquanto CI e
+imagem rodavam 3.12.
+
+Recrie sempre nomeando a minor:
+
+```bash
+cd backend && rm -rf .venv && python3.12 -m venv .venv \
+  && . .venv/bin/activate && pip install -r requirements/development.txt
+```
+
+Confira com `backend/.venv/bin/python -V` antes de confiar em qualquer verde local.
+
 ## Atualizar dependências
 
 Para pegar versões novas dentro dos ranges já declarados, regenere os locks
