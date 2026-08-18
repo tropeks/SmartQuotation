@@ -54,10 +54,6 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
 **Regra de ouro:** `pricing_engine` é lib pura. O único ponto que importa Django↔motor é
 `apps/quotations/adapter.py` (`recompute()` monta FeixeInputs, chama `quote_feixe`, persiste a EAP).
 
-## Stack
-Python 3.12 · Django 5.2 · django-tenants · DRF · HTMX + Alpine + Tailwind tokens G ·
-PostgreSQL 16 · Redis · Celery · WeasyPrint/docxtpl (proposta) · django-encrypted-model-fields.
-
 ## Dev (Docker)
 ```bash
 cp backend/.env.example backend/.env       # ajuste se necessário

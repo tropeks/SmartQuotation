@@ -1,0 +1,45 @@
+{
+  "base_url": "http://engematex.localhost:42073",
+  "pages": [
+    {
+      "name": "01_login",
+      "url": "http://engematex.localhost:42073/login/",
+      "status": 200
+    },
+    {
+      "name": "02_dashboard",
+      "url": "http://engematex.localhost:42073/",
+      "status": 200
+    },
+    {
+      "name": "03_cotacoes_lista",
+      "url": "http://engematex.localhost:42073/cotacoes/",
+      "status": 200
+    },
+    {
+      "name": "04_cotacao_detalhe_resumo",
+      "url": "http://engematex.localhost:42073/cotacoes/2/",
+      "status": 200
+    },
+    {
+      "name": "05_cotacao_detalhe_eap",
+      "url": "http://engematex.localhost:42073/cotacoes/2/",
+      "status": 200
+    },
+    {
+      "name": "06_permutador_data_sheet",
+      "url": "http://engematex.localhost:42073/tema/permutador/",
+      "status": 200
+    },
+    {
+      "name": "07_ofs_lista",
+      "url": "http://engematex.localhost:42073/ofs/",
+      "status": 200
+    },
+    {
+      "name": "08_of_detalhe",
+      "url": "http://engematex.localhost:42073/ofs/2/",
+      "status": 200
+    }
+  ]
+}
