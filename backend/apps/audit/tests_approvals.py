@@ -16,7 +16,7 @@ from apps.access.workflow_templates import seed_workflow
 from apps.accounts.models import UserProfile
 from apps.audit import approvals
 from apps.audit.models import ApprovalCase, ApprovalTask
-from apps.audit.services import approve_quotation
+from apps.audit.services import approve_quotation, revoke_approval
 from apps.production import services as prod
 from apps.quotations.models import Customer
 from apps.quotations.services import create_feixe_quotation
@@ -146,6 +146,52 @@ class SoDTests(ApprovalRuntimeBase):
         task.refresh_from_db()
         self.assertEqual(task.status, ApprovalTask.STATUS_APPROVED)
         self.assertFalse(task.metadata.get("self_approved"))
+
+
+class TechnicalApprovalSatisfiedTests(ApprovalRuntimeBase):
+    """API pública `approvals.technical_approval_satisfied` (ex-`_technical_satisfied`).
+
+    Consumida por `open_case`/`current_task` (gate do estágio técnico built-in) e por
+    `apps.quotations.views._selo` (estado do selo de confiança da tela de detalhe).
+    """
+
+    def test_sem_aprovacao_nenhuma_e_nao_satisfeito(self):
+        self.assertFalse(approvals.technical_approval_satisfied(self.quotation))
+
+    def test_aprovacao_cobrindo_snapshot_vigente_e_satisfeito(self):
+        approve_quotation(self.quotation, self.eng)
+        self.assertTrue(approvals.technical_approval_satisfied(self.quotation))
+
+    def test_aprovacao_divergente_apos_novo_snapshot_nao_e_satisfeito(self):
+        from apps.quotations.models import CalculationSnapshot
+
+        approve_quotation(self.quotation, self.eng)
+        self.assertTrue(approvals.technical_approval_satisfied(self.quotation))
+        CalculationSnapshot.objects.create(
+            quotation=self.quotation, snapshot_hash="HASH-EDITADO",
+            inputs={}, outputs={}, engine_version="x", standard_refs=[],
+        )
+        self.assertFalse(approvals.technical_approval_satisfied(self.quotation))
+
+    def test_aprovacao_revogada_nao_e_satisfeito(self):
+        approval = approve_quotation(self.quotation, self.eng)
+        self.assertTrue(approvals.technical_approval_satisfied(self.quotation))
+        revoke_approval(approval, self.eng)
+        self.assertFalse(approvals.technical_approval_satisfied(self.quotation))
+
+    def test_usado_como_gate_do_estagio_tecnico_no_current_task(self):
+        """Confirma que open_case/current_task consultam a MESMA função pública."""
+        case = approvals.open_case(self.quotation, self.eng)
+        task = self._commercial_task(case)
+        # sem aprovação técnica -> estágio anterior (built-in) não satisfeito -> bloqueado
+        with self.assertRaises(ValidationError):
+            approvals.approve_task(self.quotation, task.pk, self.gestor)
+        approve_quotation(self.quotation, self.eng)
+        self.assertTrue(approvals.technical_approval_satisfied(self.quotation))
+        # agora o estágio comercial pode ser decidido
+        approvals.approve_task(self.quotation, task.pk, self.gestor)
+        task.refresh_from_db()
+        self.assertEqual(task.status, ApprovalTask.STATUS_APPROVED)
 
 
 class InvalidationTests(ApprovalRuntimeBase):

@@ -140,7 +140,17 @@ def _other_qualified_exists(task, exclude_profile):
     return any(is_qualified(p, task) for p in others)
 
 
-def _technical_satisfied(quotation):
+def technical_approval_satisfied(quotation):
+    """True se a cotação tem uma TechnicalApproval ATIVA (não revogada) cobrindo o
+    CalculationSnapshot MAIS RECENTE dela — ou seja, se a assinatura técnica (CREA)
+    ainda cobre o cálculo vigente (recalcular/editar a cotação gera snapshot novo e
+    "descola" a assinatura antiga, exigindo nova aprovação).
+
+    API pública do app `audit`: é a MESMA regra que `open_case`/`current_task` usam
+    para satisfazer o estágio técnico built-in do fluxo de aprovação, e que
+    `apps.quotations.views._selo` consulta para decidir o estado do selo de
+    confiança (ok/divergente/sem-aprovação) exibido na tela de detalhe da cotação.
+    """
     snap = latest_snapshot_for(quotation)
     if snap is None:
         return False
@@ -152,7 +162,7 @@ def _technical_satisfied(quotation):
 def _stage_satisfied_snapshot(quotation, case, stage_dict):
     """Satisfação de um estágio DO SNAPSHOT do case (para checar sequência)."""
     if stage_dict.get("is_builtin"):
-        return _technical_satisfied(quotation)
+        return technical_approval_satisfied(quotation)
     return case.tasks.filter(
         stage_key=stage_dict["key"], status=ApprovalTask.STATUS_APPROVED
     ).exists()

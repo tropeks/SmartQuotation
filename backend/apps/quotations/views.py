@@ -171,11 +171,12 @@ def _carimbo(quotation, approval, snapshot) -> dict:
 #   sem-aprovacao .. nenhuma assinatura ativa
 #
 # A comparação de hash NÃO é reimplementada aqui: quem decide é
-# `apps.audit.approvals._technical_satisfied` — a MESMA função que o gate de
-# conversão consulta (production.services._technical_approval_satisfied usa a
-# regra idêntica). Este módulo só acrescenta "existe assinatura ativa?", que é
-# pergunta de apresentação (separar "divergente" de "sem aprovação"), não regra
-# de negócio. TODO: promover `_technical_satisfied` a API pública do app audit.
+# `apps.audit.approvals.technical_approval_satisfied` (API pública do app audit) —
+# a MESMA função que o gate de conversão consulta (production.services usa uma
+# checagem equivalente, mantida separada de propósito para preservar intacto o
+# comportamento histórico do estágio built-in — ver comentário lá). Este módulo só
+# acrescenta "existe assinatura ativa?", que é pergunta de apresentação (separar
+# "divergente" de "sem aprovação"), não regra de negócio.
 # ─────────────────────────────────────────────────────────────────────────────
 
 _SELO_TEXTO = {
@@ -192,7 +193,7 @@ def _selo(quotation, approval, snapshot) -> dict:
 
     if approval is None:
         estado = "sem-aprovacao"
-    elif _approvals._technical_satisfied(quotation):
+    elif _approvals.technical_approval_satisfied(quotation):
         estado = "ok"
     else:
         estado = "divergente"
