@@ -3,10 +3,15 @@
 # silencioso e o caminho de PDF não era exercitado por ninguém. Precisa das libs de pango
 # (ver o passo "Instalar libs de sistema do WeasyPrint" em .github/workflows/ci.yml).
 Django==5.2.16
+# sqlparse/cryptography: pins de piso de segurança, ver comentário em base.txt (mesmas
+# CVEs, mesma justificativa — ambas transitivas, sem elas um pip-compile sem --upgrade
+# não subiria sozinho).
+sqlparse>=0.6.0
 djangorestframework==3.16
 django-tenants>=3.5,<4.0
 django-environ==0.12
 django-encrypted-model-fields==0.6.5
+cryptography>=50.0.0
 django-filter==24.3
 drf-spectacular==0.30.0
 psycopg2-binary==2.9.12

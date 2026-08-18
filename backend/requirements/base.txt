@@ -1,9 +1,21 @@
 # SmartQuotation — base requirements (Django 5.2 + django-tenants)
 Django==5.2.16
+# sqlparse é transitiva de Django (não a chamamos direto), mas é quem faz parsing de SQL
+# multi-tenant aqui — pin de piso de segurança, não frouxidão. 0.5.5 tinha CVE-2026-71491,
+# CVE-2026-59894, CVE-2026-59893 e CVE-2026-54284 (pip-audit, 2026-08-18); Django só exige
+# sqlparse>=0.3.1, então sem este piso um `pip-compile` sem --upgrade não subiria sozinho.
+# Pode sair quando o floor do próprio Django subir para >=0.6.0.
+sqlparse>=0.6.0
 djangorestframework==3.16
 django-tenants>=3.5,<4.0
 django-environ==0.12
 django-encrypted-model-fields==0.6.5
+# cryptography é transitiva de django-encrypted-model-fields — sustenta o cifrado de
+# MaterialPrice. Pin de piso de segurança: 49.0.0 tinha PYSEC-2026-3552 (pip-audit,
+# 2026-08-18); django-encrypted-model-fields só exige cryptography>=3.4, então sem este
+# piso um `pip-compile` sem --upgrade não subiria sozinho. Pode sair quando o floor do
+# próprio django-encrypted-model-fields subir para >=50.0.0.
+cryptography>=50.0.0
 django-filter==24.3
 drf-spectacular==0.30.0
 psycopg2-binary==2.9.12
