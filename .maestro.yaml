@@ -1,0 +1,15 @@
+# Perfil Maestro do SmartQuotation.
+#
+# Stack medida em 2026-08-18 (git ls-files): Python/Django backend,
+# django-tenants e migrations; UI principal não é TypeScript neste checkout.
+# Pricing/quotation é domínio crítico: preservar cálculos, proveniência e isolamento
+# tenant/schema.
+#
+# Formato simples lido pelo hook SessionStart do Maestro: chave em coluna 0 e
+# listas inline.
+version: 1
+project: smartquotation
+languages: [python, sql]
+experts: [dev-junior, dev-pleno, engenheiro, python-pro, postgres-pro, qa, revisor]
+pipeline: default
+notes: "pricing_engine é lib pura; preservar cálculos de cotação, proveniência, tenant/schema e artefatos visuais quando mexer em UI"
