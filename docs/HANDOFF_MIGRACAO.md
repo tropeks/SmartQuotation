@@ -83,6 +83,32 @@ execução é exatamente a receita do incidente de corrupção de catálogo de 2
 O SmartQuotation em produção (`sq-web-proto`, `sq-prod-db`, `sq-prod-redis`) usa **volumes
 nomeados**, não bind mounts em `~/dev` — não é afetado pela migração.
 
+### 2.2b ⚠️ Sessão viva segurando `~/dev/NetForge` (verificado 2026-08-18, 07:0x)
+
+```
+PID 4128486   /home/rcosta00/dev/NetForge/.venv/bin/python manage.py runserver 127.0.0.1:8011
+```
+
+O `cwd` deste processo é **`/home/rcosta00/dev/NetForge`** — ele segura o diretório do host
+diretamente (confirmado por `readlink /proc/<pid>/cwd`, sem cgroup de container). É um servidor
+de dev subido por **outra sessão do Claude Code** (`-home-rcosta00-dev-NetForge`), viva no
+momento desta verificação.
+
+**Não matei o processo de propósito:** é trabalho em voo de outro contexto, e derrubá-lo sem o
+dono saber trocaria um risco por outro. **Encerre aquela sessão antes do move.**
+
+Para reconferir na hora da migração — só o que segura o host aparece:
+
+```bash
+for p in $(pgrep -f "manage.py runserver"); do
+  cg=$(sudo cat /proc/$p/cgroup 2>/dev/null | grep -c docker)
+  [ "$cg" -eq 0 ] && echo "HOST  $p  $(sudo readlink /proc/$p/cwd)"
+done
+```
+
+*(Nota: dois `runserver` na porta 8000 com 27 dias de uptime aparecem no `ps` mas rodam
+**dentro** de container — `cwd=/app` — e não seguram `~/dev`. Ignorar.)*
+
 ### 2.3 Virtualenv com caminhos absolutos
 
 `backend/.venv/bin/*` tem shebangs com o caminho absoluto antigo. Depois do move:
