@@ -122,7 +122,7 @@ case "$sql" in
   *information_schema.schemata*) echo "${FAKE_SCHEMA_PRESENT:-1}" ;;
   *information_schema.tables*)
     t="$(printf '%s' "$sql" | sed -n "s/.*table_name = '\([a-z0-9_]*\)'.*/\1/p")"
-    case " ${FAKE_TABLES:-quotations_quotation materials_materialprice} " in
+    case " ${FAKE_TABLES:-quotations_quotation quotations_quotationitem materials_material materials_materialprice} " in
       *" $t "*) echo 1 ;;
       *) echo 0 ;;
     esac ;;
