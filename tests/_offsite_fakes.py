@@ -14,7 +14,8 @@ docker falso de tests/_ops_fakes.py (scripts bash num bin/ temporário na frente
   bin/rclone   Um "bucket" por seção do rclone.conf em FAKE_BUCKETS/<secao>/<caminho>.
                  hashsum TIPO [--download] ALVO   "<hash>  <nome>"; nada se não existe
                                                   (FAKE_RCLONE_ABSENT_RC=3 simula "directory
-                                                  not found"); FAKE_RCLONE_NO_HASH=1 sem hash
+                                                  not found"); FAKE_RCLONE_NO_HASH=1 sem hash,
+                                                  salvo com --download (baixa e calcula)
                  copyto [--immutable] SRC ALVO    --immutable recusa sobrescrever conteúdo
                                                   diferente; FAKE_RCLONE_CORRUPT=1 grava um byte
                                                   a mais (o hash não confere)
@@ -31,6 +32,7 @@ import gzip
 import hashlib
 import re
 import secrets
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -89,9 +91,9 @@ rnd() { printf '%s%s%s' "$1" "$RANDOM" "$RANDOM" | sha256sum | cut -c1-43; }
 _FAKE_RCLONE = r"""#!/usr/bin/env bash
 printf '%s\n' "$*" >> "${FAKE_RCLONE_LOG:-/dev/null}"
 cmd="${1:-}"; shift || true
-immutable=0; args=()
+immutable=0; download=0; args=()
 for a in "$@"; do
-  case "$a" in --immutable) immutable=1 ;; --*) ;; *) args+=("$a") ;; esac
+  case "$a" in --immutable) immutable=1 ;; --download) download=1 ;; --*) ;; *) args+=("$a") ;; esac
 done
 path_of() { printf '%s/%s/%s' "${FAKE_BUCKETS}" "${1%%:*}" "${1#*:}"; }
 [ -f "${RCLONE_CONFIG:-}" ] || { echo "rclone falso: RCLONE_CONFIG ausente" >&2; exit 1; }
@@ -106,7 +108,9 @@ case "$cmd" in
       echo "ERROR : directory not found" >&2; exit "${FAKE_RCLONE_ABSENT_RC}"
     fi
     h="$("${args[0]}sum" < "$f" | cut -d' ' -f1)"
-    [ "${FAKE_RCLONE_NO_HASH:-0}" = "1" ] && h=""
+    # Sem --download, o hash vem do "provedor" (que pode não guardá-lo); com --download o
+    # rclone baixa e calcula, então sempre há hash.
+    [ "${FAKE_RCLONE_NO_HASH:-0}" = "1" ] && [ "$download" = 0 ] && h=""
     printf '%40s  %s\n' "$h" "$(basename "$f")"
     exit 0 ;;
   copyto)
@@ -219,6 +223,18 @@ class OffsiteCase:
             "OFFSITE_AGE_RECIPIENT_RECOVERY": self.rcpt["recovery"],
         })
 
+    def write_conf(self, text: str):
+        """Troca o rclone.conf (continua 0600)."""
+        conf = Path(self.fk.env["RCLONE_CONFIG"])
+        conf.write_text(text)
+        conf.chmod(0o600)
+
+    def install_failing_mktemp(self):
+        """mktemp que falha com FAKE_MKTEMP_FAIL=1 (prova que a falha propaga sob `|| exit 1`)."""
+        real = shutil.which("mktemp")
+        _write_exec(self.fk.bin / "mktemp",
+                    f'#!/usr/bin/env bash\n[ "${{FAKE_MKTEMP_FAIL:-0}}" = 1 ] && exit 1\nexec {real} "$@"\n')
+
     def install_yubikey_plugin(self):
         """age-plugin-yubikey falso no PATH (o age falso só confere que ele existe)."""
         _write_exec(self.fk.bin / "age-plugin-yubikey", "#!/usr/bin/env bash\nexit 0\n")
@@ -319,4 +335,5 @@ def assert_no_leak(c: OffsiteCase, runs, *keys):
             assert c.key_bucket in p.parents, f"objeto da chave fora do OFFSITE_KEY_REMOTE: {p}"
 
 
+KEY_OBJECT_RE = re.compile(r"field_encryption_key\.([0-9a-f]{16})\.\d{8}T\d{6}\.\d{9}Z\.age")
 DUMP_OBJECT_RE = re.compile(r"(sq_\d{8}_\d{6}\.sql\.gz|media_\d{8}_\d{6}\.tar\.gz)\.age")

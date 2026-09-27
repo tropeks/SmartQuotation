@@ -146,9 +146,11 @@ def test_cron_entry_sources_env_prod():
     lines = text.splitlines()
     cron_lines = [l for l in lines if "backup_db.sh" in l and ("* * *" in l or "cron" in l.lower())]
     # Find the literal cron schedule line (starts with digits or 0-59)
-    schedule_lines = [l for l in lines if "backup_db.sh" in l and l.strip().startswith("0 ")]
+    # Desde a 003 o cron chama o runner backup_run.sh, que roda o backup_db.sh (e o resto).
+    schedule_lines = [l for l in lines if ("backup_db.sh" in l or "backup_run.sh" in l)
+                      and l.strip().startswith("0 ")]
     assert schedule_lines, (
-        "INFRASTRUCTURE.md must contain a cron schedule line with 'backup_db.sh'"
+        "INFRASTRUCTURE.md must contain a cron schedule line with 'backup_db.sh' or 'backup_run.sh'"
     )
     for line in schedule_lines:
         # Desde a ordem 002 o cron carrega o env file DEDICADO de backup (sem segredos da
@@ -462,7 +464,10 @@ if __name__ == "__main__":
     from tests.test_offsite_key_push import TESTS as OFFSITE_KEY
     from tests.test_offsite_push import TESTS as OFFSITE
     from tests.test_offsite_yubikey import TESTS as OFFSITE_YUBIKEY
+    from tests.test_offsite_separation import TESTS as OFFSITE_SEPARATION
+    from tests.test_backup_run import TESTS as RUNNER
     tests += ATOMIC + HARDENING + KEY + RESTORE + UNITS + OFFSITE + OFFSITE_KEY + OFFSITE_YUBIKEY
+    tests += OFFSITE_SEPARATION + RUNNER
     failed = []
     for t in tests:
         try:

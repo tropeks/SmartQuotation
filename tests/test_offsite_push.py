@@ -6,8 +6,10 @@ runbook na §6 do INFRASTRUCTURE.
 age e rclone FALSOS (tests/_offsite_fakes.py). Dump, mídia e chave SINTÉTICOS.
 """
 import hashlib
+import os
 import re
 import stat
+import time
 import subprocess
 import sys
 from pathlib import Path
@@ -16,7 +18,7 @@ from tests._offsite_fakes import (
     DUMP, DUMP_REMOTE, MEDIA, OffsiteCase, assert_no_leak, assert_no_rclone_violation,
     objects, split_age, status,
 )
-from tests._ops_fakes import ROOT, run_tests
+from tests._ops_fakes import ROOT, run_tests, write_gz
 
 PRIVATE = "AGE-SECRET-KEY-1" + "Q" * 58
 
@@ -32,11 +34,12 @@ def test_success_pushes_newest_dump_and_media_to_two_recipients_and_records_stat
         r = c.push()
         assert r.returncode == 0, r.stderr
         objs = objects(c.dump_bucket)
-        assert sorted(p.name for p in objs) == sorted([f"{DUMP}.age", f"{MEDIA}.age"]), objs
+        local = sorted(p.name + ".age" for p in c.bdir.glob("sq_*.sql.gz")) + [f"{MEDIA}.age"]
+        assert sorted(p.name for p in objs) == sorted(local), objs  # backfill: todos os locais
         for p in objs:
             _assert_is_two_recipient_age_of(p, c.bdir / p.name[:-4])
         calls = c.age_calls()
-        assert len(calls) == 2, calls
+        assert len(calls) == len(local), calls
         assert all(sorted(x["recipients"]) == sorted(c.rcpt.values()) for x in calls), calls
         st_path = c.bdir / "offsite_last_success"
         assert stat.S_IMODE(st_path.stat().st_mode) == 0o600
@@ -47,6 +50,7 @@ def test_success_pushes_newest_dump_and_media_to_two_recipients_and_records_stat
         assert st["dump_hash"] == "sha1:" + hashlib.sha1(dump_obj.read_bytes()).hexdigest(), st
         assert st["dump_bytes"] == str(dump_obj.stat().st_size), st
         assert st["media"] == f"{MEDIA}.age" and st["media_hash"].startswith("sha1:"), st
+        assert st["backfill"] == "1", st  # o dump de 26/09
         assert stat.S_IMODE((c.bdir / "offsite_manifest").stat().st_mode) == 0o600
         leftovers = list(c.bdir.glob("*.tmp*")) + list(c.bdir.glob(".offsite*"))
         assert not leftovers, leftovers
@@ -74,7 +78,7 @@ def test_absent_object_reported_as_directory_not_found_is_uploaded():
     with OffsiteCase() as c:
         r = c.push({"FAKE_RCLONE_ABSENT_RC": "3"})
         assert r.returncode == 0, r.stderr
-        assert len(c.copytos()) == 2
+        assert len(c.copytos()) == 3
 
 
 def test_foreign_remote_object_is_never_overwritten():
@@ -85,7 +89,8 @@ def test_foreign_remote_object_is_never_overwritten():
         r = c.push()
         assert r.returncode != 0 and "nunca é sobrescrito" in r.stderr, r.stderr
         assert target.read_bytes() == b"objeto de outro host"
-        assert not c.copytos() and not (c.bdir / "offsite_last_success").exists()
+        assert not [x for x in c.copytos() if DUMP in x], c.copytos()
+        assert not (c.bdir / "offsite_last_success").exists()
         assert_no_rclone_violation(c)
 
 
@@ -141,6 +146,12 @@ def test_missing_single_private_or_fictitious_recipient_is_refused():
 
 def test_rclone_config_readable_by_others_or_connection_string_is_refused():
     _refused_before_any_tool({"OFFSITE_REMOTE": ":b2,account=ID,key=SEGREDO:bucket"}, "inválido")
+    with OffsiteCase() as c:  # a credencial da string nunca vai para o journal
+        for bad in (":b2,account=ID,key=SEGREDO:bucket", "sq-offsite:bucket:SEGREDO"):
+            r = c.push({"OFFSITE_REMOTE": bad})
+            assert r.returncode == 1 and "SEGREDO" not in r.stdout + r.stderr, r.stderr
+            r = c.push_key({"OFFSITE_KEY_REMOTE": bad})
+            assert r.returncode == 1 and "SEGREDO" not in r.stdout + r.stderr, r.stderr
     with OffsiteCase() as c:
         Path(c.fk.env["RCLONE_CONFIG"]).chmod(0o644)
         r = c.push()
@@ -165,9 +176,15 @@ def test_remote_without_hash_fails_loudly():
 _FORBIDDEN = re.compile(r"\b(delete|deletefile|purge|sync|move|moveto|rmdirs?|cleanup|dedupe)\b")
 
 
-def _rclone_code_lines(name: str) -> list[str]:
-    lines = (ROOT / "scripts" / name).read_text().splitlines()
-    return [ln for ln in lines if "RCLONE" in ln and not ln.lstrip().startswith("#")]
+def _code_lines(name: str) -> list[str]:
+    """TODAS as linhas de código (não só as que citam RCLONE): um alias ou variável não esconde
+    um delete. Nomes de funções DEFINIDAS no próprio script (ex.: cleanup) são descontados."""
+    text = (ROOT / "scripts" / name).read_text()
+    local_funcs = re.findall(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\(\)\s*\{", text, re.M)
+    lines = [ln for ln in text.splitlines() if not ln.lstrip().startswith("#")]
+    for fn in local_funcs:
+        lines = [re.sub(rf"\b{fn}\b", "", ln) for ln in lines]
+    return lines
 
 
 def test_no_remote_delete_ever():
@@ -179,9 +196,71 @@ def test_no_remote_delete_ever():
         # o fake de fato pega um delete (senão o assert acima seria vazio)
         p = subprocess.run(["rclone", "delete", DUMP_REMOTE], env=c.fk.env, capture_output=True)
         assert p.returncode == 99 and "VIOLATION delete" in c.rclone_log.read_text()
-    for name in ("offsite_push.sh", "offsite_key_push.sh", "lib/offsite_common.sh"):
-        bad = [ln.strip() for ln in _rclone_code_lines(name) if _FORBIDDEN.search(ln)]
+    for name in ("offsite_push.sh", "offsite_key_push.sh", "lib/offsite_common.sh",
+                 "backup_run.sh", "restore_check.sh"):
+        bad = [ln.strip() for ln in _code_lines(name) if _FORBIDDEN.search(ln)]
         assert not bad, f"{name}: {bad}"
+
+
+def test_backfill_sends_every_missing_dump_oldest_first_and_skips_sent_ones():
+    with OffsiteCase() as c:
+        write_gz(c.bdir / "sq_20260925_030000.sql.gz", "dump sintetico 25\n")
+        later = [c.bdir / "sq_20260926_030000.sql.gz", c.bdir / DUMP]
+        parked = c.base / "parked"
+        parked.mkdir()
+        for p in later:
+            p.rename(parked / p.name)
+        assert c.push({"OFFSITE_MAX_AGE_HOURS": "0"}).returncode == 0  # só o de 25/09 vai
+        for p in later:
+            (parked / p.name).rename(p)
+        n = len(c.copytos())
+        r = c.push()
+        assert r.returncode == 0, r.stderr
+        sent = [x.split()[-1].rsplit("/", 1)[-1] for x in c.copytos()[n:]]
+        dumps = [s for s in sent if s.startswith("sq_")]
+        assert dumps == ["sq_20260926_030000.sql.gz.age", f"{DUMP}.age"], sent  # mais antigo antes
+        assert not [s for s in sent if "20260925" in s], "o já enviado não volta"
+        assert status(c.bdir / "offsite_last_success")["backfill"] == "1"
+
+
+def test_pending_manifest_entry_is_retried_by_backfill():
+    """Registro 'pendente' (upload que não aconteceu) não conta como enviado."""
+    with OffsiteCase() as c:
+        r = c.push({"FAKE_RCLONE_FAIL": "copyto"})
+        assert r.returncode != 0
+        assert "pendente" in (c.bdir / "offsite_manifest").read_text()
+        r = c.push()
+        assert r.returncode == 0, r.stderr
+        assert len(objects(c.dump_bucket)) == 3
+
+
+def test_status_is_not_renewed_over_a_stale_newest_dump():
+    with OffsiteCase() as c:
+        old = time.time() - 30 * 3600
+        for p in c.bdir.glob("sq_*.sql.gz"):
+            os.utime(p, (old, old))
+        r = c.push()
+        assert r.returncode != 0 and "NÃO foi renovado" in r.stderr, r.stderr
+        assert not (c.bdir / "offsite_last_success").exists()
+        assert (c.dump_bucket / f"{DUMP}.age").exists(), "o dump velho sai mesmo assim"
+        r = c.push({"OFFSITE_MAX_AGE_HOURS": "48"})
+        assert r.returncode == 0, r.stderr
+
+
+def test_hash_download_mode_works_when_provider_has_no_hash():
+    with OffsiteCase() as c:
+        r = c.push({"FAKE_RCLONE_NO_HASH": "1", "OFFSITE_HASH_DOWNLOAD": "1"})
+        assert r.returncode == 0, r.stderr
+        hs = [x for x in c.rclone_calls() if x.startswith("hashsum ")]
+        assert hs and all("--download" in x.split() for x in hs), hs
+
+
+def test_mktemp_failure_inside_remote_hash_propagates():
+    with OffsiteCase() as c:
+        c.install_failing_mktemp()
+        r = c.push({"FAKE_MKTEMP_FAIL": "1"})
+        assert r.returncode != 0 and "mktemp falhou" in r.stderr, r.stderr
+        assert not c.copytos(), "falha interna não pode virar envio"
 
 
 # --- documentação (decisão (a) e runbook) ----------------------------------------------------
@@ -201,8 +280,15 @@ def test_infra_doc_offsite_section_covers_scripts_remotes_ship_and_drill():
                    "OFFSITE_AGE_RECIPIENT_INSTANCE", "OFFSITE_AGE_RECIPIENT_RECOVERY",
                    "DP-29", "DP-27", "DP-41", "drill trimestral", "RESTORE_DUMP_FILE",
                    "offsite_last_success", "rclone.conf", "parecer J-29 pode mudar o destino",
-                   "age1yubikey1", "age-plugin-yubikey", "decisão de instalação", "só para cifrar"):
+                   "age1yubikey1", "age-plugin-yubikey", "decisão de instalação", "só para cifrar",
+                   "backup_run.sh", "backfill", "OFFSITE_MAX_AGE_HOURS", "MANUAL e offline",
+                   "contas diferentes de verdade", "wrapper", "backup_run_last",
+                   "decifre com CADA identidade", "age-keygen -y sq-instancia.agekey"):
         assert needle in sec6, f"§6 não cita {needle}"
+    drill = doc[doc.index("### Drill trimestral a partir do off-site"):]
+    drill_code = drill[drill.index("```bash"):drill.index("```", drill.index("```bash") + 7)]
+    assert drill_code.split("\n")[1].startswith("umask 077"), "o drill começa com umask 077"
+    assert "chmod" not in drill_code, "nada de chmod depois: o umask já cuida"
     assert "Off-site (ordem 003, não existe)" not in doc
 
 
@@ -219,6 +305,11 @@ TESTS = [
     test_rclone_lookup_error_is_not_read_as_absent,
     test_remote_without_hash_fails_loudly,
     test_no_remote_delete_ever,
+    test_backfill_sends_every_missing_dump_oldest_first_and_skips_sent_ones,
+    test_pending_manifest_entry_is_retried_by_backfill,
+    test_status_is_not_renewed_over_a_stale_newest_dump,
+    test_hash_download_mode_works_when_provider_has_no_hash,
+    test_mktemp_failure_inside_remote_hash_propagates,
     test_security_doc_says_foreign_offsite_is_allowed_by_dp29,
     test_infra_doc_offsite_section_covers_scripts_remotes_ship_and_drill,
 ]

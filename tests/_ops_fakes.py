@@ -140,7 +140,9 @@ _SCRUB_PREFIXES = ("POSTGRES_", "BACKUP_", "DB_", "MEDIA_", "KEY_", "RESTORE_", 
 
 
 def _scrubbed(name: str) -> bool:
-    return name.startswith(_SCRUB_PREFIXES) or name in ("AGE", "RCLONE")
+    # INVOCATION_ID: quem roda o teste sob systemd (ex.: o runner do CI) não pode fazer o
+    # script achar que está numa unit.
+    return name.startswith(_SCRUB_PREFIXES) or name in ("AGE", "RCLONE", "INVOCATION_ID")
 
 
 def _write_exec(path: Path, text: str) -> None:

@@ -10,7 +10,7 @@ import stat
 import sys
 
 from tests._offsite_fakes import (
-    DUMP_OBJECT_RE, DUMP_REMOTE, KEY_REMOTE, OffsiteCase, assert_no_leak,
+    DUMP_OBJECT_RE, DUMP_REMOTE, KEY_OBJECT_RE, KEY_REMOTE, OffsiteCase, assert_no_leak,
     assert_no_rclone_violation, objects, split_age, status,
 )
 from tests._ops_fakes import run_tests
@@ -20,12 +20,22 @@ def _fpr(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
+def _key_fprs(c) -> list:
+    """Fingerprint de cada objeto no remote da chave (o nome tem de seguir o padrão)."""
+    out = []
+    for p in objects(c.key_bucket):
+        m = KEY_OBJECT_RE.fullmatch(p.name)
+        assert m, f"nome de objeto da chave fora do padrão: {p.name}"
+        out.append(m.group(1))
+    return sorted(out)
+
+
 def test_key_goes_only_to_key_remote_encrypted_only_to_recovery():
     with OffsiteCase() as c:
         r = c.push_key()
         assert r.returncode == 0, r.stderr
         objs = objects(c.key_bucket)
-        assert [p.name for p in objs] == [f"field_encryption_key.{_fpr(c.key)}.age"], objs
+        assert _key_fprs(c) == [_fpr(c.key)], objs
         stanzas, payload = split_age(objs[0].read_bytes())
         assert len(stanzas) == 1 and stanzas[0].split()[1] == "X25519", stanzas
         assert payload == c.key.encode()
@@ -34,7 +44,8 @@ def test_key_goes_only_to_key_remote_encrypted_only_to_recovery():
         assert not objects(c.dump_bucket), "a chave não passa pelo remote do dump"
         for name in ("offsite_key_fingerprint", "offsite_key_last_success", "offsite_key_manifest"):
             assert stat.S_IMODE((c.kdir / name).stat().st_mode) == 0o600, name
-        assert (c.kdir / "offsite_key_fingerprint").read_text().strip() == f"sha256_16={_fpr(c.key)}"
+        fp = status(c.kdir / "offsite_key_fingerprint")
+        assert fp == {"sha256_16": _fpr(c.key), "object": objs[0].name}, fp
         st = status(c.kdir / "offsite_key_last_success")
         assert st["remote"] == KEY_REMOTE and st["result"] == "enviado", st
         assert st["hash"] == "sha1:" + hashlib.sha1(objs[0].read_bytes()).hexdigest(), st
@@ -50,15 +61,16 @@ def test_key_is_sent_only_when_fingerprint_changes():
         assert r1.returncode == 0, r1.stderr
         n_rclone = len(c.rclone_calls())
         r2 = c.push_key()
-        assert r2.returncode == 0 and "inalterada" in r2.stderr, r2.stderr
-        assert len(c.age_calls()) == 1 and len(c.rclone_calls()) == n_rclone, "reenviou chave igual"
+        assert r2.returncode == 0 and "inalterada" in r2.stderr and "conferido" in r2.stderr, r2.stderr
+        assert len(c.age_calls()) == 1 and not c.copytos()[1:], "reenviou chave igual"
+        new_calls = c.rclone_calls()[n_rclone:]
+        assert len(new_calls) == 1 and new_calls[0].startswith("hashsum "), new_calls  # só confere
         k2 = c.fk.fernet().generate_key().decode()
         c.write_key(k2)
         r3 = c.push_key()
         assert r3.returncode == 0, r3.stderr
-        names = sorted(p.name for p in objects(c.key_bucket))
-        assert names == sorted(f"field_encryption_key.{_fpr(k)}.age" for k in (k1, k2)), names
-        assert (c.kdir / "offsite_key_fingerprint").read_text().strip() == f"sha256_16={_fpr(k2)}"
+        assert _key_fprs(c) == sorted([_fpr(k1), _fpr(k2)])
+        assert status(c.kdir / "offsite_key_fingerprint")["sha256_16"] == _fpr(k2)
         assert_no_rclone_violation(c)
         assert_no_leak(c, [r1, r2, r3], k1, k2)
 
@@ -117,6 +129,35 @@ def test_full_chain_never_puts_key_or_env_prod_in_dump_remote():
         assert_no_leak(c, [r1, r2])
 
 
+def test_new_host_with_same_key_appends_a_new_object_never_fails_daily():
+    """Pós-desastre: host novo, mesma chave, sem fingerprint nem manifesto locais."""
+    with OffsiteCase() as c:
+        assert c.push_key().returncode == 0
+        first = [p.name for p in objects(c.key_bucket)]
+        for name in ("offsite_key_fingerprint", "offsite_key_manifest", "offsite_key_last_success"):
+            (c.kdir / name).unlink()
+        r = c.push_key()
+        assert r.returncode == 0, r.stderr
+        names = [p.name for p in objects(c.key_bucket)]
+        assert len(names) == 2 and set(first) < set(names), names  # append, o antigo intacto
+        assert _key_fprs(c) == [_fpr(c.key)] * 2
+        r = c.push_key()  # e no dia seguinte, verde sem reenviar
+        assert r.returncode == 0 and "inalterada" in r.stderr, r.stderr
+        assert len(objects(c.key_bucket)) == 2
+        assert_no_leak(c, r)
+
+
+def test_unchanged_key_whose_object_vanished_or_remote_is_down_fails():
+    with OffsiteCase() as c:
+        assert c.push_key().returncode == 0
+        r = c.push_key({"FAKE_RCLONE_FAIL": "hashsum"})
+        assert r.returncode != 0 and "hashsum falhou" in r.stderr, r.stderr
+        objects(c.key_bucket)[0].unlink()
+        r = c.push_key()
+        assert r.returncode != 0 and "sumiu" in r.stderr, r.stderr
+        assert not c.copytos()[1:], "sumiço não é consertado reenviando por baixo dos panos"
+
+
 TESTS = [
     test_key_goes_only_to_key_remote_encrypted_only_to_recovery,
     test_key_is_sent_only_when_fingerprint_changes,
@@ -124,6 +165,8 @@ TESTS = [
     test_key_recipient_missing_or_private_is_refused_without_echo,
     test_key_file_not_0600_or_key_dir_inside_backup_dir_is_refused,
     test_full_chain_never_puts_key_or_env_prod_in_dump_remote,
+    test_new_host_with_same_key_appends_a_new_object_never_fails_daily,
+    test_unchanged_key_whose_object_vanished_or_remote_is_down_fails,
 ]
 
 if __name__ == "__main__":
