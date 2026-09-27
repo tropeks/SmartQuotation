@@ -211,19 +211,26 @@ def test_restore_dump_file_missing_fails_before_starting_container():
         assert not [x for x in c.fk.docker_calls() if x.startswith("run ")]
 
 
-def test_restore_file_is_refused_under_systemd_or_inside_backup_dir():
+def test_restore_file_is_refused_inside_backup_units_or_inside_backup_dir():
     with Case() as c:
         outside = c.base / "drill.sql.gz"
         write_gz(outside, synthetic_dump())
-        r = c.run({"RESTORE_DUMP_FILE": str(outside), "INVOCATION_ID": "abc123"})
-        assert r.returncode == 1 and "systemd" in r.stderr, r.stderr
-        r = c.run({"RESTORE_MEDIA_FILE": str(c.bdir / "media_20260927_030000.tar.gz"), "INVOCATION_ID": "x"})
-        assert r.returncode == 1 and "systemd" in r.stderr, r.stderr
+        r = c.run({"RESTORE_DUMP_FILE": str(outside), "SQ_BACKUP_UNIT": "1"})
+        assert r.returncode == 1 and "SQ_BACKUP_UNIT=1" in r.stderr, r.stderr
+        media_out = c.base / "drill_media.tar.gz"
+        write_media_tar(media_out, {"a.pdf": b"%PDF"})
+        r = c.run({"RESTORE_MEDIA_FILE": str(media_out), "SQ_BACKUP_UNIT": "1"})
+        assert r.returncode == 1 and "SQ_BACKUP_UNIT=1" in r.stderr, r.stderr
         r = c.run({"RESTORE_DUMP_FILE": str(c.bdir / "sq_20260927_030000.sql.gz")})
         assert r.returncode == 1 and "dentro do BACKUP_DIR" in r.stderr, r.stderr
         r = c.run({"RESTORE_MEDIA_FILE": str(c.bdir / "media_20260927_030000.tar.gz")})
         assert r.returncode == 1 and "dentro do BACKUP_DIR" in r.stderr, r.stderr
         assert not [x for x in c.fk.docker_calls() if x.startswith("run ")]
+    with Case() as c:  # INVOCATION_ID sozinho (terminal sob systemd, runner de CI) NÃO é o marcador
+        outside = c.base / "drill.sql.gz"
+        write_gz(outside, synthetic_dump())
+        r = c.run({"RESTORE_DUMP_FILE": str(outside), "INVOCATION_ID": "abc123"})
+        assert r.returncode == 0, r.stderr
 
 
 def _offsite_restore(oc, extra=None):
@@ -264,6 +271,42 @@ def test_weekly_drill_fails_when_offsite_is_missing_changed_or_unreachable():
         assert r.returncode == 1 and "nenhum dump confirmado" in r.stderr, r.stderr
 
 
+def test_weekly_drill_fails_when_offsite_confirmed_is_not_the_newest_local_or_is_stale():
+    with OffsiteCase() as oc:
+        assert oc.push().returncode == 0
+        write_gz(oc.bdir / "sq_20260928_030000.sql.gz", synthetic_dump())  # novo, não enviado
+        r = _offsite_restore(oc)
+        assert r.returncode == 1 and "não é o dump local mais novo" in r.stderr, r.stderr
+        (oc.bdir / "sq_20260928_030000.sql.gz").unlink()
+        old = time.time() - 30 * 3600
+        for p in oc.bdir.glob("sq_*.sql.gz"):
+            os.utime(p, (old, old))
+        r = _offsite_restore(oc, {"RESTORE_MAX_AGE_HOURS": "0"})
+        assert r.returncode == 1 and "mais de 26h" in r.stderr, r.stderr
+        r = _offsite_restore(oc, {"RESTORE_MAX_AGE_HOURS": "0", "OFFSITE_MAX_AGE_HOURS": "48"})
+        assert r.returncode == 0, r.stderr
+
+
+def test_weekly_drill_never_downloads_when_provider_has_no_hash():
+    with OffsiteCase() as oc:
+        assert oc.push().returncode == 0
+        n = len(oc.rclone_calls())
+        r = _offsite_restore(oc, {"OFFSITE_HASH_DOWNLOAD": "1"})
+        assert r.returncode == 0, r.stderr
+        calls = oc.rclone_calls()[n:]
+        assert len(calls) == 1 and calls[0].startswith("lsjson "), calls  # nem hashsum --download
+        assert "hash indisponível sem download" in r.stderr, r.stderr
+        st = dict(ln.split("=", 1) for ln in (oc.bdir / "restore_last_success").read_text().splitlines())
+        assert st["offsite_check"] == "tamanho", st
+        obj = oc.dump_bucket / "sq_20260927_030000.sql.gz.age"
+        obj.write_bytes(obj.read_bytes() + b"X")
+        r = _offsite_restore(oc, {"OFFSITE_HASH_DOWNLOAD": "1"})
+        assert r.returncode == 1 and "tamanho diferente" in r.stderr, r.stderr
+        obj.unlink()
+        r = _offsite_restore(oc, {"OFFSITE_HASH_DOWNLOAD": "1"})
+        assert r.returncode == 1 and "ausente" in r.stderr, r.stderr
+
+
 TESTS = [
     test_success_restores_newest_dump_in_isolated_ephemeral_container,
     test_output_has_only_counts_and_table_names_never_content,
@@ -279,7 +322,9 @@ TESTS = [
     test_stale_newest_dump_fails_before_starting_container,
     test_restore_dump_file_points_to_a_specific_offsite_download,
     test_restore_dump_file_missing_fails_before_starting_container,
-    test_restore_file_is_refused_under_systemd_or_inside_backup_dir,
+    test_restore_file_is_refused_inside_backup_units_or_inside_backup_dir,
+    test_weekly_drill_fails_when_offsite_confirmed_is_not_the_newest_local_or_is_stale,
+    test_weekly_drill_never_downloads_when_provider_has_no_hash,
     test_weekly_drill_confirms_newest_offsite_dump_by_hash_without_download,
     test_weekly_drill_fails_when_offsite_is_missing_changed_or_unreachable,
 ]

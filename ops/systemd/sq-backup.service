@@ -39,6 +39,9 @@ EnvironmentFile=/etc/smartquotation/backup.env
 # /usr/bin. Nada do home do root entra no PATH (ProtectHome=read-only). O plugin só CIFRA:
 # não precisa do token, de pcscd nem de dispositivo, então o sandbox abaixo não muda.
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Marcador explícito "estou numa unit de backup": o restore_check recusa RESTORE_DUMP_FILE/
+# RESTORE_MEDIA_FILE (drill manual) quando ele está ligado.
+Environment=SQ_BACKUP_UNIT=1
 WorkingDirectory=/opt/smartquotation
 UMask=0077
 ExecStart=/opt/smartquotation/scripts/backup_run.sh

@@ -154,16 +154,18 @@ def test_units_use_dedicated_env_file_never_env_prod():
         assert ".env.prod" not in text, f"{name} não pode referenciar .env.prod (nem em comentário)"
         unit = parse_unit(UNITS / name)
         assert get(unit, "Service", "EnvironmentFile") == [BACKUP_ENV_TARGET], name
-        extra = [e for e in get(unit, "Service", "Environment") if not e.startswith("PATH=")]
-        assert not extra, f"{name}: variáveis vão no backup.env (só PATH fica na unit): {extra}"
+        envs = get(unit, "Service", "Environment")
+        extra = [e for e in envs if not e.startswith("PATH=") and e != "SQ_BACKUP_UNIT=1"]
+        assert not extra, f"{name}: variáveis vão no backup.env (só PATH e o marcador ficam na unit): {extra}"
+        assert "SQ_BACKUP_UNIT=1" in envs, f"{name}: marcador SQ_BACKUP_UNIT=1 ausente"
 
 
 def test_backup_service_path_is_explicit_system_only_for_age_plugin():
     """age, rclone e age-plugin-yubikey (DP-41) são achados pelo PATH da unit: explícito,
     só diretórios do sistema, nada de home (ProtectHome=read-only)."""
     unit = parse_unit(UNITS / "sq-backup.service")
-    env = get(unit, "Service", "Environment")
-    assert len(env) == 1 and env[0].startswith("PATH="), env
+    env = [e for e in get(unit, "Service", "Environment") if e.startswith("PATH=")]
+    assert len(env) == 1, env
     dirs = env[0][len("PATH="):].split(":")
     assert "/usr/local/bin" in dirs and "/usr/bin" in dirs, dirs
     assert not [d for d in dirs if d.startswith(("/root", "/home", "~")) or not d.startswith("/")], dirs

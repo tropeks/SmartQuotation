@@ -18,6 +18,9 @@ Type=oneshot
 User=root
 # Mesmo env file dedicado do sq-backup.service (só variáveis de backup).
 EnvironmentFile=/etc/smartquotation/backup.env
+# Marcador explícito "estou numa unit de backup": RESTORE_DUMP_FILE/RESTORE_MEDIA_FILE (drill
+# manual) são recusados aqui.
+Environment=SQ_BACKUP_UNIT=1
 WorkingDirectory=/opt/smartquotation
 UMask=0077
 ExecStart=/opt/smartquotation/scripts/restore_check.sh

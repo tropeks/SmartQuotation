@@ -13,15 +13,17 @@
 #      ${RESTORE_SCHEMA}.quotations_quotation >= ${RESTORE_MIN_QUOTATIONS}.
 #   5. Valida o tar de mídia mais recente (gzip íntegro, tar tzf, entradas sob app/backend/media).
 #   6. Off-site (se OFFSITE_REMOTE estiver definido): confere, SEM baixar, que o dump mais
-#      novo confirmado no ${BACKUP_DIR}/offsite_manifest existe no remote com o hash
-#      registrado (rclone hashsum). Remote que não responde, objeto ausente ou com outro hash
-#      = falha. Roda antes de subir o container.
+#      novo confirmado no ${BACKUP_DIR}/offsite_manifest é o dump local mais novo, tem menos
+#      de OFFSITE_MAX_AGE_HOURS (26) e existe no remote com o hash registrado (rclone
+#      hashsum). Com OFFSITE_HASH_DOWNLOAD=1 NÃO baixa: confere só presença e tamanho
+#      (lsjson) e avisa. Remote que não responde, objeto ausente ou diferente = falha. Roda
+#      antes de subir o container.
 #   7. Grava ${BACKUP_DIR}/restore_last_success (só no sucesso).
 # O container é SEMPRE destruído (trap), inclusive em erro no meio.
 #
 # Drill a partir do off-site (trimestral, manual — docs/INFRASTRUCTURE.md §6): baixado e
 # decifrado o .age, aponte RESTORE_DUMP_FILE (e RESTORE_MEDIA_FILE) para os arquivos — FORA
-# do BACKUP_DIR e fora do systemd (INVOCATION_ID definido): os dois casos são recusados. Nesse
+# do BACKUP_DIR e fora das units (SQ_BACKUP_UNIT=1): os dois casos são recusados. Nesse
 # modo a checagem de idade não se aplica (o arquivo é o que se quer provar, velho ou não) e o
 # status vai para ${BACKUP_DIR}/restore_file_last_success, sem mexer no restore_last_success
 # do drill semanal.
@@ -73,6 +75,7 @@ RESTORE_MEDIA_FILE="${RESTORE_MEDIA_FILE:-}"
 OFFSITE_REMOTE="${OFFSITE_REMOTE:-}"
 OFFSITE_HASH="${OFFSITE_HASH:-sha1}"
 OFFSITE_HASH_DOWNLOAD="${OFFSITE_HASH_DOWNLOAD:-0}"
+OFFSITE_MAX_AGE_HOURS="${OFFSITE_MAX_AGE_HOURS:-26}"
 RCLONE="${RCLONE:-rclone}"
 DOCKER="${DOCKER:-docker}"
 
@@ -95,12 +98,13 @@ newest() {
   find "${BACKUP_DIR}" -maxdepth 1 -type f -name "$1" 2>/dev/null | LC_ALL=C sort | tail -n 1
 }
 
-# Arquivo específico é do drill MANUAL: nunca sob systemd, nunca de dentro do BACKUP_DIR
-# (um dump baixado largado lá entraria na série e no backfill do off-site).
+# Arquivo específico é do drill MANUAL: nunca nas units de backup (marcador explícito
+# SQ_BACKUP_UNIT=1, posto por Environment= nas duas units), nunca de dentro do BACKUP_DIR (um
+# dump baixado largado lá entraria na série e no backfill do off-site).
 for f in "${RESTORE_DUMP_FILE}" "${RESTORE_MEDIA_FILE}"; do
   [ -n "${f}" ] || continue
-  if [ -n "${INVOCATION_ID:-}" ]; then
-    echo "${SQ_SCRIPT}: RESTORE_DUMP_FILE/RESTORE_MEDIA_FILE são só para o drill manual; sob systemd (INVOCATION_ID) são recusados." >&2
+  if [ "${SQ_BACKUP_UNIT:-0}" = "1" ]; then
+    echo "${SQ_SCRIPT}: RESTORE_DUMP_FILE/RESTORE_MEDIA_FILE são só para o drill manual; dentro das units de backup (SQ_BACKUP_UNIT=1) são recusados." >&2
     exit 1
   fi
   case "$(realpath -m -- "${f}")/" in
@@ -152,27 +156,57 @@ fi
 
 # --- Off-site: o dump mais novo confirmado existe no remote, com o hash registrado. -------
 OFFSITE_DUMP="-"
+OFFSITE_CHECK="-"
 if [ -n "${OFFSITE_REMOTE}" ] && [ -z "${RESTORE_DUMP_FILE}" ]; then
   trap sq_cleanup EXIT INT TERM   # o temporário do hashsum; trocado pelo do container abaixo
   sq_offsite_check_remote OFFSITE_REMOTE
   sq_offsite_check_rclone_config
   sq_offsite_check_rclone_tool
+  [[ "${OFFSITE_MAX_AGE_HOURS}" =~ ^[0-9]+$ ]] || { echo "${SQ_SCRIPT}: OFFSITE_MAX_AGE_HOURS inválido." >&2; exit 1; }
   MANIFEST="${BACKUP_DIR}/offsite_manifest"
   OFFSITE_DUMP="$( [ -f "${MANIFEST}" ] && LC_ALL=C awk -F '\t' '$1 ~ /^sq_.*\.sql\.gz\.age$/ && $4 == "ok" { print $1 }' "${MANIFEST}" | LC_ALL=C sort | tail -n 1 || true)"
   if [ -z "${OFFSITE_DUMP}" ]; then
     echo "${SQ_SCRIPT}: FALHA — OFFSITE_REMOTE definido, mas nenhum dump confirmado no offsite_manifest." >&2
     exit 1
   fi
+  # O confirmado mais novo tem de SER o dump local mais novo, e recente: off-site parado com
+  # objeto velho íntegro não é verde.
+  if [ "${OFFSITE_DUMP}" != "$(basename -- "${DUMP}").age" ]; then
+    echo "${SQ_SCRIPT}: FALHA — o dump mais novo confirmado no off-site (${OFFSITE_DUMP}) não é o dump local mais novo ($(basename -- "${DUMP}")): o off-site parou?" >&2
+    exit 1
+  fi
+  if [ "${OFFSITE_MAX_AGE_HOURS}" -gt 0 ] \
+      && [ -n "$(find "${DUMP}" -mmin +$((OFFSITE_MAX_AGE_HOURS * 60)) -print)" ]; then
+    echo "${SQ_SCRIPT}: FALHA — o dump mais novo confirmado no off-site tem mais de ${OFFSITE_MAX_AGE_HOURS}h." >&2
+    exit 1
+  fi
   ENTRY="$(sq_manifest_get "${MANIFEST}" "${OFFSITE_DUMP}")"
-  if ! sq_remote_hash "${OFFSITE_REMOTE%/}/${OFFSITE_DUMP}"; then
-    echo "${SQ_SCRIPT}: FALHA — o remote off-site não respondeu à conferência de ${OFFSITE_DUMP}." >&2
-    exit 1
+  TARGET="${OFFSITE_REMOTE%/}/${OFFSITE_DUMP}"
+  if [ "${OFFSITE_HASH_DOWNLOAD}" = "1" ]; then
+    # Provedor sem hash: o drill semanal NUNCA baixa o dump inteiro. Confere só presença e
+    # tamanho (lsjson) e avisa que a conferência é mais fraca.
+    if ! sq_remote_size "${TARGET}"; then
+      echo "${SQ_SCRIPT}: FALHA — o remote off-site não respondeu à conferência de ${OFFSITE_DUMP}." >&2
+      exit 1
+    fi
+    if [ -z "${REMOTE_SIZE}" ] || [ "${REMOTE_SIZE}" != "${ENTRY#*$'\t'}" ]; then
+      echo "${SQ_SCRIPT}: FALHA — ${OFFSITE_DUMP} ausente ou com tamanho diferente do registrado no off-site." >&2
+      exit 1
+    fi
+    OFFSITE_CHECK="tamanho"
+    echo "${SQ_SCRIPT}: AVISO — hash indisponível sem download; conferência só de presença e tamanho (${OFFSITE_DUMP}, ${REMOTE_SIZE} bytes)." >&2
+  else
+    if ! sq_remote_hash "${TARGET}"; then
+      echo "${SQ_SCRIPT}: FALHA — o remote off-site não respondeu à conferência de ${OFFSITE_DUMP}." >&2
+      exit 1
+    fi
+    if [ "${OFFSITE_HASH}:${REMOTE_HASH}" != "${ENTRY%%$'\t'*}" ]; then
+      echo "${SQ_SCRIPT}: FALHA — ${OFFSITE_DUMP} ausente ou com hash diferente do registrado no off-site." >&2
+      exit 1
+    fi
+    OFFSITE_CHECK="hash"
+    echo "${SQ_SCRIPT}: off-site: ${OFFSITE_DUMP} presente com o hash registrado"
   fi
-  if [ "${OFFSITE_HASH}:${REMOTE_HASH}" != "${ENTRY%%$'\t'*}" ]; then
-    echo "${SQ_SCRIPT}: FALHA — ${OFFSITE_DUMP} ausente ou com hash diferente do registrado no off-site." >&2
-    exit 1
-  fi
-  echo "${SQ_SCRIPT}: off-site: ${OFFSITE_DUMP} presente com o hash registrado"
 fi
 
 sq_require_docker
@@ -282,6 +316,7 @@ sq_write_status "${STATUS_FILE}" \
   "media=$( [ -n "${MEDIA}" ] && basename -- "${MEDIA}" || echo - )" \
   "media_entries=${MEDIA_ENTRIES}" \
   "offsite_dump=${OFFSITE_DUMP}" \
+  "offsite_check=${OFFSITE_CHECK}" \
   "duration_s=${DURATION}"
 
 echo "${SQ_SCRIPT}: ok — restore verificado em ${DURATION}s"
