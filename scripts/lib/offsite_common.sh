@@ -10,7 +10,7 @@
 
 # Saídas de sq_offsite_push (lidas pelo script chamador) e de sq_remote_hash.
 # shellcheck disable=SC2034
-PUSH_RESULT="" PUSH_HASH="" PUSH_BYTES="" REMOTE_HASH="" SQ_HASH_LEN=0
+PUSH_RESULT="" PUSH_HASH="" PUSH_BYTES="" REMOTE_HASH="" REMOTE_SIZE="" SQ_HASH_LEN=0
 
 # Dois formatos de destinatário (a forma da chave de recuperação é decisão de instalação,
 # DP-41):
@@ -101,46 +101,64 @@ sq_offsite_check_separate() {
 
 # sq_offsite_check_conf_separation REMOTE_DO_DUMP REMOTE_DA_CHAVE
 # O nome da seção não prova credencial própria. Lê o RCLONE_CONFIG direto (depois de
-# sq_offsite_check_rclone_config) e recusa, sem imprimir VALOR nenhum do arquivo:
+# sq_offsite_check_rclone_config) e recusa, sem imprimir VALOR nenhum do arquivo nem do env:
 #   - seção ausente (ou rclone.conf cifrado, que não dá para ler);
-#   - wrapper (alias, union, combine, chunker, crypt, compress, hasher, cache) em qualquer
-#     das duas: ele aponta para outro remote, e a separação deixaria de ser verificável;
-#   - mesmo type e mesmo bucket (primeiro componente do caminho), ainda que em seções
-#     diferentes;
-#   - o mesmo valor em qualquer campo de identidade (account, access_key_id, key_id, user,
-#     client_id, service_account_file) nas duas seções.
+#   - type fora da ALLOWLIST de armazenamento direto (SQ_DIRECT_BACKENDS). Allowlist, não
+#     lista de wrappers: todo backend que aponta para outro remote (alias, crypt, union,
+#     combine, chunker, compress, hasher, cache, e os que vierem) fica de fora por padrão;
+#     só entra o que guarda credencial e bucket na própria seção;
+#   - o MESMO bucket (primeiro componente do caminho) nos dois remotes, em QUALQUER tipo: B2
+#     nativo e S3 da Backblaze são o mesmo bucket por dois caminhos;
+#   - qualquer VALOR de credencial em comum entre as duas seções, sem olhar o nome do campo
+#     (a mesma chave vira account= no b2 e access_key_id= no s3);
+#   - variável RCLONE_CONFIG_<SEÇÃO>_* no ambiente para qualquer das duas: ela sobrepõe o
+#     rclone.conf e escaparia desta checagem.
 # O que o código NÃO vê: se as contas são de fato de donos diferentes e se a credencial é só
 # de escrita. Isso é do ship (docs/INFRASTRUCTURE.md §6).
+SQ_DIRECT_BACKENDS="s3 b2 gcs azureblob swift oos sftp local"
+# Campos que carregam identidade OU segredo de credencial nos backends da allowlist.
+SQ_CRED_FIELDS="account key access_key_id secret_access_key key_id user pass client_id client_secret service_account_file service_account_credentials sas_url key_file tenant application_credential_id application_credential_secret"
 sq_offsite_check_conf_separation() {
-  local d="${1%/}" k="${2%/}" verdict code arg dbucket kbucket
+  local d="${1%/}" k="${2%/}" verdict code arg dbucket kbucket sec prefix
   local sd="${d%%:*}" sk="${k%%:*}"
   dbucket="${d#*:}"; dbucket="${dbucket#/}"; dbucket="${dbucket%%/*}"
   kbucket="${k#*:}"; kbucket="${kbucket#/}"; kbucket="${kbucket%%/*}"
-  # O awk só devolve CÓDIGOS (nome de seção, de tipo e de campo — nunca valor de campo).
-  verdict="$(LC_ALL=C awk -v A="${sd}" -v B="${sk}" -v BA="${dbucket}" -v BB="${kbucket}" '
+  if [ "${dbucket}" = "${kbucket}" ]; then
+    sq_die "OFFSITE_REMOTE e OFFSITE_KEY_REMOTE apontam para o MESMO bucket ('${dbucket}'), ainda que por seções ou tipos diferentes. A chave precisa de bucket próprio. Recusando."
+  fi
+  # Só NOMES de variáveis (compgen -e): o valor nunca é lido.
+  for sec in "${sd}" "${sk}"; do
+    prefix="RCLONE_CONFIG_$(printf '%s' "${sec}" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9\n' '_')_"
+    if compgen -e | grep -q "^${prefix}"; then
+      sq_die "há variável ${prefix}* no ambiente (valor NÃO exibido): ela sobrepõe o rclone.conf e a separação não pode ser conferida. Tire-a do ambiente. Recusando."
+    fi
+  done
+  # O awk só devolve CÓDIGOS (nome de seção e de tipo — nunca valor de campo).
+  verdict="$(LC_ALL=C awk -v A="${sd}" -v B="${sk}" -v ALLOW="${SQ_DIRECT_BACKENDS}" -v CRED="${SQ_CRED_FIELDS}" '
     function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
+    BEGIN { n = split(ALLOW, a, " "); for (i = 1; i <= n; i++) ok[a[i]] = 1
+            n = split(CRED, c, " "); for (i = 1; i <= n; i++) cred[c[i]] = 1 }
     /^[ \t]*[#;]/ { next }
     /^[ \t]*\[.*\][ \t\r]*$/ { s = trim($0); s = substr(s, 2, length(s) - 2); seen[s] = 1; next }
-    index($0, "=") { key = trim(substr($0, 1, index($0, "=") - 1)); val = trim(substr($0, index($0, "=") + 1))
-                     if (s == A || s == B) v[s, key] = val }
+    index($0, "=") && (s == A || s == B) {
+      key = trim(substr($0, 1, index($0, "=") - 1)); val = trim(substr($0, index($0, "=") + 1))
+      if (key == "type") type[s] = val
+      else if ((key in cred) && val != "") vals[s, val] = 1
+    }
     END {
       if (!seen[A]) { print "missing " A; exit }
       if (!seen[B]) { print "missing " B; exit }
-      split("alias union combine chunker crypt compress hasher cache", w, " ")
-      for (i in w) { if (v[A, "type"] == w[i]) { print "wrapper " A " " w[i]; exit }
-                     if (v[B, "type"] == w[i]) { print "wrapper " B " " w[i]; exit } }
-      if (v[A, "type"] == v[B, "type"] && BA == BB) { print "samebucket " v[A, "type"]; exit }
-      split("account access_key_id key_id user client_id service_account_file", f, " ")
-      for (i in f) if (v[A, f[i]] != "" && v[A, f[i]] == v[B, f[i]]) { print "sameid " f[i]; exit }
+      if (!(type[A] in ok)) { print "notdirect " A " " type[A]; exit }
+      if (!(type[B] in ok)) { print "notdirect " B " " type[B]; exit }
+      for (kv in vals) { split(kv, p, SUBSEP); if (p[1] == A && ((B, p[2]) in vals)) { print "samecred"; exit } }
       print "ok"
     }' "${RCLONE_CONFIG}")" || sq_die "não consegui ler o RCLONE_CONFIG. Recusando."
   read -r code arg _ <<< "${verdict}"
   case "${code}" in
     ok) return 0 ;;
     missing) sq_die "seção '${arg}' não encontrada no RCLONE_CONFIG (ou o rclone.conf está cifrado, e a separação de credencial não pode ser conferida). Recusando." ;;
-    wrapper) sq_die "a seção '${arg}' é um wrapper do rclone (type ${verdict##* }): ela aponta para outro remote e a separação entre dump e chave não é verificável. Use seções de backend direto. Recusando." ;;
-    samebucket) sq_die "OFFSITE_REMOTE e OFFSITE_KEY_REMOTE apontam para o MESMO bucket ('${dbucket}') no mesmo tipo de backend (${arg}), ainda que por seções diferentes. A chave precisa de bucket próprio. Recusando." ;;
-    sameid) sq_die "as seções '${sd}' e '${sk}' têm o MESMO valor em '${arg}' (valor NÃO exibido): é a mesma credencial. A chave precisa de credencial própria. Recusando." ;;
+    notdirect) sq_die "a seção '${arg}' não é backend de armazenamento direto (type '${verdict#* * }'; aceitos: ${SQ_DIRECT_BACKENDS}). Wrapper ou backend que aponta para outro remote torna a separação entre dump e chave inverificável. Recusando." ;;
+    samecred) sq_die "as seções '${sd}' e '${sk}' têm um VALOR de credencial em comum (campo e valor NÃO exibidos): é a mesma credencial, talvez com nome de campo diferente. A chave precisa de credencial própria. Recusando." ;;
     *) sq_die "RCLONE_CONFIG: resultado inesperado da checagem de separação. Recusando." ;;
   esac
 }
@@ -232,6 +250,30 @@ sq_remote_hash() {
   if [ -n "${REMOTE_HASH}" ] && ! [[ "${REMOTE_HASH}" =~ ^[0-9a-f]{${SQ_HASH_LEN}}$ ]]; then
     echo "${SQ_SCRIPT}: o remoto não deu hash ${OFFSITE_HASH} para ${target} (o provedor não guarda esse hash?)." >&2
     echo "${SQ_SCRIPT}: troque OFFSITE_HASH para um que o provedor suporte ou use OFFSITE_HASH_DOWNLOAD=1 (baixa e calcula)." >&2
+    return 1
+  fi
+  return 0
+}
+
+# sq_remote_size ALVO — define REMOTE_SIZE: "" se o objeto não existe, o tamanho em bytes se
+# existe. Só lista (rclone lsjson), NUNCA baixa: é o que o drill semanal usa quando o provedor
+# não guarda hash (OFFSITE_HASH_DOWNLOAD=1), para não puxar o dump inteiro toda semana.
+sq_remote_size() {
+  local target="$1" leaf="${1##*/}" out rc=0
+  out="$("${RCLONE}" lsjson --files-only "${target}" 2>/dev/null)" || rc=$?
+  if [ "${rc}" -eq 3 ] || [ "${rc}" -eq 4 ]; then
+    REMOTE_SIZE=""
+    return 0
+  fi
+  if [ "${rc}" -ne 0 ]; then
+    echo "${SQ_SCRIPT}: rclone lsjson falhou (exit ${rc}) em ${target}." >&2
+    return 1
+  fi
+  # Um objeto por linha no JSON do lsjson: pega o Size da entrada cujo Name é o objeto.
+  if ! REMOTE_SIZE="$(printf '%s\n' "${out}" | tr '{' '\n' \
+      | LC_ALL=C awk -v leaf="${leaf}" 'index($0, "\"Name\":\"" leaf "\"") {
+          if (match($0, /"Size":[0-9]+/)) { print substr($0, RSTART + 7, RLENGTH - 7); exit } }')"; then
+    echo "${SQ_SCRIPT}: não consegui ler a saída do rclone lsjson." >&2
     return 1
   fi
   return 0
