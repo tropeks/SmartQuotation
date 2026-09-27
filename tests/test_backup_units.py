@@ -180,6 +180,29 @@ def test_backup_env_dirs_match_unit_rw_paths():
     assert env["KEY_BACKUP_DIR"] != env["BACKUP_DIR"], "chave e dump no mesmo diretório"
 
 
+
+def _section(text: str, start: str, end: str) -> str:
+    a = text.index(start)
+    return text[a:text.index(end, a + len(start))]
+
+
+def test_infra_doc_env_prod_is_key_material_in_custody_not_in_dump_package():
+    """Condição C: o .env.prod contém a FIELD_ENCRYPTION_KEY, então segue a custódia separada
+    e nunca vai no pacote do dump da 003 — escrito na §6 E na seção de off-site."""
+    doc = (ROOT / "docs" / "INFRASTRUCTURE.md").read_text()
+    sec6 = _section(doc, "## 6. Backup e Recuperação", "## 7.")
+    offsite = _section(sec6, "### Off-site", "\n### ")
+    head = sec6[: sec6.index("### Off-site")]
+    for name, part in (("§6", head), ("off-site", offsite)):
+        flat = " ".join(part.split())
+        assert "/opt/smartquotation/.env.prod" in flat, f"{name}: citar o .env.prod"
+        assert "material de chave" in flat, f"{name}: dizer que o .env.prod é material de chave"
+        assert "custódia separada" in flat, f"{name}: mesma custódia separada da chave"
+        assert re.search(r"nunca\W+(vai|entra) no pacote do dump", flat, re.I), (
+            f"{name}: dizer que nunca vai no pacote do dump da 003"
+        )
+    assert "NUNCA viaja junto com o dump no off-site (ordem 003)" in " ".join(sec6.split())
+
 TESTS = [
     test_backup_service_runs_db_media_key_in_order_hardened,
     test_backup_timer_daily_at_3am_persistent,
@@ -188,6 +211,7 @@ TESTS = [
     test_units_use_dedicated_env_file_never_env_prod,
     test_backup_env_example_has_only_backup_vars_and_no_secrets,
     test_backup_env_dirs_match_unit_rw_paths,
+    test_infra_doc_env_prod_is_key_material_in_custody_not_in_dump_package,
 ]
 
 if __name__ == "__main__":
