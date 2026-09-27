@@ -90,7 +90,8 @@ def _assert_timer(unit: dict, name: str, service: str, calendar_re: str):
     assert one(unit, "Install", "WantedBy") == "timers.target", name
 
 
-def test_backup_service_runs_db_media_key_in_order_hardened():
+def test_backup_service_runs_db_media_key_then_offsite_in_order_hardened():
+    """Off-site (003) depois dos três da 002; a chave vai à custódia ANTES do dump sair."""
     unit = parse_unit(UNITS / "sq-backup.service")
     _assert_hardened_oneshot(unit, "sq-backup.service")
     execs = [c.split()[0] for c in get(unit, "Service", "ExecStart")]
@@ -98,7 +99,10 @@ def test_backup_service_runs_db_media_key_in_order_hardened():
         "/opt/smartquotation/scripts/backup_db.sh",
         "/opt/smartquotation/scripts/backup_media.sh",
         "/opt/smartquotation/scripts/backup_key.sh",
+        "/opt/smartquotation/scripts/offsite_key_push.sh",
+        "/opt/smartquotation/scripts/offsite_push.sh",
     ], execs
+    assert "network-online.target" in one(unit, "Unit", "After"), "o off-site precisa de rede"
     rw = one(unit, "Service", "ReadWritePaths").split()
     assert _script_default("backup_key.sh", "KEY_BACKUP_DIR") in rw, rw
     assert "/backups/sq" in rw, rw
@@ -128,7 +132,7 @@ def test_restore_check_timer_weekly_persistent():
 BACKUP_ENV = UNITS / "backup.env.example"
 BACKUP_ENV_TARGET = "/etc/smartquotation/backup.env"
 # O que pode morar no env file das units: variáveis de backup e nomes de container.
-ALLOWED_ENV = re.compile(r"^(BACKUP_[A-Z_]+|KEY_[A-Z_]+|RESTORE_[A-Z_]+|MEDIA_[A-Z_]+|DB_CONTAINER[A-Z_]*|DB_SERVICE|WEB_CONTAINER|WEB_SERVICE|COMPOSE_FILE)$")
+ALLOWED_ENV = re.compile(r"^(BACKUP_[A-Z_]+|KEY_[A-Z_]+|RESTORE_[A-Z_]+|MEDIA_[A-Z_]+|DB_CONTAINER[A-Z_]*|DB_SERVICE|WEB_CONTAINER|WEB_SERVICE|COMPOSE_FILE|OFFSITE_[A-Z_]+|RCLONE_CONFIG|RCLONE_CACHE_DIR)$")
 
 
 def _env_assignments(path: Path) -> dict:
@@ -163,6 +167,7 @@ def test_backup_env_example_has_only_backup_vars_and_no_secrets():
     for secret in ("FIELD_ENCRYPTION_KEY=", "DJANGO_SECRET_KEY=", "POSTGRES_PASSWORD=",
                    "AWS_SECRET_ACCESS_KEY=", "AWS_ACCESS_KEY_ID="):
         assert secret not in text, f"backup.env.example não pode ter {secret}"
+    assert not re.search(r"AGE-SECRET-KEY-1[0-9A-Z]{20,}", text), "chave privada age no backup.env.example"
     # modo container: vale o POSTGRES_USER do próprio sq-prod-db
     assert "POSTGRES_USER" not in env and "POSTGRES_DB" not in env, env
     assert not re.search(r"^\s*DOCKER=.*sudo", text, re.M), "sudo não passa pelo NoNewPrivileges"
@@ -172,12 +177,30 @@ def test_backup_env_dirs_match_unit_rw_paths():
     """O que a unit deixa escrever tem que ser o que o backup.env.example manda usar."""
     env = _env_assignments(BACKUP_ENV)
     rw = one(parse_unit(UNITS / "sq-backup.service"), "Service", "ReadWritePaths").split()
-    for var in ("BACKUP_DIR", "KEY_BACKUP_DIR"):
+    for var in ("BACKUP_DIR", "KEY_BACKUP_DIR", "RCLONE_CACHE_DIR"):
         assert var in env, f"backup.env.example precisa definir {var}"
         assert env[var] in rw, f"{var}={env[var]} fora de ReadWritePaths {rw}"
     rw_restore = one(parse_unit(UNITS / "sq-restore-check.service"), "Service", "ReadWritePaths").split()
     assert env["BACKUP_DIR"] in rw_restore, rw_restore
     assert env["KEY_BACKUP_DIR"] != env["BACKUP_DIR"], "chave e dump no mesmo diretório"
+
+
+def test_backup_env_offsite_example_is_fictitious_public_and_separated():
+    """Chaves de exemplo: formato de chave PÚBLICA, obviamente fictícias (um caractere
+    repetido) e recusadas pelo script; a chave vai para outra seção do rclone.conf."""
+    import subprocess
+    env = _env_assignments(BACKUP_ENV)
+    for var in ("OFFSITE_AGE_RECIPIENT_INSTANCE", "OFFSITE_AGE_RECIPIENT_RECOVERY"):
+        v = env[var]
+        assert re.fullmatch(r"age1[a-z0-9]{58}", v) and len(set(v[4:])) == 1, f"{var}={v}"
+        r = subprocess.run(
+            ["bash", "-c", f'SQ_SCRIPT=t; . scripts/lib/offsite_common.sh; sq_offsite_check_recipient {var}'],
+            cwd=ROOT, env={"PATH": "/usr/bin:/bin", var: v}, capture_output=True, text=True)
+        assert r.returncode == 1 and "FICTÍCIO" in r.stderr, (var, r.stderr)
+    assert env["OFFSITE_AGE_RECIPIENT_INSTANCE"] != env["OFFSITE_AGE_RECIPIENT_RECOVERY"]
+    dump, key = env["OFFSITE_REMOTE"], env["OFFSITE_KEY_REMOTE"]
+    assert dump.split(":")[0] != key.split(":")[0], "chave e dump na mesma seção do rclone.conf"
+    assert env["RCLONE_CONFIG"].startswith("/etc/smartquotation/"), env["RCLONE_CONFIG"]
 
 
 
@@ -204,13 +227,14 @@ def test_infra_doc_env_prod_is_key_material_in_custody_not_in_dump_package():
     assert "NUNCA viaja junto com o dump no off-site (ordem 003)" in " ".join(sec6.split())
 
 TESTS = [
-    test_backup_service_runs_db_media_key_in_order_hardened,
+    test_backup_service_runs_db_media_key_then_offsite_in_order_hardened,
     test_backup_timer_daily_at_3am_persistent,
     test_restore_check_service_hardened_and_runs_restore_check,
     test_restore_check_timer_weekly_persistent,
     test_units_use_dedicated_env_file_never_env_prod,
     test_backup_env_example_has_only_backup_vars_and_no_secrets,
     test_backup_env_dirs_match_unit_rw_paths,
+    test_backup_env_offsite_example_is_fictitious_public_and_separated,
     test_infra_doc_env_prod_is_key_material_in_custody_not_in_dump_package,
 ]
 

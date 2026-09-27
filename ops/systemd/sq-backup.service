@@ -1,4 +1,4 @@
-# SmartQuotation — backup diário da produção (ordem 002).
+# SmartQuotation — backup diário da produção (ordens 002 e 003).
 # Instalação e leitura do resultado: docs/INFRASTRUCTURE.md §6. Instalar no host de produção
 # é gate ship do Capitão.
 #
@@ -6,20 +6,27 @@
 #   1. backup_db.sh    dump do sq-prod-db, validado pelo conteúdo (rodapé, schema, tamanho)
 #   2. backup_media.sh tar do volume de mídia do sq-web-proto, validado com tar tzf
 #   3. backup_key.sh   FIELD_ENCRYPTION_KEY em diretório SEPARADO + prova de decifra do dump
+#   4. offsite_key_push.sh  a chave, cifrada só para a recuperação da Quantum, no remote DA
+#                      CHAVE (OFFSITE_KEY_REMOTE), só quando o fingerprint muda. Vem antes do
+#                      dump: se a chave nova não chegar à custódia, o dump cifrado com ela
+#                      também não sai.
+#   5. offsite_push.sh dump + mídia cifrados com age (instância + recuperação) no
+#                      OFFSITE_REMOTE, hash remoto conferido. Nunca apaga nada no remoto.
 # Qualquer falha deixa a unit "failed": aparece em `systemctl --failed` e no journal.
 
 [Unit]
-Description=SmartQuotation: backup diário (dump + mídia + chave com prova de decifra)
+Description=SmartQuotation: backup diário (dump + mídia + chave com prova de decifra + off-site cifrado)
 Documentation=file:///opt/smartquotation/docs/INFRASTRUCTURE.md
 Requires=docker.service
-After=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
 # User=root, de propósito: o usuário de deploy NÃO está no grupo docker (hoje ele usa sudo),
 # e um timer não pode depender de sudo interativo. Pôr o deploy no grupo docker daria a ele
 # root permanente (o socket do docker é root-equivalente) só para o backup; rodar a unit como
-# root limita esse poder a estes três scripts, com o sandbox abaixo. NoNewPrivileges impede
+# root limita esse poder a estes scripts, com o sandbox abaixo. NoNewPrivileges impede
 # sudo aqui dentro.
 User=root
 # Env file DEDICADO, só com variáveis de backup (modelo: ops/systemd/backup.env.example).
@@ -30,12 +37,16 @@ UMask=0077
 ExecStart=/opt/smartquotation/scripts/backup_db.sh
 ExecStart=/opt/smartquotation/scripts/backup_media.sh
 ExecStart=/opt/smartquotation/scripts/backup_key.sh
+ExecStart=/opt/smartquotation/scripts/offsite_key_push.sh
+ExecStart=/opt/smartquotation/scripts/offsite_push.sh
 TimeoutStartSec=2h
 
-# Sandbox: o sistema inteiro fica read-only, exceto os dois diretórios de backup (que têm de
-# existir antes — ver §6). Se mudar BACKUP_DIR/KEY_BACKUP_DIR no backup.env, mude aqui.
+# Sandbox: o sistema inteiro fica read-only, exceto os diretórios de backup e o cache do
+# rclone (RCLONE_CACHE_DIR: o home do root é read-only aqui). Têm de existir antes — ver §6.
+# Se mudar BACKUP_DIR/KEY_BACKUP_DIR/RCLONE_CACHE_DIR no backup.env, mude aqui. O
+# rclone.conf (RCLONE_CONFIG, em /etc/smartquotation) só precisa de leitura.
 ProtectSystem=strict
-ReadWritePaths=/backups/sq /var/lib/smartquotation/key-backup
+ReadWritePaths=/backups/sq /var/lib/smartquotation/key-backup /var/lib/smartquotation/offsite-cache
 ProtectHome=read-only
 PrivateTmp=true
 NoNewPrivileges=true
