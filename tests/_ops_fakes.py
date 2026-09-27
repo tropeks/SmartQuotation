@@ -138,14 +138,24 @@ def _write_exec(path: Path, text: str) -> None:
     path.chmod(0o755)
 
 
-def crypto_stub_needed() -> bool:
-    if os.environ.get("SQ_TEST_CRYPTO_STUB") == "1":
-        return True
+def _detect_real_cryptography() -> bool:
     try:
         import cryptography.fernet  # noqa: F401
     except ImportError:
+        return False
+    return True
+
+
+# Decidido UMA vez, na importação, antes de qualquer stub entrar em sys.modules. Sondar a
+# cada chamada enganava: depois do primeiro FakeEnv, o stub em cache fazia o import dar
+# certo, o "container" subia sem stub e a prova falhava (só no job de ops, sem cryptography).
+_REAL_CRYPTOGRAPHY = _detect_real_cryptography()
+
+
+def crypto_stub_needed() -> bool:
+    if os.environ.get("SQ_TEST_CRYPTO_STUB") == "1":
         return True
-    return False
+    return not _REAL_CRYPTOGRAPHY
 
 
 # Stub de cryptography.fernet: só para o job de ops do CI, que não instala cryptography
@@ -272,6 +282,9 @@ class FakeEnv:
                 from cryptography.fernet import Fernet
             finally:
                 sys.path.remove(self.pythonpath)
+                # O stub vive no diretório temporário deste FakeEnv: não deixa cache para o próximo.
+                for m in [m for m in sys.modules if m == "cryptography" or m.startswith("cryptography.")]:
+                    del sys.modules[m]
             return Fernet
         from cryptography.fernet import Fernet
         return Fernet
