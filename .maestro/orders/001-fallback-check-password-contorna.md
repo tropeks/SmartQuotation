@@ -35,3 +35,7 @@ lockout. O mesmo caminho aprovava approver com `is_active=False`.
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 001` (você não fecha a própria ordem).
+accepted_at: 2026-09-27T18:20:23-03:00
+accepted_session: desconhecido
+accepted_tree: 5832bd232f8f6ddc01b0ff3f949ebd46c6e58c64
+accepted_intent: 3
