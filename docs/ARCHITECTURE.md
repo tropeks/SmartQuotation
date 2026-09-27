@@ -2,10 +2,17 @@
 # Contrato de documentação (Maestro E16).
 # Arquitetura vigente do SmartQuotation: motor puro, adapter, apps Django, integrações ERP
 # e a fronteira com o Cognitive Core (F1). Direção: .maestro/INTENT.md v2.
+# Cover ESTREITO de propósito: as fronteiras estruturais (API pública do motor, adapter,
+# wiring do projeto Django, registro de apps, compose). O miolo de cada app é governado
+# pelo DATA_MODEL (models/migrations), API_SPEC (urls/views) e SECURITY (auth/RBAC).
 covers:
-  - pricing_engine/**
+  - pricing_engine/__init__.py
+  - pricing_engine/feixe_quote.py
+  - pricing_engine/permutador_quote.py
+  - pricing_engine/rates.py
+  - backend/apps/quotations/adapter.py
   - backend/smartquotation/**
-  - backend/apps/**
+  - backend/apps/*/apps.py
   - docker-compose*.yml
   - backend/Dockerfile
 reviewed: 2026-09-27
