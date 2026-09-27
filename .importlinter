@@ -1,0 +1,113 @@
+# Trava mecânica do INTENT v3 §Limites (ordem 004, decisão 01M3JC1DSBDS2B4G70MMX4ZWMW):
+# "pricing_engine é Python puro, sem Django, e o único caminho que PERSISTE resultado do
+# motor é apps/quotations/adapter.py (outros módulos podem chamar o motor para simular
+# ou exibir, nunca gravar o resultado), travado por import-linter no CI."
+#
+# `pricing_engine` vive na raiz do repo; `apps` vive em `backend/apps`. São duas raízes de
+# import diferentes — rode via `python scripts/lint_imports.py` (injeta as duas no
+# PYTHONPATH) em vez de `lint-imports` cru, ou o import-linter não encontra `apps`.
+#
+# root_packages = as duas raízes que os contratos abaixo referenciam.
+[importlinter]
+root_packages=
+    pricing_engine
+    apps
+# forbidden_modules do C1 inclui pacotes externos (django, rest_framework, celery), que só
+# entram no grafo se include_external_packages=True.
+include_external_packages=True
+
+# --- C1: pricing_engine é lib pura ---------------------------------------------------
+# Não pode importar Django, DRF, Celery nem qualquer coisa de `apps` (o sentido contrário
+# já é garantido pelo Python: apps importa pricing_engine, nunca o inverso — mas travamos
+# aqui também para pegar um import acidental em qualquer arquivo novo do motor).
+[importlinter:contract:pricing-engine-lib-pura]
+name=pricing_engine é lib pura (zero Django)
+type=forbidden
+source_modules=
+    pricing_engine
+forbidden_modules=
+    django
+    rest_framework
+    celery
+    apps
+
+# --- C2: só o adapter persiste --------------------------------------------------------
+# Tipo escolhido: `forbidden` com `ignore_imports`, não `layers`/`independence`.
+# `layers` modela uma ordem entre camadas (A pode importar B, B não pode importar A) — não
+# é essa a forma do problema aqui: TODO módulo de `apps` pode importar essas três funções
+# do motor, elas só não podem estar decoradas com o direito de GRAVAR o resultado fora do
+# adapter. `independence` provaria que dois pacotes não se tocam, e aqui um toque parcial
+# (import liberado, persistência não) é exatamente o que se quer permitir. `forbidden` com
+# uma allowlist NOMEADA via `ignore_imports` é o único dos três que expressa "ninguém pode,
+# exceto esta lista explícita, com o porquê ao lado".
+#
+# forbidden_modules = os módulos do motor que COMPUTAM uma cotação inteira (a função monta
+# a EAP completa, com preço de venda) — não constantes, tipos ou seeds:
+#   - pricing_engine.feixe_quote    (quote_feixe)
+#   - pricing_engine.permutador_quote (quote_completo)
+#   - pricing_engine.beu_quote      (quote_beu, compat = quote_completo("BEU", ...))
+# Constantes/tipos/seeds (feixe_inputs.FeixeInputs, rates.TenantCostChain, asme.*,
+# permutador_layout.*, dimensions.*, process_params.*, beu_geometry.*, ...) NÃO entram
+# aqui: são dados e utilitários, não "computar uma cotação". `apps.engineering_params.models`
+# está na allowlist abaixo só porque o import-linter enxerga o MÓDULO inteiro, e ela usa
+# apenas uma constante de `permutador_quote` (ver comentário na entrada).
+#
+# O import-linter checa cadeias INDIRETAS por padrão (allow_indirect_imports=False não
+# significa "não checa indireto": ao contrário, usa find_shortest_chains, que inclui
+# cadeias de qualquer tamanho). Isso é o que faz a allowlist funcionar por composição: ao
+# ignorar a aresta DIRETA de cada módulo abaixo para o motor, qualquer outro módulo de
+# `apps` que importe UM DESSES módulos (ex.: uma view que importa
+# apps.tema_templates.services) não herda uma cadeia válida até o motor — a aresta que
+# fecharia a cadeia já foi removida do grafo. Só quebra quem importar o motor DIRETO sem
+# estar nesta lista.
+[importlinter:contract:so-o-adapter-persiste]
+name=só apps.quotations.adapter persiste resultado do motor (INTENT v3 §Limites)
+type=forbidden
+source_modules=
+    apps
+forbidden_modules=
+    pricing_engine.feixe_quote
+    pricing_engine.permutador_quote
+    pricing_engine.beu_quote
+ignore_imports=
+    # O adapter: único caminho que persiste (recompute() grava Quotation/QuotationItem).
+    apps.quotations.adapter -> pricing_engine.feixe_quote
+
+    # --- allowlist de simulação/exibição (não persistem a EAP) ---
+    # quotations/views._preview: "Computa um preview (sem persistir) -> contexto de
+    # resultados" (docstring do próprio módulo). Também importa quote_completo como
+    # fallback de recálculo em quotation_revise — ver ACHADO no relato da ordem 004:
+    # esse fallback alimenta apps.quotations.services.create_permutador_quotation, que
+    # persiste sem passar pelo adapter. Import liberado aqui; achado reportado ao Diretor,
+    # não corrigido nesta ordem (fora do escopo: mudaria comportamento de persistência).
+    apps.quotations.views -> pricing_engine.feixe_quote
+    apps.quotations.views -> pricing_engine.permutador_quote
+
+    # engineering_params/simulation.py: "NADA é persistido... Não usa
+    # apps.quotations.adapter.recompute (que grava a EAP no banco)" (docstring do módulo).
+    # Simulação de impacto de Rate/ProcessParameter sobre um golden case, em memória.
+    apps.engineering_params.simulation -> pricing_engine.feixe_quote
+
+    # cost_discovery/services.py: back_solve() calibra fator_correcao_mo por bisseção,
+    # rodando quote_feixe várias vezes sobre inputs sintéticos; grava o fator resolvido em
+    # TenantParamConfig (config, não EAP), nunca uma Quotation/QuotationItem.
+    apps.cost_discovery.services -> pricing_engine.feixe_quote
+
+    # tema_templates/services.py: estimate_complete/estimate_from_inputs computam o preview
+    # do data sheet do permutador completo (Tela do catálogo TEMA); quem persiste a partir
+    # do resultado é apps.quotations.services.create_permutador_quotation, chamado pela view
+    # (apps.tema_templates.views.data_sheet), não este módulo.
+    apps.tema_templates.services -> pricing_engine.permutador_quote
+
+    # engineering_params/models.py: usa SÓ a constante _SETUP_FRAC (setup fraction default
+    # por operação) para popular um default de configuração — não chama quote_completo.
+    # Entra na allowlist porque o import-linter enxerga o módulo inteiro, não o nome
+    # importado; não é "simulação", é leitura de uma constante.
+    apps.engineering_params.models -> pricing_engine.permutador_quote
+
+    # --- testes: constroem fixtures chamando o motor direto, não é caminho de produção ---
+    apps.quotations.tests -> pricing_engine.permutador_quote
+    apps.quotations.test_feature -> pricing_engine.permutador_quote
+    apps.tema_templates.tests -> pricing_engine.permutador_quote
+    apps.tema_templates.tests -> pricing_engine.beu_quote
+    apps.proposals.tests -> pricing_engine.permutador_quote
