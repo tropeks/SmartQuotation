@@ -1,0 +1,14 @@
+# Drill de restore toda segunda às 05:00 — depois do backup das 03:00, que é o dump testado.
+
+[Unit]
+Description=SmartQuotation: agenda do drill semanal de restore
+
+[Timer]
+OnCalendar=Mon *-*-* 05:00:00
+Persistent=true
+RandomizedDelaySec=10min
+AccuracySec=1min
+Unit=sq-restore-check.service
+
+[Install]
+WantedBy=timers.target

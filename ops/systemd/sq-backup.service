@@ -1,0 +1,44 @@
+# SmartQuotation — backup diário da produção (ordem 002).
+# Instalação e leitura do resultado: docs/INFRASTRUCTURE.md §6. Instalar no host de produção
+# é gate ship do Capitão.
+#
+# Roda em sequência, e para no primeiro que falhar (Type=oneshot com vários ExecStart):
+#   1. backup_db.sh    dump do sq-prod-db, validado pelo conteúdo (rodapé, schema, tamanho)
+#   2. backup_media.sh tar do volume de mídia do sq-web-proto, validado com tar tzf
+#   3. backup_key.sh   FIELD_ENCRYPTION_KEY em diretório SEPARADO + prova de decifra do dump
+# Qualquer falha deixa a unit "failed": aparece em `systemctl --failed` e no journal.
+
+[Unit]
+Description=SmartQuotation: backup diário (dump + mídia + chave com prova de decifra)
+Documentation=file:///opt/smartquotation/docs/INFRASTRUCTURE.md
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# User=root, de propósito: o usuário de deploy NÃO está no grupo docker (hoje ele usa sudo),
+# e um timer não pode depender de sudo interativo. Pôr o deploy no grupo docker daria a ele
+# root permanente (o socket do docker é root-equivalente) só para o backup; rodar a unit como
+# root limita esse poder a estes três scripts, com o sandbox abaixo. NoNewPrivileges impede
+# `sudo` aqui dentro: não defina DOCKER="sudo docker" no .env.prod.
+User=root
+EnvironmentFile=/opt/smartquotation/.env.prod
+WorkingDirectory=/opt/smartquotation
+UMask=0077
+ExecStart=/opt/smartquotation/scripts/backup_db.sh
+ExecStart=/opt/smartquotation/scripts/backup_media.sh
+ExecStart=/opt/smartquotation/scripts/backup_key.sh
+TimeoutStartSec=2h
+
+# Sandbox: o sistema inteiro fica read-only, exceto os dois diretórios de backup (que têm de
+# existir antes — ver §6). Se mudar POSTGRES_BACKUP_DIR/KEY_BACKUP_DIR no .env.prod, mude aqui.
+ProtectSystem=strict
+ReadWritePaths=/backups/sq /var/lib/smartquotation/key-backup
+ProtectHome=read-only
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true

@@ -1,0 +1,16 @@
+# Dispara sq-backup.service todo dia às 03:00 (horário do host). Persistent=true: se o host
+# estava desligado às 03:00, roda assim que voltar. RandomizedDelaySec pequeno só para não
+# coincidir ao segundo com outros jobs do host.
+
+[Unit]
+Description=SmartQuotation: agenda do backup diário (03:00)
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=5min
+AccuracySec=1min
+Unit=sq-backup.service
+
+[Install]
+WantedBy=timers.target

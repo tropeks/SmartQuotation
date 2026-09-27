@@ -1,0 +1,32 @@
+# SmartQuotation — drill semanal de restore (ordem 002).
+# Restaura o dump mais recente num postgres:15 efêmero (--network none, --rm), confere schema
+# engematex, tabelas-chave e cotações, valida o tar de mídia e grava restore_last_success.
+# Falha = unit "failed" (systemctl --failed / journal). Ver docs/INFRASTRUCTURE.md §6.
+
+[Unit]
+Description=SmartQuotation: drill semanal de restore do backup
+Documentation=file:///opt/smartquotation/docs/INFRASTRUCTURE.md
+Requires=docker.service
+After=docker.service sq-backup.service
+
+[Service]
+Type=oneshot
+# User=root pelo mesmo motivo do sq-backup.service: o deploy não está no grupo docker,
+# e o drill precisa do socket do docker para subir o container efêmero.
+User=root
+EnvironmentFile=/opt/smartquotation/.env.prod
+WorkingDirectory=/opt/smartquotation
+UMask=0077
+ExecStart=/opt/smartquotation/scripts/restore_check.sh
+TimeoutStartSec=2h
+
+ProtectSystem=strict
+ReadWritePaths=/backups/sq
+ProtectHome=read-only
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
