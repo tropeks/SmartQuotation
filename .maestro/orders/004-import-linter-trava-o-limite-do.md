@@ -62,3 +62,7 @@ import-linter no CI, o limite acima — hoje só documentado em prosa (INTENT + 
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 004` (você não fecha a própria ordem).
+accepted_at: 2026-09-27T19:40:41-03:00
+accepted_session: desconhecido
+accepted_tree: c57d106858694f3ec551405f12ac205e940c065e
+accepted_intent: 3
