@@ -7,7 +7,7 @@ from django_tenants.test.cases import TenantTestCase
 
 from apps.accounts.models import UserProfile
 from apps.audit.models import AccessLog, ApprovalRequest, TechnicalApproval
-from apps.audit.services import approve_quotation, log_access, revoke_approval
+from apps.audit.services import approve_presencial, approve_quotation, log_access, revoke_approval
 from apps.quotations.models import Customer
 from apps.quotations.services import create_feixe_quotation
 from apps.production.services import is_convertible
@@ -144,6 +144,82 @@ class TechnicalApprovalTests(TenantTestCase):
         self.assertEqual(mail.outbox[0].to, ["gestor@example.com"])
         self.assertIn(self.quotation.number, mail.outbox[0].subject)
         self.assertTrue(AccessLog.objects.filter(action="approve", metadata__result="remote_requested").exists())
+
+
+class ApprovePresencialAxesTests(TenantTestCase):
+    """H1/S-XXX: `approve_presencial` não pode contornar o lockout do axes nem o
+    `is_active=False` via fallback de `check_password`. Ver apps/audit/services.py."""
+
+    def setUp(self):
+        self.client = Client(HTTP_HOST=self.get_test_tenant_domain())
+        self.customer = Customer.objects.create(company_name="ACME")
+        self.quotation = create_feixe_quotation(self.customer, "Feixe")
+        self.user = User.objects.create_user(username="eng", password="123")
+        self.engineer = UserProfile.objects.create(
+            user=self.user, full_name="Eng PE", role="engenheiro",
+            crea_number="CREA-123", crea_state="SP")
+
+    @override_settings(AXES_ENABLED=True)
+    def test_conta_trancada_pelo_axes_nega_mesmo_com_senha_correta(self):
+        url = reverse("audit:approve_presencial", args=[self.quotation.pk])
+        self.client.force_login(self.user)
+        for _ in range(5):
+            self.client.post(
+                url,
+                {"approved_by": self.engineer.pk, "password": "errada"},
+                REMOTE_ADDR="10.0.0.1",
+            )
+
+        resp = self.client.post(
+            url,
+            {"approved_by": self.engineer.pk, "password": "123"},
+            REMOTE_ADDR="10.0.0.1",
+        )
+
+        # O axes tranca a conta e o middleware sobrescreve a resposta com 429 (lockout) —
+        # o que importa é que a aprovação NÃO tenha sido criada por baixo do lockout.
+        self.assertNotEqual(resp.status_code, 200)
+        self.assertEqual(TechnicalApproval.objects.filter(quotation=self.quotation).count(), 0)
+
+    @override_settings(AXES_ENABLED=True)
+    def test_usuario_inativo_com_senha_correta_nega(self):
+        # O operador logado (orçamentista, ativo) registra a aprovação presencial de um
+        # engenheiro CREA cuja conta foi desativada nesse meio-tempo — mesmo com a senha
+        # certa, ModelBackend recusa is_active=False; não pode haver fallback que aprove.
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+        orc_user = User.objects.create_user(username="orc-presencial", password="456")
+        UserProfile.objects.create(user=orc_user, full_name="Orc", role=UserProfile.ROLE_ORCAMENTISTA)
+        self.client.force_login(orc_user)
+        url = reverse("audit:approve_presencial", args=[self.quotation.pk])
+
+        resp = self.client.post(
+            url,
+            {"approved_by": self.engineer.pk, "password": "123"},
+            REMOTE_ADDR="10.0.0.2",
+        )
+
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(TechnicalApproval.objects.filter(quotation=self.quotation).count(), 0)
+
+    @override_settings(AXES_ENABLED=True)
+    def test_senha_correta_conta_nao_trancada_axes_ligado_aprova(self):
+        self.client.force_login(self.user)
+        url = reverse("audit:approve_presencial", args=[self.quotation.pk])
+
+        resp = self.client.post(
+            url,
+            {"approved_by": self.engineer.pk, "password": "123"},
+            REMOTE_ADDR="10.0.0.3",
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(TechnicalApproval.objects.filter(quotation=self.quotation, revoked_at__isnull=True).count(), 1)
+
+    def test_sem_request_nega(self):
+        with self.assertRaises(ValidationError):
+            approve_presencial(self.quotation, self.engineer, "123", request=None)
+        self.assertEqual(TechnicalApproval.objects.filter(quotation=self.quotation).count(), 0)
 
 
 class AccessLogTests(TenantTestCase):
