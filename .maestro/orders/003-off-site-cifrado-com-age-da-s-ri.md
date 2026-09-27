@@ -51,3 +51,7 @@ decisão 01M3JC174DFPRG8P17WJZBA0ZP.
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 003` (você não fecha a própria ordem).
+accepted_at: 2026-09-27T20:02:45-03:00
+accepted_session: desconhecido
+accepted_tree: 32f065cfccbcebd799ee3328e27b0341a4ea7440
+accepted_intent: 3
