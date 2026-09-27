@@ -24,7 +24,7 @@ docs: [docs/ARCHITECTURE.md, docs/DATA_MODEL.md, docs/API_SPEC.md, docs/SECURITY
 #   suite: o run verde da CI no HEAD (Django multi-tenant com Postgres, ops, pip-audit).
 #          A forge não tem docker nem Postgres local; a CI roda a suíte num runner efêmero
 #          no mesmo SHA. Exige o HEAD empurrado: sem push não há recibo de suíte.
-# Caminhos são PREFIXOS. O adapter é o único acoplamento Django↔motor e prova como o motor.
+# Caminhos são PREFIXOS. O adapter é o único caminho que persiste resultado do motor (INTENT v3) e prova como o motor.
 verifications:
   motor:
     paths: [pricing_engine/, tests/, backend/apps/quotations/adapter.py]

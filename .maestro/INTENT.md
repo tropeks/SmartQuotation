@@ -1,9 +1,9 @@
 <!-- maestro-intent v1
-version: 2
-ts: 2026-09-27T16:55:53-03:00
-head: 8249a601a95042f0827758ec61e21cc00132eb20
-author_session: 079510ae-7231-489d-b05c-d4da4b3dbd60
-hash: 22b828a9
+version: 3
+ts: 2026-09-27T17:16:54-03:00
+head: 74d8149bf6fb3df9aaa681b2b8cbc7f230bac480
+author_session: d125f612-fe58-44f9-9789-3bae25d86d02
+hash: be9e1bc4
 -->
 # Direção — SmartQuotation
 
@@ -14,7 +14,10 @@ hash: 22b828a9
 > `docs/ARCHITECTURE.md`, `docs/BACKLOG.md` e de `cognitive-core/docs/VISAO.md` e `FASES.md`
 > (Fase 1). Onde as fontes divergem, vale a PRODUCT_VISION (10/07) sobre o PROJECT_BRIEF
 > (2025), e a FASES v0.3 (26/09) para o que é do Core. Incorpora as respostas técnicas do
-> Diretor de 27/09. Histórico: v1 foi o template vazio; **v2 é a primeira versão carimbada.**
+> Diretor de 27/09. Histórico: v1 foi o template vazio; v2 é a primeira versão carimbada;
+> **v3** (27/09, decisão 01M3J7RNGCM5Y22RHHZSFWJPGR do Capitão) troca, em §Limites, "o adapter
+> é o único acoplamento" por "o único caminho que PERSISTE resultado do motor é o adapter",
+> travado por import-linter.
 >
 > **Pendências** (não são limites nem resultado ainda):
 > - Candidatas e prazo da beta multi-empresa: com o Capitão.
@@ -83,7 +86,9 @@ Sucesso verificável, nesta ordem:
 ## Limites
 Django 5.2 + DRF + Celery + PostgreSQL, schema-per-tenant (django-tenants), sessão auth,
 templates + HTMX; PT-BR na interface. `pricing_engine` é Python puro, sem Django, e o único
-acoplamento é `apps/quotations/adapter.py`. Custo = peso **bruto** (cobra perdas), com bruto,
+caminho que **persiste** resultado do motor é `apps/quotations/adapter.py` (outros módulos
+podem chamar o motor para simular ou exibir, nunca gravar o resultado), travado por
+import-linter no CI. Custo = peso **bruto** (cobra perdas), com bruto,
 líquido e perda exibidos; cotação é snapshot, não referência viva ao template. Gates do motor
 (feixe e permutador) nunca regridem; o CI não relaxa gate sem ordem. Número de norma
 provisório aparece marcado como estimativa na tela, no código e na memória de cálculo até

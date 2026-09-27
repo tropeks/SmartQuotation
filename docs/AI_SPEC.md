@@ -36,7 +36,7 @@ serviços que a interface usa. Nunca pelo ORM, nunca com conta de serviço.
 | Camada | Tem modelo? | Regra |
 |---|---|---|
 | `pricing_engine/` (motor) | **Nunca** | Lib pura. Custo, horas, peso, preço saem só daqui. |
-| `apps/quotations/adapter.py` (único acoplamento) | **Nunca** | `recompute()` é a fonte de todo número que a guarda compara. |
+| `apps/quotations/adapter.py` (único que persiste resultado do motor) | **Nunca** | `recompute()` é a fonte de todo número que a guarda compara. |
 | Cadeia de custo, markup, impostos, `CalculationSnapshot` | **Nunca** | Custo é derivado (motor ou roll-up), nunca digitado nem inferido. |
 | Aprovação técnica CREA e assinatura | **Nunca** | L3 humano habilitado; classe C5, travada (ARQUITETURA §3.6). |
 | `core_bridge` (previsto, F1-02) | Não. É a borda: manifesto, endpoints finos, `preview` | Recebe `Draft`/`Advice` do Core como **proposta**; nada escrito em dado de negócio sem L0 + L3. |

@@ -38,7 +38,7 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
   apps/accounts/       # UserProfile + RBAC (regra engenheiro→CREA) + login/logout sessão
   apps/materials/      # Material (423 seed, densidade de norma) + MaterialPrice (cifrado, por forma)
   apps/engineering_params/  # Rate + ProcessParameter (seed ENGEMATEX) + regra furação radial≤600<CNC
-  apps/quotations/     # EAP persistida + ADAPTER (único acoplamento Django↔motor) + data sheet UI
+  apps/quotations/     # EAP persistida + ADAPTER (único que PERSISTE resultado do motor) + data sheet UI
   apps/proposals/      # proposta DOCX/PDF (template configurável + editável por caso)
   apps/cost_discovery/ # wizard A1-c: cadeia de custos (seed top-down + back-solve de calibração)
   static/css/design-system-g.css   # já serve os tokens da Prancha (--p-*), identidade vigente
@@ -50,8 +50,10 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
 # MO contra um job real conhecido (erro <0,1% vs realidade da empresa).
 ```
 
-**Regra de ouro:** `pricing_engine` é lib pura. O único ponto que importa Django↔motor é
-`apps/quotations/adapter.py` (`recompute()` monta FeixeInputs, chama `quote_feixe`, persiste a EAP).
+**Regra de ouro:** `pricing_engine` é lib pura. O único caminho que **persiste** resultado do
+motor é `apps/quotations/adapter.py` (`recompute()` monta FeixeInputs, chama `quote_feixe`,
+persiste a EAP). Outros módulos podem chamar o motor para simular ou exibir, nunca gravar
+(INTENT v3 §Limites; trava por import-linter vem em ordem própria).
 
 ## Dev (Docker)
 ```bash

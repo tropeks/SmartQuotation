@@ -1,7 +1,7 @@
 ---
 # Contrato de documentação (Maestro E16).
 # Arquitetura vigente do SmartQuotation: motor puro, adapter, apps Django, integrações ERP
-# e a fronteira com o Cognitive Core (F1). Direção: .maestro/INTENT.md v2.
+# e a fronteira com o Cognitive Core (F1). Direção: .maestro/INTENT.md v3.
 # Cover ESTREITO de propósito: as fronteiras estruturais (API pública do motor, adapter,
 # wiring do projeto Django, registro de apps, compose). O miolo de cada app é governado
 # pelo DATA_MODEL (models/migrations), API_SPEC (urls/views) e SECURITY (auth/RBAC).
@@ -80,7 +80,7 @@ schema (django-tenants), UI server-rendered (templates + HTMX, Alpine pontual), 
 | Produção | `apps/production` | OrdemFabricacao e filhos, apontamento, ActualRate, ITP | — |
 | Integrações | `apps/integrations/{nomus,protheus,omie,sap_b1,bling}` | Conectores por tenant, runs assíncronos, logs/tentativas, healthcheck admin | Retry por run; fiscal fica no ERP do cliente |
 
-### 0.3 Regras que a arquitetura sustenta (do INTENT v2)
+### 0.3 Regras que a arquitetura sustenta (do INTENT v3)
 
 - `pricing_engine` é lib pura; a persistência do resultado passa pelo adapter. Gates do feixe
   (−2,9%) e do permutador BEU/BEM (0,0%) nunca regridem.
@@ -456,4 +456,4 @@ smartquotation/
 
 ## Flags para o orchestrator
 
-- Acoplamento motor↔Django: além do adapter, `tema_templates/services.py`, `engineering_params/simulation.py`, `cost_discovery/services.py`, `quotations/views.py` e `quotations/services.py` chamam `quote_completo`/`quote_feixe` direto (simulação e prévia, sem persistir EAP). A regra do INTENT diz "único acoplamento"; ver relatório.
+- Acoplamento motor↔Django: além do adapter, `tema_templates/services.py`, `engineering_params/simulation.py`, `cost_discovery/services.py`, `quotations/views.py` e `quotations/services.py` chamam `quote_completo`/`quote_feixe` direto (simulação e prévia, sem persistir EAP). Resolvido no INTENT v3 (decisão 01M3J7RNGCM5Y22RHHZSFWJPGR): o limite passa a ser "o único caminho que PERSISTE resultado do motor é o adapter", e essas chamadas de simulação ficam permitidas. A trava por import-linter entra como ordem depois da 002.
