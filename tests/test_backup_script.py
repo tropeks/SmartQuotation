@@ -7,6 +7,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from tests._ops_fakes import FOOTER_CLUSTER, FOOTER_DB
+
 ROOT = Path(__file__).resolve().parent.parent
 BACKUP_SCRIPT = ROOT / "scripts" / "backup_db.sh"
 ENV_PROD_EXAMPLE = ROOT / ".env.prod.example"
@@ -256,7 +258,8 @@ def _make_fake_docker(
     fake_docker.write_text(
         "#!/usr/bin/env bash\n"
         f"if [ \"$1\" = \"info\" ]; then exit {0 if info_ok else 1}; fi\n"
-        f"if [ \"$1\" = \"inspect\" ]; then exit {0 if inspect_ok else 1}; fi\n"
+        # detect_mode pergunta `inspect -f '{{.State.Running}}'`: rodando imprime "true".
+        f"if [ \"$1\" = \"inspect\" ]; then {'echo true; exit 0' if inspect_ok else 'exit 1'}; fi\n"
         "if [ \"$1\" = \"exec\" ] || [ \"$1\" = \"compose\" ]; then\n"
         f"  printf %s {shlex_quote(payload)}\n"
         f"  exit {exec_exit}\n"
@@ -330,7 +333,7 @@ def test_backup_script_accepts_a_realistic_dump():
     with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
         payload = "\n".join(
             f"-- dump line {i} schema engematex data" for i in range(200)
-        )
+        ) + "\n" + FOOTER_CLUSTER + "\n"
         _make_fake_docker(Path(bin_dir), inspect_ok=True, payload=payload, exec_exit=0)
 
         result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
@@ -346,7 +349,7 @@ def test_backup_script_accepts_a_realistic_dump():
 def test_backup_script_container_mode_used_when_container_exists():
     """When DB_CONTAINER exists (docker inspect succeeds), auto mode must use 'docker exec'."""
     with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
-        payload = "\n".join(f"-- container dump {i} engematex" for i in range(200))
+        payload = "\n".join(f"-- container dump {i} engematex" for i in range(200)) + "\n" + FOOTER_CLUSTER + "\n"
         _make_fake_docker(Path(bin_dir), inspect_ok=True, payload=payload, exec_exit=0)
 
         result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
@@ -359,7 +362,7 @@ def test_backup_script_container_mode_used_when_container_exists():
 def test_backup_script_falls_back_to_compose_when_container_absent():
     """When DB_CONTAINER does not exist, auto mode must fall back to docker compose."""
     with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
-        payload = "\n".join(f"-- compose dump {i} engematex" for i in range(200))
+        payload = "\n".join(f"-- compose dump {i} engematex" for i in range(200)) + "\n" + FOOTER_DB + "\n"
         _make_fake_docker(Path(bin_dir), inspect_ok=False, payload=payload, exec_exit=0)
 
         result = _run_backup_db(Path(bin_dir), Path(backup_dir), {})
@@ -415,7 +418,7 @@ def test_backup_script_announces_auto_detected_mode_on_stderr():
     """Auto mode must log WHICH mode it picked and why — silent auto-detection is
     hard to debug from a cron log at 3am."""
     with tempfile.TemporaryDirectory() as bin_dir, tempfile.TemporaryDirectory() as backup_dir:
-        payload = "\n".join(f"-- dump line {i} engematex" for i in range(200))
+        payload = "\n".join(f"-- dump line {i} engematex" for i in range(200)) + "\n" + FOOTER_CLUSTER + "\n"
         _make_fake_docker(Path(bin_dir), inspect_ok=True, payload=payload, exec_exit=0)
 
         result = _run_backup_db(Path(bin_dir), Path(backup_dir), {"DB_CONTAINER": "sq-prod-db"})
