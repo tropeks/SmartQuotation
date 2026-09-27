@@ -271,6 +271,41 @@ def test_container_mode_without_postgres_user_uses_the_containers_own():
         assert argv[:2] == ["-U", "usuario_do_container"], argv
 
 
+
+# --- temporários: dentro do trap, e órfãos antigos podados ------------------------------
+
+def test_status_tmp_is_removed_by_trap_when_write_fails_midway():
+    """sq_write_status cria <alvo>.tmp.<pid>; se o mv falhar (set -e aborta), o trap limpa."""
+    with tempfile.TemporaryDirectory() as d:
+        r = subprocess.run(
+            ["bash", "-c", f'set -euo pipefail; umask 077; SQ_SCRIPT=t; . "{LIB}"; '
+             "trap sq_cleanup EXIT; mv() { return 1; }; "
+             f'sq_write_status "{d}/last_success" "timestamp=x"'],
+            capture_output=True, text=True,
+        )
+        assert r.returncode != 0, "o mv falho tinha que abortar"
+        left = sorted(p.name for p in Path(d).iterdir())
+        assert left == [], f"temporário de status sobreviveu ao trap: {left}"
+
+
+def test_orphan_tmp_older_than_one_day_is_pruned_fresh_one_kept():
+    tmp, fk, bdir = _fresh()
+    with tmp:
+        bdir.mkdir(parents=True)
+        orphans = [bdir / "sq_20200101_030000.sql.gz.tmp", bdir / "last_success.tmp.4242"]
+        fresh = bdir / "sq_20260927_030000.sql.gz.tmp"  # pode ser de uma execução em curso
+        for p in orphans + [fresh]:
+            p.write_bytes(b"parcial")
+        for p in orphans:
+            _old(p, 2)
+        fk.set_dump(synthetic_dump())
+        r = fk.run("backup_db.sh")
+        assert r.returncode == 0, r.stderr
+        assert not any(p.exists() for p in orphans), "órfão de >1 dia tinha que sair"
+        assert fresh.exists(), "tmp recente não pode ser apagado (execução concorrente)"
+        assert "órfão" in r.stderr, r.stderr
+
+
 TESTS = [
     test_umask_is_set_before_any_mkdir,
     test_final_dump_and_status_are_0600_and_dir_0700,
@@ -286,6 +321,8 @@ TESTS = [
     test_last_success_records_timestamp_file_and_bytes_only_on_success,
     test_compose_mode_without_postgres_user_gives_clear_error,
     test_container_mode_without_postgres_user_uses_the_containers_own,
+    test_status_tmp_is_removed_by_trap_when_write_fails_midway,
+    test_orphan_tmp_older_than_one_day_is_pruned_fresh_one_kept,
 ]
 
 if __name__ == "__main__":

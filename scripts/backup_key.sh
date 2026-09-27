@@ -82,7 +82,9 @@ chmod 700 "${KEY_BACKUP_DIR}"
 KEY_FILE="${KEY_BACKUP_DIR}/field_encryption_key"
 WORK="$(mktemp -d)"
 KEY_TMP="${KEY_FILE}.tmp.$$"
-trap 'rm -rf "${WORK}"; rm -f "${KEY_TMP}"' EXIT INT TERM
+sq_track_tmp "${WORK}" "${KEY_TMP}"
+trap sq_cleanup EXIT INT TERM
+sq_prune_orphan_tmp "${KEY_BACKUP_DIR}"
 
 sq_require_docker
 

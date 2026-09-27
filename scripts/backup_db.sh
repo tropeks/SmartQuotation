@@ -107,7 +107,9 @@ mkdir -p "${BACKUP_DIR}"
 FINAL="${BACKUP_DIR}/sq_$(date +%Y%m%d_%H%M%S).sql.gz"
 TMPFILE="${FINAL}.tmp"
 
-trap 'rm -f "${TMPFILE}"' EXIT INT TERM
+sq_track_tmp "${TMPFILE}"
+trap sq_cleanup EXIT INT TERM
+sq_prune_orphan_tmp "${BACKUP_DIR}"
 
 sq_require_docker
 
