@@ -13,6 +13,8 @@
 # Ordem: backup_db → backup_media → backup_key → offsite_key_push → offsite_push.
 # Registro: cada etapa com o exit code no journal e em ${BACKUP_DIR}/backup_run_last
 # (atômico, 0600): timestamp, uma linha <etapa>=<exit>, failed=<lista>.
+# Sinal (INT/TERM): a etapa em curso é morta, nada mais roda, exit 130/143 e
+# backup_run_last registra interrupted=<etapa>.
 
 set -euo pipefail
 umask 077
@@ -25,14 +27,40 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-${POSTGRES_BACKUP_DIR:-/backups/sq}}"
 STEPS=(backup_db backup_media backup_key offsite_key_push offsite_push)
 
-trap sq_cleanup EXIT INT TERM
-
 RESULTS=()
 FAILED=()
+CHILD=""
+CURRENT=""
+
+# INT/TERM (systemctl stop, TimeoutStartSec, Ctrl-C): mata a etapa em curso, limpa, registra
+# onde parou e sai com 130/143 — NÃO segue para as próximas etapas. Cada etapa roda em
+# segundo plano com `wait` só para o sinal ser atendido na hora (com a etapa em primeiro
+# plano, o bash esperaria ela terminar antes de rodar o trap).
+on_signal() {
+  trap - INT TERM
+  if [ -n "${CHILD}" ]; then
+    kill -TERM "${CHILD}" 2>/dev/null || true
+    wait "${CHILD}" 2>/dev/null || true
+  fi
+  mkdir -p "${BACKUP_DIR}"
+  sq_write_status "${BACKUP_DIR}/backup_run_last" \
+    "timestamp=$(sq_now_iso)" "${RESULTS[@]}" "interrupted=${CURRENT:--}" "failed=interrompido"
+  sq_cleanup
+  echo "${SQ_SCRIPT}: INTERROMPIDO (sinal) durante ${CURRENT:-—}; etapas seguintes NÃO rodaram." >&2
+  exit "$1"
+}
+trap sq_cleanup EXIT
+trap 'on_signal 130' INT
+trap 'on_signal 143' TERM
+
 for step in "${STEPS[@]}"; do
   echo "${SQ_SCRIPT}: ── ${step} ──" >&2
   rc=0
-  "${SCRIPT_DIR}/${step}.sh" || rc=$?
+  CURRENT="${step}"
+  "${SCRIPT_DIR}/${step}.sh" &
+  CHILD=$!
+  wait "${CHILD}" || rc=$?
+  CHILD=""
   RESULTS+=("${step}=${rc}")
   if [ "${rc}" -ne 0 ]; then
     FAILED+=("${step}")

@@ -8,16 +8,20 @@ com FAKE_RC_<etapa>).
 """
 import os
 import shutil
+import signal
 import stat
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from tests._ops_fakes import ROOT, run_tests
 
 ORDER = ["backup_db", "backup_media", "backup_key", "offsite_key_push", "offsite_push"]
-_STEP = '#!/usr/bin/env bash\necho "$(basename "$0" .sh)" >> "$STEP_LOG"\nexit "${FAKE_RC_%s:-0}"\n'
+_STEP = ('#!/usr/bin/env bash\necho "$(basename "$0" .sh)" >> "$STEP_LOG"\n'
+         '[ "${FAKE_SLOW_%s:-0}" = 1 ] && exec sleep 30\n'
+         'exit "${FAKE_RC_%s:-0}"\n')
 
 
 class RunCase:
@@ -30,17 +34,21 @@ class RunCase:
         shutil.copy(ROOT / "scripts" / "lib" / "backup_common.sh", scripts / "lib")
         for step in ORDER:
             p = scripts / f"{step}.sh"
-            p.write_text(_STEP % step.upper())
+            p.write_text(_STEP % (step.upper(), step.upper()))
             p.chmod(0o755)
         self.runner = scripts / "backup_run.sh"
         self.bdir = self.base / "backups"
         self.log = self.base / "steps.log"
 
-    def run(self, **rcs):
+    def env(self, **rcs):
         env = {k: v for k, v in os.environ.items() if not k.startswith(("FAKE_", "BACKUP_"))}
         env.update({"BACKUP_DIR": str(self.bdir), "STEP_LOG": str(self.log)})
         env.update({f"FAKE_RC_{k.upper()}": str(v) for k, v in rcs.items()})
-        return subprocess.run(["bash", str(self.runner)], env=env, capture_output=True, text=True, timeout=30)
+        return env
+
+    def run(self, **rcs):
+        cmd = ["bash", str(self.runner)]
+        return subprocess.run(cmd, env=self.env(**rcs), capture_output=True, text=True, timeout=30)
 
     def steps(self):
         return self.log.read_text().split() if self.log.exists() else []
@@ -83,6 +91,29 @@ def test_db_failure_still_runs_offsite_over_what_exists():
         assert c.status()["failed"] == "backup_db,backup_key", c.status()
 
 
+def test_sigterm_during_a_step_stops_everything_with_143():
+    """systemctl stop / TimeoutStartSec: a etapa em curso morre, as seguintes NÃO rodam."""
+    with RunCase() as c:
+        env = c.env()
+        env["FAKE_SLOW_BACKUP_MEDIA"] = "1"
+        pipes = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "text": True}
+        p = subprocess.Popen(["bash", str(c.runner)], env=env, **pipes)
+        deadline = time.time() + 10
+        while "backup_media" not in c.steps():
+            assert time.time() < deadline and p.poll() is None, "a etapa lenta não começou"
+            time.sleep(0.05)
+        time.sleep(0.2)
+        start = time.time()
+        p.send_signal(signal.SIGTERM)
+        _out, err = p.communicate(timeout=10)
+        assert p.returncode == 143, (p.returncode, err)
+        assert time.time() - start < 5, "o sinal tem de ser atendido na hora, sem esperar a etapa"
+        assert c.steps() == ["backup_db", "backup_media"], c.steps()
+        st = c.status()
+        assert st["interrupted"] == "backup_media" and st["backup_db"] == "0", st
+        assert "INTERROMPIDO" in err, err
+
+
 def test_unit_runs_only_the_runner_and_runner_lists_the_steps():
     unit = (ROOT / "ops" / "systemd" / "sq-backup.service").read_text()
     execs = [ln for ln in unit.splitlines() if ln.startswith("ExecStart=")]
@@ -97,6 +128,7 @@ TESTS = [
     test_all_green_runs_every_step_in_order,
     test_key_offsite_failure_still_ships_the_dump_and_fails_at_the_end,
     test_db_failure_still_runs_offsite_over_what_exists,
+    test_sigterm_during_a_step_stops_everything_with_143,
     test_unit_runs_only_the_runner_and_runner_lists_the_steps,
 ]
 
