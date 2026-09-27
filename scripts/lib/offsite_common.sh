@@ -12,8 +12,15 @@
 # shellcheck disable=SC2034
 PUSH_RESULT="" PUSH_HASH="" PUSH_BYTES="" REMOTE_HASH="" SQ_HASH_LEN=0
 
-# Destinatário X25519 do age em bech32: "age1" + 58 caracteres do alfabeto bech32.
-SQ_AGE_RECIPIENT_RE='^age1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58}$'
+# Dois formatos de destinatário (a forma da chave de recuperação é decisão de instalação,
+# DP-41):
+#   X25519   "age1" + 58 caracteres bech32              -> stanza "-> X25519 ..."
+#   YubiKey  "age1yubikey1" + 59 caracteres bech32      -> stanza "-> piv-p256 <tag> <share>"
+#            (P-256 comprimido, via age-plugin-yubikey; o host só CIFRA, a identidade fica
+#            no token e nunca passa por aqui)
+SQ_BECH32='qpzry9x8gf2tvdw0s3jn54khce6mua7l'
+SQ_AGE_X25519_RE="^age1[${SQ_BECH32}]{58}\$"
+SQ_AGE_YUBIKEY_RE="^age1yubikey1[${SQ_BECH32}]{59}\$"
 
 sq_die() {
   echo "${SQ_SCRIPT}: $*" >&2
@@ -31,13 +38,39 @@ sq_offsite_check_recipient() {
   if [[ "${value}" == *AGE-SECRET-KEY-* ]]; then
     sq_die "${name} parece uma chave PRIVADA do age (AGE-SECRET-KEY-…; valor NÃO exibido). O host guarda SÓ chaves públicas (age1…): tire a privada do backup.env, guarde-a offline e troque o par se ela já esteve no host. Recusando."
   fi
-  if ! [[ "${value}" =~ ${SQ_AGE_RECIPIENT_RE} ]]; then
-    sq_die "${name} não tem formato de chave pública X25519 do age (age1 + 58 caracteres bech32; valor NÃO exibido). Recusando."
+  if [[ "${value}" == *AGE-PLUGIN-YUBIKEY-* ]]; then
+    sq_die "${name} é uma IDENTIDADE do age-plugin-yubikey (AGE-PLUGIN-YUBIKEY-…; valor NÃO exibido), não um destinatário. Use o destinatário age1yubikey1… (age-plugin-yubikey --list). Recusando."
   fi
-  rest="${value#age1}"
+  if [[ "${value}" =~ ${SQ_AGE_YUBIKEY_RE} ]]; then
+    rest="${value#age1yubikey1}"
+  elif [[ "${value}" =~ ${SQ_AGE_X25519_RE} ]]; then
+    rest="${value#age1}"
+  else
+    sq_die "${name} não tem formato de destinatário age: X25519 (age1 + 58 caracteres bech32) ou YubiKey (age1yubikey1 + 59). Valor NÃO exibido. Recusando."
+  fi
   if [ -z "$(printf '%s' "${rest}" | tr -d "${rest:0:1}")" ]; then
     sq_die "${name} é o valor FICTÍCIO do backup.env.example. Ponha a chave pública real (age-keygen -y). Recusando."
   fi
+}
+
+# sq_age_stanza_type DESTINATARIO — o tipo de stanza que o age escreve para ele.
+sq_age_stanza_type() {
+  case "$1" in
+    age1yubikey1*) printf 'piv-p256' ;;
+    *) printf 'X25519' ;;
+  esac
+}
+
+# sq_offsite_check_plugins DESTINATARIO... — destinatário YubiKey exige o plugin no PATH
+# (o age chama age-plugin-yubikey para cifrar; sem ele, falharia no meio). Só cifrar: não
+# precisa do token, nem de pcscd, nem da identidade.
+sq_offsite_check_plugins() {
+  local r
+  for r in "$@"; do
+    [ "$(sq_age_stanza_type "${r}")" = "piv-p256" ] || continue
+    command -v age-plugin-yubikey >/dev/null 2>&1 && return 0
+    sq_die "há destinatário YubiKey (age1yubikey1…) e age-plugin-yubikey não está no PATH (${PATH}). Instale-o (ex.: /usr/local/bin) — o host só precisa dele para CIFRAR; a identidade fica no token. Recusando."
+  done
 }
 
 # sq_offsite_check_remote NOME_DA_VARIAVEL — "secao:caminho", com seção do rclone.conf.
@@ -144,17 +177,20 @@ sq_remote_hash() {
   return 0
 }
 
-# sq_age_header_ok ARQUIVO N — o cabeçalho age tem EXATAMENTE N stanzas, todas X25519.
-# Lê o arquivo direto (sem pipe: sair cedo não gera SIGPIPE) e para na linha "--- ".
+# sq_age_header_ok ARQUIVO DESTINATARIO... — o cabeçalho age tem EXATAMENTE uma stanza por
+# destinatário, do tipo esperado para ele (X25519 ou piv-p256), e nenhuma outra. Compara os
+# multiconjuntos de tipos. Lê o arquivo direto (sem pipe: sair cedo não gera SIGPIPE) e para
+# na linha "--- ".
 sq_age_header_ok() {
-  local counts total x25519
-  counts="$(LC_ALL=C awk '
+  local file="$1" r got want
+  shift
+  got="$(LC_ALL=C awk '
     NR == 1 { if ($0 != "age-encryption.org/v1") { bad = 1; exit } next }
-    /^-> / { t++; if ($2 == "X25519") x++; next }
+    /^-> / { print $2; next }
     /^--- / { done = 1; exit }
-    END { if (bad || !done) exit 1; printf "%d %d\n", t, x }' "$1")" || return 1
-  read -r total x25519 <<< "${counts}"
-  [ "${total}" -eq "$2" ] && [ "${x25519}" -eq "$2" ]
+    END { if (bad || !done) exit 1 }' "${file}" | LC_ALL=C sort | tr '\n' ' ')" || return 1
+  want="$(for r in "$@"; do sq_age_stanza_type "${r}"; printf '\n'; done | LC_ALL=C sort | tr '\n' ' ')"
+  [ -n "${got}" ] && [ "${got}" = "${want}" ]
 }
 
 # Manifesto local (0600): "<objeto>\t<tipo>:<hash>\t<bytes>" de cada .age cujo cabeçalho foi
@@ -177,7 +213,8 @@ sq_manifest_put() {
 }
 
 # sq_offsite_push ORIGEM REMOTE OBJETO MANIFESTO DIR_TEMP DESTINATARIO...
-# Cifra ORIGEM (lida por stdin, nunca por argv) para os destinatários, confere o cabeçalho,
+# Cifra ORIGEM (lida por stdin, nunca por argv) para os destinatários, confere o cabeçalho
+# (uma stanza do tipo certo por destinatário),
 # envia com --immutable e confere o hash remoto. Define PUSH_RESULT (enviado | já presente),
 # PUSH_HASH e PUSH_BYTES. Qualquer falha: exit != 0.
 sq_offsite_push() {
@@ -211,8 +248,8 @@ sq_offsite_push() {
     sq_die "age falhou cifrando $(basename -- "${src}")."
   fi
   chmod 600 "${tmp}"
-  if ! sq_age_header_ok "${tmp}" "$#"; then
-    sq_die "FALHA — o cabeçalho age de ${obj} não tem exatamente $# stanza(s) X25519. Nada foi enviado."
+  if ! sq_age_header_ok "${tmp}" "$@"; then
+    sq_die "FALHA — o cabeçalho age de ${obj} não tem exatamente uma stanza por destinatário, do tipo esperado ($(for r in "$@"; do sq_age_stanza_type "${r}"; printf ' '; done)). Nada foi enviado."
   fi
   hash="${OFFSITE_HASH}:$(sq_local_hash "${tmp}")"
   bytes="$(wc -c < "${tmp}" | tr -d ' ')"

@@ -9,7 +9,8 @@
 #      ${KEY_BACKUP_DIR}/field_encryption_key e compara com
 #      ${KEY_BACKUP_DIR}/offsite_key_fingerprint. Igual: nada a enviar (exit 0).
 #   2. Mudou (ou é a primeira vez): cifra com age SÓ para OFFSITE_AGE_RECIPIENT_RECOVERY,
-#      lendo o arquivo 0600 por stdin, e confere 1 stanza X25519 no cabeçalho.
+#      lendo o arquivo 0600 por stdin, e confere exatamente 1 stanza no cabeçalho, do tipo
+#      do destinatário (X25519 para age1…, piv-p256 para age1yubikey1…; DP-41).
 #   3. Envia para ${OFFSITE_KEY_REMOTE}/field_encryption_key.<fingerprint>.age com
 #      `rclone copyto --immutable`, confere o hash remoto e só então grava
 #      offsite_key_fingerprint e offsite_key_last_success (atômicos, 0600).
@@ -20,7 +21,8 @@
 # Recusa (exit 1, antes de tocar em age ou rclone):
 #   - OFFSITE_KEY_REMOTE igual ao OFFSITE_REMOTE, um dentro do outro, ou na MESMA seção do
 #     rclone.conf (a chave tem bucket e credencial próprios);
-#   - destinatário de recuperação ausente, privado (AGE-SECRET-KEY-…) ou fictício;
+#   - destinatário de recuperação ausente, privado (AGE-SECRET-KEY-…), identidade de plugin
+#     (AGE-PLUGIN-YUBIKEY-…) ou fictício; YubiKey sem age-plugin-yubikey no PATH;
 #   - arquivo da chave ausente ou legível por grupo/outros; KEY_BACKUP_DIR sobreposto ao
 #     BACKUP_DIR.
 # Nada é apagado no remoto (DP-27 aberta): versões antigas da chave ficam lá, e são elas que
@@ -66,6 +68,7 @@ if (( 8#${KEY_PERM} & 8#077 )); then
 fi
 sq_offsite_check_rclone_config
 sq_offsite_check_tools
+sq_offsite_check_plugins "${OFFSITE_AGE_RECIPIENT_RECOVERY}"
 
 trap sq_cleanup EXIT INT TERM
 sq_prune_orphan_tmp "${KEY_BACKUP_DIR}"

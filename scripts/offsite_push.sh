@@ -9,7 +9,8 @@
 #      (OFFSITE_AGE_RECIPIENT_RECOVERY, raiz offline no YubiKey, DP-41). O arquivo sai por
 #      stdin para o age, e o .age vai para um temporário 0600 no próprio BACKUP_DIR,
 #      apagado pelo trap.
-#   2. Confere o cabeçalho age: exatamente 2 stanzas "-> X25519". Senão, não envia.
+#   2. Confere o cabeçalho age: exatamente uma stanza por destinatário, do tipo dele
+#      ("-> X25519" para age1…, "-> piv-p256" para age1yubikey1…). Senão, não envia.
 #   3. Envia com `rclone copyto --immutable` para ${OFFSITE_REMOTE}/<arquivo>.age.
 #   4. Confere o hash remoto (rclone hashsum ${OFFSITE_HASH}) contra o hash local do .age.
 #   5. Só com os dois conferidos grava ${BACKUP_DIR}/offsite_last_success (atômico, 0600).
@@ -27,15 +28,18 @@
 #     media_*.tar.gz saem daqui. A chave vai pelo offsite_key_push.sh, para outro remote.
 #
 # O host guarda SÓ chaves públicas. Destinatário com cara de chave privada
-# (AGE-SECRET-KEY-…), ausente, repetido ou com o valor fictício do exemplo: recusado.
+# (AGE-SECRET-KEY-…) ou de identidade de plugin (AGE-PLUGIN-YUBIKEY-…), ausente, repetido ou
+# com o valor fictício do exemplo: recusado. Destinatário YubiKey (age1yubikey1…, DP-41)
+# exige age-plugin-yubikey no PATH — só para cifrar; a identidade fica no token.
 #
 # Variáveis:
 #   BACKUP_DIR / POSTGRES_BACKUP_DIR   onde estão dump e mídia (default /backups/sq)
 #   KEY_BACKUP_DIR                     só para conferir que não se sobrepõe ao BACKUP_DIR
 #   OFFSITE_REMOTE                     destino do dump e da mídia (obrigatório)
 #   OFFSITE_KEY_REMOTE                 se definido, conferido como distinto do OFFSITE_REMOTE
-#   OFFSITE_AGE_RECIPIENT_INSTANCE     chave pública age da instância (obrigatória)
-#   OFFSITE_AGE_RECIPIENT_RECOVERY     chave pública age de recuperação da Quantum (obrigatória)
+#   OFFSITE_AGE_RECIPIENT_INSTANCE     destinatário age da instância (obrigatório)
+#   OFFSITE_AGE_RECIPIENT_RECOVERY     destinatário de recuperação da Quantum (obrigatório);
+#                                      age1… (X25519) ou age1yubikey1… (YubiKey)
 #   OFFSITE_MEDIA                      1 envia também a mídia (default 1)
 #   OFFSITE_HASH                       sha1 | md5 | sha256 (default sha1: o que o B2 guarda)
 #   OFFSITE_HASH_DOWNLOAD              1 baixa o objeto para calcular o hash (provedor que
@@ -86,6 +90,7 @@ esac
 sq_check_dirs_disjoint "${KEY_BACKUP_DIR}" "${BACKUP_DIR}"
 sq_offsite_check_rclone_config
 sq_offsite_check_tools
+sq_offsite_check_plugins "${OFFSITE_AGE_RECIPIENT_INSTANCE}" "${OFFSITE_AGE_RECIPIENT_RECOVERY}"
 
 trap sq_cleanup EXIT INT TERM
 sq_prune_orphan_tmp "${BACKUP_DIR}"
