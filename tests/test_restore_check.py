@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 import time
 
+from tests._offsite_fakes import OffsiteCase
 from tests._ops_fakes import FakeEnv, run_tests, synthetic_dump, write_gz, write_media_tar
 
 
@@ -210,6 +211,59 @@ def test_restore_dump_file_missing_fails_before_starting_container():
         assert not [x for x in c.fk.docker_calls() if x.startswith("run ")]
 
 
+def test_restore_file_is_refused_under_systemd_or_inside_backup_dir():
+    with Case() as c:
+        outside = c.base / "drill.sql.gz"
+        write_gz(outside, synthetic_dump())
+        r = c.run({"RESTORE_DUMP_FILE": str(outside), "INVOCATION_ID": "abc123"})
+        assert r.returncode == 1 and "systemd" in r.stderr, r.stderr
+        r = c.run({"RESTORE_MEDIA_FILE": str(c.bdir / "media_20260927_030000.tar.gz"), "INVOCATION_ID": "x"})
+        assert r.returncode == 1 and "systemd" in r.stderr, r.stderr
+        r = c.run({"RESTORE_DUMP_FILE": str(c.bdir / "sq_20260927_030000.sql.gz")})
+        assert r.returncode == 1 and "dentro do BACKUP_DIR" in r.stderr, r.stderr
+        r = c.run({"RESTORE_MEDIA_FILE": str(c.bdir / "media_20260927_030000.tar.gz")})
+        assert r.returncode == 1 and "dentro do BACKUP_DIR" in r.stderr, r.stderr
+        assert not [x for x in c.fk.docker_calls() if x.startswith("run ")]
+
+
+def _offsite_restore(oc, extra=None):
+    env = {"FAKE_RESTORE_SINK": str(oc.base / "restored.sql"), "RESTORE_POLL_INTERVAL": "0",
+           "RESTORE_WAIT_SECONDS": "3"}
+    env.update(extra or {})
+    return oc.fk.run("restore_check.sh", env)
+
+
+def test_weekly_drill_confirms_newest_offsite_dump_by_hash_without_download():
+    with OffsiteCase() as oc:
+        assert oc.push().returncode == 0
+        n = len(oc.rclone_calls())
+        r = _offsite_restore(oc)
+        assert r.returncode == 0, r.stderr
+        calls = oc.rclone_calls()[n:]
+        assert len(calls) == 1 and calls[0].startswith("hashsum ") and "sq_20260927_030000" in calls[0], calls
+        st = dict(ln.split("=", 1) for ln in (oc.bdir / "restore_last_success").read_text().splitlines())
+        assert st["offsite_dump"] == "sq_20260927_030000.sql.gz.age", st
+
+
+def test_weekly_drill_fails_when_offsite_is_missing_changed_or_unreachable():
+    with OffsiteCase() as oc:
+        assert oc.push().returncode == 0
+        r = _offsite_restore(oc, {"FAKE_RCLONE_FAIL": "hashsum"})
+        assert r.returncode == 1 and "não respondeu" in r.stderr, r.stderr
+        obj = oc.dump_bucket / "sq_20260927_030000.sql.gz.age"
+        obj.write_bytes(b"adulterado")
+        r = _offsite_restore(oc)
+        assert r.returncode == 1 and "hash diferente" in r.stderr, r.stderr
+        obj.unlink()
+        r = _offsite_restore(oc)
+        assert r.returncode == 1 and "ausente" in r.stderr, r.stderr
+        assert not (oc.bdir / "restore_last_success").exists()
+        assert not [x for x in oc.fk.docker_calls() if x.startswith("run ")], "falha antes do container"
+    with OffsiteCase() as oc:  # off-site configurado, mas nada confirmado
+        r = _offsite_restore(oc)
+        assert r.returncode == 1 and "nenhum dump confirmado" in r.stderr, r.stderr
+
+
 TESTS = [
     test_success_restores_newest_dump_in_isolated_ephemeral_container,
     test_output_has_only_counts_and_table_names_never_content,
@@ -225,6 +279,9 @@ TESTS = [
     test_stale_newest_dump_fails_before_starting_container,
     test_restore_dump_file_points_to_a_specific_offsite_download,
     test_restore_dump_file_missing_fails_before_starting_container,
+    test_restore_file_is_refused_under_systemd_or_inside_backup_dir,
+    test_weekly_drill_confirms_newest_offsite_dump_by_hash_without_download,
+    test_weekly_drill_fails_when_offsite_is_missing_changed_or_unreachable,
 ]
 
 if __name__ == "__main__":

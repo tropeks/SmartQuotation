@@ -12,11 +12,16 @@
 #   4. Confere: schema ${RESTORE_SCHEMA} existe; tabelas-chave presentes; contagem de
 #      ${RESTORE_SCHEMA}.quotations_quotation >= ${RESTORE_MIN_QUOTATIONS}.
 #   5. Valida o tar de mídia mais recente (gzip íntegro, tar tzf, entradas sob app/backend/media).
-#   6. Grava ${BACKUP_DIR}/restore_last_success (só no sucesso).
+#   6. Off-site (se OFFSITE_REMOTE estiver definido): confere, SEM baixar, que o dump mais
+#      novo confirmado no ${BACKUP_DIR}/offsite_manifest existe no remote com o hash
+#      registrado (rclone hashsum). Remote que não responde, objeto ausente ou com outro hash
+#      = falha. Roda antes de subir o container.
+#   7. Grava ${BACKUP_DIR}/restore_last_success (só no sucesso).
 # O container é SEMPRE destruído (trap), inclusive em erro no meio.
 #
 # Drill a partir do off-site (trimestral, manual — docs/INFRASTRUCTURE.md §6): baixado e
-# decifrado o .age, aponte RESTORE_DUMP_FILE (e RESTORE_MEDIA_FILE) para os arquivos. Nesse
+# decifrado o .age, aponte RESTORE_DUMP_FILE (e RESTORE_MEDIA_FILE) para os arquivos — FORA
+# do BACKUP_DIR e fora do systemd (INVOCATION_ID definido): os dois casos são recusados. Nesse
 # modo a checagem de idade não se aplica (o arquivo é o que se quer provar, velho ou não) e o
 # status vai para ${BACKUP_DIR}/restore_file_last_success, sem mexer no restore_last_success
 # do drill semanal.
@@ -38,6 +43,8 @@
 #   RESTORE_DUMP_FILE       arquivo .sql.gz específico no lugar do mais recente do BACKUP_DIR
 #   RESTORE_MEDIA_FILE      tar.gz de mídia específico no lugar do mais recente
 #   MEDIA_ALLOW_EMPTY       1 aceita tar de mídia só com o diretório (default 0)
+#   OFFSITE_REMOTE, OFFSITE_HASH, OFFSITE_HASH_DOWNLOAD, RCLONE_CONFIG, RCLONE
+#                           conferência do off-site (item 6), mesmos do offsite_push.sh
 #   DOCKER                  binário docker (default docker)
 
 set -euo pipefail
@@ -47,6 +54,8 @@ SQ_SCRIPT="restore_check.sh"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source-path=SCRIPTDIR source=lib/backup_common.sh
 . "${SCRIPT_DIR}/lib/backup_common.sh"
+# shellcheck source-path=SCRIPTDIR source=lib/offsite_common.sh
+. "${SCRIPT_DIR}/lib/offsite_common.sh"
 
 BACKUP_DIR="${BACKUP_DIR:-${POSTGRES_BACKUP_DIR:-/backups/sq}}"
 RESTORE_IMAGE="${RESTORE_IMAGE:-postgres:15}"
@@ -61,6 +70,10 @@ RESTORE_CHECK_MEDIA="${RESTORE_CHECK_MEDIA:-1}"
 MEDIA_ALLOW_EMPTY="${MEDIA_ALLOW_EMPTY:-0}"
 RESTORE_DUMP_FILE="${RESTORE_DUMP_FILE:-}"
 RESTORE_MEDIA_FILE="${RESTORE_MEDIA_FILE:-}"
+OFFSITE_REMOTE="${OFFSITE_REMOTE:-}"
+OFFSITE_HASH="${OFFSITE_HASH:-sha1}"
+OFFSITE_HASH_DOWNLOAD="${OFFSITE_HASH_DOWNLOAD:-0}"
+RCLONE="${RCLONE:-rclone}"
 DOCKER="${DOCKER:-docker}"
 
 # Tudo que entra em SQL é identificador validado por lista branca (não há bind aqui).
@@ -81,6 +94,21 @@ done
 newest() {
   find "${BACKUP_DIR}" -maxdepth 1 -type f -name "$1" 2>/dev/null | LC_ALL=C sort | tail -n 1
 }
+
+# Arquivo específico é do drill MANUAL: nunca sob systemd, nunca de dentro do BACKUP_DIR
+# (um dump baixado largado lá entraria na série e no backfill do off-site).
+for f in "${RESTORE_DUMP_FILE}" "${RESTORE_MEDIA_FILE}"; do
+  [ -n "${f}" ] || continue
+  if [ -n "${INVOCATION_ID:-}" ]; then
+    echo "${SQ_SCRIPT}: RESTORE_DUMP_FILE/RESTORE_MEDIA_FILE são só para o drill manual; sob systemd (INVOCATION_ID) são recusados." >&2
+    exit 1
+  fi
+  case "$(realpath -m -- "${f}")/" in
+    "$(realpath -m -- "${BACKUP_DIR}")/"*)
+      echo "${SQ_SCRIPT}: ${f} está dentro do BACKUP_DIR: o drill usa um diretório próprio (o arquivo entraria na série). Recusando." >&2
+      exit 1 ;;
+  esac
+done
 
 STATUS_FILE="${BACKUP_DIR}/restore_last_success"
 if [ -n "${RESTORE_DUMP_FILE}" ]; then
@@ -120,6 +148,31 @@ if [ "${RESTORE_CHECK_MEDIA}" = "1" ]; then
     echo "${SQ_SCRIPT}: nenhum media_*.tar.gz em ${BACKUP_DIR} (RESTORE_CHECK_MEDIA=0 desliga)." >&2
     exit 1
   fi
+fi
+
+# --- Off-site: o dump mais novo confirmado existe no remote, com o hash registrado. -------
+OFFSITE_DUMP="-"
+if [ -n "${OFFSITE_REMOTE}" ] && [ -z "${RESTORE_DUMP_FILE}" ]; then
+  trap sq_cleanup EXIT INT TERM   # o temporário do hashsum; trocado pelo do container abaixo
+  sq_offsite_check_remote OFFSITE_REMOTE
+  sq_offsite_check_rclone_config
+  sq_offsite_check_rclone_tool
+  MANIFEST="${BACKUP_DIR}/offsite_manifest"
+  OFFSITE_DUMP="$( [ -f "${MANIFEST}" ] && LC_ALL=C awk -F '\t' '$1 ~ /^sq_.*\.sql\.gz\.age$/ && $4 == "ok" { print $1 }' "${MANIFEST}" | LC_ALL=C sort | tail -n 1 || true)"
+  if [ -z "${OFFSITE_DUMP}" ]; then
+    echo "${SQ_SCRIPT}: FALHA — OFFSITE_REMOTE definido, mas nenhum dump confirmado no offsite_manifest." >&2
+    exit 1
+  fi
+  ENTRY="$(sq_manifest_get "${MANIFEST}" "${OFFSITE_DUMP}")"
+  if ! sq_remote_hash "${OFFSITE_REMOTE%/}/${OFFSITE_DUMP}"; then
+    echo "${SQ_SCRIPT}: FALHA — o remote off-site não respondeu à conferência de ${OFFSITE_DUMP}." >&2
+    exit 1
+  fi
+  if [ "${OFFSITE_HASH}:${REMOTE_HASH}" != "${ENTRY%%$'\t'*}" ]; then
+    echo "${SQ_SCRIPT}: FALHA — ${OFFSITE_DUMP} ausente ou com hash diferente do registrado no off-site." >&2
+    exit 1
+  fi
+  echo "${SQ_SCRIPT}: off-site: ${OFFSITE_DUMP} presente com o hash registrado"
 fi
 
 sq_require_docker
@@ -228,6 +281,7 @@ sq_write_status "${STATUS_FILE}" \
   "psql_errors=${PSQL_ERRORS}" \
   "media=$( [ -n "${MEDIA}" ] && basename -- "${MEDIA}" || echo - )" \
   "media_entries=${MEDIA_ENTRIES}" \
+  "offsite_dump=${OFFSITE_DUMP}" \
   "duration_s=${DURATION}"
 
 echo "${SQ_SCRIPT}: ok — restore verificado em ${DURATION}s"
