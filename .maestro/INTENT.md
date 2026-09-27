@@ -1,24 +1,25 @@
 <!-- maestro-intent v1
-version: 1
-ts: 2026-09-27T16:23:29-03:00
-head: fff8b4dcbb1ff21c79ab1389ccd8b096e02480bd
+version: 2
+ts: 2026-09-27T16:55:53-03:00
+head: 8249a601a95042f0827758ec61e21cc00132eb20
 author_session: 079510ae-7231-489d-b05c-d4da4b3dbd60
-hash: a4c1ad7a
+hash: 22b828a9
 -->
 # Direção — SmartQuotation
 
-> **RASCUNHO, não carimbado.** Redigido pelo Conformador em 27/09/2026 (DP-52), a partir de
-> `docs/PRODUCT_VISION.md`, `docs/PROJECT_BRIEF.md`, `docs/ROADMAP.md`,
-> `docs/RESUMO_WELLINGTON.md`, `docs/ARCHITECTURE.md`, `docs/BACKLOG.md` e de
-> `cognitive-core/docs/VISAO.md` e `FASES.md` (Fase 1). Não vale como direção até o carimbo
-> do Capitão; nenhuma ordem se ancora nele antes disso. Onde as fontes divergem, o rascunho
-> segue a mais recente (PRODUCT_VISION de 10/07 e FASES v0.3 de 26/09) e a divergência vai
-> para as perguntas abertas, não para o texto.
-> Respostas técnicas do Diretor de 27/09 (perguntas 4, 8, 10, 11, 13, 14 e 15) já estão
-> incorporadas. As perguntas de direção (1, 2, 3, 5, 6, 7, 9 e 12) estão com o Capitão.
+> **Carimbada pelo Capitão em 27/09/2026** (decisão 01M3J59NS40AM6SHH0198B311E do app,
+> DP-52), aprovada como redigida. `maestro intent --bump` sobe a versão só com o carimbo
+> dele. Redigida pelo Conformador a partir de `docs/PRODUCT_VISION.md`,
+> `docs/PROJECT_BRIEF.md`, `docs/ROADMAP.md`, `docs/RESUMO_WELLINGTON.md`,
+> `docs/ARCHITECTURE.md`, `docs/BACKLOG.md` e de `cognitive-core/docs/VISAO.md` e `FASES.md`
+> (Fase 1). Onde as fontes divergem, vale a PRODUCT_VISION (10/07) sobre o PROJECT_BRIEF
+> (2025), e a FASES v0.3 (26/09) para o que é do Core. Incorpora as respostas técnicas do
+> Diretor de 27/09. Histórico: v1 foi o template vazio; **v2 é a primeira versão carimbada.**
 >
-> **Pendência, não limite:** retenção de cotações e cálculos por 15 anos (NR-13, do
-> `PROJECT_BRIEF`) espera a DP-27 (jurídico, J-27).
+> **Pendências** (não são limites nem resultado ainda):
+> - Candidatas e prazo da beta multi-empresa: com o Capitão.
+> - Retenção de cotações e cálculos por 15 anos (NR-13, do `PROJECT_BRIEF`): espera a DP-27
+>   (jurídico, J-27).
 
 ## Problema
 Fabricante brasileiro de equipamento sob encomenda (caldeiraria média e pesada, trocadores
