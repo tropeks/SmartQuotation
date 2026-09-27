@@ -1,0 +1,1190 @@
+{
+  "a": {
+    "itens": [
+      {
+        "codigo_item": "cabecote_material",
+        "custo_material": "6723.64",
+        "custo_mo": "0.00",
+        "descricao": "Cabecote Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 0
+      },
+      {
+        "codigo_item": "casco_material",
+        "custo_material": "17068.60",
+        "custo_mo": "0.00",
+        "descricao": "Casco Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 1
+      },
+      {
+        "codigo_item": "fabricacao",
+        "custo_material": "0.00",
+        "custo_mo": "81714.72",
+        "descricao": "Fabricacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 2
+      },
+      {
+        "codigo_item": "feixe_material",
+        "custo_material": "15633.20",
+        "custo_mo": "0.00",
+        "descricao": "Feixe Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 3
+      },
+      {
+        "codigo_item": "finalizacao",
+        "custo_material": "0.00",
+        "custo_mo": "6907.16",
+        "descricao": "Finalizacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 4
+      }
+    ],
+    "quotation": {
+      "avisos": [],
+      "computed_at_is_null": false,
+      "custo_material": "39425.43",
+      "custo_mo": "88621.89",
+      "custo_total": "128047.32",
+      "fator_preco": "1.25000",
+      "impostos_pct": "9.000",
+      "inputs": {
+        "classe_casco": "CS",
+        "classe_feixe": "CS",
+        "comprimento_casco_mm": 1631.0,
+        "comprimento_tubo_mm": 13000.0,
+        "corrosao_mm": null,
+        "densidade_fluido_kg_m3": null,
+        "designacao": "BEU",
+        "diametro_casco_mm": 764.0,
+        "esp_casco_mm": 9.5,
+        "esp_tubo_mm": 2.108,
+        "fator_correcao_mo": 1.0,
+        "fluido_corrosivo": "Tubos",
+        "n_chicanas": 1,
+        "n_passes_tubos": 2,
+        "n_tubos": 68,
+        "od_tubo_mm": 19.05,
+        "pressao_projeto_bar": null,
+        "rt_escopo": "Total",
+        "temperatura_projeto_c": null
+      },
+      "number": "COT-2026-001",
+      "peso_bruto_kg": "0.00",
+      "peso_liquido_kg": "0.00",
+      "preco_com_impostos": "160059.15",
+      "preco_sem_impostos": "145653.83",
+      "pricing_basis": "referencial",
+      "revision": 0,
+      "scope": "complete",
+      "status": "draft",
+      "title": "Permutador BEU"
+    },
+    "snapshot": {
+      "count": 1,
+      "snapshot": {
+        "engine_version": "calc-snapshot-v2",
+        "inputs": {
+          "inputs": {
+            "classe_casco": "CS",
+            "classe_feixe": "CS",
+            "comprimento_casco_mm": 1631.0,
+            "comprimento_tubo_mm": 13000.0,
+            "corrosao_mm": null,
+            "densidade_fluido_kg_m3": null,
+            "designacao": "BEU",
+            "diametro_casco_mm": 764.0,
+            "esp_casco_mm": 9.5,
+            "esp_tubo_mm": 2.108,
+            "fator_correcao_mo": 1.0,
+            "fluido_corrosivo": "Tubos",
+            "n_chicanas": 1,
+            "n_passes_tubos": 2,
+            "n_tubos": 68,
+            "od_tubo_mm": 19.05,
+            "pressao_projeto_bar": null,
+            "rt_escopo": "Total",
+            "temperatura_projeto_c": null
+          },
+          "pricing": {
+            "fator_preco": "1.25",
+            "impostos_pct": "9.0"
+          },
+          "quotation": {
+            "number": "COT-2026-001",
+            "revision": 0,
+            "scope": "complete",
+            "title": "Permutador BEU"
+          }
+        },
+        "outputs": {
+          "items": [
+            {
+              "codigo_item": "cabecote_material",
+              "custo_material": "6723.64",
+              "custo_mo": "0.00",
+              "descricao": "Cabecote Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 0
+            },
+            {
+              "codigo_item": "casco_material",
+              "custo_material": "17068.60",
+              "custo_mo": "0.00",
+              "descricao": "Casco Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 1
+            },
+            {
+              "codigo_item": "fabricacao",
+              "custo_material": "0.00",
+              "custo_mo": "81714.72",
+              "descricao": "Fabricacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 2
+            },
+            {
+              "codigo_item": "feixe_material",
+              "custo_material": "15633.20",
+              "custo_mo": "0.00",
+              "descricao": "Feixe Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 3
+            },
+            {
+              "codigo_item": "finalizacao",
+              "custo_material": "0.00",
+              "custo_mo": "6907.16",
+              "descricao": "Finalizacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 4
+            }
+          ],
+          "number": "COT-2026-001",
+          "revision": 0,
+          "scope": "complete",
+          "totals": {
+            "custo_material": "39425.43",
+            "custo_mo": "88621.89",
+            "custo_total": "128047.32",
+            "peso_bruto_kg": "0",
+            "peso_liquido_kg": "0",
+            "preco_com_impostos": "160059.15",
+            "preco_sem_impostos": "145653.83"
+          }
+        },
+        "snapshot_hash": "03643f50d7a8f2d9c0300272280fa1368df5eb66d583cfcf82c295a7ab9a5ace",
+        "standard_refs": []
+      }
+    }
+  },
+  "b": {
+    "itens": [
+      {
+        "codigo_item": "cabecote_material",
+        "custo_material": "12323.54",
+        "custo_mo": "0.00",
+        "descricao": "Cabecote Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 0
+      },
+      {
+        "codigo_item": "casco_material",
+        "custo_material": "11653.63",
+        "custo_mo": "0.00",
+        "descricao": "Casco Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 1
+      },
+      {
+        "codigo_item": "fabricacao",
+        "custo_material": "0.00",
+        "custo_mo": "72680.88",
+        "descricao": "Fabricacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 2
+      },
+      {
+        "codigo_item": "feixe_material",
+        "custo_material": "15318.87",
+        "custo_mo": "0.00",
+        "descricao": "Feixe Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 3
+      },
+      {
+        "codigo_item": "finalizacao",
+        "custo_material": "0.00",
+        "custo_mo": "7084.16",
+        "descricao": "Finalizacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 4
+      }
+    ],
+    "quotation": {
+      "avisos": [],
+      "computed_at_is_null": false,
+      "custo_material": "39296.04",
+      "custo_mo": "79765.04",
+      "custo_total": "119061.08",
+      "fator_preco": "1.25000",
+      "impostos_pct": "9.000",
+      "inputs": {
+        "classe_casco": "CS",
+        "classe_feixe": "CS",
+        "comprimento_casco_mm": 1631.0,
+        "comprimento_tubo_mm": 6096.0,
+        "corrosao_mm": null,
+        "densidade_fluido_kg_m3": null,
+        "designacao": "BEM",
+        "diametro_casco_mm": 764.0,
+        "esp_casco_mm": 9.5,
+        "esp_tubo_mm": 2.108,
+        "fator_correcao_mo": 1.0,
+        "fluido_corrosivo": "Tubos",
+        "n_chicanas": 1,
+        "n_passes_tubos": 2,
+        "n_tubos": 136,
+        "od_tubo_mm": 19.05,
+        "pressao_projeto_bar": null,
+        "rt_escopo": "Total",
+        "temperatura_projeto_c": null
+      },
+      "number": "COT-2026-002",
+      "peso_bruto_kg": "0.00",
+      "peso_liquido_kg": "0.00",
+      "preco_com_impostos": "148826.35",
+      "preco_sem_impostos": "135431.98",
+      "pricing_basis": "referencial",
+      "revision": 0,
+      "scope": "complete",
+      "status": "draft",
+      "title": "Permutador BEM"
+    },
+    "snapshot": {
+      "count": 1,
+      "snapshot": {
+        "engine_version": "calc-snapshot-v2",
+        "inputs": {
+          "inputs": {
+            "classe_casco": "CS",
+            "classe_feixe": "CS",
+            "comprimento_casco_mm": 1631.0,
+            "comprimento_tubo_mm": 6096.0,
+            "corrosao_mm": null,
+            "densidade_fluido_kg_m3": null,
+            "designacao": "BEM",
+            "diametro_casco_mm": 764.0,
+            "esp_casco_mm": 9.5,
+            "esp_tubo_mm": 2.108,
+            "fator_correcao_mo": 1.0,
+            "fluido_corrosivo": "Tubos",
+            "n_chicanas": 1,
+            "n_passes_tubos": 2,
+            "n_tubos": 136,
+            "od_tubo_mm": 19.05,
+            "pressao_projeto_bar": null,
+            "rt_escopo": "Total",
+            "temperatura_projeto_c": null
+          },
+          "pricing": {
+            "fator_preco": "1.25",
+            "impostos_pct": "9.0"
+          },
+          "quotation": {
+            "number": "COT-2026-002",
+            "revision": 0,
+            "scope": "complete",
+            "title": "Permutador BEM"
+          }
+        },
+        "outputs": {
+          "items": [
+            {
+              "codigo_item": "cabecote_material",
+              "custo_material": "12323.54",
+              "custo_mo": "0.00",
+              "descricao": "Cabecote Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 0
+            },
+            {
+              "codigo_item": "casco_material",
+              "custo_material": "11653.63",
+              "custo_mo": "0.00",
+              "descricao": "Casco Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 1
+            },
+            {
+              "codigo_item": "fabricacao",
+              "custo_material": "0.00",
+              "custo_mo": "72680.88",
+              "descricao": "Fabricacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 2
+            },
+            {
+              "codigo_item": "feixe_material",
+              "custo_material": "15318.87",
+              "custo_mo": "0.00",
+              "descricao": "Feixe Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 3
+            },
+            {
+              "codigo_item": "finalizacao",
+              "custo_material": "0.00",
+              "custo_mo": "7084.16",
+              "descricao": "Finalizacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 4
+            }
+          ],
+          "number": "COT-2026-002",
+          "revision": 0,
+          "scope": "complete",
+          "totals": {
+            "custo_material": "39296.04",
+            "custo_mo": "79765.04",
+            "custo_total": "119061.08",
+            "peso_bruto_kg": "0",
+            "peso_liquido_kg": "0",
+            "preco_com_impostos": "148826.35",
+            "preco_sem_impostos": "135431.98"
+          }
+        },
+        "snapshot_hash": "9dccc1b2a09a09560dd1598ae01c6a7e5231b9451baa81444429782fde3c5207",
+        "standard_refs": []
+      }
+    }
+  },
+  "c": {
+    "itens": [
+      {
+        "codigo_item": "cabecote_material",
+        "custo_material": "31521.24",
+        "custo_mo": "0.00",
+        "descricao": "Cabecote Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 0
+      },
+      {
+        "codigo_item": "casco_material",
+        "custo_material": "19615.39",
+        "custo_mo": "0.00",
+        "descricao": "Casco Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 1
+      },
+      {
+        "codigo_item": "fabricacao",
+        "custo_material": "0.00",
+        "custo_mo": "108715.52",
+        "descricao": "Fabricacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 2
+      },
+      {
+        "codigo_item": "feixe_material",
+        "custo_material": "67121.42",
+        "custo_mo": "0.00",
+        "descricao": "Feixe Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 3
+      },
+      {
+        "codigo_item": "finalizacao",
+        "custo_material": "0.00",
+        "custo_mo": "7423.38",
+        "descricao": "Finalizacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 4
+      }
+    ],
+    "quotation": {
+      "avisos": [],
+      "computed_at_is_null": false,
+      "custo_material": "118258.05",
+      "custo_mo": "116138.90",
+      "custo_total": "234396.96",
+      "fator_preco": "1.25000",
+      "impostos_pct": "9.000",
+      "inputs": {
+        "classe_casco": "CS",
+        "classe_feixe": "INOX",
+        "comprimento_casco_mm": 1631.0,
+        "comprimento_tubo_mm": 9000.0,
+        "corrosao_mm": 3.0,
+        "densidade_fluido_kg_m3": 1000.0,
+        "designacao": "BEU",
+        "diametro_casco_mm": 900.0,
+        "esp_casco_mm": 12.0,
+        "esp_tubo_mm": 2.108,
+        "fator_correcao_mo": 1.0,
+        "fluido_corrosivo": "Tubos",
+        "n_chicanas": 1,
+        "n_passes_tubos": 2,
+        "n_tubos": 100,
+        "od_tubo_mm": 19.05,
+        "pressao_projeto_bar": 15.0,
+        "rt_escopo": "Total",
+        "temperatura_projeto_c": 150.0
+      },
+      "number": "COT-2026-003",
+      "peso_bruto_kg": "0.00",
+      "peso_liquido_kg": "0.00",
+      "preco_com_impostos": "292996.20",
+      "preco_sem_impostos": "266626.54",
+      "pricing_basis": "referencial",
+      "revision": 0,
+      "scope": "complete",
+      "status": "draft",
+      "title": "Permutador BEU"
+    },
+    "snapshot": {
+      "count": 1,
+      "snapshot": {
+        "engine_version": "calc-snapshot-v2",
+        "inputs": {
+          "inputs": {
+            "classe_casco": "CS",
+            "classe_feixe": "INOX",
+            "comprimento_casco_mm": 1631.0,
+            "comprimento_tubo_mm": 9000.0,
+            "corrosao_mm": 3.0,
+            "densidade_fluido_kg_m3": 1000.0,
+            "designacao": "BEU",
+            "diametro_casco_mm": 900.0,
+            "esp_casco_mm": 12.0,
+            "esp_tubo_mm": 2.108,
+            "fator_correcao_mo": 1.0,
+            "fluido_corrosivo": "Tubos",
+            "n_chicanas": 1,
+            "n_passes_tubos": 2,
+            "n_tubos": 100,
+            "od_tubo_mm": 19.05,
+            "pressao_projeto_bar": 15.0,
+            "rt_escopo": "Total",
+            "temperatura_projeto_c": 150.0
+          },
+          "pricing": {
+            "fator_preco": "1.25",
+            "impostos_pct": "9.0"
+          },
+          "quotation": {
+            "number": "COT-2026-003",
+            "revision": 0,
+            "scope": "complete",
+            "title": "Permutador BEU"
+          }
+        },
+        "outputs": {
+          "items": [
+            {
+              "codigo_item": "cabecote_material",
+              "custo_material": "31521.24",
+              "custo_mo": "0.00",
+              "descricao": "Cabecote Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 0
+            },
+            {
+              "codigo_item": "casco_material",
+              "custo_material": "19615.39",
+              "custo_mo": "0.00",
+              "descricao": "Casco Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 1
+            },
+            {
+              "codigo_item": "fabricacao",
+              "custo_material": "0.00",
+              "custo_mo": "108715.52",
+              "descricao": "Fabricacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 2
+            },
+            {
+              "codigo_item": "feixe_material",
+              "custo_material": "67121.42",
+              "custo_mo": "0.00",
+              "descricao": "Feixe Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 3
+            },
+            {
+              "codigo_item": "finalizacao",
+              "custo_material": "0.00",
+              "custo_mo": "7423.38",
+              "descricao": "Finalizacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 4
+            }
+          ],
+          "memorial": [
+            {
+              "item": "Pressão de projeto (UG-21)",
+              "norma": "ASME VIII Div.1 UG-21",
+              "valor": "15.09 bar (projeto + coluna estática do fluido)"
+            },
+            {
+              "fonte": "ASME BPVC II-D (M) 2025, Tab 1A L43",
+              "item": "Tensão admissível (S)",
+              "norma": "ASME II-D",
+              "valor": "138 MPa @ 150°C — SA-516 GR 70"
+            },
+            {
+              "fonte": "ASME BPVC II-D (M) 2025, Tab 1A L43",
+              "item": "Espessura mínima do casco (UG-27)",
+              "norma": "ASME VIII Div.1 UG-27",
+              "status": "OK",
+              "valor": "t_mín=5.0mm; t_req=8.0mm (c/ corrosão 3mm); E=1; informado 12mm"
+            },
+            {
+              "fonte": "ASME BPVC II-D (M) 2025, Tab 1A L43",
+              "item": "Espessura mínima do tampo 2:1 (UG-32)",
+              "norma": "ASME VIII Div.1 UG-32",
+              "valor": "t_mín=5.0mm; t_req=8.0mm (c/ corrosão 3mm)"
+            },
+            {
+              "item": "Flange de corpo (Apêndice 2)",
+              "norma": "ASME VIII Div.1 Ap. 2",
+              "status": "OK",
+              "valor": "t_mín≈77mm; referência do referencial 104mm (gaxeta espiralada padrão m=3,0/y=69, validada PE)"
+            },
+            {
+              "item": "Radiografia — exposições (Seção V Art.2)",
+              "norma": "ASME Seção V Art.2",
+              "valor": "~24 exposições (6 long + 18 circ) — estimativa"
+            }
+          ],
+          "number": "COT-2026-003",
+          "revision": 0,
+          "scope": "complete",
+          "totals": {
+            "custo_material": "118258.05",
+            "custo_mo": "116138.9",
+            "custo_total": "234396.96",
+            "peso_bruto_kg": "0",
+            "peso_liquido_kg": "0",
+            "preco_com_impostos": "292996.2",
+            "preco_sem_impostos": "266626.54"
+          }
+        },
+        "snapshot_hash": "308d5fa6b1c5a55f268b2f7efe36c7b09d20f4260ed79c592d569ae7ae079905",
+        "standard_refs": [
+          {
+            "item": "Pressão de projeto (UG-21)",
+            "norma": "ASME VIII Div.1 UG-21"
+          },
+          {
+            "fonte": "ASME BPVC II-D (M) 2025, Tab 1A L43",
+            "item": "Tensão admissível (S)",
+            "norma": "ASME II-D"
+          },
+          {
+            "fonte": "ASME BPVC II-D (M) 2025, Tab 1A L43",
+            "item": "Espessura mínima do casco (UG-27)",
+            "norma": "ASME VIII Div.1 UG-27"
+          },
+          {
+            "fonte": "ASME BPVC II-D (M) 2025, Tab 1A L43",
+            "item": "Espessura mínima do tampo 2:1 (UG-32)",
+            "norma": "ASME VIII Div.1 UG-32"
+          },
+          {
+            "item": "Flange de corpo (Apêndice 2)",
+            "norma": "ASME VIII Div.1 Ap. 2"
+          },
+          {
+            "item": "Radiografia — exposições (Seção V Art.2)",
+            "norma": "ASME Seção V Art.2"
+          }
+        ]
+      }
+    }
+  },
+  "counts": {
+    "accesslog_delta": 0,
+    "approvalcase_delta": 0,
+    "proposal_total": 3
+  },
+  "d": {
+    "itens": [
+      {
+        "codigo_item": "cabecote_material",
+        "custo_material": "6723.64",
+        "custo_mo": "0.00",
+        "descricao": "Cabecote Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 0
+      },
+      {
+        "codigo_item": "casco_material",
+        "custo_material": "17068.60",
+        "custo_mo": "0.00",
+        "descricao": "Casco Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 1
+      },
+      {
+        "codigo_item": "fabricacao",
+        "custo_material": "0.00",
+        "custo_mo": "81714.72",
+        "descricao": "Fabricacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 2
+      },
+      {
+        "codigo_item": "feixe_material",
+        "custo_material": "15633.20",
+        "custo_mo": "0.00",
+        "descricao": "Feixe Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 3
+      },
+      {
+        "codigo_item": "finalizacao",
+        "custo_material": "0.00",
+        "custo_mo": "6907.16",
+        "descricao": "Finalizacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 4
+      }
+    ],
+    "quotation": {
+      "avisos": [],
+      "computed_at_is_null": false,
+      "custo_material": "39425.43",
+      "custo_mo": "88621.89",
+      "custo_total": "128047.32",
+      "fator_preco": "1.25000",
+      "impostos_pct": "9.000",
+      "inputs": {
+        "classe_casco": "CS",
+        "classe_feixe": "CS",
+        "comprimento_casco_mm": 1631.0,
+        "comprimento_tubo_mm": 13000.0,
+        "corrosao_mm": null,
+        "densidade_fluido_kg_m3": null,
+        "designacao": "BEU",
+        "diametro_casco_mm": 764.0,
+        "esp_casco_mm": 9.5,
+        "esp_tubo_mm": 2.108,
+        "fator_correcao_mo": 1.0,
+        "fluido_corrosivo": "Tubos",
+        "n_chicanas": 1,
+        "n_passes_tubos": 2,
+        "n_tubos": 68,
+        "od_tubo_mm": 19.05,
+        "pressao_projeto_bar": null,
+        "rt_escopo": "Total",
+        "temperatura_projeto_c": null
+      },
+      "number": "COT-2026-004",
+      "peso_bruto_kg": "0.00",
+      "peso_liquido_kg": "0.00",
+      "preco_com_impostos": "160059.15",
+      "preco_sem_impostos": "145653.83",
+      "pricing_basis": "referencial",
+      "revision": 1,
+      "scope": "complete",
+      "status": "draft",
+      "title": "Permutador BEU"
+    },
+    "snapshot": {
+      "count": 1,
+      "snapshot": {
+        "engine_version": "calc-snapshot-v2",
+        "inputs": {
+          "inputs": {
+            "classe_casco": "CS",
+            "classe_feixe": "CS",
+            "comprimento_casco_mm": 1631.0,
+            "comprimento_tubo_mm": 13000.0,
+            "corrosao_mm": null,
+            "densidade_fluido_kg_m3": null,
+            "designacao": "BEU",
+            "diametro_casco_mm": 764.0,
+            "esp_casco_mm": 9.5,
+            "esp_tubo_mm": 2.108,
+            "fator_correcao_mo": 1.0,
+            "fluido_corrosivo": "Tubos",
+            "n_chicanas": 1,
+            "n_passes_tubos": 2,
+            "n_tubos": 68,
+            "od_tubo_mm": 19.05,
+            "pressao_projeto_bar": null,
+            "rt_escopo": "Total",
+            "temperatura_projeto_c": null
+          },
+          "pricing": {
+            "fator_preco": "1.25",
+            "impostos_pct": "9.0"
+          },
+          "quotation": {
+            "number": "COT-2026-004",
+            "revision": 1,
+            "scope": "complete",
+            "title": "Permutador BEU"
+          }
+        },
+        "outputs": {
+          "items": [
+            {
+              "codigo_item": "cabecote_material",
+              "custo_material": "6723.64",
+              "custo_mo": "0.00",
+              "descricao": "Cabecote Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 0
+            },
+            {
+              "codigo_item": "casco_material",
+              "custo_material": "17068.60",
+              "custo_mo": "0.00",
+              "descricao": "Casco Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 1
+            },
+            {
+              "codigo_item": "fabricacao",
+              "custo_material": "0.00",
+              "custo_mo": "81714.72",
+              "descricao": "Fabricacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 2
+            },
+            {
+              "codigo_item": "feixe_material",
+              "custo_material": "15633.20",
+              "custo_mo": "0.00",
+              "descricao": "Feixe Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 3
+            },
+            {
+              "codigo_item": "finalizacao",
+              "custo_material": "0.00",
+              "custo_mo": "6907.16",
+              "descricao": "Finalizacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 4
+            }
+          ],
+          "number": "COT-2026-004",
+          "revision": 1,
+          "scope": "complete",
+          "totals": {
+            "custo_material": "39425.43",
+            "custo_mo": "88621.89",
+            "custo_total": "128047.32",
+            "peso_bruto_kg": "0",
+            "peso_liquido_kg": "0",
+            "preco_com_impostos": "160059.15",
+            "preco_sem_impostos": "145653.83"
+          }
+        },
+        "snapshot_hash": "d067a51199486ac71d662849874e5b52de7cbb7c3996fb4bf7efee16a4456063",
+        "standard_refs": []
+      }
+    }
+  },
+  "e": {
+    "itens": [
+      {
+        "codigo_item": "cabecote_material",
+        "custo_material": "6723.58",
+        "custo_mo": "0.00",
+        "descricao": "Cabecote Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 0
+      },
+      {
+        "codigo_item": "casco_material",
+        "custo_material": "17067.92",
+        "custo_mo": "0.00",
+        "descricao": "Casco Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 1
+      },
+      {
+        "codigo_item": "fabricacao",
+        "custo_material": "0.00",
+        "custo_mo": "81831.00",
+        "descricao": "Fabricacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 2
+      },
+      {
+        "codigo_item": "feixe_material",
+        "custo_material": "15633.20",
+        "custo_mo": "0.00",
+        "descricao": "Feixe Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 3
+      },
+      {
+        "codigo_item": "finalizacao",
+        "custo_material": "0.00",
+        "custo_mo": "6907.00",
+        "descricao": "Finalizacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 4
+      }
+    ],
+    "quotation": {
+      "avisos": [],
+      "computed_at_is_null": false,
+      "custo_material": "39424.69",
+      "custo_mo": "88738.00",
+      "custo_total": "128162.69",
+      "fator_preco": "1.25000",
+      "impostos_pct": "9.000",
+      "inputs": {
+        "designacao": "BEU",
+        "n_tubos": 68
+      },
+      "number": "COT-2026-901",
+      "peso_bruto_kg": "0.00",
+      "peso_liquido_kg": "0.00",
+      "preco_com_impostos": "160203.37",
+      "preco_sem_impostos": "145785.07",
+      "pricing_basis": "referencial",
+      "revision": 1,
+      "scope": "complete",
+      "status": "draft",
+      "title": "BEU inválido p/ fallback"
+    },
+    "snapshot": {
+      "count": 1,
+      "snapshot": {
+        "engine_version": "calc-snapshot-v2",
+        "inputs": {
+          "inputs": {
+            "designacao": "BEU",
+            "n_tubos": 68
+          },
+          "pricing": {
+            "fator_preco": "1.25",
+            "impostos_pct": "9.0"
+          },
+          "quotation": {
+            "number": "COT-2026-901",
+            "revision": 1,
+            "scope": "complete",
+            "title": "BEU inválido p/ fallback"
+          }
+        },
+        "outputs": {
+          "items": [
+            {
+              "codigo_item": "cabecote_material",
+              "custo_material": "6723.58",
+              "custo_mo": "0.00",
+              "descricao": "Cabecote Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 0
+            },
+            {
+              "codigo_item": "casco_material",
+              "custo_material": "17067.92",
+              "custo_mo": "0.00",
+              "descricao": "Casco Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 1
+            },
+            {
+              "codigo_item": "fabricacao",
+              "custo_material": "0.00",
+              "custo_mo": "81831.00",
+              "descricao": "Fabricacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 2
+            },
+            {
+              "codigo_item": "feixe_material",
+              "custo_material": "15633.20",
+              "custo_mo": "0.00",
+              "descricao": "Feixe Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 3
+            },
+            {
+              "codigo_item": "finalizacao",
+              "custo_material": "0.00",
+              "custo_mo": "6907.00",
+              "descricao": "Finalizacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 4
+            }
+          ],
+          "number": "COT-2026-901",
+          "revision": 1,
+          "scope": "complete",
+          "totals": {
+            "custo_material": "39424.69",
+            "custo_mo": "88738.0",
+            "custo_total": "128162.69",
+            "peso_bruto_kg": "0",
+            "peso_liquido_kg": "0",
+            "preco_com_impostos": "160203.37",
+            "preco_sem_impostos": "145785.07"
+          }
+        },
+        "snapshot_hash": "0833e09f8c38756e815160f5a685bdc71638f2c0d494f031da1261d8e2e0d2bf",
+        "standard_refs": []
+      }
+    }
+  },
+  "f": {
+    "itens": [
+      {
+        "codigo_item": "cabecote_material",
+        "custo_material": "6723.64",
+        "custo_mo": "0.00",
+        "descricao": "Cabecote Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 0
+      },
+      {
+        "codigo_item": "casco_material",
+        "custo_material": "17068.60",
+        "custo_mo": "0.00",
+        "descricao": "Casco Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 1
+      },
+      {
+        "codigo_item": "fabricacao",
+        "custo_material": "0.00",
+        "custo_mo": "81714.72",
+        "descricao": "Fabricacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 2
+      },
+      {
+        "codigo_item": "feixe_material",
+        "custo_material": "15633.20",
+        "custo_mo": "0.00",
+        "descricao": "Feixe Material",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 3
+      },
+      {
+        "codigo_item": "finalizacao",
+        "custo_material": "0.00",
+        "custo_mo": "6907.16",
+        "descricao": "Finalizacao",
+        "materiais": [],
+        "operacoes": [],
+        "sort_order": 4
+      }
+    ],
+    "quotation": {
+      "avisos": [
+        {
+          "codigo": "TEMA_COMPAT",
+          "mensagem": "Cabeçote traseiro 'U' = feixe em U (um único espelho, sem espelho traseiro).",
+          "nivel": "warning"
+        }
+      ],
+      "computed_at_is_null": false,
+      "custo_material": "39425.43",
+      "custo_mo": "88621.89",
+      "custo_total": "128047.32",
+      "fator_preco": "1.25000",
+      "impostos_pct": "9.000",
+      "inputs": {
+        "classe_casco": "CS",
+        "classe_feixe": "CS",
+        "comprimento_casco_mm": 1631.0,
+        "comprimento_tubo_mm": 13000.0,
+        "corrosao_mm": null,
+        "densidade_fluido_kg_m3": null,
+        "designacao": "BEU",
+        "diametro_casco_mm": 764.0,
+        "esp_casco_mm": 9.5,
+        "esp_tubo_mm": 2.108,
+        "fator_correcao_mo": 1.0,
+        "fluido_corrosivo": "Tubos",
+        "n_chicanas": 1,
+        "n_passes_tubos": 2,
+        "n_tubos": 68,
+        "od_tubo_mm": 19.05,
+        "pressao_projeto_bar": null,
+        "rt_escopo": "Total",
+        "temperatura_projeto_c": null
+      },
+      "number": "COT-2026-001",
+      "peso_bruto_kg": "0.00",
+      "peso_liquido_kg": "0.00",
+      "preco_com_impostos": "160059.15",
+      "preco_sem_impostos": "145653.83",
+      "pricing_basis": "referencial",
+      "revision": 0,
+      "scope": "complete",
+      "status": "draft",
+      "title": "Permutador BEU"
+    },
+    "snapshot": {
+      "count": 1,
+      "snapshot": {
+        "engine_version": "calc-snapshot-v2",
+        "inputs": {
+          "inputs": {
+            "classe_casco": "CS",
+            "classe_feixe": "CS",
+            "comprimento_casco_mm": 1631.0,
+            "comprimento_tubo_mm": 13000.0,
+            "corrosao_mm": null,
+            "densidade_fluido_kg_m3": null,
+            "designacao": "BEU",
+            "diametro_casco_mm": 764.0,
+            "esp_casco_mm": 9.5,
+            "esp_tubo_mm": 2.108,
+            "fator_correcao_mo": 1.0,
+            "fluido_corrosivo": "Tubos",
+            "n_chicanas": 1,
+            "n_passes_tubos": 2,
+            "n_tubos": 68,
+            "od_tubo_mm": 19.05,
+            "pressao_projeto_bar": null,
+            "rt_escopo": "Total",
+            "temperatura_projeto_c": null
+          },
+          "pricing": {
+            "fator_preco": "1.25",
+            "impostos_pct": "9.0"
+          },
+          "quotation": {
+            "number": "COT-2026-001",
+            "revision": 0,
+            "scope": "complete",
+            "title": "Permutador BEU"
+          }
+        },
+        "outputs": {
+          "items": [
+            {
+              "codigo_item": "cabecote_material",
+              "custo_material": "6723.64",
+              "custo_mo": "0.00",
+              "descricao": "Cabecote Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 0
+            },
+            {
+              "codigo_item": "casco_material",
+              "custo_material": "17068.60",
+              "custo_mo": "0.00",
+              "descricao": "Casco Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 1
+            },
+            {
+              "codigo_item": "fabricacao",
+              "custo_material": "0.00",
+              "custo_mo": "81714.72",
+              "descricao": "Fabricacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 2
+            },
+            {
+              "codigo_item": "feixe_material",
+              "custo_material": "15633.20",
+              "custo_mo": "0.00",
+              "descricao": "Feixe Material",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 3
+            },
+            {
+              "codigo_item": "finalizacao",
+              "custo_material": "0.00",
+              "custo_mo": "6907.16",
+              "descricao": "Finalizacao",
+              "materiais": [],
+              "operacoes": [],
+              "sort_order": 4
+            }
+          ],
+          "number": "COT-2026-001",
+          "revision": 0,
+          "scope": "complete",
+          "totals": {
+            "custo_material": "39425.43",
+            "custo_mo": "88621.89",
+            "custo_total": "128047.32",
+            "peso_bruto_kg": "0",
+            "peso_liquido_kg": "0",
+            "preco_com_impostos": "160059.15",
+            "preco_sem_impostos": "145653.83"
+          }
+        },
+        "snapshot_hash": "03643f50d7a8f2d9c0300272280fa1368df5eb66d583cfcf82c295a7ab9a5ace",
+        "standard_refs": []
+      }
+    }
+  }
+}
