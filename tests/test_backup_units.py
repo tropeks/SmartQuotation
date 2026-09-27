@@ -155,7 +155,21 @@ def test_units_use_dedicated_env_file_never_env_prod():
         assert ".env.prod" not in text, f"{name} não pode referenciar .env.prod (nem em comentário)"
         unit = parse_unit(UNITS / name)
         assert get(unit, "Service", "EnvironmentFile") == [BACKUP_ENV_TARGET], name
-        assert not get(unit, "Service", "Environment"), f"{name}: variáveis vão no backup.env"
+        extra = [e for e in get(unit, "Service", "Environment") if not e.startswith("PATH=")]
+        assert not extra, f"{name}: variáveis vão no backup.env (só PATH fica na unit): {extra}"
+
+
+def test_backup_service_path_is_explicit_system_only_for_age_plugin():
+    """age, rclone e age-plugin-yubikey (DP-41) são achados pelo PATH da unit: explícito,
+    só diretórios do sistema, nada de home (ProtectHome=read-only)."""
+    unit = parse_unit(UNITS / "sq-backup.service")
+    env = get(unit, "Service", "Environment")
+    assert len(env) == 1 and env[0].startswith("PATH="), env
+    dirs = env[0][len("PATH="):].split(":")
+    assert "/usr/local/bin" in dirs and "/usr/bin" in dirs, dirs
+    assert not [d for d in dirs if d.startswith(("/root", "/home", "~")) or not d.startswith("/")], dirs
+    assert one(unit, "Service", "ProtectHome") == "read-only"
+    assert any("age-plugin-yubikey" in c for c in unit["_comments"]), "comentário do plugin na unit"
 
 
 def test_backup_env_example_has_only_backup_vars_and_no_secrets():
@@ -167,7 +181,8 @@ def test_backup_env_example_has_only_backup_vars_and_no_secrets():
     for secret in ("FIELD_ENCRYPTION_KEY=", "DJANGO_SECRET_KEY=", "POSTGRES_PASSWORD=",
                    "AWS_SECRET_ACCESS_KEY=", "AWS_ACCESS_KEY_ID="):
         assert secret not in text, f"backup.env.example não pode ter {secret}"
-    assert not re.search(r"AGE-SECRET-KEY-1[0-9A-Z]{20,}", text), "chave privada age no backup.env.example"
+    assert not re.search(r"AGE-(SECRET-KEY|PLUGIN-YUBIKEY)-1[0-9A-Z]{20,}", text), (
+        "chave privada/identidade age no backup.env.example")
     # modo container: vale o POSTGRES_USER do próprio sq-prod-db
     assert "POSTGRES_USER" not in env and "POSTGRES_DB" not in env, env
     assert not re.search(r"^\s*DOCKER=.*sudo", text, re.M), "sudo não passa pelo NoNewPrivileges"
@@ -232,6 +247,7 @@ TESTS = [
     test_restore_check_service_hardened_and_runs_restore_check,
     test_restore_check_timer_weekly_persistent,
     test_units_use_dedicated_env_file_never_env_prod,
+    test_backup_service_path_is_explicit_system_only_for_age_plugin,
     test_backup_env_example_has_only_backup_vars_and_no_secrets,
     test_backup_env_dirs_match_unit_rw_paths,
     test_backup_env_offsite_example_is_fictitious_public_and_separated,

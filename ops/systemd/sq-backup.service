@@ -32,6 +32,11 @@ User=root
 # Env file DEDICADO, só com variáveis de backup (modelo: ops/systemd/backup.env.example).
 # O ambiente da aplicação, com a chave de cifragem e as senhas, não entra nesta unit.
 EnvironmentFile=/etc/smartquotation/backup.env
+# PATH explícito (é a única variável fora do backup.env): age, rclone e, se o destinatário
+# de recuperação for YubiKey (DP-41), age-plugin-yubikey têm de estar em /usr/local/bin ou
+# /usr/bin. Nada do home do root entra no PATH (ProtectHome=read-only). O plugin só CIFRA:
+# não precisa do token, de pcscd nem de dispositivo, então o sandbox abaixo não muda.
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 WorkingDirectory=/opt/smartquotation
 UMask=0077
 ExecStart=/opt/smartquotation/scripts/backup_db.sh
