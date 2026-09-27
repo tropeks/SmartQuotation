@@ -306,6 +306,46 @@ def test_orphan_tmp_older_than_one_day_is_pruned_fresh_one_kept():
         assert "órfão" in r.stderr, r.stderr
 
 
+
+# --- validação numa passada só ----------------------------------------------------------
+
+def test_validation_decompresses_the_dump_once():
+    body = SCRIPT.read_text()
+    fn = body[body.index("validate_dump() {"):]
+    fn = fn[: fn.index("\n}\n")]
+    assert fn.count("zcat") == 1, f"validate_dump descomprime {fn.count('zcat')} vezes"
+
+
+def test_corrupt_gzip_is_rejected():
+    """zcat falhando no meio (gzip truncado) tem que reprovar, não passar com contagem 0."""
+    tmp, fk, bdir = _fresh()
+    with tmp:
+        fk.set_dump(synthetic_dump(lines=3000))
+        real_gzip = subprocess.run(["bash", "-c", "command -v gzip"], capture_output=True, text=True).stdout.strip()
+        # gzip do host que corta o próprio fluxo ao meio: arquivo .gz truncado
+        (fk.bin / "gzip").write_text(
+            f'#!/usr/bin/env bash\nif [ "$#" -eq 0 ]; then "{real_gzip}" | head -c 2000; exit 0; fi\n'
+            f'exec "{real_gzip}" "$@"\n'
+        )
+        (fk.bin / "gzip").chmod(0o755)
+        r = fk.run("backup_db.sh")
+        assert r.returncode != 0 and "gzip" in r.stderr, r.stderr
+        assert not _dumps(bdir)
+
+
+def test_schema_with_backslash_is_matched_literally():
+    """BACKUP_EXPECT_SCHEMA é texto literal: `engema\\tex` casa com a barra invertida do dump,
+    não com um TAB (o que aconteceria se entrasse no awk por -v)."""
+    tmp, fk, bdir = _fresh()
+    with tmp:
+        fk.set_dump("-- marcador engema\\tex\n" + synthetic_dump(schema="outro"))
+        r = fk.run("backup_db.sh", {"BACKUP_EXPECT_SCHEMA": "engema\\tex"})
+        assert r.returncode == 0, r.stderr
+        fk.set_dump("-- marcador engema\tex\n" + synthetic_dump(schema="outro"))  # TAB real
+        r = fk.run("backup_db.sh", {"BACKUP_EXPECT_SCHEMA": "engema\\tex"})
+        assert r.returncode != 0 and "schema esperado ausente" in r.stderr, r.stderr
+
+
 TESTS = [
     test_umask_is_set_before_any_mkdir,
     test_final_dump_and_status_are_0600_and_dir_0700,
@@ -323,6 +363,9 @@ TESTS = [
     test_container_mode_without_postgres_user_uses_the_containers_own,
     test_status_tmp_is_removed_by_trap_when_write_fails_midway,
     test_orphan_tmp_older_than_one_day_is_pruned_fresh_one_kept,
+    test_validation_decompresses_the_dump_once,
+    test_corrupt_gzip_is_rejected,
+    test_schema_with_backslash_is_matched_literally,
 ]
 
 if __name__ == "__main__":

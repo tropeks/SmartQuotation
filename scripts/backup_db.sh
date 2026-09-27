@@ -182,36 +182,39 @@ esac
 # --- Validação por conteúdo: exit code 0 não é suficiente (é exatamente o que engana). ---
 validate_dump() {
   local file="$1"
-  local size lines hits
+  local stats size lines hits footer
 
-  if ! gzip -t "${file}" 2>/dev/null; then
-    echo "${SQ_SCRIPT}: gzip corrompido. Rejeitando backup." >&2
+  # UMA descompressão só: um awk mede bytes, linhas, ocorrências do schema e procura o rodapé
+  # nas últimas 20 linhas (versões com \restrict/\unrestrict fecham o arquivo depois dele).
+  # Descompressão falhando (gzip corrompido/truncado) derruba o pipe via pipefail. Schema e rodapé
+  # entram por ENVIRON, não por -v, que interpretaria barras invertidas.
+  # shellcheck disable=SC2016  # programa awk, não expansão do shell
+  if ! stats="$(zcat "${file}" | SQ_S="${BACKUP_EXPECT_SCHEMA}" SQ_F="${EXPECTED_FOOTER}" LC_ALL=C awk '
+      { bytes += length($0) + 1; if (ENVIRON["SQ_S"] != "" && index($0, ENVIRON["SQ_S"])) hits++
+        last[NR % 20] = $0 }
+      END { foot = 0; for (i in last) if (last[i] == ENVIRON["SQ_F"]) foot = 1
+            printf "%d %d %d %d\n", bytes, NR, hits, foot }')"; then
+    echo "${SQ_SCRIPT}: gzip corrompido ou ilegível. Rejeitando backup." >&2
     return 1
   fi
+  read -r size lines hits footer <<< "${stats}"
 
-  size="$(zcat "${file}" | wc -c)"
   if [ "${size}" -lt "${BACKUP_MIN_BYTES}" ]; then
     echo "${SQ_SCRIPT}: dump suspeito — apenas ${size} bytes descomprimidos (mínimo ${BACKUP_MIN_BYTES}). Rejeitando backup." >&2
     return 1
   fi
 
-  lines="$(zcat "${file}" | wc -l)"
   if [ "${lines}" -lt "${BACKUP_MIN_LINES}" ]; then
     echo "${SQ_SCRIPT}: dump suspeito — apenas ${lines} linhas (mínimo ${BACKUP_MIN_LINES}). Rejeitando backup." >&2
     return 1
   fi
 
-  if [ -n "${BACKUP_EXPECT_SCHEMA}" ]; then
-    hits="$(zcat "${file}" | grep -c -F -- "${BACKUP_EXPECT_SCHEMA}" || true)"
-    if [ "${hits}" -eq 0 ]; then
-      echo "${SQ_SCRIPT}: dump não contém nenhuma referência a '${BACKUP_EXPECT_SCHEMA}' — schema esperado ausente. Rejeitando backup." >&2
-      return 1
-    fi
+  if [ -n "${BACKUP_EXPECT_SCHEMA}" ] && [ "${hits}" -eq 0 ]; then
+    echo "${SQ_SCRIPT}: dump não contém nenhuma referência a '${BACKUP_EXPECT_SCHEMA}' — schema esperado ausente. Rejeitando backup." >&2
+    return 1
   fi
 
-  # Rodapé nas últimas linhas: o Postgres só o escreve ao terminar. Últimas 20 (e não a
-  # última) porque versões com \restrict/\unrestrict fecham o arquivo depois do rodapé.
-  if ! zcat "${file}" | tail -n 20 | grep -q -x -F -- "${EXPECTED_FOOTER}"; then
+  if [ "${footer}" -ne 1 ]; then
     echo "${SQ_SCRIPT}: dump sem o rodapé '${EXPECTED_FOOTER}' — truncado ou interrompido. Rejeitando backup." >&2
     return 1
   fi
