@@ -127,15 +127,26 @@ def approve_presencial(quotation, approver_profile, password, request=None, art_
     if not Role.key_requires_crea(approver_profile.role) or not (approver_profile.crea_number or "").strip():
         _log_approval_attempt(request, quotation, approver_profile, "denied", "invalid_approver")
         raise ValidationError("Nao foi possivel validar a aprovacao.")
+    if request is None:
+        # authenticate() precisa do request para o axes (lockout por username/IP). Sem
+        # request não há como checar lockout, então a aprovação presencial é negada — o
+        # único chamador (audit/views.py) sempre passa o request da requisição HTTP.
+        _log_approval_attempt(request, quotation, approver_profile, "denied", "missing_request")
+        raise ValidationError("Nao foi possivel validar a aprovacao.")
     authenticated = authenticate(
         request=request,
         username=approver_profile.user.username,
         password=password,
     )
     if authenticated is None or authenticated.pk != approver_profile.user_id:
-        if not approver_profile.user.check_password(password):
-            _log_approval_attempt(request, quotation, approver_profile, "denied", "invalid_credentials")
-            raise ValidationError("Nao foi possivel validar a aprovacao.")
+        # SEM fallback para check_password: um authenticate() que devolve None pode ser
+        # senha errada, mas também pode ser a conta trancada pelo axes (lockout) ou
+        # is_active=False (ModelBackend recusa). check_password() não sabe distinguir e
+        # aprovaria os três casos com a senha certa — foi exatamente esse o bypass que
+        # contornava o lockout técnico do CREA.
+        reason = "locked_out" if getattr(request, "axes_locked_out", False) else "invalid_credentials"
+        _log_approval_attempt(request, quotation, approver_profile, "denied", reason)
+        raise ValidationError("Nao foi possivel validar a aprovacao.")
     with transaction.atomic():
         approval = approve_quotation(
             quotation,
