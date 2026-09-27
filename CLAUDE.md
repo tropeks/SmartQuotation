@@ -53,7 +53,10 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
 **Regra de ouro:** `pricing_engine` é lib pura. O único caminho que **persiste** resultado do
 motor é `apps/quotations/adapter.py` (`recompute()` monta FeixeInputs, chama `quote_feixe`,
 persiste a EAP). Outros módulos podem chamar o motor para simular ou exibir, nunca gravar
-(INTENT v3 §Limites; trava por import-linter vem em ordem própria).
+(INTENT v3 §Limites). Travado por import-linter (ordem 004): `.importlinter` na raiz,
+`python scripts/lint_imports.py` roda os contratos. Achado da ordem 004, ainda aberto:
+`apps.quotations.services.create_permutador_quotation` persiste sem passar pelo adapter
+(ver `docs/ARCHITECTURE.md` §Flags).
 
 ## Dev (Docker)
 ```bash
@@ -80,6 +83,7 @@ python manage.py runserver 0.0.0.0:8000     # acessar via engematex.localhost:80
 ```bash
 python -m tests.validate_feixe_completo      # gate do FEIXE (falha se regredir >10%)
 python -m tests.validate_permutador_completo # gate do PERMUTADOR completo BEU+BEM (±10% + geometria)
+python scripts/lint_imports.py               # import-linter: lib pura + só o adapter persiste
 cd backend && python manage.py test apps     # 73 testes (django-tenants TenantTestCase)
 ```
 

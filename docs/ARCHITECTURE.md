@@ -15,6 +15,8 @@ covers:
   - backend/apps/*/apps.py
   - docker-compose*.yml
   - backend/Dockerfile
+  - .importlinter
+  - scripts/lint_imports.py
 reviewed: 2026-09-27
 ---
 # ARCHITECTURE.md — SmartQuotation
@@ -84,6 +86,14 @@ schema (django-tenants), UI server-rendered (templates + HTMX, Alpine pontual), 
 
 - `pricing_engine` é lib pura; a persistência do resultado passa pelo adapter. Gates do feixe
   (−2,9%) e do permutador BEU/BEM (0,0%) nunca regridem.
+- Travado por `import-linter` (ordem 004): `.importlinter` (raiz do repo) tem dois contratos —
+  `pricing_engine` não importa Django/DRF/Celery/`apps` (lib pura), e só
+  `apps.quotations.adapter` + uma allowlist nomeada de módulos de simulação importam
+  `pricing_engine.feixe_quote`/`permutador_quote`/`beu_quote` (as funções que COMPUTAM uma
+  cotação inteira). Rode com `python scripts/lint_imports.py` (junta `pricing_engine`, na
+  raiz, e `apps`, em `backend/`, no mesmo PYTHONPATH). Gate programático em
+  `tests/test_import_contracts.py`, hoje dependurado em `tests/test_requirements_lock.py`
+  (job `ops-tests`) — `docs/patches/004-ci-import-linter.patch` adiciona um step dedicado.
 - Custo é derivado (motor ou roll-up), nunca digitado; preço rotulado `referencial` ou
   `validado_custo` (`Quotation.pricing_basis`).
 - Nenhum caminho (admin, API, Core) altera número assinado sem invalidar a assinatura.
@@ -456,4 +466,25 @@ smartquotation/
 
 ## Flags para o orchestrator
 
-- Acoplamento motor↔Django: além do adapter, `tema_templates/services.py`, `engineering_params/simulation.py`, `cost_discovery/services.py`, `quotations/views.py` e `quotations/services.py` chamam `quote_completo`/`quote_feixe` direto (simulação e prévia, sem persistir EAP). Resolvido no INTENT v3 (decisão 01M3J7RNGCM5Y22RHHZSFWJPGR): o limite passa a ser "o único caminho que PERSISTE resultado do motor é o adapter", e essas chamadas de simulação ficam permitidas. A trava por import-linter entra como ordem depois da 002.
+- Acoplamento motor↔Django: além do adapter, `tema_templates/services.py`,
+  `engineering_params/simulation.py`, `cost_discovery/services.py` e `quotations/views.py`
+  chamam `quote_completo`/`quote_feixe` direto (simulação e prévia, sem persistir EAP).
+  Resolvido no INTENT v3 (decisão 01M3J7RNGCM5Y22RHHZSFWJPGR): o limite passa a ser "o único
+  caminho que PERSISTE resultado do motor é o adapter", e essas chamadas de simulação ficam
+  permitidas — travado por `import-linter` na ordem 004 (`.importlinter`,
+  `tests/test_import_contracts.py`). `quotations/services.py` NÃO importa `pricing_engine`
+  (correção: a nota anterior citava esse módulo errado).
+- **ACHADO da ordem 004 (não corrigido, reportado ao Diretor):**
+  `apps.quotations.services.create_permutador_quotation` persiste Quotation/QuotationItem a
+  partir de um `resultado` já computado pelo motor, SEM passar por
+  `apps.quotations.adapter.py` — chamado por `apps.tema_templates.views.data_sheet` (criação,
+  quando `salvar`) e por `apps.quotations.views.quotation_revise` (revisão de cotação
+  `scope="complete"`; ver `apps/quotations/test_feature.py::test_quotation_revise_permutador`
+  para a reprodução, que já passa hoje). O import-linter não pega isto: `services.py` recebe
+  o dict já pronto como parâmetro, não importa `pricing_engine`. Ou seja, hoje HÁ dois
+  caminhos que persistem resultado do motor — o adapter (`recompute`/`_recompute_complete`,
+  para feixe e para RE-computar um "complete" existente) e `create_permutador_quotation`
+  (criação e revisão de "complete"). O texto literal do INTENT v3 §Limites ("o único caminho
+  que PERSISTE... é apps/quotations/adapter.py") não descreve o código como ele é hoje para
+  o permutador completo. Decisão do Diretor: emendar o INTENT para reconhecer os dois
+  caminhos, ou abrir uma ordem para rotear `create_permutador_quotation` pelo adapter.
