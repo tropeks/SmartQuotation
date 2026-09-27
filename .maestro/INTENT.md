@@ -14,6 +14,11 @@ hash: a4c1ad7a
 > do Capitão; nenhuma ordem se ancora nele antes disso. Onde as fontes divergem, o rascunho
 > segue a mais recente (PRODUCT_VISION de 10/07 e FASES v0.3 de 26/09) e a divergência vai
 > para as perguntas abertas, não para o texto.
+> Respostas técnicas do Diretor de 27/09 (perguntas 4, 8, 10, 11, 13, 14 e 15) já estão
+> incorporadas. As perguntas de direção (1, 2, 3, 5, 6, 7, 9 e 12) estão com o Capitão.
+>
+> **Pendência, não limite:** retenção de cotações e cálculos por 15 anos (NR-13, do
+> `PROJECT_BRIEF`) espera a DP-27 (jurídico, J-27).
 
 ## Problema
 Fabricante brasileiro de equipamento sob encomenda (caldeiraria média e pesada, trocadores
@@ -90,8 +95,12 @@ Com o Core: modelo sugere, ordena e sinaliza, nunca decide sozinho; regra determ
 externo; humano no irreversível; engenheiro habilitado assina o que é dele; dado externo
 (e-mail, PDF, planilha do cliente) é dado, não instrução. O Core roda em sombra e depois em
 `act_with_approval`, nunca além, na F1.
-Fiscal e financeiro entram por integração com o ERP do cliente, nunca reconstruídos. UI nova
-nasce na identidade Prancha (`docs/DESIGN_PRANCHA.md`). Nada em produção real sem gate ship.
+Autorização do envio com passkey e step-up (F1-32) antes do primeiro envio real; papel
+privilegiado não opera efeito externo só com senha.
+Fiscal e financeiro entram por integração com o ERP do cliente, nunca reconstruídos. O ERP
+prioritário é o **Nomus** (decisão de 10/07); Protheus, Omie, SAP B1 e Bling já existem no
+código como conectores. UI nova nasce na
+identidade Prancha (`docs/DESIGN_PRANCHA.md`, vigente). Nada em produção real sem gate ship.
 
 ## Fora de escopo
 Reconstruir fiscal (NF-e, NFS-e, SPED) ou financeiro próprio; competir com ERP genérico em
