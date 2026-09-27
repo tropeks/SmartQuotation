@@ -16,11 +16,12 @@ docker falso de tests/_ops_fakes.py (scripts bash num bin/ temporário na frente
                                                   (FAKE_RCLONE_ABSENT_RC=3 simula "directory
                                                   not found"); FAKE_RCLONE_NO_HASH=1 sem hash,
                                                   salvo com --download (baixa e calcula)
+                 lsjson [--files-only] ALVO       '[{"Name":…,"Size":N}]' ou '[]' (só lista)
                  copyto [--immutable] SRC ALVO    --immutable recusa sobrescrever conteúdo
                                                   diferente; FAKE_RCLONE_CORRUPT=1 grava um byte
                                                   a mais (o hash não confere)
                  FAKE_RCLONE_FAIL=<subcomando>    aquele subcomando sai 1 (rede/credencial)
-               Qualquer outro subcomando (delete, purge, sync, move...) registra "VIOLATION"
+               Qualquer outro subcomando (delete, purge, sync, move, cat, copy...) registra "VIOLATION"
                em FAKE_RCLONE_LOG e sai 99: o off-site não apaga nada no remoto (DP-27).
 
 OffsiteCase monta o cenário completo: dump, mídia, chave 0600 em KEY_BACKUP_DIR e ISCAS (um
@@ -43,7 +44,7 @@ MEDIA = "media_20260927_030000.tar.gz"
 DUMP_REMOTE = "sq-offsite:sq-backup/engematex"
 KEY_REMOTE = "sq-offsite-key:sq-key-custody/engematex"
 ENV_PROD_MARKER = "DJANGO_SECRET_KEY=segredo-sintetico-do-env-prod"
-ALLOWED_RCLONE = {"hashsum", "copyto"}
+ALLOWED_RCLONE = {"hashsum", "copyto", "lsjson"}
 
 _FAKE_AGE = r"""#!/usr/bin/env bash
 orig="$*"
@@ -112,6 +113,19 @@ case "$cmd" in
     # rclone baixa e calcula, então sempre há hash.
     [ "${FAKE_RCLONE_NO_HASH:-0}" = "1" ] && [ "$download" = 0 ] && h=""
     printf '%40s  %s\n' "$h" "$(basename "$f")"
+    exit 0 ;;
+  lsjson)
+    f="$(path_of "${args[0]}")"
+    if [ ! -f "$f" ]; then
+      [ -z "${FAKE_RCLONE_ABSENT_RC:-}" ] && { echo '[]'; exit 0; }
+      echo "ERROR : directory not found" >&2; exit "${FAKE_RCLONE_ABSENT_RC}"
+    fi
+    n="$(basename "$f")"
+    printf '[
+{"Path":"%s","Name":"%s","Size":%s,"MimeType":"application/octet-stream","IsDir":false}
+]
+' \
+      "$n" "$n" "$(wc -c < "$f" | tr -d ' ')"
     exit 0 ;;
   copyto)
     src="${args[0]}"; f="$(path_of "${args[1]}")"

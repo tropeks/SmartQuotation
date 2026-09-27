@@ -4,9 +4,11 @@
 # backup_db.sh, backup_media.sh, backup_key.sh e offsite_key_push.sh — e roda mesmo que algum
 # deles tenha falhado: o off-site do dump tem valor sem a chave.
 #
-# O que faz, para cada dump (${BACKUP_DIR}/sq_*.sql.gz) e tar de mídia (media_*.tar.gz)
-# que ainda não está confirmado no offsite_manifest (backfill, do mais antigo para o mais
-# novo — um dia sem envio não deixa buraco na série), e sempre para os mais novos:
+# O que faz, primeiro para o dump (${BACKUP_DIR}/sq_*.sql.gz) e o tar de mídia
+# (media_*.tar.gz) MAIS NOVOS, e depois para cada um ainda não confirmado no offsite_manifest
+# (backfill, do mais antigo para o mais novo, até OFFSITE_BACKFILL_MAX por execução — um dia
+# sem envio não deixa buraco na série). Um objeto antigo com problema não bloqueia o de hoje:
+# as falhas se acumulam e o script sai != 0 no fim, nomeando-as:
 #   1. Cifra com age para DOIS destinatários: a chave pública da instância
 #      (OFFSITE_AGE_RECIPIENT_INSTANCE) e a de recuperação da Quantum
 #      (OFFSITE_AGE_RECIPIENT_RECOVERY, raiz offline no YubiKey, DP-41). O arquivo sai por
@@ -48,6 +50,8 @@
 #   OFFSITE_MEDIA                      1 envia também a mídia (default 1)
 #   OFFSITE_MAX_AGE_HOURS              idade máxima do dump mais novo para renovar o status
 #                                      (default 26; 0 desliga)
+#   OFFSITE_BACKFILL_MAX               arquivos antigos pendentes enviados por execução, além
+#                                      dos mais novos (default 6; o resto sai nas próximas)
 #   OFFSITE_HASH                       sha1 | md5 | sha256 (default sha1: o que o B2 guarda)
 #   OFFSITE_HASH_DOWNLOAD              1 baixa o objeto para calcular o hash (provedor que
 #                                      não guarda o hash escolhido). Default 0
@@ -75,6 +79,7 @@ OFFSITE_AGE_RECIPIENT_INSTANCE="${OFFSITE_AGE_RECIPIENT_INSTANCE:-}"
 OFFSITE_AGE_RECIPIENT_RECOVERY="${OFFSITE_AGE_RECIPIENT_RECOVERY:-}"
 OFFSITE_MEDIA="${OFFSITE_MEDIA:-1}"
 OFFSITE_MAX_AGE_HOURS="${OFFSITE_MAX_AGE_HOURS:-26}"
+OFFSITE_BACKFILL_MAX="${OFFSITE_BACKFILL_MAX:-6}"
 OFFSITE_HASH="${OFFSITE_HASH:-sha1}"
 OFFSITE_HASH_DOWNLOAD="${OFFSITE_HASH_DOWNLOAD:-0}"
 AGE="${AGE:-age}"
@@ -95,6 +100,8 @@ case "${OFFSITE_MEDIA}" in
   0|1) ;;
   *) sq_die "OFFSITE_MEDIA='${OFFSITE_MEDIA}' inválido (0 | 1). Recusando." ;;
 esac
+[[ "${OFFSITE_BACKFILL_MAX}" =~ ^[0-9]+$ ]] \
+  || sq_die "OFFSITE_BACKFILL_MAX='${OFFSITE_BACKFILL_MAX}' inválido (inteiro >= 0). Recusando."
 [[ "${OFFSITE_MAX_AGE_HOURS}" =~ ^[0-9]+$ ]] \
   || sq_die "OFFSITE_MAX_AGE_HOURS='${OFFSITE_MAX_AGE_HOURS}' inválido (inteiro >= 0; 0 desliga). Recusando."
 sq_check_dirs_disjoint "${KEY_BACKUP_DIR}" "${BACKUP_DIR}"
@@ -118,39 +125,79 @@ MANIFEST="${BACKUP_DIR}/offsite_manifest"
 RECIPIENTS=("${OFFSITE_AGE_RECIPIENT_INSTANCE}" "${OFFSITE_AGE_RECIPIENT_RECOVERY}")
 STATUS=("timestamp=PLACEHOLDER" "remote=${OFFSITE_REMOTE%/}")
 BACKFILLED=0
+PENDING_LEFT=0
+FAILURES=()
+RESULT_FILE="$(mktemp)" || sq_die "mktemp falhou."
+sq_track_tmp "${RESULT_FILE}"
 
-push_file() {  # ARQUIVO
-  sq_offsite_push "$1" "${OFFSITE_REMOTE}" "$(basename -- "$1").age" "${MANIFEST}" "${BACKUP_DIR}" "${RECIPIENTS[@]}"
+# try_push ARQUIVO — um envio isolado: falha de UM objeto (ex.: antigo divergente) não aborta
+# os outros. Roda num subshell com set -e LIGADO (set +e fora, para capturar o exit sem
+# desligar o errexit lá dentro) e com o próprio trap de limpeza. Sucesso: PUSH_* preenchidos.
+try_push() {
+  local rc
+  set +e
+  (
+    set -e
+    trap sq_cleanup EXIT
+    SQ_TMPS=()
+    sq_offsite_push "$1" "${OFFSITE_REMOTE}" "$(basename -- "$1").age" "${MANIFEST}" "${BACKUP_DIR}" "${RECIPIENTS[@]}"
+    printf '%s\t%s\t%s\n' "${PUSH_RESULT}" "${PUSH_HASH}" "${PUSH_BYTES}" > "${RESULT_FILE}"
+  )
+  rc=$?
+  set -e
+  if [ "${rc}" -ne 0 ]; then
+    FAILURES+=("$(basename -- "$1").age")
+    return 1
+  fi
+  IFS=$'\t' read -r PUSH_RESULT PUSH_HASH PUSH_BYTES < "${RESULT_FILE}"
 }
 
-# push_series ROTULO PADRAO — backfill: todo arquivo que ainda não está CONFIRMADO no
-# manifesto vai, do mais antigo para o mais novo (um buraco na série não fica para trás). O
-# mais novo passa sempre pelo sq_offsite_push, que confere o hash remoto mesmo quando já foi
-# enviado. Define NEWEST (o mais novo), que vai para o status.
+# push_series ROTULO PADRAO
+#   1. o MAIS NOVO primeiro (sempre passa pelo sq_offsite_push, que confere o hash remoto
+#      mesmo quando já foi enviado): um objeto antigo com problema nunca bloqueia o de hoje;
+#   2. depois o backfill: todo arquivo ainda não CONFIRMADO no manifesto, do mais antigo para
+#      o mais novo, até OFFSITE_BACKFILL_MAX por execução (somado entre as séries; o resto
+#      sai nas próximas). Falhas se acumulam em FAILURES e são nomeadas no fim.
+# Define NEWEST (o mais novo) e NEWEST_OK (1 se ele foi confirmado).
 push_series() {
   local label="$1" f last=""
   local -a files=()
   mapfile -t files < <(all_of "$2")
   [ "${#files[@]}" -gt 0 ] || sq_die "nenhum $2 em ${BACKUP_DIR}: nada a enviar."
   last="${files[${#files[@]}-1]}"
+  NEWEST="${last}"
+  NEWEST_OK=0
+  if try_push "${last}"; then
+    NEWEST_OK=1
+    STATUS+=("${label}=$(basename -- "${last}").age" "${label}_result=${PUSH_RESULT}"
+             "${label}_bytes=${PUSH_BYTES}" "${label}_hash=${PUSH_HASH}")
+  fi
   for f in "${files[@]}"; do
     [ "${f}" = "${last}" ] && break
     sq_manifest_confirmed "${MANIFEST}" "$(basename -- "${f}").age" && continue
-    push_file "${f}"
+    if [ "${BACKFILLED}" -ge "${OFFSITE_BACKFILL_MAX}" ]; then
+      PENDING_LEFT=$((PENDING_LEFT + 1))
+      continue
+    fi
     BACKFILLED=$((BACKFILLED + 1))
+    try_push "${f}" || true
   done
-  push_file "${last}"
-  NEWEST="${last}"
-  STATUS+=("${label}=$(basename -- "${last}").age" "${label}_result=${PUSH_RESULT}"
-           "${label}_bytes=${PUSH_BYTES}" "${label}_hash=${PUSH_HASH}")
 }
 
 push_series dump 'sq_*.sql.gz'
 DUMP="${NEWEST}"
+DUMP_OK="${NEWEST_OK}"
 MEDIA=""
 if [ "${OFFSITE_MEDIA}" = "1" ]; then
   push_series media 'media_*.tar.gz'
   MEDIA="${NEWEST}"
+fi
+
+if [ "${PENDING_LEFT}" -gt 0 ]; then
+  echo "${SQ_SCRIPT}: backfill: ${PENDING_LEFT} arquivo(s) ainda pendente(s) — saem nas próximas execuções (OFFSITE_BACKFILL_MAX=${OFFSITE_BACKFILL_MAX})." >&2
+fi
+if [ "${#FAILURES[@]}" -gt 0 ]; then
+  sq_die "FALHA — ${#FAILURES[@]} objeto(s) não enviados/conferidos: ${FAILURES[*]}. O que deu certo ficou no off-site; offsite_last_success NÃO foi renovado.$( [ "${DUMP_OK}" = 1 ] && printf ' O dump mais novo (%s) está confirmado.' "$(basename -- "${DUMP}")" )"
 fi
 
 # Verde só sobre dump recente: com o backup_db parado, o off-site continua conferindo o que
@@ -161,6 +208,6 @@ if [ "${OFFSITE_MAX_AGE_HOURS}" -gt 0 ] \
 fi
 
 STATUS[0]="timestamp=$(sq_now_iso)"
-STATUS+=("backfill=${BACKFILLED}")
+STATUS+=("backfill=${BACKFILLED}" "backfill_pending=${PENDING_LEFT}")
 sq_write_status "${BACKUP_DIR}/offsite_last_success" "${STATUS[@]}"
-echo "${SQ_SCRIPT}: ok — $(basename -- "${DUMP}")${MEDIA:+ e $(basename -- "${MEDIA}")} conferidos em ${OFFSITE_REMOTE%/} (${BACKFILLED} do backfill)" >&2
+echo "${SQ_SCRIPT}: ok — $(basename -- "${DUMP}")${MEDIA:+ e $(basename -- "${MEDIA}")} conferidos em ${OFFSITE_REMOTE%/} (${BACKFILLED} do backfill, ${PENDING_LEFT} pendente(s))" >&2

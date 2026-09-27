@@ -202,7 +202,7 @@ def test_no_remote_delete_ever():
         assert not bad, f"{name}: {bad}"
 
 
-def test_backfill_sends_every_missing_dump_oldest_first_and_skips_sent_ones():
+def test_newest_first_then_backfill_oldest_first_and_skips_sent_ones():
     with OffsiteCase() as c:
         write_gz(c.bdir / "sq_20260925_030000.sql.gz", "dump sintetico 25\n")
         later = [c.bdir / "sq_20260926_030000.sql.gz", c.bdir / DUMP]
@@ -218,7 +218,7 @@ def test_backfill_sends_every_missing_dump_oldest_first_and_skips_sent_ones():
         assert r.returncode == 0, r.stderr
         sent = [x.split()[-1].rsplit("/", 1)[-1] for x in c.copytos()[n:]]
         dumps = [s for s in sent if s.startswith("sq_")]
-        assert dumps == ["sq_20260926_030000.sql.gz.age", f"{DUMP}.age"], sent  # mais antigo antes
+        assert dumps == [f"{DUMP}.age", "sq_20260926_030000.sql.gz.age"], sent  # o de hoje primeiro
         assert not [s for s in sent if "20260925" in s], "o já enviado não volta"
         assert status(c.bdir / "offsite_last_success")["backfill"] == "1"
 
@@ -263,6 +263,44 @@ def test_mktemp_failure_inside_remote_hash_propagates():
         assert not c.copytos(), "falha interna não pode virar envio"
 
 
+def test_old_divergent_object_does_not_block_todays_dump():
+    """Manifesto perdido + objeto antigo divergente no remote: o de hoje sai e é confirmado,
+    o exit é != 0 e a falha antiga é nomeada."""
+    with OffsiteCase() as c:
+        old = c.dump_bucket / "sq_20260926_030000.sql.gz.age"
+        old.parent.mkdir(parents=True)
+        old.write_bytes(b"objeto antigo de outro envio")
+        r = c.push()
+        assert r.returncode != 0, r.stderr
+        assert "sq_20260926_030000.sql.gz.age" in r.stderr.split("FALHA —")[-1], r.stderr
+        today = c.dump_bucket / f"{DUMP}.age"
+        assert today.exists() and split_age(today.read_bytes())[1] == (c.bdir / DUMP).read_bytes()
+        manifest = (c.bdir / "offsite_manifest").read_text()
+        assert f"{DUMP}.age\t" in manifest and manifest.split(f"{DUMP}.age\t")[1].split("\n")[0].endswith("\tok")
+        assert (c.dump_bucket / f"{MEDIA}.age").exists(), "a mídia também sai"
+        assert old.read_bytes() == b"objeto antigo de outro envio", "o antigo nunca é sobrescrito"
+        assert "está confirmado" in r.stderr, r.stderr
+        assert not (c.bdir / "offsite_last_success").exists()
+
+
+def test_backfill_is_capped_per_run_and_resumes_next_run():
+    with OffsiteCase() as c:
+        for day in range(18, 26):  # 8 dumps antigos + o de 26/09 = 9 pendentes além do de hoje
+            write_gz(c.bdir / f"sq_202609{day:02d}_030000.sql.gz", f"dump {day}\n")
+        r = c.push()
+        assert r.returncode == 0, r.stderr
+        st = status(c.bdir / "offsite_last_success")
+        assert st["backfill"] == "6" and st["backfill_pending"] == "3", st
+        names = sorted(p.name for p in objects(c.dump_bucket) if p.name.startswith("sq_"))
+        assert f"{DUMP}.age" in names and len(names) == 7, names
+        assert names[0] == "sq_20260918_030000.sql.gz.age", "backfill do mais antigo para o mais novo"
+        r = c.push()
+        assert r.returncode == 0, r.stderr
+        st = status(c.bdir / "offsite_last_success")
+        assert st["backfill"] == "3" and st["backfill_pending"] == "0", st
+        assert len([p for p in objects(c.dump_bucket) if p.name.startswith("sq_")]) == 10
+
+
 # --- documentação (decisão (a) e runbook) ----------------------------------------------------
 
 def test_security_doc_says_foreign_offsite_is_allowed_by_dp29():
@@ -283,13 +321,16 @@ def test_infra_doc_offsite_section_covers_scripts_remotes_ship_and_drill():
                    "age1yubikey1", "age-plugin-yubikey", "decisão de instalação", "só para cifrar",
                    "backup_run.sh", "backfill", "OFFSITE_MAX_AGE_HOURS", "MANUAL e offline",
                    "contas diferentes de verdade", "wrapper", "backup_run_last",
-                   "decifre com CADA identidade", "age-keygen -y sq-instancia.agekey"):
+                   "decifre com CADA identidade", "age-keygen -y sq-instancia.agekey",
+                   "OFFSITE_BACKFILL_MAX", "não bloqueia o de hoje", "allowlist de armazenamento direto",
+                   "RCLONE_CONFIG_<SEÇÃO>_*", "SQ_BACKUP_UNIT=1", "hash indisponível sem download"):
         assert needle in sec6, f"§6 não cita {needle}"
     drill = doc[doc.index("### Drill trimestral a partir do off-site"):]
     drill_code = drill[drill.index("```bash"):drill.index("```", drill.index("```bash") + 7)]
     assert drill_code.split("\n")[1].startswith("umask 077"), "o drill começa com umask 077"
     assert "chmod" not in drill_code, "nada de chmod depois: o umask já cuida"
     assert "Off-site (ordem 003, não existe)" not in doc
+    assert "INVOCATION_ID" not in doc, "o marcador é SQ_BACKUP_UNIT, não INVOCATION_ID"
 
 
 TESTS = [
@@ -305,7 +346,9 @@ TESTS = [
     test_rclone_lookup_error_is_not_read_as_absent,
     test_remote_without_hash_fails_loudly,
     test_no_remote_delete_ever,
-    test_backfill_sends_every_missing_dump_oldest_first_and_skips_sent_ones,
+    test_newest_first_then_backfill_oldest_first_and_skips_sent_ones,
+    test_old_divergent_object_does_not_block_todays_dump,
+    test_backfill_is_capped_per_run_and_resumes_next_run,
     test_pending_manifest_entry_is_retried_by_backfill,
     test_status_is_not_renewed_over_a_stale_newest_dump,
     test_hash_download_mode_works_when_provider_has_no_hash,
