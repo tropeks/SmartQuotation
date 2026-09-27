@@ -74,10 +74,10 @@ def data_sheet(request):
             cliente = (request.POST.get("cliente") or "").strip()
             if custo and request.POST.get("salvar") and cliente:
                 from apps.quotations.models import Customer
-                from apps.quotations.services import create_permutador_quotation
+                from apps.quotations.adapter import persist_complete
                 from apps.proposals.services import create_proposal
                 cust, _ = Customer.objects.get_or_create(company_name=cliente)
-                cotacao = create_permutador_quotation(
+                cotacao = persist_complete(
                     cust, desig, form.cleaned_data, custo,
                     created_by=request.user if request.user.is_authenticated else None)
                 create_proposal(cotacao)

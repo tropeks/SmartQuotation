@@ -70,18 +70,18 @@ forbidden_modules=
     pricing_engine.permutador_quote
     pricing_engine.beu_quote
 ignore_imports=
-    # O adapter: único caminho que persiste (recompute() grava Quotation/QuotationItem).
+    # O adapter: único caminho que persiste. recompute() grava Quotation/QuotationItem via
+    # quote_feixe; persist_complete()/revise_complete() (ordem 005 — ACHADO da ordem 004,
+    # resolvido: a persistência do permutador completo, que vivia solta em
+    # apps.quotations.services.create_permutador_quotation, agora mora aqui) via
+    # quote_completo.
     apps.quotations.adapter -> pricing_engine.feixe_quote
+    apps.quotations.adapter -> pricing_engine.permutador_quote
 
     # --- allowlist de simulação/exibição (não persistem a EAP) ---
     # quotations/views._preview: "Computa um preview (sem persistir) -> contexto de
-    # resultados" (docstring do próprio módulo). Também importa quote_completo como
-    # fallback de recálculo em quotation_revise — ver ACHADO no relato da ordem 004:
-    # esse fallback alimenta apps.quotations.services.create_permutador_quotation, que
-    # persiste sem passar pelo adapter. Import liberado aqui; achado reportado ao Diretor,
-    # não corrigido nesta ordem (fora do escopo: mudaria comportamento de persistência).
+    # resultados" (docstring do próprio módulo).
     apps.quotations.views -> pricing_engine.feixe_quote
-    apps.quotations.views -> pricing_engine.permutador_quote
 
     # engineering_params/simulation.py: "NADA é persistido... Não usa
     # apps.quotations.adapter.recompute (que grava a EAP no banco)" (docstring do módulo).
@@ -95,7 +95,7 @@ ignore_imports=
 
     # tema_templates/services.py: estimate_complete/estimate_from_inputs computam o preview
     # do data sheet do permutador completo (Tela do catálogo TEMA); quem persiste a partir
-    # do resultado é apps.quotations.services.create_permutador_quotation, chamado pela view
+    # do resultado é apps.quotations.adapter.persist_complete, chamado pela view
     # (apps.tema_templates.views.data_sheet), não este módulo.
     apps.tema_templates.services -> pricing_engine.permutador_quote
 
@@ -111,3 +111,8 @@ ignore_imports=
     apps.tema_templates.tests -> pricing_engine.permutador_quote
     apps.tema_templates.tests -> pricing_engine.beu_quote
     apps.proposals.tests -> pricing_engine.permutador_quote
+
+    # tests_characterization_005.py (ordem 005): fixture da cena (e) — cotação com inputs
+    # inválidos — chama quote_completo direto para semear uma Quotation via ORM cru; não é
+    # o caminho de persistência de produção que o teste está caracterizando.
+    apps.quotations.tests_characterization_005 -> pricing_engine.permutador_quote

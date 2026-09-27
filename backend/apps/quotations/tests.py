@@ -216,13 +216,13 @@ class FeixeQuotationTests(TenantTestCase):
         self.assertEqual(h1, h2)
 
     def test_snapshot_permutador_com_memorial_e_standard_refs(self):
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from pricing_engine.permutador_quote import quote_completo
         cust = Customer.objects.create(company_name="ACME Memo")
         cleaned = {"designacao": "BEU", "classe_casco": "CS", "pressao_projeto_bar": 50,
                    "temperatura_projeto_c": 150, "rt_escopo": "Total", "diametro_casco_mm": 764,
                    "esp_casco_mm": 9.5, "corrosao_mm": 3, "comprimento_casco_mm": 1631}
-        q = create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
+        q = persist_complete(cust, "BEU", cleaned, quote_completo("BEU"))
         snap = q.snapshots.first()
         self.assertIn("memorial", snap.outputs)
         self.assertTrue(snap.standard_refs)
@@ -231,23 +231,23 @@ class FeixeQuotationTests(TenantTestCase):
 
     def test_snapshot_permutador_pressurizado_exige_memorial(self):
         from unittest.mock import patch
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from pricing_engine.permutador_quote import quote_completo
         cust = Customer.objects.create(company_name="ACME Empty Memo")
         cleaned = {"designacao": "BEU", "pressao_projeto_bar": 50}
         with patch("apps.tema_templates.services.memorial_asme", return_value=[]):
             with self.assertRaises(RuntimeError):
-                create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
+                persist_complete(cust, "BEU", cleaned, quote_completo("BEU"))
 
     def test_snapshot_permutador_propaga_falha_do_memorial(self):
         from unittest.mock import patch
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from pricing_engine.permutador_quote import quote_completo
         cust = Customer.objects.create(company_name="ACME Fail")
         cleaned = {"designacao": "BEU", "pressao_projeto_bar": 50}
         with patch("apps.tema_templates.services.memorial_asme", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
-                create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
+                persist_complete(cust, "BEU", cleaned, quote_completo("BEU"))
 
     def test_to_feixe_inputs_merge_defaults(self):
         q = Quotation(inputs={"n_tubos": 99}, customer=self.customer)
@@ -1153,11 +1153,11 @@ class PermutadorQuotationTests(TenantTestCase):
     """Ciclo cotação→proposta: persistir a cotação do permutador a partir do motor."""
 
     def test_persiste_totais_do_permutador(self):
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from pricing_engine.permutador_quote import quote_completo
         cust = Customer.objects.create(company_name="ACME Ltda")
         resultado = quote_completo("BEU")
-        q = create_permutador_quotation(cust, "BEU", {"designacao": "BEU", "n_tubos": 68},
+        q = persist_complete(cust, "BEU", {"designacao": "BEU", "n_tubos": 68},
                                         resultado)
         self.assertEqual(q.scope, "complete")
         self.assertEqual(q.inputs.get("designacao"), "BEU")
@@ -1172,11 +1172,11 @@ class PermutadorQuotationTests(TenantTestCase):
         self.assertEqual(q.snapshots.count(), 1)
 
     def test_cria_itens_por_secao(self):
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from pricing_engine.permutador_quote import quote_completo
         cust = Customer.objects.create(company_name="ACME")
         resultado = quote_completo("BEU")
-        q = create_permutador_quotation(cust, "BEU", {}, resultado)
+        q = persist_complete(cust, "BEU", {}, resultado)
         itens = q.itens.all()
         self.assertEqual(itens.count(), len(resultado["por_secao"]))
         soma = sum(float(i.custo_material) + float(i.custo_mo) for i in itens)
@@ -1185,12 +1185,12 @@ class PermutadorQuotationTests(TenantTestCase):
 
     def test_loop_fecha_gera_proposta(self):
         """Prova o ciclo: cotação do permutador → proposta com o preço correto."""
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from apps.proposals.services import create_proposal, build_context
         from pricing_engine.permutador_quote import quote_completo
         cust = Customer.objects.create(company_name="ACME")
         resultado = quote_completo("BEU")
-        q = create_permutador_quotation(cust, "BEU", {"n_tubos": 68}, resultado)
+        q = persist_complete(cust, "BEU", {"n_tubos": 68}, resultado)
         prop = create_proposal(q)
         self.assertEqual(prop.quotation_id, q.id)
         ctx = build_context(q)

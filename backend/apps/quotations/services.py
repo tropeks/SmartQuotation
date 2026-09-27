@@ -9,11 +9,6 @@ from apps.quotations.models import CalculationSnapshot, Quotation
 from apps.quotations.adapter import default_inputs, recompute
 
 
-def _d(x) -> Decimal:
-    """float/str → Decimal com 2 casas (campos monetários da Quotation)."""
-    return Decimal(str(round(float(x or 0), 2)))
-
-
 # v2 (M1): `outputs.items.operacoes` passou a carregar horas, taxas, custo_direto e
 # origem. Sem o bump, snapshots de formatos diferentes se identificavam igual e quem
 # comparasse épocas distintas não teria como saber que o schema mudou. A versão é
@@ -226,49 +221,8 @@ def create_feixe_quotation(customer, title, created_by=None, inputs=None) -> Quo
     return q
 
 
-def _inputs_serializaveis(cleaned: dict) -> dict:
-    """Subconjunto JSON-serializável do data sheet (descarta objetos não serializáveis)."""
-    import json
-    out = {}
-    for k, v in (cleaned or {}).items():
-        try:
-            json.dumps(v)
-            out[k] = v
-        except (TypeError, ValueError):
-            out[k] = str(v)
-    return out
-
-
-@transaction.atomic
-def create_permutador_quotation(customer, designacao, cleaned, resultado,
-                                created_by=None, title=None, number=None, revision=0) -> Quotation:
-    """Persiste uma cotação de PERMUTADOR COMPLETO a partir do resultado do motor
-    (tema_templates.estimate_complete / pricing_engine.quote_completo). Fecha o elo
-    motor → Quotation, de onde a proposta é gerada. Cria itens a partir de por_secao."""
-    from apps.quotations.models import QuotationItem
-    desig = (designacao or "").upper()
-    custo_mo = float(resultado.get("custo_mao_obra", 0)) + float(resultado.get("custo_servicos", 0))
-    q = Quotation.objects.create(
-        number=number or next_number(), revision=revision, customer=customer, scope="complete",
-        title=title or f"Permutador {desig}", created_by=created_by,
-        inputs={**_inputs_serializaveis(cleaned), "designacao": desig},
-        custo_material=_d(resultado.get("custo_material")),
-        custo_mo=_d(custo_mo),
-        custo_total=_d(resultado.get("custo_total")),
-        preco_sem_impostos=_d(resultado.get("preco_sem_impostos")),
-        preco_com_impostos=_d(resultado.get("preco_com_impostos")),
-        fator_preco=_d(resultado.get("fator_preco", 1)),
-        impostos_pct=_d(resultado.get("impostos_pct", 0)),
-        computed_at=timezone.now(),
-    )
-    # itens da EAP a partir das seções do motor (material vs fabricação/finalização = MO)
-    for i, (secao, valor) in enumerate(sorted((resultado.get("por_secao") or {}).items())):
-        is_material = "material" in secao
-        QuotationItem.objects.create(
-            quotation=q, codigo_item=secao[:30], descricao=secao.replace("_", " ").title(),
-            custo_material=_d(valor) if is_material else Decimal("0"),
-            custo_mo=Decimal("0") if is_material else _d(valor),
-            sort_order=i,
-        )
-    create_calculation_snapshot(q)
-    return q
+# A persistência do permutador completo (create_permutador_quotation) mudou para
+# apps.quotations.adapter.persist_complete / .revise_complete na ordem 005 (INTENT v3
+# §Limites: só o adapter persiste resultado do motor). Sem wrapper de compat aqui de
+# propósito — os dois chamadores (tema_templates/views.py, quotations/views.py) e os
+# testes foram atualizados para importar do adapter.

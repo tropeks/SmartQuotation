@@ -1,22 +1,26 @@
 """
-Adapter Django <-> pricing_engine (ÚNICO ponto de acoplamento).
+Adapter Django <-> pricing_engine (INTENT v3 §Limites: único módulo que PERSISTE
+resultado do motor — outros módulos podem chamar o motor para simular/exibir, nunca gravar).
 
 - to_feixe_inputs(quotation): dict de inputs (data sheet) -> FeixeInputs.
-- recompute(quotation): chama pricing_engine.quote_feixe e persiste a EAP
-  (QuotationItem/ItemMaterial/ItemOperation) + totais, como SNAPSHOT.
+- recompute(quotation): chama pricing_engine.quote_feixe/quote_completo (por scope) e
+  persiste a EAP (QuotationItem/ItemMaterial/ItemOperation) + totais, como SNAPSHOT.
+- persist_complete(...): cria uma Quotation de PERMUTADOR COMPLETO a partir do resultado
+  do motor (data sheet "salvar"). revise_complete(...): revisão de uma cotação 'complete'
+  (ordem 005 — movidas de apps.quotations.services.create_permutador_quotation).
 
 pricing_engine permanece PURO (zero import Django). float -> Decimal na fronteira.
 """
 import logging
 from dataclasses import fields
 from decimal import Decimal
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 from pricing_engine.feixe_inputs import FeixeInputs, caso_136_tubos
 from pricing_engine.feixe_quote import quote_feixe
 from pricing_engine.rates import TenantCostChain, op_key
-from apps.quotations.models import QuotationItem, ItemMaterial, ItemOperation
+from apps.quotations.models import Quotation, QuotationItem, ItemMaterial, ItemOperation
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +308,7 @@ def _recompute_parts(quotation) -> None:
 def _recompute_complete(quotation) -> None:
     """Recomputa um permutador completo (scope='complete') por designação TEMA, reusando o
     motor via tema_templates.estimate_from_inputs e repersistindo a EAP por seção (mesma forma
-    de services.create_permutador_quotation).
+    de persist_complete, abaixo).
 
     Reconstrói dims_override/params/metalurgia a partir do data sheet salvo em quotation.inputs
     (paridade com a view data_sheet e com quotation_revise). ANTES chamava estimate_complete(desig)
@@ -336,3 +340,88 @@ def _recompute_complete(quotation) -> None:
     quotation.preco_com_impostos = D(resultado.get("preco_com_impostos") or 0)
     quotation.computed_at = timezone.now()
     quotation.save()
+
+
+def _money2(x) -> Decimal:
+    """float/str -> Decimal com 2 casas (campos monetários da Quotation do permutador
+    completo). MANTENHA a quantização em 2 casas: o hash do CalculationSnapshot depende
+    dela — os totais do snapshot vêm da memória (quotation.custo_*), não do banco."""
+    return Decimal(str(round(float(x or 0), 2)))
+
+
+def _inputs_serializaveis(cleaned: dict) -> dict:
+    """Subconjunto JSON-serializável do data sheet (descarta objetos não serializáveis)."""
+    import json
+    out = {}
+    for k, v in (cleaned or {}).items():
+        try:
+            json.dumps(v)
+            out[k] = v
+        except (TypeError, ValueError):
+            out[k] = str(v)
+    return out
+
+
+def _criar_itens_por_secao(quotation, resultado: dict) -> None:
+    """Itens da EAP a partir das seções do motor (material vs fabricação/finalização = MO)."""
+    for i, (secao, valor) in enumerate(sorted((resultado.get("por_secao") or {}).items())):
+        is_material = "material" in secao
+        QuotationItem.objects.create(
+            quotation=quotation, codigo_item=secao[:30], descricao=secao.replace("_", " ").title(),
+            custo_material=_money2(valor) if is_material else Decimal("0"),
+            custo_mo=Decimal("0") if is_material else _money2(valor),
+            sort_order=i,
+        )
+
+
+@transaction.atomic
+def persist_complete(customer, designacao, cleaned, resultado,
+                      created_by=None, title=None, number=None, revision=0) -> Quotation:
+    """Persiste uma cotação de PERMUTADOR COMPLETO a partir do resultado do motor
+    (tema_templates.estimate_complete / pricing_engine.quote_completo). Fecha o elo
+    motor -> Quotation, de onde a proposta é gerada. Cria itens a partir de por_secao.
+
+    Movida de apps.quotations.services.create_permutador_quotation (ordem 005, INTENT v3
+    §Limites: só o adapter persiste resultado do motor). Corpo idêntico ao original."""
+    from apps.quotations.services import next_number, create_calculation_snapshot
+
+    desig = (designacao or "").upper()
+    custo_mo = float(resultado.get("custo_mao_obra", 0)) + float(resultado.get("custo_servicos", 0))
+    q = Quotation.objects.create(
+        number=number or next_number(), revision=revision, customer=customer, scope="complete",
+        title=title or f"Permutador {desig}", created_by=created_by,
+        inputs={**_inputs_serializaveis(cleaned), "designacao": desig},
+        custo_material=_money2(resultado.get("custo_material")),
+        custo_mo=_money2(custo_mo),
+        custo_total=_money2(resultado.get("custo_total")),
+        preco_sem_impostos=_money2(resultado.get("preco_sem_impostos")),
+        preco_com_impostos=_money2(resultado.get("preco_com_impostos")),
+        fator_preco=_money2(resultado.get("fator_preco", 1)),
+        impostos_pct=_money2(resultado.get("impostos_pct", 0)),
+        computed_at=timezone.now(),
+    )
+    _criar_itens_por_secao(q, resultado)
+    create_calculation_snapshot(q)
+    return q
+
+
+@transaction.atomic
+def revise_complete(orig: Quotation, created_by) -> Quotation:
+    """Revisão de uma cotação de permutador completo (scope='complete'): recomputa com as
+    DIMENSÕES da cotação original (não o seed), com fallback defensivo no seed se os inputs
+    salvos não validarem mais. Absorve o ramo 'complete' de quotations.views.quotation_revise
+    (ordem 005). A revisão ganha NÚMERO NOVO — regra de negócio confirmada pelo Capitão
+    (decisão 01M3JEK53Y43C5A55X0ANSA4B5); a correção fica para a ordem 006, junto com a de
+    fator_preco/impostos_pct."""
+    from apps.tema_templates.services import estimate_from_inputs
+    from pricing_engine.permutador_quote import quote_completo
+
+    desig = orig.inputs.get("designacao", "BEU")
+    resultado = estimate_from_inputs(desig, orig.inputs) or quote_completo(desig)
+    q = persist_complete(
+        customer=orig.customer, designacao=desig, cleaned=orig.inputs, resultado=resultado,
+        created_by=created_by, title=orig.title, revision=orig.revision + 1,
+    )
+    q.status = "draft"
+    q.save()
+    return q

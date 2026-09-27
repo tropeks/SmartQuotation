@@ -448,13 +448,13 @@ class ProposalMemorialTests(TenantTestCase):
     """Memorial ASME embutido na proposta (anexo de certificação no PDF)."""
 
     def _permutador_q(self):
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from pricing_engine.permutador_quote import quote_completo
         cust = Customer.objects.create(company_name="ACME")
         cleaned = {"classe_casco": "CS", "pressao_projeto_bar": 50, "temperatura_projeto_c": 150,
                    "rt_escopo": "Total", "diametro_casco_mm": 764, "esp_casco_mm": 9.5,
                    "corrosao_mm": 3, "comprimento_casco_mm": 1631}
-        return create_permutador_quotation(cust, "BEU", cleaned, quote_completo("BEU"))
+        return persist_complete(cust, "BEU", cleaned, quote_completo("BEU"))
 
     def test_proposal_memorial_para_permutador(self):
         from apps.proposals.services import proposal_memorial

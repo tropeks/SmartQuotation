@@ -1072,28 +1072,12 @@ def quotation_update_meta(request, pk):
 @require_POST
 def quotation_revise(request, pk):
     orig = get_object_or_404(Quotation, pk=pk)
-    
-    from apps.quotations.adapter import recompute
-    from apps.quotations.services import create_permutador_quotation
-    from pricing_engine.permutador_quote import quote_completo
 
     if orig.scope == "complete":
-        desig = orig.inputs.get("designacao", "BEU")
-        from apps.tema_templates.services import estimate_from_inputs
-        # recomputa com as DIMENSÕES da cotação original (não o seed); fallback defensivo no seed
-        resultado = estimate_from_inputs(desig, orig.inputs) or quote_completo(desig)
-        q = create_permutador_quotation(
-            customer=orig.customer,
-            designacao=desig,
-            cleaned=orig.inputs,
-            resultado=resultado,
-            created_by=request.user,
-            title=orig.title,
-            revision=orig.revision + 1
-        )
-        q.status = "draft"
-        q.save()
+        from apps.quotations.adapter import revise_complete
+        q = revise_complete(orig, created_by=request.user)
     else:
+        from apps.quotations.adapter import recompute
         from apps.quotations.services import next_number
         q = Quotation.objects.create(
             number=next_number(),

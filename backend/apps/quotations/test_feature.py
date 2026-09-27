@@ -92,10 +92,10 @@ class FeatureViewsTests(TenantTestCase):
         self.assertEqual(CalculationSnapshot.objects.filter(quotation=q2).count(), 1)
 
     def test_quotation_revise_permutador(self):
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from pricing_engine.permutador_quote import quote_completo
         resultado = quote_completo("BEU")
-        q = create_permutador_quotation(self.customer, "BEU", {"designacao": "BEU", "n_tubos": 68}, resultado, title="BEU Test")
+        q = persist_complete(self.customer, "BEU", {"designacao": "BEU", "n_tubos": 68}, resultado, title="BEU Test")
 
         resp = self.client.post(f"/cotacoes/{q.pk}/revisar/")
         self.assertEqual(resp.status_code, 302)
@@ -112,7 +112,7 @@ class FeatureViewsTests(TenantTestCase):
     def test_revise_permutador_reproduz_custo_original(self):
         """REGRESSÃO: revisar deve recomputar com as DIMENSÕES da cotação original, não o seed."""
         from apps.tema_templates.services import estimate_from_inputs
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         # dims customizadas (casco bem maior que o referencial) → custo != seed
         cleaned = {"designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
                    "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 18,
@@ -120,7 +120,7 @@ class FeatureViewsTests(TenantTestCase):
                    "n_passes_tubos": 2, "rt_escopo": "Total", "classe_feixe": "INOX",
                    "classe_casco": "CS", "fluido_corrosivo": "Tubos", "fator_correcao_mo": 1.0}
         resultado = estimate_from_inputs("BEU", cleaned)
-        q = create_permutador_quotation(self.customer, "BEU", cleaned, resultado, title="BEU custom")
+        q = persist_complete(self.customer, "BEU", cleaned, resultado, title="BEU custom")
         resp = self.client.post(f"/cotacoes/{q.pk}/revisar/")
         q2 = Quotation.objects.get(pk=resp.url.split("/")[-2])
         # a revisão deve ter o MESMO preço (mesmas dims), não o preço do seed

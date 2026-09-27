@@ -189,10 +189,10 @@ class ComposeViewTests(TestCase):
         self.assertEqual(antes, depois)
 
     def test_estimate_complete_nao_persiste_eap(self):
-        """Ordem 004: estimate_complete/estimate_from_inputs (tema_templates.services)
+        """Ordem 004/005: estimate_complete/estimate_from_inputs (tema_templates.services)
         chamam pricing_engine.permutador_quote.quote_completo direto, mas não persistem —
-        quem persiste é apps.quotations.services.create_permutador_quotation, chamado só
-        pela view quando recebe 'salvar' (apps/tema_templates/views.py:data_sheet)."""
+        quem persiste é apps.quotations.adapter.persist_complete, chamado só pela view
+        quando recebe 'salvar' (apps/tema_templates/views.py:data_sheet)."""
         from apps.quotations.models import CalculationSnapshot, Quotation, QuotationItem
         from apps.tema_templates.services import estimate_complete, estimate_from_inputs
 
@@ -257,7 +257,7 @@ class ComposeViewTests(TestCase):
         recomputando sobre o seed de referência; agora reconstrói dims/params/metalurgia dos
         inputs salvos (via estimate_from_inputs), mantendo o custo do data sheet do projeto."""
         from apps.tema_templates.services import estimate_complete, estimate_from_inputs
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from apps.quotations.adapter import recompute
         from apps.quotations.models import Customer
 
@@ -270,7 +270,7 @@ class ComposeViewTests(TestCase):
                    "fator_correcao_mo": 1.0}
         resultado = estimate_from_inputs("BEU", cleaned)
         cust, _ = Customer.objects.get_or_create(company_name="ACME Ltda")
-        q = create_permutador_quotation(cust, "BEU", cleaned, resultado)
+        q = persist_complete(cust, "BEU", cleaned, resultado)
         salvo = float(q.custo_total)
 
         recompute(q)
@@ -858,7 +858,7 @@ class KnobsConfigTests(TestCase):
 
     def test_build_cost_chain_copia_os_knobs(self):
         from apps.quotations.adapter import build_cost_chain
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
         from apps.quotations.models import Customer
         from apps.tema_templates.services import estimate_from_inputs
         cfg = TenantParamConfig.get_solo()
@@ -866,7 +866,7 @@ class KnobsConfigTests(TestCase):
         cfg.setup_frac = {"tubos": 0.9}
         cfg.save()
         cust, _ = Customer.objects.get_or_create(company_name="ACME")
-        q = create_permutador_quotation(cust, "BEU", self._REF,
+        q = persist_complete(cust, "BEU", self._REF,
                                         estimate_from_inputs("BEU", self._REF))
         chain = build_cost_chain(q)
         self.assertEqual(chain.perda("espelho", 1.40), 2.5)

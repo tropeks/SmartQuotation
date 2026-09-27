@@ -95,7 +95,7 @@ class PranchaDetailTests(TestCase):
 
     def test_carimbo_permutador_traz_designacao_pressao_e_norma(self):
         from apps.tema_templates.services import estimate_from_inputs
-        from apps.quotations.services import create_permutador_quotation
+        from apps.quotations.adapter import persist_complete
 
         cleaned = {
             "designacao": "BEU", "n_tubos": 136, "comprimento_tubo_mm": 6000,
@@ -109,7 +109,7 @@ class PranchaDetailTests(TestCase):
         }
         resultado = estimate_from_inputs("BEU", cleaned)
         self.assertIsNotNone(resultado, "data sheet do permutador deve custear")
-        q = create_permutador_quotation(self.customer, "BEU", cleaned, resultado,
+        q = persist_complete(self.customer, "BEU", cleaned, resultado,
                                         created_by=self.user, title="Permutador BEU")
         carimbo = self.client.get(
             reverse("quotations:detail", args=[q.pk])).context["carimbo"]
