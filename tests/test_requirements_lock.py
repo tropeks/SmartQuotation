@@ -14,6 +14,10 @@ import re
 import sys
 from pathlib import Path
 
+# Reexport da função de teste real — ver o comentário de test_import_linter_contracts_gate
+# abaixo sobre por que ela roda dependurada aqui em vez de só em tests/test_import_contracts.py.
+from tests.test_import_contracts import test_import_contracts_pass as _lint_imports_contracts_pass
+
 ROOT = Path(__file__).resolve().parent.parent
 REQ = ROOT / "backend" / "requirements"
 BASE_TXT = REQ / "base.txt"
@@ -280,6 +284,17 @@ def test_base_and_ci_locks_agree_on_shared_packages():
     )
 
 
+def test_import_linter_contract_gate():
+    """Gate do import-linter (INTENT v3 §Limites, ordem 004), dependurado AQUI porque este
+    módulo é o único já registrado em ci.yml (job `ops-tests`, step "Verificar contrato dos
+    lockfiles de dependência") capaz de puxar um teste novo sem editar o workflow —
+    `docs/patches/004-ci-import-linter.patch` adiciona um step dedicado
+    (`tests.test_import_contracts`) quando o Capitão tocar `.github/workflows/ci.yml`; até
+    lá, é isto ou o contrato não roda no CI de verdade. Ver tests/test_import_contracts.py
+    para o teste em si e `.importlinter` para os contratos."""
+    _lint_imports_contracts_pass()
+
+
 def test_runner_registers_every_test():
     """A lista do __main__ é manual: uma função test_* definida e esquecida ali nunca
     roda e o CI fica verde sobre um teste que não existe na prática (aconteceu com
@@ -312,6 +327,7 @@ if __name__ == "__main__":
         test_ci_has_no_unhashed_pip_install,
         test_ci_runs_pip_audit_against_locks,
         test_base_and_ci_locks_agree_on_shared_packages,
+        test_import_linter_contract_gate,
         test_runner_registers_every_test,
     ]
     _REGISTERED = tests
