@@ -1,13 +1,15 @@
 # SmartQuotation — drill semanal de restore (ordem 002).
 # Restaura o dump mais recente num postgres:15 efêmero (--network none, --rm), confere schema
-# engematex, tabelas-chave e cotações, valida o tar de mídia e grava restore_last_success.
+# engematex, tabelas-chave e cotações, valida o tar de mídia, confere (sem baixar) que o dump
+# mais novo enviado está no off-site com o hash registrado, e grava restore_last_success.
 # Falha = unit "failed" (systemctl --failed / journal). Ver docs/INFRASTRUCTURE.md §6.
 
 [Unit]
 Description=SmartQuotation: drill semanal de restore do backup
 Documentation=file:///opt/smartquotation/docs/INFRASTRUCTURE.md
 Requires=docker.service
-After=docker.service sq-backup.service
+After=docker.service sq-backup.service network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
@@ -22,7 +24,8 @@ ExecStart=/opt/smartquotation/scripts/restore_check.sh
 TimeoutStartSec=2h
 
 ProtectSystem=strict
-ReadWritePaths=/backups/sq
+# RCLONE_CACHE_DIR: a conferência do off-site usa o rclone (o home do root é read-only).
+ReadWritePaths=/backups/sq /var/lib/smartquotation/offsite-cache
 ProtectHome=read-only
 PrivateTmp=true
 NoNewPrivileges=true

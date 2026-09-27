@@ -2,17 +2,19 @@
 # Instalação e leitura do resultado: docs/INFRASTRUCTURE.md §6. Instalar no host de produção
 # é gate ship do Capitão.
 #
-# Roda em sequência, e para no primeiro que falhar (Type=oneshot com vários ExecStart):
+# Um ExecStart só: scripts/backup_run.sh roda TODAS as etapas em ordem, SEGUE depois de uma
+# falha (o off-site do dump tem valor mesmo sem a chave) e sai != 0 no fim se alguma falhou:
 #   1. backup_db.sh    dump do sq-prod-db, validado pelo conteúdo (rodapé, schema, tamanho)
 #   2. backup_media.sh tar do volume de mídia do sq-web-proto, validado com tar tzf
 #   3. backup_key.sh   FIELD_ENCRYPTION_KEY em diretório SEPARADO + prova de decifra do dump
 #   4. offsite_key_push.sh  a chave, cifrada só para a recuperação da Quantum, no remote DA
-#                      CHAVE (OFFSITE_KEY_REMOTE), só quando o fingerprint muda. Vem antes do
-#                      dump: se a chave nova não chegar à custódia, o dump cifrado com ela
-#                      também não sai.
+#                      CHAVE (OFFSITE_KEY_REMOTE), só quando o fingerprint muda; senão, confere
+#                      que o objeto dela continua lá.
 #   5. offsite_push.sh dump + mídia cifrados com age (instância + recuperação) no
-#                      OFFSITE_REMOTE, hash remoto conferido. Nunca apaga nada no remoto.
-# Qualquer falha deixa a unit "failed": aparece em `systemctl --failed` e no journal.
+#                      OFFSITE_REMOTE, com backfill do que faltar, hash remoto conferido.
+#                      Nunca apaga nada no remoto.
+# Qualquer falha deixa a unit "failed": aparece em `systemctl --failed`, no journal e em
+# /backups/sq/backup_run_last (qual etapa falhou).
 
 [Unit]
 Description=SmartQuotation: backup diário (dump + mídia + chave com prova de decifra + off-site cifrado)
@@ -39,11 +41,7 @@ EnvironmentFile=/etc/smartquotation/backup.env
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 WorkingDirectory=/opt/smartquotation
 UMask=0077
-ExecStart=/opt/smartquotation/scripts/backup_db.sh
-ExecStart=/opt/smartquotation/scripts/backup_media.sh
-ExecStart=/opt/smartquotation/scripts/backup_key.sh
-ExecStart=/opt/smartquotation/scripts/offsite_key_push.sh
-ExecStart=/opt/smartquotation/scripts/offsite_push.sh
+ExecStart=/opt/smartquotation/scripts/backup_run.sh
 TimeoutStartSec=2h
 
 # Sandbox: o sistema inteiro fica read-only, exceto os diretórios de backup e o cache do
