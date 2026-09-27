@@ -222,6 +222,18 @@ def test_key_rotation_preserves_previous_key():
         _assert_no_leak(c, r, k1, k2)
 
 
+
+def test_stopped_container_is_an_environment_error_not_a_failed_proof():
+    with Case() as c:
+        r = c.run({"FAKE_STATE": "false"})
+        assert r.returncode == 1, (r.returncode, r.stderr)
+        assert "PARADO" in r.stderr, r.stderr
+        assert "prova de decifra:" not in r.stdout, "parado não pode virar resultado de prova"
+        assert not (c.kdir / "last_proof").exists() and not (c.kdir / "field_encryption_key").exists()
+        assert not [x for x in c.fk.docker_calls() if x.startswith("exec ")]
+        _assert_no_leak(c, r)
+
+
 TESTS = [
     test_proof_ok_saves_key_0600_separately_and_records_success,
     test_key_and_token_travel_by_stdin_never_argv_or_env,
@@ -231,6 +243,7 @@ TESTS = [
     test_key_dir_inside_backup_dir_is_refused,
     test_missing_or_malformed_key_fails_without_echoing_the_value,
     test_key_rotation_preserves_previous_key,
+    test_stopped_container_is_an_environment_error_not_a_failed_proof,
 ]
 
 if __name__ == "__main__":

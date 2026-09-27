@@ -29,7 +29,8 @@
 #   0  chave salva + prova ok                     → ${KEY_BACKUP_DIR}/last_success
 #   2  prova falhou (chave não abre o dump)       → unit falha
 #   3  sem amostra (dump sem MaterialPrice)       → unit falha, salvo KEY_PROOF_ALLOW_NO_SAMPLE=1
-#   1  erro de ambiente (docker, container, dump ausente, chave ausente/malformada)
+#   1  erro de ambiente (docker, container ausente ou PARADO, dump ausente, chave
+#      ausente/malformada)
 #   Toda execução que chega à prova grava ${KEY_BACKUP_DIR}/last_proof (resultado, dump,
 #   fingerprint, timestamp).
 #
@@ -88,10 +89,16 @@ sq_prune_orphan_tmp "${KEY_BACKUP_DIR}"
 
 sq_require_docker
 
-if [ "$(sq_container_state "${WEB_CONTAINER}")" = "absent" ]; then
-  echo "${SQ_SCRIPT}: container '${WEB_CONTAINER}' não encontrado." >&2
-  exit 1
-fi
+# Parado não é "chave não abre": a prova roda DENTRO do container, então parado é erro de
+# ambiente (exit 1), não prova falha (exit 2). Checado antes de tocar em qualquer arquivo.
+case "$(sq_container_state "${WEB_CONTAINER}")" in
+  absent)
+    echo "${SQ_SCRIPT}: container '${WEB_CONTAINER}' não encontrado." >&2
+    exit 1 ;;
+  stopped)
+    echo "${SQ_SCRIPT}: container '${WEB_CONTAINER}' está PARADO — a prova de decifra roda dentro dele. Suba-o e rode de novo (nada foi gravado)." >&2
+    exit 1 ;;
+esac
 
 # --- 1. Chave: do env do container direto para o arquivo, só por pipe. -------------------
 # O template já filtra para só FIELD_ENCRYPTION_KEY cruzar o pipe (o env do container tem
