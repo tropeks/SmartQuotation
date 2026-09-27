@@ -11,6 +11,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+import os
+import time
+
 from tests._ops_fakes import FakeEnv, run_tests, synthetic_dump, write_gz, write_media_tar
 
 
@@ -46,7 +49,8 @@ class Case:
     def assert_removed(self):
         run, name = self.container_name()
         rms = [c for c in self.fk.docker_calls() if c.startswith("rm ")]
-        assert rms and rms[-1] == f"rm -f {name}", f"container {name} não foi removido: {rms}"
+        # -v: sem ele o volume anônimo do postgres:15, com a cópia do banco, fica para trás
+        assert rms and rms[-1] == f"rm -fv {name}", f"container {name} não foi removido com -v: {rms}"
         last_rm = max(i for i, c in enumerate(self.fk.docker_calls()) if c.startswith("rm "))
         last_exec = max((i for i, c in enumerate(self.fk.docker_calls()) if c.startswith("exec ")), default=-1)
         assert last_rm > last_exec, "rm tem que vir depois do último exec"
@@ -145,6 +149,37 @@ def test_injection_in_identifiers_is_refused():
         assert c.fk.docker_calls() == []
 
 
+def test_partial_restore_with_failed_copy_fails():
+    """Um COPY que falha no meio é restore parcial: só 'role já existe' é tolerado."""
+    with Case() as c:
+        err = ('ERROR:  invalid input syntax for type bigint: "x"\n'
+               'CONTEXT:  COPY quotations_quotation, line 7: "7\tCOT-SINT-0007"')
+        r = c.run({"FAKE_PSQL_EXTRA_ERR": err})
+        assert r.returncode != 0 and "restore parcial" in r.stderr, r.stderr
+        assert "COT-SINT" not in r.stdout + r.stderr, "mensagem do psql (com dado) vazou"
+        assert not (c.bdir / "restore_last_success").exists()
+        c.assert_removed()
+
+
+def test_only_role_already_exists_is_tolerated():
+    with Case() as c:
+        r = c.run({"FAKE_PSQL_EXTRA_ERR": 'ERROR:  role "postgres" already exists'})
+        assert r.returncode == 0, r.stderr
+        assert "2 erro(s) do psql, 0 inesperado(s)" in r.stdout, r.stdout
+
+
+def test_stale_newest_dump_fails_before_starting_container():
+    with Case() as c:
+        t = time.time() - 30 * 3600
+        for p in c.bdir.glob("sq_*.sql.gz"):
+            os.utime(p, (t, t))
+        r = c.run()
+        assert r.returncode != 0 and "mais de 26h" in r.stderr, r.stderr
+        assert not [x for x in c.fk.docker_calls() if x.startswith("run ")]
+        r = c.run({"RESTORE_MAX_AGE_HOURS": "48"})
+        assert r.returncode == 0, r.stderr
+
+
 TESTS = [
     test_success_restores_newest_dump_in_isolated_ephemeral_container,
     test_output_has_only_counts_and_table_names_never_content,
@@ -155,6 +190,9 @@ TESTS = [
     test_corrupt_media_fails_and_container_is_removed,
     test_no_dump_fails_before_starting_any_container,
     test_injection_in_identifiers_is_refused,
+    test_partial_restore_with_failed_copy_fails,
+    test_only_role_already_exists_is_tolerated,
+    test_stale_newest_dump_fails_before_starting_container,
 ]
 
 if __name__ == "__main__":

@@ -115,6 +115,7 @@ done
 if [ -z "$sql" ]; then
   cat > "${FAKE_RESTORE_SINK:-/dev/null}"
   echo "ERROR:  role \"sq\" already exists" >&2
+  [ -n "${FAKE_PSQL_EXTRA_ERR:-}" ] && printf '%s\n' "${FAKE_PSQL_EXTRA_ERR}" >&2
   exit 0
 fi
 printf '%s\n' "$sql" >> "${FAKE_SQL_LOG:-/dev/null}"

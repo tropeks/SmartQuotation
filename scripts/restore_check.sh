@@ -5,8 +5,10 @@
 #   1. Sobe um Postgres efêmero (${RESTORE_IMAGE}, default postgres:15 — mesma major da
 #      produção) com --network none e --rm, nome único; auth trust (sem rede, sem senha).
 #   2. Espera ficar pronto (pg_isready em 127.0.0.1: só responde depois do init da imagem).
-#   3. Aplica o dump mais recente (${BACKUP_DIR}/sq_*.sql.gz) via psql. Erros do psql são só
-#      CONTADOS (ex.: "role já existe" é esperado num pg_dumpall); quem decide são as checagens.
+#   3. Aplica o dump mais recente (${BACKUP_DIR}/sq_*.sql.gz) via psql. Erros do psql são
+#      CONTADOS, não exibidos. O único tolerado é 'role "..." already exists' (esperado num
+#      pg_dumpall aplicado num cluster que já tem o superusuário); qualquer outro ERROR (ex.:
+#      um COPY que falhou) reprova — restore parcial não é restore.
 #   4. Confere: schema ${RESTORE_SCHEMA} existe; tabelas-chave presentes; contagem de
 #      ${RESTORE_SCHEMA}.quotations_quotation >= ${RESTORE_MIN_QUOTATIONS}.
 #   5. Valida o tar de mídia mais recente (gzip íntegro, tar tzf, entradas sob app/backend/media).
@@ -24,6 +26,8 @@
 #   RESTORE_TABLES          tabelas obrigatórias no schema (default abaixo)
 #   RESTORE_MIN_QUOTATIONS  mínimo de linhas em quotations_quotation (default 1)
 #   RESTORE_WAIT_SECONDS    espera máxima pelo Postgres (default 90)
+#   RESTORE_MAX_AGE_HOURS   falha se o dump mais novo for mais velho que isso (default 26;
+#                           0 desliga) — drill verde sobre dump velho esconde backup parado
 #   RESTORE_CHECK_MEDIA     1 valida também o tar de mídia (default 1)
 #   MEDIA_ALLOW_EMPTY       1 aceita tar de mídia só com o diretório (default 0)
 #   DOCKER                  binário docker (default docker)
@@ -44,6 +48,7 @@ RESTORE_TABLES="${RESTORE_TABLES:-quotations_quotation quotations_quotationitem 
 RESTORE_MIN_QUOTATIONS="${RESTORE_MIN_QUOTATIONS:-1}"
 RESTORE_WAIT_SECONDS="${RESTORE_WAIT_SECONDS:-90}"
 RESTORE_POLL_INTERVAL="${RESTORE_POLL_INTERVAL:-1}"
+RESTORE_MAX_AGE_HOURS="${RESTORE_MAX_AGE_HOURS:-26}"
 RESTORE_CHECK_MEDIA="${RESTORE_CHECK_MEDIA:-1}"
 MEDIA_ALLOW_EMPTY="${MEDIA_ALLOW_EMPTY:-0}"
 DOCKER="${DOCKER:-docker}"
@@ -56,9 +61,9 @@ for v in "${RESTORE_SCHEMA}" "${RESTORE_DB}" ${RESTORE_TABLES}; do
     exit 1
   fi
 done
-for v in "${RESTORE_MIN_QUOTATIONS}" "${RESTORE_WAIT_SECONDS}" "${RESTORE_POLL_INTERVAL}"; do
+for v in "${RESTORE_MIN_QUOTATIONS}" "${RESTORE_WAIT_SECONDS}" "${RESTORE_POLL_INTERVAL}" "${RESTORE_MAX_AGE_HOURS}"; do
   if ! [[ "${v}" =~ ^[0-9]+$ ]]; then
-    echo "${SQ_SCRIPT}: RESTORE_MIN_QUOTATIONS/RESTORE_WAIT_SECONDS/RESTORE_POLL_INTERVAL têm que ser inteiros." >&2
+    echo "${SQ_SCRIPT}: RESTORE_MIN_QUOTATIONS/RESTORE_WAIT_SECONDS/RESTORE_POLL_INTERVAL/RESTORE_MAX_AGE_HOURS têm que ser inteiros." >&2
     exit 1
   fi
 done
@@ -70,6 +75,11 @@ newest() {
 DUMP="$(newest 'sq_*.sql.gz')"
 if [ -z "${DUMP}" ]; then
   echo "${SQ_SCRIPT}: nenhum dump sq_*.sql.gz em ${BACKUP_DIR}." >&2
+  exit 1
+fi
+if [ "${RESTORE_MAX_AGE_HOURS}" -gt 0 ] \
+    && [ -n "$(find "${DUMP}" -mmin +$((RESTORE_MAX_AGE_HOURS * 60)) -print)" ]; then
+  echo "${SQ_SCRIPT}: FALHA — o dump mais novo ($(basename -- "${DUMP}")) tem mais de ${RESTORE_MAX_AGE_HOURS}h: o backup diário parou?" >&2
   exit 1
 fi
 if ! gzip -t "${DUMP}" 2>/dev/null; then
@@ -91,9 +101,12 @@ sq_require_docker
 
 NAME="sq-restore-check-$(date +%Y%m%d%H%M%S)-$$"
 WORK="$(mktemp -d)"
+sq_track_tmp "${WORK}"
+# -v: o postgres:15 declara VOLUME /var/lib/postgresql/data; sem -v o volume anônimo, com a
+# cópia restaurada do banco, sobrevive ao container.
 cleanup() {
-  ${DOCKER} rm -f "${NAME}" >/dev/null 2>&1 || true
-  rm -rf "${WORK}"
+  ${DOCKER} rm -fv "${NAME}" >/dev/null 2>&1 || true
+  sq_cleanup
 }
 trap cleanup EXIT INT TERM
 
@@ -120,7 +133,13 @@ done
 zcat "${DUMP}" | ${DOCKER} exec -i "${NAME}" psql -X -q -U postgres -d postgres \
   -v ON_ERROR_STOP=0 >/dev/null 2>"${WORK}/psql.err" || true
 PSQL_ERRORS="$(grep -c 'ERROR:' "${WORK}/psql.err" || true)"
-echo "${SQ_SCRIPT}: dump aplicado; ${PSQL_ERRORS} erro(s) do psql (contados, não exibidos — num pg_dumpall, 'role já existe' é esperado)"
+UNEXPECTED_ERRORS="$(grep 'ERROR:' "${WORK}/psql.err" \
+  | grep -v -E 'ERROR:[[:space:]]+role "[^"]+" already exists' | grep -c . || true)"
+echo "${SQ_SCRIPT}: dump aplicado; ${PSQL_ERRORS} erro(s) do psql, ${UNEXPECTED_ERRORS} inesperado(s) (contados, não exibidos — só 'role já existe' é tolerado)"
+if [ "${UNEXPECTED_ERRORS}" -gt 0 ]; then
+  echo "${SQ_SCRIPT}: FALHA — ${UNEXPECTED_ERRORS} erro(s) do psql além de 'role já existe': restore parcial. Mensagens suprimidas (podem citar dado)." >&2
+  exit 1
+fi
 
 q() {
   ${DOCKER} exec "${NAME}" psql -X -tA -U postgres -d "${RESTORE_DB}" -c "$1" 2>/dev/null | tr -d '[:space:]'
