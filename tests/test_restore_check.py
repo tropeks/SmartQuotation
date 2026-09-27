@@ -180,6 +180,36 @@ def test_stale_newest_dump_fails_before_starting_container():
         assert r.returncode == 0, r.stderr
 
 
+def test_restore_dump_file_points_to_a_specific_offsite_download():
+    """Drill trimestral a partir do off-site: o arquivo indicado, velho ou não, é o restaurado,
+    e o status do drill semanal não é tocado."""
+    with Case() as c:
+        drill = c.base / "drill"
+        drill.mkdir()
+        dump = drill / "sq_20260601_030000.sql.gz"
+        write_gz(dump, synthetic_dump(quotations=5))
+        media = drill / "media_20260601_030000.tar.gz"
+        write_media_tar(media, {"a.pdf": b"%PDF", "b.pdf": b"%PDF"})
+        t = time.time() - 120 * 24 * 3600
+        os.utime(dump, (t, t))
+        r = c.run({"RESTORE_DUMP_FILE": str(dump), "RESTORE_MEDIA_FILE": str(media)})
+        assert r.returncode == 0, r.stderr
+        assert c.sink.read_bytes() == gzip.decompress(dump.read_bytes()), "não restaurou o arquivo indicado"
+        st = dict(ln.split("=", 1) for ln in (c.bdir / "restore_file_last_success").read_text().splitlines())
+        assert st["dump"] == dump.name and st["media"] == media.name and st["media_entries"] == "2", st
+        assert not (c.bdir / "restore_last_success").exists(), "drill do off-site não vira o semanal"
+        c.assert_removed()
+
+
+def test_restore_dump_file_missing_fails_before_starting_container():
+    with Case() as c:
+        r = c.run({"RESTORE_DUMP_FILE": str(c.base / "nao_existe.sql.gz")})
+        assert r.returncode != 0 and "RESTORE_DUMP_FILE" in r.stderr, r.stderr
+        r = c.run({"RESTORE_MEDIA_FILE": str(c.base / "nao_existe.tar.gz")})
+        assert r.returncode != 0 and "RESTORE_MEDIA_FILE" in r.stderr, r.stderr
+        assert not [x for x in c.fk.docker_calls() if x.startswith("run ")]
+
+
 TESTS = [
     test_success_restores_newest_dump_in_isolated_ephemeral_container,
     test_output_has_only_counts_and_table_names_never_content,
@@ -193,6 +223,8 @@ TESTS = [
     test_partial_restore_with_failed_copy_fails,
     test_only_role_already_exists_is_tolerated,
     test_stale_newest_dump_fails_before_starting_container,
+    test_restore_dump_file_points_to_a_specific_offsite_download,
+    test_restore_dump_file_missing_fails_before_starting_container,
 ]
 
 if __name__ == "__main__":

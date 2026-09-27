@@ -15,6 +15,12 @@
 #   6. Grava ${BACKUP_DIR}/restore_last_success (só no sucesso).
 # O container é SEMPRE destruído (trap), inclusive em erro no meio.
 #
+# Drill a partir do off-site (trimestral, manual — docs/INFRASTRUCTURE.md §6): baixado e
+# decifrado o .age, aponte RESTORE_DUMP_FILE (e RESTORE_MEDIA_FILE) para os arquivos. Nesse
+# modo a checagem de idade não se aplica (o arquivo é o que se quer provar, velho ou não) e o
+# status vai para ${BACKUP_DIR}/restore_file_last_success, sem mexer no restore_last_success
+# do drill semanal.
+#
 # Saída: só contagens e nomes de tabela. Nenhuma linha do dump, nenhuma mensagem do psql
 # (que pode citar conteúdo em CONTEXT) é repassada.
 #
@@ -29,6 +35,8 @@
 #   RESTORE_MAX_AGE_HOURS   falha se o dump mais novo for mais velho que isso (default 26;
 #                           0 desliga) — drill verde sobre dump velho esconde backup parado
 #   RESTORE_CHECK_MEDIA     1 valida também o tar de mídia (default 1)
+#   RESTORE_DUMP_FILE       arquivo .sql.gz específico no lugar do mais recente do BACKUP_DIR
+#   RESTORE_MEDIA_FILE      tar.gz de mídia específico no lugar do mais recente
 #   MEDIA_ALLOW_EMPTY       1 aceita tar de mídia só com o diretório (default 0)
 #   DOCKER                  binário docker (default docker)
 
@@ -51,6 +59,8 @@ RESTORE_POLL_INTERVAL="${RESTORE_POLL_INTERVAL:-1}"
 RESTORE_MAX_AGE_HOURS="${RESTORE_MAX_AGE_HOURS:-26}"
 RESTORE_CHECK_MEDIA="${RESTORE_CHECK_MEDIA:-1}"
 MEDIA_ALLOW_EMPTY="${MEDIA_ALLOW_EMPTY:-0}"
+RESTORE_DUMP_FILE="${RESTORE_DUMP_FILE:-}"
+RESTORE_MEDIA_FILE="${RESTORE_MEDIA_FILE:-}"
 DOCKER="${DOCKER:-docker}"
 
 # Tudo que entra em SQL é identificador validado por lista branca (não há bind aqui).
@@ -72,12 +82,23 @@ newest() {
   find "${BACKUP_DIR}" -maxdepth 1 -type f -name "$1" 2>/dev/null | LC_ALL=C sort | tail -n 1
 }
 
-DUMP="$(newest 'sq_*.sql.gz')"
+STATUS_FILE="${BACKUP_DIR}/restore_last_success"
+if [ -n "${RESTORE_DUMP_FILE}" ]; then
+  if [ ! -f "${RESTORE_DUMP_FILE}" ]; then
+    echo "${SQ_SCRIPT}: RESTORE_DUMP_FILE=${RESTORE_DUMP_FILE} não existe." >&2
+    exit 1
+  fi
+  DUMP="${RESTORE_DUMP_FILE}"
+  STATUS_FILE="${BACKUP_DIR}/restore_file_last_success"
+  echo "${SQ_SCRIPT}: dump indicado por RESTORE_DUMP_FILE (checagem de idade desligada)"
+else
+  DUMP="$(newest 'sq_*.sql.gz')"
+fi
 if [ -z "${DUMP}" ]; then
   echo "${SQ_SCRIPT}: nenhum dump sq_*.sql.gz em ${BACKUP_DIR}." >&2
   exit 1
 fi
-if [ "${RESTORE_MAX_AGE_HOURS}" -gt 0 ] \
+if [ -z "${RESTORE_DUMP_FILE}" ] && [ "${RESTORE_MAX_AGE_HOURS}" -gt 0 ] \
     && [ -n "$(find "${DUMP}" -mmin +$((RESTORE_MAX_AGE_HOURS * 60)) -print)" ]; then
   echo "${SQ_SCRIPT}: FALHA — o dump mais novo ($(basename -- "${DUMP}")) tem mais de ${RESTORE_MAX_AGE_HOURS}h: o backup diário parou?" >&2
   exit 1
@@ -90,7 +111,11 @@ fi
 MEDIA=""
 MEDIA_ENTRIES="-"
 if [ "${RESTORE_CHECK_MEDIA}" = "1" ]; then
-  MEDIA="$(newest 'media_*.tar.gz')"
+  MEDIA="${RESTORE_MEDIA_FILE:-$(newest 'media_*.tar.gz')}"
+  if [ -n "${RESTORE_MEDIA_FILE}" ] && [ ! -f "${RESTORE_MEDIA_FILE}" ]; then
+    echo "${SQ_SCRIPT}: RESTORE_MEDIA_FILE=${RESTORE_MEDIA_FILE} não existe." >&2
+    exit 1
+  fi
   if [ -z "${MEDIA}" ]; then
     echo "${SQ_SCRIPT}: nenhum media_*.tar.gz em ${BACKUP_DIR} (RESTORE_CHECK_MEDIA=0 desliga)." >&2
     exit 1
@@ -193,7 +218,8 @@ if [ -n "${MEDIA}" ]; then
 fi
 
 DURATION=$(( $(date +%s) - START ))
-sq_write_status "${BACKUP_DIR}/restore_last_success" \
+mkdir -p "${BACKUP_DIR}"
+sq_write_status "${STATUS_FILE}" \
   "timestamp=$(sq_now_iso)" \
   "dump=$(basename -- "${DUMP}")" \
   "schema=${RESTORE_SCHEMA}" \
