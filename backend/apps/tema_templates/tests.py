@@ -179,6 +179,33 @@ class ComposeViewTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Custo total")
 
+    def test_data_sheet_post_sem_salvar_nao_persiste_eap(self):
+        """Ordem 004 (INTENT v3 §Limites): o data sheet SEM 'salvar' só chama
+        estimate_complete (preview) — não deve tocar Quotation/QuotationItem."""
+        from apps.quotations.models import Quotation, QuotationItem
+        antes = (Quotation.objects.count(), QuotationItem.objects.count())
+        self._post()
+        depois = (Quotation.objects.count(), QuotationItem.objects.count())
+        self.assertEqual(antes, depois)
+
+    def test_estimate_complete_nao_persiste_eap(self):
+        """Ordem 004: estimate_complete/estimate_from_inputs (tema_templates.services)
+        chamam pricing_engine.permutador_quote.quote_completo direto, mas não persistem —
+        quem persiste é apps.quotations.services.create_permutador_quotation, chamado só
+        pela view quando recebe 'salvar' (apps/tema_templates/views.py:data_sheet)."""
+        from apps.quotations.models import CalculationSnapshot, Quotation, QuotationItem
+        from apps.tema_templates.services import estimate_complete, estimate_from_inputs
+
+        antes = (Quotation.objects.count(), QuotationItem.objects.count(),
+                 CalculationSnapshot.objects.count())
+
+        estimate_complete("BEU")
+        estimate_from_inputs("BEU", {"designacao": "BEU", "n_tubos": 68})
+
+        depois = (Quotation.objects.count(), QuotationItem.objects.count(),
+                  CalculationSnapshot.objects.count())
+        self.assertEqual(antes, depois)
+
     def test_data_sheet_mostra_rt_exposicoes(self):
         """End-to-end: o data sheet exibe a estimativa de exposições de RT (Seção V Art.2)."""
         r = self._post()

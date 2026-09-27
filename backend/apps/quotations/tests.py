@@ -855,6 +855,15 @@ class DataSheetViewTests(TenantTestCase):
         # extrai o preço grosso do HTML (presença de valores distintos)
         self.assertNotEqual(r136.content, r200.content)
 
+    def test_recompute_preview_nao_persiste_eap(self):
+        """Ordem 004 (INTENT v3 §Limites): views._preview chama pricing_engine.quote_feixe
+        direto (docstring: "Computa um preview (sem persistir)"). recompute_preview é o
+        endpoint HTMX que usa esse preview — não deve tocar Quotation/QuotationItem."""
+        antes = (Quotation.objects.count(), QuotationItem.objects.count())
+        self.client.post("/cotacoes/recompute/", self._form_data(n_tubos=200))
+        depois = (Quotation.objects.count(), QuotationItem.objects.count())
+        self.assertEqual(antes, depois)
+
     def test_criar_persiste_e_redireciona_pro_detalhe(self):
         resp = self.client.post("/cotacoes/criar/", self._form_data())
         self.assertEqual(resp.status_code, 302)

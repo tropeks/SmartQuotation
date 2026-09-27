@@ -10,6 +10,9 @@ from apps.cost_discovery.models import CostDiscoverySession
 from apps.cost_discovery import services
 from apps.engineering_params.models import TenantParamConfig
 from apps.materials.models import Material, MaterialPrice
+from apps.quotations.models import (
+    CalculationSnapshot, ItemMaterial, ItemOperation, Quotation, QuotationItem,
+)
 from apps.quotations.models import Customer
 from apps.quotations.services import create_feixe_quotation
 
@@ -43,6 +46,22 @@ class BackSolveTests(TenantTestCase):
         services.run_back_solve(s)
         depois = create_feixe_quotation(cust, "depois")
         self.assertGreater(depois.preco_com_impostos, antes.preco_com_impostos)
+
+    def test_back_solve_nao_persiste_eap(self):
+        """Ordem 004 (INTENT v3 §Limites): back_solve chama pricing_engine.quote_feixe
+        várias vezes (bisseção) sobre inputs sintéticos, mas não toca a EAP — só
+        run_back_solve grava, e o que ele grava é TenantParamConfig/CostDiscoverySession,
+        nunca Quotation/QuotationItem."""
+        antes = (Quotation.objects.count(), QuotationItem.objects.count(),
+                 ItemMaterial.objects.count(), ItemOperation.objects.count(),
+                 CalculationSnapshot.objects.count())
+
+        services.back_solve({"n_tubos": 136}, known_price=50000.0)
+
+        depois = (Quotation.objects.count(), QuotationItem.objects.count(),
+                  ItemMaterial.objects.count(), ItemOperation.objects.count(),
+                  CalculationSnapshot.objects.count())
+        self.assertEqual(antes, depois)
 
     def test_top_down_grava_precos_e_fator(self):
         Material.objects.create(sigla="SA-179", tipo="AÇO CARBONO", densidade_kg_mm3=Decimal("0.00000785"))
