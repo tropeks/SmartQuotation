@@ -76,32 +76,46 @@ else
 fi
 
 # -C / + caminho relativo: o tar não reclama de "/" inicial e o restore é `tar xzf - -C /`.
+# Exit 1 do GNU tar = "file changed as we read it" (proposta gravada durante o backup): é
+# AVISO, porque a validação por conteúdo logo abaixo decide. Exit > 1 é erro de verdade.
+TAR_RC=0
 case "${MODE}" in
   container)
-    ${DOCKER} exec "${MEDIA_CONTAINER}" tar czf - -C / "${MEDIA_PATH#/}" > "${TMPFILE}" ;;
+    ${DOCKER} exec "${MEDIA_CONTAINER}" tar czf - -C / "${MEDIA_PATH#/}" > "${TMPFILE}" || TAR_RC=$? ;;
   compose)
     ${DOCKER} compose -f "${COMPOSE_FILE}" exec -T "${WEB_SERVICE}" \
-      tar czf - -C / "${MEDIA_PATH#/}" > "${TMPFILE}" ;;
+      tar czf - -C / "${MEDIA_PATH#/}" > "${TMPFILE}" || TAR_RC=$? ;;
   *)
     echo "${SQ_SCRIPT}: BACKUP_MODE inválido: '${MODE}' (use auto|container|compose)" >&2
     exit 1 ;;
 esac
+if [ "${TAR_RC}" -eq 1 ]; then
+  echo "${SQ_SCRIPT}: aviso — tar saiu 1 (arquivo mudou durante a leitura); a validação por conteúdo decide." >&2
+elif [ "${TAR_RC}" -gt 1 ]; then
+  echo "${SQ_SCRIPT}: tar/docker exec falhou (exit ${TAR_RC}). Rejeitando backup." >&2
+  exit 1
+fi
 
 # --- Validação por conteúdo ---
+# A listagem vai para arquivo 0600 (no trap), não para variável + pipe: com `grep -q` saindo
+# no primeiro match, um `printf | grep -q` de listagem > 64 KiB leva SIGPIPE e, sob
+# pipefail, vira vermelho falso justamente na mídia grande.
+LISTING="${TMPFILE}.list"
+sq_track_tmp "${LISTING}"
 if ! gzip -t "${TMPFILE}" 2>/dev/null; then
   echo "${SQ_SCRIPT}: arquivo não é gzip íntegro. Rejeitando backup." >&2
   exit 1
 fi
-if ! LISTING="$(tar tzf "${TMPFILE}" 2>/dev/null)"; then
+if ! tar tzf "${TMPFILE}" > "${LISTING}" 2>/dev/null; then
   echo "${SQ_SCRIPT}: tar ilegível (tar tzf falhou). Rejeitando backup." >&2
   exit 1
 fi
 REL="${MEDIA_PATH#/}"
-if ! printf '%s\n' "${LISTING}" | grep -q -x -E "${REL}/?"; then
+if ! grep -q -x -E "${REL}/?" "${LISTING}"; then
   echo "${SQ_SCRIPT}: o tar não contém ${REL}/ — volume de mídia errado ou ausente. Rejeitando backup." >&2
   exit 1
 fi
-ENTRIES="$(printf '%s\n' "${LISTING}" | grep -c -E "^${REL}/.+" || true)"
+ENTRIES="$(grep -c -E "^${REL}/.+" "${LISTING}" || true)"
 if [ "${ENTRIES}" -eq 0 ]; then
   if [ "${MEDIA_ALLOW_EMPTY}" = "1" ]; then
     echo "${SQ_SCRIPT}: mídia VAZIA (aceita por MEDIA_ALLOW_EMPTY=1)." >&2

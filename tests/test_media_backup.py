@@ -214,6 +214,50 @@ def test_media_retention_prunes_only_old_media_after_success():
         assert not old.exists() and db_old.exists()
 
 
+def test_media_large_listing_does_not_false_fail():
+    """>2000 entradas (listagem bem acima dos 64 KiB do pipe): grep -q saindo cedo não pode
+    matar o produtor com SIGPIPE e virar vermelho falso sob pipefail."""
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        for i in range(2500):
+            fk.add_media_file(f"proposals/2026/COT-SINT-{i:06d}-proposta-tecnica-comercial.pdf", b"%PDF")
+        r = fk.run("backup_media.sh")
+        assert r.returncode == 0, r.stderr
+        status = (bdir / "media_last_success").read_text()
+        assert "entries=2502" in status, status  # 2500 arquivos + proposals/ + proposals/2026/
+        assert not list(bdir.glob("*.tmp*")), list(bdir.iterdir())
+
+
+def _tar_exiting_with(fk, code: int) -> None:
+    real = fk.ctr_bin / "tar.real"
+    (fk.ctr_bin / "tar").rename(real)
+    (fk.ctr_bin / "tar").write_text(f'#!/usr/bin/env bash\n"{real}" "$@"\nexit {code}\n')
+    (fk.ctr_bin / "tar").chmod(0o755)
+
+
+def test_media_tar_exit_1_is_a_warning_validated_by_content():
+    """GNU tar sai 1 em "file changed as we read it" (mídia sendo gravada durante o backup):
+    é aviso — quem decide é a validação por conteúdo que vem depois."""
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        fk.add_media_file("a.pdf")
+        _tar_exiting_with(fk, 1)
+        r = fk.run("backup_media.sh")
+        assert r.returncode == 0, r.stderr
+        assert "aviso" in r.stderr.lower(), r.stderr
+        assert len(list(bdir.glob("media_*.tar.gz"))) == 1
+
+
+def test_media_tar_exit_above_1_is_a_failure():
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        fk.add_media_file("a.pdf")
+        _tar_exiting_with(fk, 2)
+        r = fk.run("backup_media.sh")
+        assert r.returncode != 0, r.stderr
+        assert not list(bdir.glob("media_*")), list(bdir.iterdir())
+
+
 if __name__ == "__main__":
     tests = [
         test_backup_media_script_exists,
@@ -230,6 +274,9 @@ if __name__ == "__main__":
         test_media_garbage_archive_is_rejected,
         test_media_stopped_container_and_inaccessible_docker_fail_fast,
         test_media_retention_prunes_only_old_media_after_success,
+        test_media_large_listing_does_not_false_fail,
+        test_media_tar_exit_1_is_a_warning_validated_by_content,
+        test_media_tar_exit_above_1_is_a_failure,
     ]
     failed = []
     for t in tests:
