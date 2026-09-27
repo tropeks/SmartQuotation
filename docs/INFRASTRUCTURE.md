@@ -18,7 +18,9 @@
 # Emenda da ordem 003 (27/09/2026): off-site cifrado com age (offsite_push.sh, dump + mídia
 # para dois destinatários) e custódia off-site da chave em remote próprio
 # (offsite_key_push.sh); drill trimestral a partir do off-site; covers ganham os dois scripts
-# e a lib.
+# e a lib. Revisão da 003: runner backup_run.sh (segue depois de falha), backfill, conferência
+# do off-site no drill semanal, separação de credencial lida do rclone.conf, custódia MANUAL
+# do .env.prod.
 covers:
   - docker-compose.yml
   - docker-compose.prod.yml
@@ -30,6 +32,7 @@ covers:
   - scripts/restore_check.sh
   - scripts/lib/backup_common.sh
   - scripts/offsite_push.sh
+  - scripts/backup_run.sh
   - scripts/offsite_key_push.sh
   - scripts/lib/offsite_common.sh
   - ops/systemd/sq-backup.service
@@ -366,10 +369,11 @@ regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT)
 | `scripts/backup_db.sh` | `pg_dumpall` no container avulso `sq-prod-db` (porta 5436, senha do env do próprio container), ou `pg_dump` via compose onde houver compose. Detecta o modo por `.State.Running`; container parado **falha** (não cai para compose); docker inacessível falha na hora. `umask 077`, escrita atômica (`.tmp` + `mv`). **Valida pelo conteúdo**: gzip íntegro, tamanho e linhas mínimos, schema `engematex` presente e o **rodapé** `-- PostgreSQL database cluster dump complete` (ou `... database dump complete` no compose) — dump truncado é rejeitado. Usuário/host/porta vão ao `sh` do container como argv posicional e passam por lista branca. Grava `last_success`; poda `sq_*.sql.gz` > `BACKUP_RETENTION_DAYS` (14) só depois de um backup novo validado | PITR (cifra e off-site: `offsite_push.sh`) |
 | `scripts/backup_media.sh` | `tar czf - -C / app/backend/media` no `sq-web-proto` (volume `media_data` montado em `/app/backend/media`), mesma detecção/fail-fast. Valida com `tar tzf`: exige `app/backend/media/` e ≥1 entrada sob ele (ou `MEDIA_ALLOW_EMPTY=1`). Grava `media_last_success`; retenção igual | Idem |
 | `scripts/backup_key.sh` | Copia a `FIELD_ENCRYPTION_KEY` do env do `sq-web-proto` para `${KEY_BACKUP_DIR}/field_encryption_key` (0600), com fingerprint `sha256` truncado ao lado; preserva a anterior se a chave mudou. **Prova de decifra**: tira um `preco_brl_kg` de `engematex.materials_materialprice` do dump mais recente e roda Fernet **dentro** do container, com chave e token por **stdin**. A prova imprime só `ok`, `falha` ou `sem amostra` (exit 0 / 2 / 3); saída inesperada do container é descartada | Custódia fora do host (`offsite_key_push.sh`) |
-| `scripts/restore_check.sh` | Drill: sobe `postgres:15` efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
-| `scripts/offsite_key_push.sh` | Se o fingerprint da chave mudou desde o último envio (`offsite_key_fingerprint`), cifra a `FIELD_ENCRYPTION_KEY` com `age` **só** para a chave de recuperação da Quantum (lida do arquivo 0600 por stdin) e envia para `OFFSITE_KEY_REMOTE`, com hash remoto conferido | Enviar a chave para o remote do dump (recusa se for o mesmo, um dentro do outro ou a mesma seção do `rclone.conf`) |
-| `scripts/offsite_push.sh` | Cifra o dump e o tar de mídia mais recentes com `age` para **dois** destinatários (instância + recuperação), confere no cabeçalho uma stanza por destinatário, do tipo dele (`X25519` ou `piv-p256`), envia com `rclone copyto --immutable` para `OFFSITE_REMOTE`, confere o hash remoto e grava `offsite_last_success` | Apagar no remoto; sobrescrever objeto remoto; escolher provedor |
-| `ops/systemd/sq-backup.{service,timer}` | Todo dia 03:00 (`Persistent=true`, `RandomizedDelaySec=5min`): `backup_db.sh` → `backup_media.sh` → `backup_key.sh` → `offsite_key_push.sh` → `offsite_push.sh`, `Type=oneshot`, para no primeiro que falhar | — |
+| `scripts/restore_check.sh` | Drill: sobe `postgres:15` efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. Com `OFFSITE_REMOTE` definido, confere **sem baixar** (`rclone hashsum`) que o dump mais novo confirmado no `offsite_manifest` está no remote com o hash registrado; remote mudo, objeto ausente ou diferente = falha. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
+| `scripts/offsite_key_push.sh` | Se o fingerprint da chave mudou desde o último envio (`offsite_key_fingerprint`), cifra a `FIELD_ENCRYPTION_KEY` com `age` **só** para a chave de recuperação da Quantum (lida do arquivo 0600 por stdin) e envia `field_encryption_key.<fpr>.<UTC>.age` para `OFFSITE_KEY_REMOTE`, com hash remoto conferido. Chave igual: confere (`hashsum`) que o objeto dela continua lá | Enviar a chave para o remote do dump (recusa se for o mesmo, um dentro do outro ou a mesma seção do `rclone.conf`) |
+| `scripts/offsite_push.sh` | Cifra, com backfill (todo dump e tar local ainda não confirmado, do mais antigo para o mais novo), com `age` para **dois** destinatários (instância + recuperação), confere no cabeçalho uma stanza por destinatário, do tipo dele (`X25519` ou `piv-p256`), envia com `rclone copyto --immutable` para `OFFSITE_REMOTE`, confere o hash remoto e grava `offsite_last_success` | Apagar no remoto; sobrescrever objeto remoto; escolher provedor |
+| `scripts/backup_run.sh` | Runner da unit: `backup_db.sh` → `backup_media.sh` → `backup_key.sh` → `offsite_key_push.sh` → `offsite_push.sh`, **seguindo depois de falha** (o off-site do dump tem valor sem a chave); registra cada exit em `backup_run_last` e sai != 0 no fim se alguma etapa falhou | — |
+| `ops/systemd/sq-backup.{service,timer}` | Todo dia 03:00 (`Persistent=true`, `RandomizedDelaySec=5min`): `backup_run.sh`, `Type=oneshot`; qualquer etapa com erro deixa a unit `failed` | — |
 | `ops/systemd/sq-restore-check.{service,timer}` | Toda segunda 05:00: `restore_check.sh` | — |
 
 As units rodam como `root` (o usuário de deploy não está no grupo docker, e dar o grupo a ele
@@ -392,9 +396,11 @@ chave (testado com chave sintética). Sem a chave, o dump restaura com preços i
 dump, a chave não serve para nada — os dois juntos no mesmo destino é que não podem estar.
 
 **O `/opt/smartquotation/.env.prod` também é material de chave**: ele contém a
-`FIELD_ENCRYPTION_KEY` (e as demais senhas da aplicação). Segue a **mesma custódia separada** da
-chave e **nunca** vai no pacote do dump da ordem 003 — nem inteiro, nem como "config para
-subir o host novo".
+`FIELD_ENCRYPTION_KEY` (e as demais senhas da aplicação). Segue **custódia separada** da chave —
+e essa custódia é **MANUAL e offline, do Capitão**: nenhum script copia, cifra nem envia o
+`.env.prod` (o `offsite_key_push.sh` leva só a `FIELD_ENCRYPTION_KEY`). Ele **nunca** vai no
+pacote do dump da ordem 003 — nem inteiro, nem como "config para subir o host novo". A cópia é
+passo do checklist do ship e de cada troca de segredo (subseção "Off-site cifrado").
 
 **Restore testado:** o único registrado em produção é o dump pré-Prancha de 28/07/2026
 (`~/backups/sq/pre_prancha_20260728_143633.sql.gz`, "verificado" no HANDOFF §4). A partir da
@@ -445,9 +451,10 @@ referencia o `.env.prod`).
 | `/var/lib/smartquotation/key-backup/last_proof` | `backup_key.sh`, toda prova | `result=ok\|falha\|sem amostra`, `dump=`, `key_sha256_16=` |
 | `/backups/sq/restore_last_success` | `restore_check.sh`, só no sucesso | `dump=`, `schema=`, `quotations=`, `tables=`, `psql_errors=`, `media_entries=`, `duration_s=` |
 | `/backups/sq/offsite_last_success` | `offsite_push.sh`, só com hash e cabeçalho conferidos | `timestamp=`, `remote=`, `dump=`, `dump_result=enviado\|já presente`, `dump_bytes=`, `dump_hash=`, idem `media_*` |
-| `/backups/sq/offsite_manifest` | `offsite_push.sh` | objeto, hash e bytes de cada `.age` conferido (é o que reconhece no remoto o que este host enviou) |
+| `/backups/sq/offsite_manifest` | `offsite_push.sh` | objeto, hash, bytes e estado (`pendente` antes do envio, `ok` depois do hash conferido) de cada `.age` — é o que reconhece no remoto o que este host enviou e o que o backfill ainda deve |
+| `/backups/sq/backup_run_last` | `backup_run.sh`, toda execução | `timestamp=`, `<etapa>=<exit>` de cada etapa, `failed=` (lista ou `-`) |
 | `/var/lib/smartquotation/key-backup/offsite_key_last_success` | `offsite_key_push.sh`, só quando envia | `remote=`, `object=`, `bytes=`, `hash=`, `key_sha256_16=` |
-| `/var/lib/smartquotation/key-backup/offsite_key_fingerprint` | `offsite_key_push.sh` | `sha256_16=` da última chave que chegou à custódia off-site |
+| `/var/lib/smartquotation/key-backup/offsite_key_fingerprint` | `offsite_key_push.sh` | `sha256_16=` e `object=` da última chave que chegou à custódia off-site |
 | `/backups/sq/restore_file_last_success` | `restore_check.sh` com `RESTORE_DUMP_FILE` (drill trimestral) | mesmos campos do `restore_last_success` |
 
 Falha **não** toca nos `*last_success`: a **idade** deles é o sinal. Backup diário saudável
@@ -480,7 +487,7 @@ set -a && source /etc/smartquotation/backup.env && set +a && ./scripts/backup_db
 Alternativa às units, se o host não tiver systemd (crontab do **root**, mesma cadeia):
 
 ```
-0 3 * * * bash -c 'set -a && source /etc/smartquotation/backup.env && set +a && /opt/smartquotation/scripts/backup_db.sh && /opt/smartquotation/scripts/backup_media.sh && /opt/smartquotation/scripts/backup_key.sh && /opt/smartquotation/scripts/offsite_key_push.sh && /opt/smartquotation/scripts/offsite_push.sh' >> /var/log/sq_backup.log 2>&1
+0 3 * * * bash -c 'set -a && source /etc/smartquotation/backup.env && set +a && /opt/smartquotation/scripts/backup_run.sh' >> /var/log/sq_backup.log 2>&1
 ```
 
 ### Restore em produção (runbook, containers avulsos — nunca executado em produção)
@@ -515,28 +522,40 @@ curl -fsS https://quotation.qtec.me/health/
 /opt/smartquotation/scripts/backup_key.sh              # prova de decifra contra o banco novo
 ```
 
-Em host novo: Docker, repo em `/opt/smartquotation`, `.env.prod`, containers `sq-prod-db` e
-`sq-web-proto` recriados (HANDOFF §4), a chave **da custódia** no env do `sq-web-proto`, e então
-os passos 2–5.
+Em host novo: Docker, repo em `/opt/smartquotation`, `.env.prod` (da custódia manual do
+Capitão), containers `sq-prod-db` e `sq-web-proto` recriados (HANDOFF §4), a chave **da
+custódia** no env do `sq-web-proto`, e então os passos 2–5. Dois efeitos esperados no off-site
+do host novo: o `offsite_key_push.sh` não tem `offsite_key_fingerprint` nem manifesto e envia a
+MESMA chave como objeto **novo** (`field_encryption_key.<fpr>.<UTC>.age` — o nome leva o
+timestamp, então isso é append, nunca conflito nem sobrescrita); e dumps baixados do off-site
+para o restore **não** vão para o `BACKUP_DIR` (o backfill os reenviaria e esbarraria nos
+objetos que já existem) — use um diretório à parte.
 
 ### Off-site cifrado (ordem 003 — no repo, NÃO instalado)
 
 Sem off-site, perder o host é perder os backups. A ordem 003 leva o **dump e a mídia** para
 fora, cifrados, e a **chave vai por outro caminho, para custódia separada** — nunca no mesmo
-destino nem no mesmo pacote do dump. O mesmo vale para o **`/opt/smartquotation/.env.prod`**,
-que contém a `FIELD_ENCRYPTION_KEY`: é material de chave, vai para a custódia separada junto
-com ela e **nunca** entra no pacote do dump da 003 (o `offsite_push.sh` só leva `sq_*.sql.gz`
-e `media_*.tar.gz`; o teste varre tudo que o remote do dump recebe atrás da chave e do
-`.env.prod`). O `/etc/smartquotation/backup.env` não tem segredo e pode ir com a configuração.
+destino nem no mesmo pacote do dump. O **`/opt/smartquotation/.env.prod`** contém a
+`FIELD_ENCRYPTION_KEY`: é material de chave, segue custódia separada — **MANUAL e offline, do
+Capitão** (nenhum script o envia; é passo do checklist do ship abaixo) — e **nunca** entra no
+pacote do dump da 003 (o `offsite_push.sh` só leva `sq_*.sql.gz` e `media_*.tar.gz`; o teste
+varre tudo que o remote do dump recebe atrás da chave e do `.env.prod`). O `/etc/smartquotation/backup.env` não tem segredo e pode ir com a configuração.
 
-**O que roda** (dentro da `sq-backup.service`, depois de dump, mídia e chave):
+**O que roda** (pelo `backup_run.sh` da `sq-backup.service`, depois de dump, mídia e chave —
+e **mesmo que alguma etapa anterior tenha falhado**: o off-site do dump tem valor sem a chave;
+a unit fica `failed` no fim e o `backup_run_last` diz qual etapa falhou):
 
-1. `offsite_key_push.sh` — só quando o fingerprint da chave muda: cifra a
-   `FIELD_ENCRYPTION_KEY` com `age` **só** para `OFFSITE_AGE_RECIPIENT_RECOVERY` e envia
-   `field_encryption_key.<fingerprint>.age` para `OFFSITE_KEY_REMOTE`. Vem antes do dump: se a
-   chave nova não chegar à custódia, o dump cifrado com ela também não sai.
-2. `offsite_push.sh` — cifra o dump e a mídia mais recentes para **dois** destinatários e
-   envia `<arquivo>.age` para `OFFSITE_REMOTE`.
+1. `offsite_key_push.sh` — quando o fingerprint da chave muda: cifra a `FIELD_ENCRYPTION_KEY`
+   com `age` **só** para `OFFSITE_AGE_RECIPIENT_RECOVERY` e envia
+   `field_encryption_key.<fingerprint>.<UTC>.age` para `OFFSITE_KEY_REMOTE` (nome único: host
+   novo com a mesma chave faz append, não conflito). Chave igual: não reenvia, mas confere
+   (`hashsum`) que o objeto registrado continua lá — sumiu ou mudou, falha.
+2. `offsite_push.sh` — **backfill**: todo dump e tar de mídia local ainda não confirmado no
+   `offsite_manifest`, do mais antigo para o mais novo (um dia sem envio não deixa buraco),
+   cifrado para **dois** destinatários e enviado como `<arquivo>.age` para `OFFSITE_REMOTE`. O
+   `offsite_last_success` só renova se o dump mais novo tiver menos de
+   `OFFSITE_MAX_AGE_HOURS` (default 26): com o `backup_db` parado, o off-site roda, mas não
+   fica verde.
 
 Os dois cifram por stdin (a chave nunca passa por argv, env nem log), conferem o cabeçalho
 `age` (uma stanza por destinatário, do tipo esperado: `X25519` para `age1…`, `piv-p256` para
@@ -563,9 +582,16 @@ exemplo.
 **Dois remotes, duas credenciais.** `OFFSITE_REMOTE` (dump e mídia) e `OFFSITE_KEY_REMOTE` (a
 chave) são `secao:bucket/prefixo` de seções **diferentes** do `rclone.conf`
 (`RCLONE_CONFIG=/etc/smartquotation/rclone.conf`, root 0600 — o script recusa se grupo ou
-outros lerem). Mesmo remote, um dentro do outro ou mesma seção: recusado. Sintaxe de backend
-na hora (`:b2,account=…:`) também, porque poria credencial em argv. O código não escolhe
-provedor.
+outros lerem). O que o código confere, lendo o `rclone.conf` sem imprimir valor nenhum: mesmo
+remote, um dentro do outro ou mesma seção; seção de **wrapper** (`alias`, `union`, `combine`,
+`chunker`, `crypt`, `compress`, `hasher`, `cache`) em qualquer das duas; **mesmo bucket** no
+mesmo tipo de backend, ainda que por seções diferentes; e o **mesmo valor** em qualquer campo de
+identidade (`account`, `access_key_id`, `key_id`, `user`, `client_id`,
+`service_account_file`). Tudo isso é recusado, assim como a sintaxe de backend na hora
+(`:b2,account=…:`), que poria credencial em argv (a mensagem não repete o valor). O código não
+escolhe provedor. **O que o código não consegue ver, e é do Capitão no ship:** que as duas
+credenciais são de **contas diferentes de verdade** (duas application keys da mesma conta B2
+passam na checagem), e que cada uma tem permissão **só de escrita** (sem delete) no seu bucket.
 
 **Destino estrangeiro:** permitido já pela DP-29 aprovada (decisão (a) do Diretor); o parecer
 J-29 pode mudar o destino — se apontar risco, troca-se o remote e a série é reenviada.
@@ -578,6 +604,7 @@ dumps antigos. A poda local do `BACKUP_RETENTION_DAYS` continua valendo só para
 **No ship (Capitão — NÃO executado):**
 
 ```bash
+umask 077
 # 1. Dois buckets, em contas/credenciais separadas: um para a série (dump + mídia), outro para
 #    a chave. Credencial SÓ DE ESCRITA onde o provedor permitir (B2: application key restrita
 #    ao bucket com writeFiles + listFiles, SEM deleteFiles; S3: PutObject + ListBucket, sem
@@ -596,9 +623,26 @@ apt-get install -y age rclone
 #    (ou pacote em /usr/bin). Só cifra; token, pcscd e identidade NÃO vão para o host.
 #    edite /etc/smartquotation/backup.env: OFFSITE_REMOTE, OFFSITE_KEY_REMOTE e as duas
 #    chaves PÚBLICAS reais (os valores do exemplo são fictícios e recusados)
-# 4. Primeira execução assistida e conferência:
+# 4. As identidades abrem o que o host cifra? Na estação (nunca no host), confira que cada
+#    identidade corresponde ao destinatário do backup.env:
+age-keygen -y sq-instancia.agekey          # == OFFSITE_AGE_RECIPIENT_INSTANCE
+#    recuperação X25519: age-keygen -y <identidade> == OFFSITE_AGE_RECIPIENT_RECOVERY
+#    recuperação YubiKey: age-plugin-yubikey --list (token conectado) == OFFSITE_AGE_RECIPIENT_RECOVERY
+# 5. Primeira execução assistida e conferência:
 systemctl start sq-backup.service && journalctl -u sq-backup.service -n 80 --no-pager
-cat /backups/sq/offsite_last_success /var/lib/smartquotation/key-backup/offsite_key_last_success
+cat /backups/sq/backup_run_last /backups/sq/offsite_last_success \
+    /var/lib/smartquotation/key-backup/offsite_key_last_success
+# 6. Prova de decifra ANTES do primeiro drill trimestral: baixe o primeiro .age do dump e
+#    decifre com CADA identidade (instância e recuperação); o da chave, com a de recuperação.
+#    Tudo numa estação, sem gravar o texto claro em disco:
+rclone cat sq-offsite:<bucket>/<prefixo>/sq_<ts>.sql.gz.age > sq.age
+age -d -i sq-instancia.agekey sq.age | gzip -t && echo "instância abre"
+age -d -i <identidade-de-recuperação> sq.age | gzip -t && echo "recuperação abre"
+rclone cat sq-offsite-key:<bucket>/<prefixo>/field_encryption_key.<fpr>.<UTC>.age \
+  | age -d -i <identidade-de-recuperação> | sha256sum | cut -c1-16   # == key_sha256_16
+# 7. .env.prod: custódia MANUAL e offline do Capitão (nenhum script o envia). Copie
+#    /opt/smartquotation/.env.prod para a mídia offline da custódia (a mesma guarda das
+#    identidades, nunca o bucket), e repita a cada troca de segredo da aplicação.
 ```
 
 O host nunca guarda chave privada age: se uma já esteve lá, gere outro par e reenvie a série.
@@ -609,17 +653,18 @@ O drill semanal prova o dump **local**; o trimestral prova que a cópia **off-si
 com as chaves offline. Roda numa estação com docker, **fora** do host de produção:
 
 ```bash
+umask 077                                  # tudo que o drill grava já nasce 0600
 # 1. Baixar (credencial de leitura) o dump, a mídia e a chave do trimestre
 rclone copyto sq-offsite:<bucket>/<prefixo>/sq_<ts>.sql.gz.age ./sq_<ts>.sql.gz.age
 rclone copyto sq-offsite:<bucket>/<prefixo>/media_<ts>.tar.gz.age ./media_<ts>.tar.gz.age
-rclone copyto sq-offsite-key:<bucket>/<prefixo>/field_encryption_key.<fpr>.age ./fek.age
+rclone copyto sq-offsite-key:<bucket>/<prefixo>/field_encryption_key.<fpr>.<UTC>.age ./fek.age
 # 2. Decifrar com a chave privada offline (alterne a cada trimestre: a da instância e a de
 #    recuperação; a chave de campo só abre com a de recuperação). Com YubiKey: token
 #    conectado, age-plugin-yubikey na estação e -i com o arquivo de identidade
 #    (age-plugin-yubikey --identity)
 age -d -i <identidade> -o sq_<ts>.sql.gz sq_<ts>.sql.gz.age
 age -d -i <identidade> -o media_<ts>.tar.gz media_<ts>.tar.gz.age
-age -d -i <identidade-de-recuperação> -o fek fek.age && chmod 600 fek
+age -d -i <identidade-de-recuperação> -o fek fek.age
 # 3. Restore verificado do arquivo baixado (postgres:15 efêmero, sem rede)
 BACKUP_DIR="$PWD/drill" RESTORE_DUMP_FILE="$PWD/sq_<ts>.sql.gz" \
   RESTORE_MEDIA_FILE="$PWD/media_<ts>.tar.gz" /opt/smartquotation/scripts/restore_check.sh
@@ -629,7 +674,9 @@ sha256sum < fek | cut -c1-16
 ```
 
 `RESTORE_DUMP_FILE` desliga a checagem de idade e grava `restore_file_last_success` no
-`BACKUP_DIR` do drill, sem tocar no sinal do drill semanal. A prova de decifra com a chave
+`BACKUP_DIR` do drill, sem tocar no sinal do drill semanal. Ele e o `RESTORE_MEDIA_FILE` são
+recusados sob systemd (`INVOCATION_ID`) e para arquivo dentro do `BACKUP_DIR`: são do drill
+manual e não vão no `backup.env`. A prova de decifra com a chave
 (Fernet) só roda com o container da app: a conferência do drill é o fingerprint.
 
 ### Política de retenção de backup (desenho-alvo)
