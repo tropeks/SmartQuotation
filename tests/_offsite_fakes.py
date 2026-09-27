@@ -7,7 +7,10 @@ docker falso de tests/_ops_fakes.py (scripts bash num bin/ temporário na frente
                destinatário, "--- mac" aleatório: recifrar dá outro hash, como no age real) e
                depois o texto em CLARO, para o teste poder "decifrar" (split_age). Registra em
                FAKE_AGE_LOG: destinatários, sha256 da entrada e argv (nunca a entrada).
-               FAKE_AGE_EXTRA_STANZA=1 põe uma stanza a mais; FAKE_AGE_STANZA_TYPE troca o tipo.
+               Destinatário age1yubikey1… vira "-> piv-p256 <tag> <share>" (formato do
+               age-plugin-yubikey) e, como no age real, exige age-plugin-yubikey no PATH.
+               FAKE_AGE_EXTRA_STANZA=1 põe uma stanza a mais; FAKE_AGE_STANZA_TYPE força o
+               tipo de TODAS as stanzas (ex.: X25519 para um destinatário YubiKey).
   bin/rclone   Um "bucket" por seção do rclone.conf em FAKE_BUCKETS/<secao>/<caminho>.
                  hashsum TIPO [--download] ALVO   "<hash>  <nome>"; nada se não existe
                                                   (FAKE_RCLONE_ABSENT_RC=3 simula "directory
@@ -55,6 +58,11 @@ while [ "$#" -gt 0 ]; do
 done
 [ "${#recips[@]}" -gt 0 ] || { echo "age: error: missing recipients" >&2; exit 1; }
 for r in "${recips[@]}"; do
+  if [[ "$r" =~ ^age1yubikey1[a-z0-9]{59}$ ]]; then
+    command -v age-plugin-yubikey >/dev/null 2>&1 \
+      || { echo "age: error: age-plugin-yubikey not found in \$PATH" >&2; exit 1; }
+    continue
+  fi
   [[ "$r" =~ ^age1[a-z0-9]{58}$ ]] || { echo "age: error: unknown recipient type" >&2; exit 1; }
 done
 payload="$(mktemp)"
@@ -66,7 +74,11 @@ rnd() { printf '%s%s%s' "$1" "$RANDOM" "$RANDOM" | sha256sum | cut -c1-43; }
 {
   printf 'age-encryption.org/v1\n'
   for r in "${recips[@]}"; do
-    printf -- '-> %s %s\n%s\n' "${FAKE_AGE_STANZA_TYPE:-X25519}" "$(rnd "$r")" "$(rnd corpo)"
+    case "$r" in
+      age1yubikey1*) st="${FAKE_AGE_STANZA_TYPE:-piv-p256}"; args="$(rnd "$r" | cut -c1-6) $(rnd "$r")=" ;;
+      *) st="${FAKE_AGE_STANZA_TYPE:-X25519}"; args="$(rnd "$r")" ;;
+    esac
+    printf -- '-> %s %s\n%s\n' "$st" "$args" "$(rnd corpo)"
   done
   if [ "${FAKE_AGE_EXTRA_STANZA:-0}" = "1" ]; then printf -- '-> X25519 extra\nextra\n'; fi
   printf -- '--- %s\n' "$(rnd mac)"
@@ -117,6 +129,11 @@ _BECH32 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 def fake_age_recipient() -> str:
     """Chave pública age SINTÉTICA (formato válido; o checksum não: o age real a recusaria)."""
     return "age1" + "".join(secrets.choice(_BECH32) for _ in range(58))
+
+
+def fake_yubikey_recipient() -> str:
+    """Destinatário age-plugin-yubikey SINTÉTICO (age1yubikey1 + 59, P-256 comprimido)."""
+    return "age1yubikey1" + "".join(secrets.choice(_BECH32) for _ in range(59))
 
 
 def split_age(data: bytes) -> tuple[list[str], bytes]:
@@ -201,6 +218,15 @@ class OffsiteCase:
             "OFFSITE_AGE_RECIPIENT_INSTANCE": self.rcpt["instance"],
             "OFFSITE_AGE_RECIPIENT_RECOVERY": self.rcpt["recovery"],
         })
+
+    def install_yubikey_plugin(self):
+        """age-plugin-yubikey falso no PATH (o age falso só confere que ele existe)."""
+        _write_exec(self.fk.bin / "age-plugin-yubikey", "#!/usr/bin/env bash\nexit 0\n")
+
+    def path_without_yubikey_plugin(self) -> str:
+        """PATH do teste sem nenhum diretório que tenha um age-plugin-yubikey real."""
+        dirs = self.fk.env["PATH"].split(":")
+        return ":".join(d for d in dirs if not (Path(d) / "age-plugin-yubikey").exists())
 
     def write_key(self, key):
         kf = self.kdir / "field_encryption_key"

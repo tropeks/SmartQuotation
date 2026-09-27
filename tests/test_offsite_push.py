@@ -200,7 +200,8 @@ def test_infra_doc_offsite_section_covers_scripts_remotes_ship_and_drill():
     for needle in ("offsite_push.sh", "offsite_key_push.sh", "OFFSITE_REMOTE", "OFFSITE_KEY_REMOTE",
                    "OFFSITE_AGE_RECIPIENT_INSTANCE", "OFFSITE_AGE_RECIPIENT_RECOVERY",
                    "DP-29", "DP-27", "DP-41", "drill trimestral", "RESTORE_DUMP_FILE",
-                   "offsite_last_success", "rclone.conf", "parecer J-29 pode mudar o destino"):
+                   "offsite_last_success", "rclone.conf", "parecer J-29 pode mudar o destino",
+                   "age1yubikey1", "age-plugin-yubikey", "decisão de instalação", "só para cifrar"):
         assert needle in sec6, f"§6 não cita {needle}"
     assert "Off-site (ordem 003, não existe)" not in doc
 

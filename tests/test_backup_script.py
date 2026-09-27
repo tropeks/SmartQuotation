@@ -461,7 +461,8 @@ if __name__ == "__main__":
     # Ordem 003: off-site cifrado (age e rclone falsos), pelo mesmo job.
     from tests.test_offsite_key_push import TESTS as OFFSITE_KEY
     from tests.test_offsite_push import TESTS as OFFSITE
-    tests += ATOMIC + HARDENING + KEY + RESTORE + UNITS + OFFSITE + OFFSITE_KEY
+    from tests.test_offsite_yubikey import TESTS as OFFSITE_YUBIKEY
+    tests += ATOMIC + HARDENING + KEY + RESTORE + UNITS + OFFSITE + OFFSITE_KEY + OFFSITE_YUBIKEY
     failed = []
     for t in tests:
         try:
