@@ -28,6 +28,7 @@ covers:
   - ops/systemd/sq-backup.timer
   - ops/systemd/sq-restore-check.service
   - ops/systemd/sq-restore-check.timer
+  - ops/systemd/backup.env.example
   - .env.prod.example
 reviewed: 2026-09-27
 ---
@@ -363,8 +364,13 @@ regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT)
 As units rodam como `root` (o usuário de deploy não está no grupo docker, e dar o grupo a ele
 seria root permanente só para o backup), com `ProtectSystem=strict` + `ReadWritePaths` só nos
 diretórios de backup, `PrivateTmp`, `NoNewPrivileges`, `UMask=0077`, e
-`EnvironmentFile=/opt/smartquotation/.env.prod`. Falha = unit `failed`, visível em
-`systemctl --failed` e no journal.
+`EnvironmentFile=/etc/smartquotation/backup.env` — um env file **dedicado** (root, 0600) só com
+variáveis `BACKUP_*`, `KEY_*`, `RESTORE_*`, `MEDIA_*`, `DB_CONTAINER*` e afins (modelo:
+`ops/systemd/backup.env.example`). As units **não** carregam o `.env.prod`: ele poria
+`FIELD_ENCRYPTION_KEY`, `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD` e `AWS_*` no ambiente de todo
+processo da unit, e nenhum script precisa deles (senha e chave são lidas de dentro dos
+containers). `POSTGRES_USER` fica fora de propósito: no modo container vale o do próprio
+`sq-prod-db`. Falha = unit `failed`, visível em `systemctl --failed` e no journal.
 
 **A `FIELD_ENCRYPTION_KEY` NUNCA viaja junto com o dump no off-site (ordem 003): vai para
 custódia separada.** Por isso ela mora em `KEY_BACKUP_DIR` (default
@@ -381,13 +387,15 @@ instalação das units, o drill semanal é o registro (`restore_last_success`). 
 
 ### Instalar as units (gate ship do Capitão — NÃO executado)
 
-Pré-requisitos a conferir no host: o repo (com `scripts/` e `scripts/lib/`) em
-`/opt/smartquotation`, e `/opt/smartquotation/.env.prod` presente com as variáveis de backup
-(ver `.env.prod.example`; **sem** `DOCKER="sudo docker"`, que o `NoNewPrivileges` bloqueia).
+Pré-requisitos a conferir no host: o repo (com `scripts/`, `scripts/lib/` e `ops/systemd/`)
+em `/opt/smartquotation`, e o `RESTORE_DB` do `backup.env` igual ao `POSTGRES_DB` do
+`sq-prod-db`. O `backup.env` **não** leva `DOCKER` com sudo (o `NoNewPrivileges` bloqueia).
 
 ```bash
 # como root no host de produção
-install -d -m 0700 /backups/sq /var/lib/smartquotation/key-backup
+install -d -m 0700 /backups/sq /var/lib/smartquotation/key-backup /etc/smartquotation
+install -m 0600 -o root -g root /opt/smartquotation/ops/systemd/backup.env.example \
+                /etc/smartquotation/backup.env      # revise os valores; nenhum segredo vai aqui
 install -m 0644 /opt/smartquotation/ops/systemd/sq-backup.service \
                 /opt/smartquotation/ops/systemd/sq-backup.timer \
                 /opt/smartquotation/ops/systemd/sq-restore-check.service \
@@ -401,8 +409,9 @@ systemctl enable --now sq-backup.timer sq-restore-check.timer
 systemctl list-timers 'sq-*'
 ```
 
-Se mudar `POSTGRES_BACKUP_DIR` ou `KEY_BACKUP_DIR` no `.env.prod`, mude o `ReadWritePaths` das
-units junto (o teste `test_backup_units` confere o par no `.env.prod.example`).
+Se mudar `BACKUP_DIR` ou `KEY_BACKUP_DIR` no `backup.env`, mude o `ReadWritePaths` das units
+junto (o teste `test_backup_units` confere o par no `backup.env.example` e que nenhuma unit
+referencia o `.env.prod`).
 
 ### Como ler o resultado
 
@@ -431,19 +440,19 @@ sem `MaterialPrice`) falha a unit por padrão: a chave não foi provada, e isso 
 ### Execução manual (sem systemd)
 
 ```bash
-# Uso manual (usa POSTGRES_BACKUP_DIR e o resto do .env.prod):
-set -a && source .env.prod && set +a && ./scripts/backup_db.sh
-# Usuário de deploy fora do grupo docker: DOCKER="sudo docker" só neste uso manual.
+# Uso manual, como root, com o MESMO env file das units (não o .env.prod):
+set -a && source /etc/smartquotation/backup.env && set +a && ./scripts/backup_db.sh
+# (o backup.env é root 0600: o usuário de deploy não o lê, e não deve rodar o backup)
 ```
 
-> **Atenção:** use `set -a` antes de `source` para que as variáveis do `.env.prod` (sem `export`)
+> **Atenção:** use `set -a` antes de `source` para que as variáveis do env file (sem `export`)
 > sejam exportadas e herdadas pelo processo filho (`backup_db.sh`). Sem isso, com `set -u` no
 > script, variáveis obrigatórias ficam "unbound".
 
 Alternativa às units, se o host não tiver systemd (crontab do **root**, mesma cadeia):
 
 ```
-0 3 * * * bash -c 'set -a && source /opt/smartquotation/.env.prod && set +a && /opt/smartquotation/scripts/backup_db.sh && /opt/smartquotation/scripts/backup_media.sh && /opt/smartquotation/scripts/backup_key.sh' >> /var/log/sq_backup.log 2>&1
+0 3 * * * bash -c 'set -a && source /etc/smartquotation/backup.env && set +a && /opt/smartquotation/scripts/backup_db.sh && /opt/smartquotation/scripts/backup_media.sh && /opt/smartquotation/scripts/backup_key.sh' >> /var/log/sq_backup.log 2>&1
 ```
 
 ### Restore em produção (runbook, containers avulsos — nunca executado em produção)

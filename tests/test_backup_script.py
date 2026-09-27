@@ -151,7 +151,9 @@ def test_cron_entry_sources_env_prod():
         "INFRASTRUCTURE.md must contain a cron schedule line with 'backup_db.sh'"
     )
     for line in schedule_lines:
-        sources_env = ".env.prod" in line or "env.prod" in line
+        # Desde a ordem 002 o cron carrega o env file DEDICADO de backup (sem segredos da
+        # app), não o .env.prod; os dois servem ao propósito deste teste (exportar as vars).
+        sources_env = ".env.prod" in line or "env.prod" in line or "backup.env" in line
         assert sources_env, (
             f"Cron entry must source .env.prod to export POSTGRES_USER/POSTGRES_DB, "
             f"but found: {line!r}. "

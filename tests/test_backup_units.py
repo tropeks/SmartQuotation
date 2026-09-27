@@ -60,7 +60,7 @@ def _assert_hardened_oneshot(unit: dict, name: str):
     assert any("grupo docker" in c for c in unit["_comments"]), (
         f"{name}: User=root precisa do comentário justificando (deploy fora do grupo docker)"
     )
-    assert one(unit, s, "EnvironmentFile") == "/opt/smartquotation/.env.prod", name
+    assert one(unit, s, "EnvironmentFile") == "/etc/smartquotation/backup.env", name
     assert one(unit, s, "ProtectSystem") == "strict", name
     assert one(unit, s, "PrivateTmp") == "true", name
     assert one(unit, s, "NoNewPrivileges") == "true", name
@@ -125,15 +125,59 @@ def test_restore_check_timer_weekly_persistent():
     )
 
 
-def test_env_example_backup_dir_matches_unit_rw_paths():
-    """O que a unit deixa escrever tem que ser o que o .env.prod.example manda usar."""
-    env = (ROOT / ".env.prod.example").read_text()
-    unit = parse_unit(UNITS / "sq-backup.service")
-    rw = one(unit, "Service", "ReadWritePaths").split()
-    for var in ("POSTGRES_BACKUP_DIR", "MEDIA_BACKUP_DIR", "KEY_BACKUP_DIR"):
-        m = re.search(rf"^#?\s*{var}=(\S+)", env, re.M)
-        assert m, f".env.prod.example precisa documentar {var}"
-        assert m.group(1) in rw, f"{var}={m.group(1)} fora de ReadWritePaths {rw}"
+BACKUP_ENV = UNITS / "backup.env.example"
+BACKUP_ENV_TARGET = "/etc/smartquotation/backup.env"
+# O que pode morar no env file das units: variáveis de backup e nomes de container.
+ALLOWED_ENV = re.compile(r"^(BACKUP_[A-Z_]+|KEY_[A-Z_]+|RESTORE_[A-Z_]+|MEDIA_[A-Z_]+|DB_CONTAINER[A-Z_]*|DB_SERVICE|WEB_CONTAINER|WEB_SERVICE|COMPOSE_FILE)$")
+
+
+def _env_assignments(path: Path) -> dict:
+    out = {}
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, sep, value = line.partition("=")
+        assert sep, f"{path.name}: linha inválida {line!r}"
+        out[key.strip()] = value.strip()
+    return out
+
+
+def test_units_use_dedicated_env_file_never_env_prod():
+    """O .env.prod tem FIELD_ENCRYPTION_KEY, DJANGO_SECRET_KEY, POSTGRES_PASSWORD e AWS_*:
+    carregá-lo poria tudo isso no ambiente de todo processo da unit."""
+    for name in ("sq-backup.service", "sq-restore-check.service"):
+        text = (UNITS / name).read_text()
+        assert ".env.prod" not in text, f"{name} não pode referenciar .env.prod (nem em comentário)"
+        unit = parse_unit(UNITS / name)
+        assert get(unit, "Service", "EnvironmentFile") == [BACKUP_ENV_TARGET], name
+        assert not get(unit, "Service", "Environment"), f"{name}: variáveis vão no backup.env"
+
+
+def test_backup_env_example_has_only_backup_vars_and_no_secrets():
+    env = _env_assignments(BACKUP_ENV)
+    assert env, "backup.env.example vazio"
+    for key in env:
+        assert ALLOWED_ENV.match(key), f"{key} não é variável de backup — fora do backup.env"
+    text = BACKUP_ENV.read_text()
+    for secret in ("FIELD_ENCRYPTION_KEY=", "DJANGO_SECRET_KEY=", "POSTGRES_PASSWORD=",
+                   "AWS_SECRET_ACCESS_KEY=", "AWS_ACCESS_KEY_ID="):
+        assert secret not in text, f"backup.env.example não pode ter {secret}"
+    # modo container: vale o POSTGRES_USER do próprio sq-prod-db
+    assert "POSTGRES_USER" not in env and "POSTGRES_DB" not in env, env
+    assert not re.search(r"^\s*DOCKER=.*sudo", text, re.M), "sudo não passa pelo NoNewPrivileges"
+
+
+def test_backup_env_dirs_match_unit_rw_paths():
+    """O que a unit deixa escrever tem que ser o que o backup.env.example manda usar."""
+    env = _env_assignments(BACKUP_ENV)
+    rw = one(parse_unit(UNITS / "sq-backup.service"), "Service", "ReadWritePaths").split()
+    for var in ("BACKUP_DIR", "KEY_BACKUP_DIR"):
+        assert var in env, f"backup.env.example precisa definir {var}"
+        assert env[var] in rw, f"{var}={env[var]} fora de ReadWritePaths {rw}"
+    rw_restore = one(parse_unit(UNITS / "sq-restore-check.service"), "Service", "ReadWritePaths").split()
+    assert env["BACKUP_DIR"] in rw_restore, rw_restore
+    assert env["KEY_BACKUP_DIR"] != env["BACKUP_DIR"], "chave e dump no mesmo diretório"
 
 
 TESTS = [
@@ -141,7 +185,9 @@ TESTS = [
     test_backup_timer_daily_at_3am_persistent,
     test_restore_check_service_hardened_and_runs_restore_check,
     test_restore_check_timer_weekly_persistent,
-    test_env_example_backup_dir_matches_unit_rw_paths,
+    test_units_use_dedicated_env_file_never_env_prod,
+    test_backup_env_example_has_only_backup_vars_and_no_secrets,
+    test_backup_env_dirs_match_unit_rw_paths,
 ]
 
 if __name__ == "__main__":

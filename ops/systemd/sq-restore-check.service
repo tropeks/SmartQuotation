@@ -14,7 +14,8 @@ Type=oneshot
 # User=root pelo mesmo motivo do sq-backup.service: o deploy não está no grupo docker,
 # e o drill precisa do socket do docker para subir o container efêmero.
 User=root
-EnvironmentFile=/opt/smartquotation/.env.prod
+# Mesmo env file dedicado do sq-backup.service (só variáveis de backup).
+EnvironmentFile=/etc/smartquotation/backup.env
 WorkingDirectory=/opt/smartquotation
 UMask=0077
 ExecStart=/opt/smartquotation/scripts/restore_check.sh
