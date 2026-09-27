@@ -368,7 +368,7 @@ regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT)
 | `scripts/backup_key.sh` | Copia a `FIELD_ENCRYPTION_KEY` do env do `sq-web-proto` para `${KEY_BACKUP_DIR}/field_encryption_key` (0600), com fingerprint `sha256` truncado ao lado; preserva a anterior se a chave mudou. **Prova de decifra**: tira um `preco_brl_kg` de `engematex.materials_materialprice` do dump mais recente e roda Fernet **dentro** do container, com chave e token por **stdin**. A prova imprime só `ok`, `falha` ou `sem amostra` (exit 0 / 2 / 3); saída inesperada do container é descartada | Custódia fora do host (`offsite_key_push.sh`) |
 | `scripts/restore_check.sh` | Drill: sobe `postgres:15` efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
 | `scripts/offsite_key_push.sh` | Se o fingerprint da chave mudou desde o último envio (`offsite_key_fingerprint`), cifra a `FIELD_ENCRYPTION_KEY` com `age` **só** para a chave de recuperação da Quantum (lida do arquivo 0600 por stdin) e envia para `OFFSITE_KEY_REMOTE`, com hash remoto conferido | Enviar a chave para o remote do dump (recusa se for o mesmo, um dentro do outro ou a mesma seção do `rclone.conf`) |
-| `scripts/offsite_push.sh` | Cifra o dump e o tar de mídia mais recentes com `age` para **dois** destinatários (instância + recuperação), confere 2 stanzas `X25519` no cabeçalho, envia com `rclone copyto --immutable` para `OFFSITE_REMOTE`, confere o hash remoto e grava `offsite_last_success` | Apagar no remoto; sobrescrever objeto remoto; escolher provedor |
+| `scripts/offsite_push.sh` | Cifra o dump e o tar de mídia mais recentes com `age` para **dois** destinatários (instância + recuperação), confere no cabeçalho uma stanza por destinatário, do tipo dele (`X25519` ou `piv-p256`), envia com `rclone copyto --immutable` para `OFFSITE_REMOTE`, confere o hash remoto e grava `offsite_last_success` | Apagar no remoto; sobrescrever objeto remoto; escolher provedor |
 | `ops/systemd/sq-backup.{service,timer}` | Todo dia 03:00 (`Persistent=true`, `RandomizedDelaySec=5min`): `backup_db.sh` → `backup_media.sh` → `backup_key.sh` → `offsite_key_push.sh` → `offsite_push.sh`, `Type=oneshot`, para no primeiro que falhar | — |
 | `ops/systemd/sq-restore-check.{service,timer}` | Toda segunda 05:00: `restore_check.sh` | — |
 
@@ -539,7 +539,8 @@ e `media_*.tar.gz`; o teste varre tudo que o remote do dump recebe atrás da cha
    envia `<arquivo>.age` para `OFFSITE_REMOTE`.
 
 Os dois cifram por stdin (a chave nunca passa por argv, env nem log), conferem o cabeçalho
-`age` (2 stanzas `X25519` no dump, 1 na chave), enviam com `rclone copyto --immutable` e
+`age` (uma stanza por destinatário, do tipo esperado: `X25519` para `age1…`, `piv-p256` para
+`age1yubikey1…`; duas no dump, uma na chave), enviam com `rclone copyto --immutable` e
 conferem o hash remoto (`rclone hashsum`, `OFFSITE_HASH`, default `sha1`) contra o local antes
 de gravar qualquer `*_last_success`. Objeto remoto que já existe com o hash que este host
 registrou (`offsite_manifest`) é pulado; com outro hash, é **falha** — nunca sobrescreve.
@@ -549,8 +550,15 @@ Qualquer falha deixa a unit `failed`.
 pública de um par gerado no ship para esta instância (a privada vai para guarda offline, fora
 do host); `OFFSITE_AGE_RECIPIENT_RECOVERY` é a chave de recuperação da Quantum, raiz offline no
 YubiKey (DP-41). Qualquer uma das duas privadas abre o dump; a chave de campo só abre com a de
-recuperação. Os scripts recusam destinatário ausente, repetido (um só, na prática), com cara de
-chave privada (`AGE-SECRET-KEY-…`, sem exibir o valor) ou com o valor fictício do exemplo.
+recuperação. Cada destinatário pode ser **X25519** (`age1…`, de `age-keygen -y`) ou **YubiKey**
+(`age1yubikey1…`, de `age-plugin-yubikey --list`): a forma do destinatário de recuperação é
+**decisão de instalação** (DP-41). Com YubiKey, o host precisa do `age-plugin-yubikey` no PATH
+da unit (`/usr/local/bin` ou `/usr/bin`; a unit fixa `Environment=PATH` só com diretórios do
+sistema) **só para cifrar** — a identidade fica no token e nunca passa pelo host; sem o plugin,
+os scripts falham na hora, antes de tocar em `age` ou `rclone`. Os scripts recusam destinatário
+ausente, repetido (um só, na prática), com cara de chave privada (`AGE-SECRET-KEY-…`) ou de
+identidade de plugin (`AGE-PLUGIN-YUBIKEY-…`) — sem exibir o valor — ou com o valor fictício do
+exemplo.
 
 **Dois remotes, duas credenciais.** `OFFSITE_REMOTE` (dump e mídia) e `OFFSITE_KEY_REMOTE` (a
 chave) são `secao:bucket/prefixo` de seções **diferentes** do `rclone.conf`
@@ -578,11 +586,14 @@ dumps antigos. A poda local do `BACKUP_RETENTION_DAYS` continua valendo só para
 # 2. Par age da instância, gerado FORA do host de produção (estação do Capitão):
 age-keygen -o sq-instancia.agekey          # a privada: guarda offline (cofre/YubiKey/papel)
 age-keygen -y sq-instancia.agekey          # a pública: vai para o backup.env
-#    e a pública de recuperação da Quantum (DP-41), fornecida pela Quantum.
+#    e o destinatário de recuperação da Quantum (DP-41), fornecido pela Quantum: age1… ou,
+#    se a raiz estiver no YubiKey, age1yubikey1… (age-plugin-yubikey --list).
 # 3. No host, como root:
 install -m 0600 -o root -g root /dev/null /etc/smartquotation/rclone.conf
 rclone config --config /etc/smartquotation/rclone.conf   # seções sq-offsite e sq-offsite-key
 apt-get install -y age rclone
+#    se algum destinatário for YubiKey (age1yubikey1…): age-plugin-yubikey em /usr/local/bin
+#    (ou pacote em /usr/bin). Só cifra; token, pcscd e identidade NÃO vão para o host.
 #    edite /etc/smartquotation/backup.env: OFFSITE_REMOTE, OFFSITE_KEY_REMOTE e as duas
 #    chaves PÚBLICAS reais (os valores do exemplo são fictícios e recusados)
 # 4. Primeira execução assistida e conferência:
@@ -603,7 +614,9 @@ rclone copyto sq-offsite:<bucket>/<prefixo>/sq_<ts>.sql.gz.age ./sq_<ts>.sql.gz.
 rclone copyto sq-offsite:<bucket>/<prefixo>/media_<ts>.tar.gz.age ./media_<ts>.tar.gz.age
 rclone copyto sq-offsite-key:<bucket>/<prefixo>/field_encryption_key.<fpr>.age ./fek.age
 # 2. Decifrar com a chave privada offline (alterne a cada trimestre: a da instância e a de
-#    recuperação no YubiKey; a chave de campo só abre com a de recuperação)
+#    recuperação; a chave de campo só abre com a de recuperação). Com YubiKey: token
+#    conectado, age-plugin-yubikey na estação e -i com o arquivo de identidade
+#    (age-plugin-yubikey --identity)
 age -d -i <identidade> -o sq_<ts>.sql.gz sq_<ts>.sql.gz.age
 age -d -i <identidade> -o media_<ts>.tar.gz media_<ts>.tar.gz.age
 age -d -i <identidade-de-recuperação> -o fek fek.age && chmod 600 fek
