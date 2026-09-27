@@ -379,6 +379,11 @@ um diretório estiver dentro do outro, e nenhum log, status ou arquivo do `BACKU
 chave (testado com chave sintética). Sem a chave, o dump restaura com preços ilegíveis; sem o
 dump, a chave não serve para nada — os dois juntos no mesmo destino é que não podem estar.
 
+**O `/opt/smartquotation/.env.prod` também é material de chave**: ele contém a
+`FIELD_ENCRYPTION_KEY` (e as demais senhas da aplicação). Segue a **mesma custódia separada** da
+chave e **nunca** vai no pacote do dump da ordem 003 — nem inteiro, nem como "config para
+subir o host novo".
+
 **Restore testado:** o único registrado em produção é o dump pré-Prancha de 28/07/2026
 (`~/backups/sq/pre_prancha_20260728_143633.sql.gz`, "verificado" no HANDOFF §4). A partir da
 instalação das units, o drill semanal é o registro (`restore_last_success`). Lição já paga:
@@ -495,7 +500,10 @@ os passos 2–5.
 
 Hoje tudo fica no disco do próprio host: perder o host é perder os backups. A ordem 003 leva o
 **dump e a mídia** para fora (cifrados); a **chave vai por outro caminho, para custódia
-separada** — nunca no mesmo destino nem no mesmo pacote do dump.
+separada** — nunca no mesmo destino nem no mesmo pacote do dump. O mesmo vale para o
+**`/opt/smartquotation/.env.prod`**, que contém a `FIELD_ENCRYPTION_KEY`: é material de chave,
+vai para a custódia separada junto com ela e **nunca** entra no pacote do dump da 003. O
+`/etc/smartquotation/backup.env` não tem segredo e pode ir com a configuração.
 
 ### Política de retenção de backup (desenho-alvo)
 
