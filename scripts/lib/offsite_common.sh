@@ -82,7 +82,8 @@ sq_offsite_check_remote() {
     sq_die "${name} ausente (ex.: sq-offsite:bucket/prefixo, com a seção sq-offsite no rclone.conf). Recusando."
   fi
   if ! [[ "${value}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]*:[^[:space:]]+$ ]] || [[ "${value}" == *:*:* ]]; then
-    sq_die "${name}='${value}' inválido: use 'secao:bucket/prefixo', com a seção (e a credencial) no rclone.conf, nunca na string. Recusando."
+    # O valor NÃO é exibido: a sintaxe de backend na hora carrega a credencial na string.
+    sq_die "${name} inválido (valor NÃO exibido — pode conter credencial): use 'secao:bucket/prefixo', com a seção (e a credencial) no rclone.conf, nunca na string. Recusando."
   fi
 }
 
@@ -96,6 +97,52 @@ sq_offsite_check_separate() {
   if [ "${d%%:*}" = "${k%%:*}" ]; then
     sq_die "OFFSITE_KEY_REMOTE e OFFSITE_REMOTE usam a mesma seção do rclone.conf ('${d%%:*}'): a chave precisa de bucket e credencial PRÓPRIOS (outra seção). Recusando."
   fi
+}
+
+# sq_offsite_check_conf_separation REMOTE_DO_DUMP REMOTE_DA_CHAVE
+# O nome da seção não prova credencial própria. Lê o RCLONE_CONFIG direto (depois de
+# sq_offsite_check_rclone_config) e recusa, sem imprimir VALOR nenhum do arquivo:
+#   - seção ausente (ou rclone.conf cifrado, que não dá para ler);
+#   - wrapper (alias, union, combine, chunker, crypt, compress, hasher, cache) em qualquer
+#     das duas: ele aponta para outro remote, e a separação deixaria de ser verificável;
+#   - mesmo type e mesmo bucket (primeiro componente do caminho), ainda que em seções
+#     diferentes;
+#   - o mesmo valor em qualquer campo de identidade (account, access_key_id, key_id, user,
+#     client_id, service_account_file) nas duas seções.
+# O que o código NÃO vê: se as contas são de fato de donos diferentes e se a credencial é só
+# de escrita. Isso é do ship (docs/INFRASTRUCTURE.md §6).
+sq_offsite_check_conf_separation() {
+  local d="${1%/}" k="${2%/}" verdict code arg dbucket kbucket
+  local sd="${d%%:*}" sk="${k%%:*}"
+  dbucket="${d#*:}"; dbucket="${dbucket#/}"; dbucket="${dbucket%%/*}"
+  kbucket="${k#*:}"; kbucket="${kbucket#/}"; kbucket="${kbucket%%/*}"
+  # O awk só devolve CÓDIGOS (nome de seção, de tipo e de campo — nunca valor de campo).
+  verdict="$(LC_ALL=C awk -v A="${sd}" -v B="${sk}" -v BA="${dbucket}" -v BB="${kbucket}" '
+    function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
+    /^[ \t]*[#;]/ { next }
+    /^[ \t]*\[.*\][ \t\r]*$/ { s = trim($0); s = substr(s, 2, length(s) - 2); seen[s] = 1; next }
+    index($0, "=") { key = trim(substr($0, 1, index($0, "=") - 1)); val = trim(substr($0, index($0, "=") + 1))
+                     if (s == A || s == B) v[s, key] = val }
+    END {
+      if (!seen[A]) { print "missing " A; exit }
+      if (!seen[B]) { print "missing " B; exit }
+      split("alias union combine chunker crypt compress hasher cache", w, " ")
+      for (i in w) { if (v[A, "type"] == w[i]) { print "wrapper " A " " w[i]; exit }
+                     if (v[B, "type"] == w[i]) { print "wrapper " B " " w[i]; exit } }
+      if (v[A, "type"] == v[B, "type"] && BA == BB) { print "samebucket " v[A, "type"]; exit }
+      split("account access_key_id key_id user client_id service_account_file", f, " ")
+      for (i in f) if (v[A, f[i]] != "" && v[A, f[i]] == v[B, f[i]]) { print "sameid " f[i]; exit }
+      print "ok"
+    }' "${RCLONE_CONFIG}")" || sq_die "não consegui ler o RCLONE_CONFIG. Recusando."
+  read -r code arg _ <<< "${verdict}"
+  case "${code}" in
+    ok) return 0 ;;
+    missing) sq_die "seção '${arg}' não encontrada no RCLONE_CONFIG (ou o rclone.conf está cifrado, e a separação de credencial não pode ser conferida). Recusando." ;;
+    wrapper) sq_die "a seção '${arg}' é um wrapper do rclone (type ${verdict##* }): ela aponta para outro remote e a separação entre dump e chave não é verificável. Use seções de backend direto. Recusando." ;;
+    samebucket) sq_die "OFFSITE_REMOTE e OFFSITE_KEY_REMOTE apontam para o MESMO bucket ('${dbucket}') no mesmo tipo de backend (${arg}), ainda que por seções diferentes. A chave precisa de bucket próprio. Recusando." ;;
+    sameid) sq_die "as seções '${sd}' e '${sk}' têm o MESMO valor em '${arg}' (valor NÃO exibido): é a mesma credencial. A chave precisa de credencial própria. Recusando." ;;
+    *) sq_die "RCLONE_CONFIG: resultado inesperado da checagem de separação. Recusando." ;;
+  esac
 }
 
 # rclone.conf tem a credencial do bucket: root, 0600. Legível por grupo/outros é recusado.
@@ -115,6 +162,11 @@ sq_offsite_check_rclone_config() {
 
 sq_offsite_check_tools() {
   command -v "${AGE}" >/dev/null 2>&1 || sq_die "age não encontrado ('${AGE}'). Instale o pacote age. Recusando."
+  sq_offsite_check_rclone_tool
+}
+
+# Só o que o rclone precisa (o restore_check confere o off-site sem cifrar nada).
+sq_offsite_check_rclone_tool() {
   command -v "${RCLONE}" >/dev/null 2>&1 || sq_die "rclone não encontrado ('${RCLONE}'). Instale o pacote rclone. Recusando."
   case "${OFFSITE_HASH}" in
     sha1) SQ_HASH_LEN=40 ;;
@@ -151,7 +203,12 @@ sq_local_hash() {
 # existe em backends com diretório; em bucket, lista vazia com exit 0.
 sq_remote_hash() {
   local target="$1" leaf="${1##*/}" out rc=0 errf
-  errf="$(mktemp)"
+  # Esta função é chamada como `sq_remote_hash … || exit 1`, contexto em que o set -e NÃO
+  # vale dentro dela: toda falha interna é checada explicitamente e vira return 1.
+  if ! errf="$(mktemp)" || [ -z "${errf}" ]; then
+    echo "${SQ_SCRIPT}: mktemp falhou em sq_remote_hash." >&2
+    return 1
+  fi
   sq_track_tmp "${errf}"
   # shellcheck disable=SC2046  # a flag opcional some quando vazia, de propósito
   out="$("${RCLONE}" hashsum "${OFFSITE_HASH}" $( [ "${OFFSITE_HASH_DOWNLOAD}" = "1" ] && echo --download ) \
@@ -166,9 +223,12 @@ sq_remote_hash() {
     return 1
   fi
   # Linha "<hash>  <nome>"; o nome é o do objeto (a listagem pode trazer vizinhos).
-  REMOTE_HASH="$(printf '%s\n' "${out}" | LC_ALL=C awk -v leaf="${leaf}" '
+  if ! REMOTE_HASH="$(printf '%s\n' "${out}" | LC_ALL=C awk -v leaf="${leaf}" '
     { n = length($0) - length(leaf)
-      if (n >= 0 && substr($0, n + 1) == leaf) { h = substr($0, 1, n); gsub(/[[:space:]]/, "", h); print (h == "" ? "-" : h); exit } }')"
+      if (n >= 0 && substr($0, n + 1) == leaf) { h = substr($0, 1, n); gsub(/[[:space:]]/, "", h); print (h == "" ? "-" : h); exit } }')"; then
+    echo "${SQ_SCRIPT}: não consegui ler a saída do rclone hashsum." >&2
+    return 1
+  fi
   if [ -n "${REMOTE_HASH}" ] && ! [[ "${REMOTE_HASH}" =~ ^[0-9a-f]{${SQ_HASH_LEN}}$ ]]; then
     echo "${SQ_SCRIPT}: o remoto não deu hash ${OFFSITE_HASH} para ${target} (o provedor não guarda esse hash?)." >&2
     echo "${SQ_SCRIPT}: troque OFFSITE_HASH para um que o provedor suporte ou use OFFSITE_HASH_DOWNLOAD=1 (baixa e calcula)." >&2
@@ -193,12 +253,19 @@ sq_age_header_ok() {
   [ -n "${got}" ] && [ "${got}" = "${want}" ]
 }
 
-# Manifesto local (0600): "<objeto>\t<tipo>:<hash>\t<bytes>" de cada .age cujo cabeçalho foi
-# conferido. Como o age cifra com aleatoriedade, recifrar dá outro hash: o manifesto é o que
-# permite reconhecer, no remoto, o objeto que ESTE host enviou.
+# Manifesto local (0600): "<objeto>\t<tipo>:<hash>\t<bytes>\t<estado>" de cada .age cujo
+# cabeçalho foi conferido. Estado "pendente" é gravado ANTES do envio, "ok" depois do hash
+# remoto conferido. Como o age cifra com aleatoriedade, recifrar dá outro hash: o manifesto é
+# o que permite reconhecer, no remoto, o objeto que ESTE host enviou.
 sq_manifest_get() {
   [ -f "$1" ] || return 0
   LC_ALL=C awk -F '\t' -v o="$2" '$1 == o { r = $2 "\t" $3 } END { if (r != "") print r }' "$1"
+}
+
+# sq_manifest_confirmed MANIFESTO OBJETO — 0 se o objeto está registrado como "ok".
+sq_manifest_confirmed() {
+  [ -f "$1" ] || return 1
+  LC_ALL=C awk -F '\t' -v o="$2" '$1 == o { s = $4 } END { exit (s == "ok" ? 0 : 1) }' "$1"
 }
 
 sq_manifest_put() {
@@ -206,7 +273,7 @@ sq_manifest_put() {
   sq_track_tmp "${tmp}"
   {
     if [ -f "${m}" ]; then LC_ALL=C awk -F '\t' -v o="$2" '$1 != o' "${m}"; fi
-    printf '%s\t%s\t%s\n' "$2" "$3" "$4"
+    printf '%s\t%s\t%s\t%s\n' "$2" "$3" "$4" "${5:-ok}"
   } > "${tmp}"
   chmod 600 "${tmp}"
   mv -f -- "${tmp}" "${m}"
@@ -230,6 +297,8 @@ sq_offsite_push() {
     known_hash="${entry%%$'\t'*}"
     known_bytes="${entry#*$'\t'}"
     if [ -n "${entry}" ] && [ "${known_hash}" = "${OFFSITE_HASH}:${REMOTE_HASH}" ]; then
+      sq_manifest_confirmed "${manifest}" "${obj}" \
+        || sq_manifest_put "${manifest}" "${obj}" "${known_hash}" "${known_bytes}" ok
       PUSH_RESULT="já presente"
       PUSH_HASH="${known_hash}"
       PUSH_BYTES="${known_bytes}"
@@ -255,7 +324,7 @@ sq_offsite_push() {
   bytes="$(wc -c < "${tmp}" | tr -d ' ')"
   # Registrado ANTES do envio: se o host cair depois do upload, a próxima execução reconhece
   # o objeto pelo hash em vez de acusá-lo de divergente.
-  sq_manifest_put "${manifest}" "${obj}" "${hash}" "${bytes}"
+  sq_manifest_put "${manifest}" "${obj}" "${hash}" "${bytes}" pendente
 
   if ! "${RCLONE}" copyto --immutable "${tmp}" "${target}"; then
     sq_die "rclone copyto falhou para ${target}."
@@ -264,6 +333,7 @@ sq_offsite_push() {
   if [ "${OFFSITE_HASH}:${REMOTE_HASH}" != "${hash}" ]; then
     sq_die "FALHA — hash remoto de ${target} (${REMOTE_HASH:-ausente}) não confere com o local (${hash#*:}) depois do envio."
   fi
+  sq_manifest_put "${manifest}" "${obj}" "${hash}" "${bytes}" ok
   rm -f -- "${tmp}"
   PUSH_RESULT="enviado"
   PUSH_HASH="${hash}"
