@@ -35,3 +35,7 @@ Tudo provado com docker falso (77 testes de backup); off-site fica na 003.
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 002` (você não fecha a própria ordem).
+accepted_at: 2026-09-27T18:44:11-03:00
+accepted_session: desconhecido
+accepted_tree: 373874f2aa9e8cd07070592052f913f71b175ca5
+accepted_intent: 3
