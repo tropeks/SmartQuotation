@@ -2,3 +2,7 @@
 pytest==9.1.1
 pytest-django==4.9.0
 ruff==0.8.4
+# import-linter: mesmo contrato do CI (.importlinter) — roda local com
+# `python scripts/lint_imports.py` antes de empurrar uma mudança que toque pricing_engine
+# ou os módulos que o importam em apps/.
+import-linter==2.15

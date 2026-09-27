@@ -25,3 +25,7 @@ python-docx>=1.2.0
 weasyprint>=70.0
 # static files: WhiteNoiseMiddleware é carregado em settings/base.py (todos os ambientes)
 whitenoise>=6.6
+# import-linter: trava o INTENT v3 §Limites (pricing_engine lib pura; só o adapter persiste
+# resultado do motor). Ver .importlinter e tests/test_import_contracts.py. Estático (grimp),
+# não precisa de Django, mas entra em ci.lock porque o job django-test instala deste lock.
+import-linter==2.15

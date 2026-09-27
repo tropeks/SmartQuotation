@@ -11,3 +11,8 @@ pyyaml==6.0.3
 # Roda contra base.lock/ci.lock no job pip-audit. Pinado + hasheado como todo o resto:
 # um scanner comprometido poderia simplesmente dizer "nenhuma vulnerabilidade".
 pip-audit==2.10.1
+# import-linter (ordem 004): trava mecânica do INTENT v3 §Limites (só o adapter persiste
+# resultado do motor). Estático (grimp) — sem Django, casa com o resto deste lock. O job
+# ops-tests roda o gate via tests.test_import_contracts, dependurado em
+# tests.test_requirements_lock (ver .importlinter e docs/patches/004-ci-import-linter.patch).
+import-linter==2.15
