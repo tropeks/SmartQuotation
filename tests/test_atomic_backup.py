@@ -8,11 +8,14 @@ The fix is the standard atomic-write pattern:
   2. On success: mv FINAL.tmp FINAL
   3. On failure (trap): rm -f FINAL.tmp
 """
+import fnmatch
 import subprocess
 import sys
 import os
 import tempfile
 from pathlib import Path
+
+from tests._ops_fakes import q, synthetic_dump, write_media_tar
 
 ROOT = Path(__file__).resolve().parent.parent
 BACKUP_DB_SCRIPT = ROOT / "scripts" / "backup_db.sh"
@@ -108,25 +111,98 @@ def _make_failing_docker(tmpdir: Path) -> str:
 
 
 def _make_succeeding_docker(tmpdir: Path) -> str:
-    """Create a fake 'docker' binary that writes a realistic-sized payload and exits 0.
+    """Fake 'docker' que responde como um docker saudável com o container rodando.
 
-    The payload must be large enough (and mention 'engematex') to pass backup_db.sh's
-    content validation (BACKUP_MIN_BYTES/BACKUP_MIN_LINES/BACKUP_EXPECT_SCHEMA) added
-    to close the "exit 0 but ~20 byte dump" gotcha — see tests/test_backup_script.py
-    for the tests that exercise that validation directly. This fixture is only about
-    proving the atomic-write pattern (temp file + mv / trap), so it uses a payload
-    that clears validation without being the focus of these assertions.
+    - info/inspect: ok ("true" para .State.Running);
+    - exec ... pg_dumpall/pg_dump: dump sintético grande o bastante, com "engematex" e com o
+      rodapé de conclusão (as validações de conteúdo do backup_db.sh são testadas em
+      tests/test_backup_script.py e tests/test_backup_db_hardening.py; aqui o foco é só o
+      padrão atômico tmp + mv / trap);
+    - exec ... tar: um tar.gz DE VERDADE com app/backend/media/proposta.pdf, porque o
+      backup_media.sh agora valida o arquivo com `tar tzf`.
     """
+    media_tgz = tmpdir / "media_fixture.tar.gz"
+    write_media_tar(media_tgz, {"proposta.pdf": b"%PDF-1.4 sintetico"})
+    dump = tmpdir / "dump_fixture.sql"
+    dump.write_text(synthetic_dump())
     fake_docker = tmpdir / "docker"
     fake_docker.write_text(
         "#!/usr/bin/env bash\n"
-        "for i in $(seq 1 200); do\n"
-        "  echo \"-- dump line $i schema engematex data\"\n"
-        "done\n"
+        "case \"$1\" in\n"
+        "  info) exit 0 ;;\n"
+        "  inspect) echo true; exit 0 ;;\n"
+        "esac\n"
+        f"case \"$*\" in\n"
+        f"  *\" tar \"*) cat {q(str(media_tgz))} ;;\n"
+        f"  *) cat {q(str(dump))} ;;\n"
+        "esac\n"
         "exit 0\n"
     )
     fake_docker.chmod(0o755)
     return str(tmpdir)
+
+
+def _make_docker_failing_mid_pipe(tmpdir: Path) -> str:
+    """Fake onde o docker está SAUDÁVEL (info ok, container rodando), e só o `exec` quebra no
+    meio do stream: escreve dados parciais e sai 1 — pg_dumpall/tar morrendo no meio.
+
+    O _make_failing_docker acima falha já no `docker info`, então o script aborta antes de
+    criar o .tmp e aquele teste não prova mais a limpeza. Este chega ao pipe de verdade.
+    """
+    fake_docker = tmpdir / "docker"
+    fake_docker.write_text(
+        "#!/usr/bin/env bash\n"
+        "case \"$1\" in\n"
+        "  info) exit 0 ;;\n"
+        "  inspect) echo true; exit 0 ;;\n"
+        "  exec|compose)\n"
+        "    printf -- '-- PostgreSQL database cluster dump\\n'\n"
+        "    head -c 65536 /dev/zero | tr '\\0' 'x'\n"
+        f"    touch {q(str(tmpdir / 'exec_ran'))}\n"
+        "    exit 1 ;;\n"
+        "esac\n"
+        "exit 1\n"
+    )
+    fake_docker.chmod(0o755)
+    return str(tmpdir)
+
+
+def _run(script: Path, fake_bin_dir: str, backup_dir: str, extra: dict | None = None):
+    env = os.environ.copy()
+    env["PATH"] = fake_bin_dir + ":" + env.get("PATH", "")
+    env["BACKUP_DIR"] = backup_dir
+    env["POSTGRES_USER"] = "testuser"
+    env["POSTGRES_DB"] = "testdb"
+    env.update(extra or {})
+    return subprocess.run(["bash", str(script)], env=env, capture_output=True, text=True)
+
+
+def _assert_mid_pipe_failure_cleans_tmp(script: Path, pattern: str):
+    with tempfile.TemporaryDirectory() as fake_bin_dir, \
+         tempfile.TemporaryDirectory() as backup_dir:
+        _make_docker_failing_mid_pipe(Path(fake_bin_dir))
+        result = _run(script, fake_bin_dir, backup_dir)
+        assert (Path(fake_bin_dir) / "exec_ran").exists(), (
+            f"o fake tinha que chegar ao exec (senão o teste não prova a limpeza do .tmp). "
+            f"stderr={result.stderr!r}"
+        )
+        assert result.returncode != 0, (
+            f"{script.name} tem que falhar quando o exec morre no meio do pipe. "
+            f"stderr={result.stderr!r}"
+        )
+        left = sorted(p.name for p in Path(backup_dir).iterdir())
+        assert not [n for n in left if n.endswith(".tmp") or fnmatch.fnmatch(n, pattern)], (
+            f"{script.name} deixou arquivo para trás depois de falha no meio do pipe: {left}"
+        )
+        assert "last_success" not in " ".join(left), left
+
+
+def test_backup_db_cleans_tmp_when_exec_fails_mid_pipe():
+    _assert_mid_pipe_failure_cleans_tmp(BACKUP_DB_SCRIPT, "sq_*.sql.gz")
+
+
+def test_backup_media_cleans_tmp_when_exec_fails_mid_pipe():
+    _assert_mid_pipe_failure_cleans_tmp(BACKUP_MEDIA_SCRIPT, "media_*.tar.gz")
 
 
 def test_backup_db_no_partial_file_on_failure():
@@ -293,6 +369,8 @@ if __name__ == "__main__":
         test_backup_db_final_file_exists_on_success,
         test_backup_media_no_partial_file_on_failure,
         test_backup_media_final_file_exists_on_success,
+        test_backup_db_cleans_tmp_when_exec_fails_mid_pipe,
+        test_backup_media_cleans_tmp_when_exec_fails_mid_pipe,
     ]
     failed = []
     for t in tests:

@@ -127,6 +127,93 @@ def test_infrastructure_restore_does_not_use_old_uploads_path():
     )
 
 
+# ---------------------------------------------------------------------------
+# Comportamento (ordem 002): container avulso sq-web-proto, validação por conteúdo,
+# umask 077, retenção. Docker FALSO (tests/_ops_fakes.py).
+# ---------------------------------------------------------------------------
+
+def _media_env():
+    import tempfile
+    from tests._ops_fakes import FakeEnv
+    tmp = tempfile.TemporaryDirectory()
+    fk = FakeEnv(Path(tmp.name))
+    bdir = Path(tmp.name) / "backups"
+    fk.env["BACKUP_DIR"] = str(bdir)
+    return tmp, fk, bdir
+
+
+def test_media_container_mode_produces_validated_0600_archive():
+    import stat
+    import tarfile
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        fk.add_media_file("proposals/2026/COT-SINT-0001.pdf")
+        r = fk.run("backup_media.sh")
+        assert r.returncode == 0, r.stderr
+        assert "modo=container" in r.stderr, r.stderr
+        calls = fk.docker_calls()
+        assert any(c.startswith("exec sq-web-proto tar czf - -C / app/backend/media") for c in calls), calls
+        files = sorted(bdir.glob("media_*.tar.gz"))
+        assert len(files) == 1, files
+        assert stat.S_IMODE(files[0].stat().st_mode) == 0o600
+        with tarfile.open(files[0]) as tf:
+            assert "app/backend/media/proposals/2026/COT-SINT-0001.pdf" in tf.getnames()
+        status = (bdir / "media_last_success").read_text()
+        assert f"file={files[0].name}" in status and "entries=" in status, status
+
+
+def test_media_empty_dir_rejected_unless_explicitly_allowed():
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        r = fk.run("backup_media.sh")
+        assert r.returncode != 0 and "vazio" in r.stderr, r.stderr
+        assert not list(bdir.glob("media_*")), list(bdir.iterdir())
+        r = fk.run("backup_media.sh", {"MEDIA_ALLOW_EMPTY": "1"})
+        assert r.returncode == 0, r.stderr
+        assert len(list(bdir.glob("media_*.tar.gz"))) == 1
+
+
+def test_media_garbage_archive_is_rejected():
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        # "tar" que sai 0 mas devolve lixo (não-gzip): exit code não é prova de nada.
+        (fk.ctr_bin / "tar").write_text("#!/usr/bin/env bash\nprintf 'nao sou um tar'\nexit 0\n")
+        r = fk.run("backup_media.sh", {"MEDIA_ALLOW_EMPTY": "1"})
+        assert r.returncode != 0, r.stderr
+        assert not list(bdir.glob("media_*")), list(bdir.iterdir())
+
+
+def test_media_stopped_container_and_inaccessible_docker_fail_fast():
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        fk.add_media_file("a.pdf")
+        r = fk.run("backup_media.sh", {"FAKE_STATE": "false"})
+        assert r.returncode != 0 and "PARADO" in r.stderr, r.stderr
+        r = fk.run("backup_media.sh", {"FAKE_INFO_OK": "0"})
+        assert r.returncode != 0 and "inacess" in r.stderr and "compose" not in r.stderr, r.stderr
+        assert not list(bdir.glob("media_*")), list(bdir.iterdir())
+
+
+def test_media_retention_prunes_only_old_media_after_success():
+    import os
+    import time
+    tmp, fk, bdir = _media_env()
+    with tmp:
+        bdir.mkdir(parents=True)
+        old = bdir / "media_20200101_030000.tar.gz"
+        db_old = bdir / "sq_20200101_030000.sql.gz"
+        for p in (old, db_old):
+            p.write_bytes(b"x")
+            t = time.time() - 40 * 86400
+            os.utime(p, (t, t))
+        r = fk.run("backup_media.sh")  # vazio → falha → não poda
+        assert r.returncode != 0 and old.exists()
+        fk.add_media_file("a.pdf")
+        r = fk.run("backup_media.sh")
+        assert r.returncode == 0, r.stderr
+        assert not old.exists() and db_old.exists()
+
+
 if __name__ == "__main__":
     tests = [
         test_backup_media_script_exists,
@@ -138,6 +225,11 @@ if __name__ == "__main__":
         test_infrastructure_doc_restore_uses_media_path,
         test_infrastructure_doc_backup_uses_media_data_volume,
         test_infrastructure_restore_does_not_use_old_uploads_path,
+        test_media_container_mode_produces_validated_0600_archive,
+        test_media_empty_dir_rejected_unless_explicitly_allowed,
+        test_media_garbage_archive_is_rejected,
+        test_media_stopped_container_and_inaccessible_docker_fail_fast,
+        test_media_retention_prunes_only_old_media_after_success,
     ]
     failed = []
     for t in tests:
