@@ -13,3 +13,28 @@ languages: [python, sql]
 experts: [dev-junior, dev-pleno, engenheiro, python-pro, postgres-pro, qa, revisor]
 pipeline: default
 notes: "pricing_engine é lib pura; preservar cálculos de cotação, proveniência, tenant/schema e artefatos visuais quando mexer em UI"
+# E16: documentação como contrato. Cada doc declara `covers:` no frontmatter; `maestro docs`
+# acusa drift quando a área muda sem emenda. Emendados pelo swarm do Conformador (27/09/2026)
+# contra o INTENT v2.
+docs: [docs/ARCHITECTURE.md, docs/DATA_MODEL.md, docs/API_SPEC.md, docs/SECURITY.md, docs/UX_SPEC.md, docs/DESIGN_PRANCHA.md, docs/AI_SPEC.md, docs/INFRASTRUCTURE.md]
+# E23b: verificações obrigatórias por área. Prova FORA DA LAB: nenhum comando abaixo usa
+# docker, compose ou a lab, por isso não há `lab:`.
+#   motor: os quatro gates stdlib do job `pricing-engine` do CI (Python puro, segundos).
+#          INTENT v2 §Limites: gates do motor nunca regridem.
+#   suite: o run verde da CI no HEAD (Django multi-tenant com Postgres, ops, pip-audit).
+#          A forge não tem docker nem Postgres local; a CI roda a suíte num runner efêmero
+#          no mesmo SHA. Exige o HEAD empurrado: sem push não há recibo de suíte.
+# Caminhos são PREFIXOS. O adapter é o único acoplamento Django↔motor e prova como o motor.
+verifications:
+  motor:
+    paths: [pricing_engine/, tests/, backend/apps/quotations/adapter.py]
+    labels: [motor, suite]
+  backend:
+    paths: [backend/]
+    labels: [suite]
+  ops:
+    paths: [scripts/, docker-compose.yml, docker-compose.prod.yml]
+    labels: [suite]
+commands:
+  motor: scripts/prova_motor.sh
+  suite: scripts/ci/suite_receipt.sh
