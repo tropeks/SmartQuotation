@@ -369,10 +369,10 @@ regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT)
 | `scripts/backup_db.sh` | `pg_dumpall` no container avulso `sq-prod-db` (porta 5436, senha do env do próprio container), ou `pg_dump` via compose onde houver compose. Detecta o modo por `.State.Running`; container parado **falha** (não cai para compose); docker inacessível falha na hora. `umask 077`, escrita atômica (`.tmp` + `mv`). **Valida pelo conteúdo**: gzip íntegro, tamanho e linhas mínimos, schema `engematex` presente e o **rodapé** `-- PostgreSQL database cluster dump complete` (ou `... database dump complete` no compose) — dump truncado é rejeitado. Usuário/host/porta vão ao `sh` do container como argv posicional e passam por lista branca. Grava `last_success`; poda `sq_*.sql.gz` > `BACKUP_RETENTION_DAYS` (14) só depois de um backup novo validado | PITR (cifra e off-site: `offsite_push.sh`) |
 | `scripts/backup_media.sh` | `tar czf - -C / app/backend/media` no `sq-web-proto` (volume `media_data` montado em `/app/backend/media`), mesma detecção/fail-fast. Valida com `tar tzf`: exige `app/backend/media/` e ≥1 entrada sob ele (ou `MEDIA_ALLOW_EMPTY=1`). Grava `media_last_success`; retenção igual | Idem |
 | `scripts/backup_key.sh` | Copia a `FIELD_ENCRYPTION_KEY` do env do `sq-web-proto` para `${KEY_BACKUP_DIR}/field_encryption_key` (0600), com fingerprint `sha256` truncado ao lado; preserva a anterior se a chave mudou. **Prova de decifra**: tira um `preco_brl_kg` de `engematex.materials_materialprice` do dump mais recente e roda Fernet **dentro** do container, com chave e token por **stdin**. A prova imprime só `ok`, `falha` ou `sem amostra` (exit 0 / 2 / 3); saída inesperada do container é descartada | Custódia fora do host (`offsite_key_push.sh`) |
-| `scripts/restore_check.sh` | Drill: sobe `postgres:15` efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. Com `OFFSITE_REMOTE` definido, confere **sem baixar** (`rclone hashsum`) que o dump mais novo confirmado no `offsite_manifest` está no remote com o hash registrado; remote mudo, objeto ausente ou diferente = falha. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
+| `scripts/restore_check.sh` | Drill: sobe `postgres:15` efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. Com `OFFSITE_REMOTE` definido, confere **sem baixar** que o dump mais novo confirmado no `offsite_manifest` é o dump local mais novo, tem menos de `OFFSITE_MAX_AGE_HOURS` e está no remote com o hash registrado (`rclone hashsum`); com `OFFSITE_HASH_DOWNLOAD=1` **não baixa**: confere só presença e tamanho (`rclone lsjson`), avisa no journal ("hash indisponível sem download") e grava `offsite_check=tamanho`. Remote mudo, objeto ausente ou diferente = falha. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
 | `scripts/offsite_key_push.sh` | Se o fingerprint da chave mudou desde o último envio (`offsite_key_fingerprint`), cifra a `FIELD_ENCRYPTION_KEY` com `age` **só** para a chave de recuperação da Quantum (lida do arquivo 0600 por stdin) e envia `field_encryption_key.<fpr>.<UTC>.age` para `OFFSITE_KEY_REMOTE`, com hash remoto conferido. Chave igual: confere (`hashsum`) que o objeto dela continua lá | Enviar a chave para o remote do dump (recusa se for o mesmo, um dentro do outro ou a mesma seção do `rclone.conf`) |
 | `scripts/offsite_push.sh` | Cifra, com backfill (todo dump e tar local ainda não confirmado, do mais antigo para o mais novo), com `age` para **dois** destinatários (instância + recuperação), confere no cabeçalho uma stanza por destinatário, do tipo dele (`X25519` ou `piv-p256`), envia com `rclone copyto --immutable` para `OFFSITE_REMOTE`, confere o hash remoto e grava `offsite_last_success` | Apagar no remoto; sobrescrever objeto remoto; escolher provedor |
-| `scripts/backup_run.sh` | Runner da unit: `backup_db.sh` → `backup_media.sh` → `backup_key.sh` → `offsite_key_push.sh` → `offsite_push.sh`, **seguindo depois de falha** (o off-site do dump tem valor sem a chave); registra cada exit em `backup_run_last` e sai != 0 no fim se alguma etapa falhou | — |
+| `scripts/backup_run.sh` | Runner da unit: `backup_db.sh` → `backup_media.sh` → `backup_key.sh` → `offsite_key_push.sh` → `offsite_push.sh`, **seguindo depois de falha** (o off-site do dump tem valor sem a chave); registra cada exit em `backup_run_last` e sai != 0 no fim se alguma etapa falhou. INT/TERM (`systemctl stop`, timeout): mata a etapa em curso, **não** segue, sai 130/143 e registra `interrupted=<etapa>` | — |
 | `ops/systemd/sq-backup.{service,timer}` | Todo dia 03:00 (`Persistent=true`, `RandomizedDelaySec=5min`): `backup_run.sh`, `Type=oneshot`; qualquer etapa com erro deixa a unit `failed` | — |
 | `ops/systemd/sq-restore-check.{service,timer}` | Toda segunda 05:00: `restore_check.sh` | — |
 
@@ -550,12 +550,15 @@ a unit fica `failed` no fim e o `backup_run_last` diz qual etapa falhou):
    `field_encryption_key.<fingerprint>.<UTC>.age` para `OFFSITE_KEY_REMOTE` (nome único: host
    novo com a mesma chave faz append, não conflito). Chave igual: não reenvia, mas confere
    (`hashsum`) que o objeto registrado continua lá — sumiu ou mudou, falha.
-2. `offsite_push.sh` — **backfill**: todo dump e tar de mídia local ainda não confirmado no
-   `offsite_manifest`, do mais antigo para o mais novo (um dia sem envio não deixa buraco),
-   cifrado para **dois** destinatários e enviado como `<arquivo>.age` para `OFFSITE_REMOTE`. O
-   `offsite_last_success` só renova se o dump mais novo tiver menos de
-   `OFFSITE_MAX_AGE_HOURS` (default 26): com o `backup_db` parado, o off-site roda, mas não
-   fica verde.
+2. `offsite_push.sh` — primeiro o dump e o tar **mais novos**; depois o **backfill**: todo
+   dump e tar local ainda não confirmado no `offsite_manifest`, do mais antigo para o mais
+   novo (um dia sem envio não deixa buraco), até `OFFSITE_BACKFILL_MAX` por execução (default
+   6, além dos mais novos; o resto sai nas próximas — o primeiro dia não estoura o
+   `TimeoutStartSec`). Tudo cifrado para **dois** destinatários e enviado como `<arquivo>.age`
+   para `OFFSITE_REMOTE`. Um objeto antigo com problema **não bloqueia o de hoje**: as falhas
+   se acumulam, o script segue e sai != 0 no fim nomeando cada uma. O `offsite_last_success`
+   só renova sem falha e com o dump mais novo abaixo de `OFFSITE_MAX_AGE_HOURS` (default 26):
+   com o `backup_db` parado, o off-site roda, mas não fica verde.
 
 Os dois cifram por stdin (a chave nunca passa por argv, env nem log), conferem o cabeçalho
 `age` (uma stanza por destinatário, do tipo esperado: `X25519` para `age1…`, `piv-p256` para
@@ -583,11 +586,15 @@ exemplo.
 chave) são `secao:bucket/prefixo` de seções **diferentes** do `rclone.conf`
 (`RCLONE_CONFIG=/etc/smartquotation/rclone.conf`, root 0600 — o script recusa se grupo ou
 outros lerem). O que o código confere, lendo o `rclone.conf` sem imprimir valor nenhum: mesmo
-remote, um dentro do outro ou mesma seção; seção de **wrapper** (`alias`, `union`, `combine`,
-`chunker`, `crypt`, `compress`, `hasher`, `cache`) em qualquer das duas; **mesmo bucket** no
-mesmo tipo de backend, ainda que por seções diferentes; e o **mesmo valor** em qualquer campo de
-identidade (`account`, `access_key_id`, `key_id`, `user`, `client_id`,
-`service_account_file`). Tudo isso é recusado, assim como a sintaxe de backend na hora
+remote, um dentro do outro ou mesma seção; `type` fora da **allowlist de armazenamento direto**
+(`s3`, `b2`, `gcs`, `azureblob`, `swift`, `oos`, `sftp`; `local` para teste) — allowlist, e não
+lista de wrappers, porque todo backend que aponta para outro remote (`alias`, `crypt`, `union`,
+`combine`, `chunker`, `compress`, `hasher`, `cache` e os que vierem) tornaria a separação
+inverificável; o **mesmo bucket** em **qualquer** tipo (B2 nativo e o S3 da Backblaze chegam ao
+mesmo bucket por dois caminhos); **qualquer valor de credencial em comum** entre as duas seções,
+sem olhar o nome do campo (a mesma chave vira `account=` no `b2` e `access_key_id=` no `s3`);
+e variável `RCLONE_CONFIG_<SEÇÃO>_*` no ambiente para qualquer das duas (ela sobrepõe o
+`rclone.conf`). Tudo isso é recusado, assim como a sintaxe de backend na hora
 (`:b2,account=…:`), que poria credencial em argv (a mensagem não repete o valor). O código não
 escolhe provedor. **O que o código não consegue ver, e é do Capitão no ship:** que as duas
 credenciais são de **contas diferentes de verdade** (duas application keys da mesma conta B2
@@ -675,8 +682,9 @@ sha256sum < fek | cut -c1-16
 
 `RESTORE_DUMP_FILE` desliga a checagem de idade e grava `restore_file_last_success` no
 `BACKUP_DIR` do drill, sem tocar no sinal do drill semanal. Ele e o `RESTORE_MEDIA_FILE` são
-recusados sob systemd (`INVOCATION_ID`) e para arquivo dentro do `BACKUP_DIR`: são do drill
-manual e não vão no `backup.env`. A prova de decifra com a chave
+recusados dentro das units de backup (marcador explícito `Environment=SQ_BACKUP_UNIT=1` na
+`sq-backup.service` e na `sq-restore-check.service`) e para arquivo dentro do `BACKUP_DIR`: são
+do drill manual e não vão no `backup.env`. A prova de decifra com a chave
 (Fernet) só roda com o container da app: a conferência do drill é o fingerprint.
 
 ### Política de retenção de backup (desenho-alvo)
