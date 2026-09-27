@@ -25,6 +25,8 @@ intocável). Este módulo monta, num diretório temporário:
                    psql                  restore (sem -c): consome stdin; consultas -c: responde
                                          por FAKE_SCHEMA_PRESENT / FAKE_TABLES / FAKE_QCOUNT
 
+O age e o rclone falsos do off-site (ordem 003) moram em tests/_offsite_fakes.py.
+
 Chamadas com stdin (a chave, na prova de decifra) NÃO vão para o log: o log é argv, e o
 teste de vazamento confere justamente que a chave nunca aparece em argv.
 """
@@ -131,6 +133,14 @@ case "$sql" in
   *) echo 0 ;;
 esac
 """
+
+
+_SCRUB_PREFIXES = ("POSTGRES_", "BACKUP_", "DB_", "MEDIA_", "KEY_", "RESTORE_", "FIELD_", "FAKE_",
+                   "OFFSITE_", "RCLONE_")
+
+
+def _scrubbed(name: str) -> bool:
+    return name.startswith(_SCRUB_PREFIXES) or name in ("AGE", "RCLONE")
 
 
 def _write_exec(path: Path, text: str) -> None:
@@ -241,11 +251,8 @@ class FakeEnv:
         _write_exec(self.ctr_bin / "pg_isready", "#!/usr/bin/env bash\nexit \"${FAKE_PG_READY_EXIT:-0}\"\n")
         _write_exec(self.ctr_bin / "psql", _FAKE_PSQL)
 
-        self.env = os.environ.copy()
         # Nada do ambiente de quem roda o teste vaza para o script (ex.: um POSTGRES_USER real).
-        for k in list(self.env):
-            if k.startswith(("POSTGRES_", "BACKUP_", "DB_", "MEDIA_", "KEY_", "RESTORE_", "FIELD_", "FAKE_")):
-                del self.env[k]
+        self.env = {k: v for k, v in os.environ.items() if not _scrubbed(k)}
         self.env.update({
             "PATH": f"{self.bin}:{self.env.get('PATH', '')}",
             "CTR_BIN": str(self.ctr_bin),
