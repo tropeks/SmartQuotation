@@ -1,6 +1,60 @@
+---
+# Contrato de documentação (Maestro E16).
+# Superfície HTTP do SmartQuotation: rotas de tela (HTMX), API DRF e a borda prevista do Core.
+covers:
+  - backend/smartquotation/urls*.py
+  - backend/apps/**/urls.py
+  - backend/apps/**/views.py
+  - backend/apps/**/api.py
+reviewed: 2026-09-27
+---
 # API_SPEC.md — SmartQuotation
 
-> **Status:** Contrato alvo aprovado; contrato H1 atual documentado no topo | **Versão:** 1.0 | **Referência:** ARCHITECTURE.md, DATA_MODEL.md
+> **Status:** Contrato alvo aprovado; contrato real documentado na §0 (emenda 2026-09-27) | **Versão:** 1.1 | **Referência:** ARCHITECTURE.md, DATA_MODEL.md, `.maestro/INTENT.md` v2
+
+---
+
+## 0. Emenda 2026-09-27 — superfície real e borda prevista
+
+**O que existe.** A UI é server-rendered (Django templates + HTMX) com sessão e CSRF; não há
+JWT, `/api/v1/`, webhooks nem OpenAPI publicado (o `drf-spectacular` está instalado, mas sem
+rota). As seções 2 a 12 abaixo são o contrato alvo de 2025 e **não estão implementadas**.
+
+API JSON real (DRF, `SessionAuthentication`):
+
+| Método e rota | Permissão | O que faz |
+|---|---|---|
+| `GET /api/cotacoes/`, `GET /api/cotacoes/{id}/` | `IsAuthenticated` | Leitura de cotações (`QuotationViewSet`, read-only) |
+| `POST /api/permutador/estimate/` | `IsAuthenticated` + `CanWriteQuotations` | Estimativa do permutador pelo motor, sem persistir |
+| `GET /health/` | nenhuma | Healthcheck (public e tenant) |
+
+Rotas de tela por app (HTML/HTMX, sessão; autorização por capability via `require_capability`):
+`accounts` (`/login/`, `/logout/`, `/change-password/`, `/members/…`), `access` (`/config/…`:
+matriz papel × capability, papéis, workflow), `quotations` (`/cotacoes/…`: data sheet do feixe,
+entrada TEMA, composição por partes, recompute, EAP, status, revisão, databook), `audit`
+(`/aprovacoes/…` e `/cotacoes/{pk}/aprovacoes/…`), `proposals` (`/cotacoes/{pk}/proposta/nova/`,
+`/propostas/{pk}/…` com `preview`, `download/{fmt}` e `enviar-email`), `production` (`/ofs/…`,
+`/cotacoes/{pk}/converter-of/`, apontamento, ITP), `engineering_params` (`/engenharia/…`:
+calibração, knobs, sugestões), `materials` (`/materiais/…`), `cost_discovery` (`/custos/…`),
+`tema_templates` (`/tema/…`), `integrations.nomus` (`/ofs/{pk}/nomus/…`), e healthchecks admin
+de Protheus, Omie e SAP B1 em `/admin/*/health/`.
+
+**Previsto na F1 do Cognitive Core** (não existe; contrato em `cognitive-core/docs/ARQUITETURA.md` §5–§6):
+
+| Ordem | Rota prevista | Capability | Classe |
+|---|---|---|---|
+| F1-01 | emissão/revogação de token delegado curto, por usuário e escopo | — | — |
+| F1-02 | `GET /api/core/v1/quotations/{id}` | `quotation.read` | leitura |
+| F1-02 | `POST /api/core/v1/quotations/draft` | `quotation.create_draft` | reversível |
+| F1-02 | `POST /api/core/v1/quotations/{id}/recompute` (via adapter) | `quotation.recompute` | reversível |
+| F1-03 | `POST /api/core/v1/proposals/{id}/render` | `proposal.render` | reversível |
+| F1-03 | `POST /api/core/v1/proposals/{id}/send/preview` e `POST …/send` com `idempotency_key` | `proposal.send` | externa |
+
+Regras da borda: autenticação só por token delegado (não sessão, não conta de serviço); o
+produto reexecuta RBAC e validação em toda chamada; `send` recalcula pelo motor e confere o
+hash aprovado e o destinatário cadastrado antes de despachar; versão já `sent` é recusada;
+step-up com passkey (F1-32) antes do primeiro envio real. O endpoint de tela
+`/propostas/{pk}/enviar-email/` hoje não é idempotente.
 
 ---
 
@@ -622,3 +676,9 @@ GET /api/v1/schema/          → openapi.yaml
 GET /api/v1/docs/            → Swagger UI
 GET /api/v1/redoc/           → ReDoc
 ```
+
+---
+
+## Flags para o orchestrator
+
+Nenhuma.

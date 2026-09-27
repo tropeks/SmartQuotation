@@ -58,9 +58,9 @@ payload muda todos os hashes — por isso não foi feito junto do M1.1.
 
 ### S2.1 — a tela do custo/hora dentro do produto
 O formulário público (`form.qtec.me`) já coleta e o comando importa. Falta a tela
-interna — que deve nascer com a pele do Vitali, não com a atual.
+interna — que deve nascer na Prancha, a identidade vigente (INTENT v2).
 
-Contrato: `docs/discovery/SPRINT_S2_CUSTO_HORA.md` · `docs/DESIGN_IDENTIDADE_VISUAL.md`
+Contrato: `docs/discovery/SPRINT_S2_CUSTO_HORA.md` · `docs/DESIGN_PRANCHA.md`
 
 ### S3.2 — cruzar o fator da folha com a ociosidade do Nível 0
 A diferença entre horas pagas e horas produtivas é a **mesma grandeza medida por dois

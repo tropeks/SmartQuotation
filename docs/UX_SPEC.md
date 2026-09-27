@@ -1,4 +1,53 @@
+---
+# Contrato de documentação (Maestro E16).
+#
+# Governa as telas do SmartQuotation: templates Django (base, por app e das integrações)
+# e o CSS servido. Tokens e componentes visuais têm fonte própria em
+# docs/DESIGN_PRANCHA.md, que cobre os mesmos arquivos de estilo.
+#
+# `reviewed:` atesta a passada de conformidade ao INTENT v2 (27/09/2026): vigência,
+# conferência por amostragem das telas e fluxos previstos da F1. As divergências
+# conhecidas estão listadas na nota de vigência abaixo, e não foram corrigidas aqui.
+covers:
+  - backend/templates/**
+  - backend/apps/**/templates/**
+  - backend/static/**
+reviewed: 2026-09-27
+---
 # UX_SPEC.md — SmartQuotation
+
+> ## Vigência (conformado ao `.maestro/INTENT.md` v2, 27/09/2026)
+>
+> | Parte | Estado |
+> |---|---|
+> | §1 princípios 1–5, §2 personas, §3.6 matriz Status × Papel, §4–§8 (fluxos, inventário, telas, padrões) | **Vale** como especificação funcional, com as divergências abaixo |
+> | §1 princípio 6, **§3 Design System G · Refined Bauhaus**, **Anexo A** (CSS G) e **Anexo B** (checklist G) | **Superados.** Só histórico. Tokens, cores e tipografia vêm de [`DESIGN_PRANCHA.md`](DESIGN_PRANCHA.md) |
+> | Pele **Tasy Neumorphic** ([`DESIGN_IDENTIDADE_VISUAL.md`](DESIGN_IDENTIDADE_VISUAL.md)) | **Superada** pela Prancha e fora de escopo no INTENT |
+> | **Prancha** | **Vale** para toda UI nova e já é o CSS servido (`backend/static/css/design-system-g.css` carrega os tokens `--p-*`; o nome do arquivo e as classes G foram mantidos) |
+> | §3.5 Command Center | Vale o conceito (coluna única com §1…§N). O minimap **não** existe na COT-03 real |
+> | §9 Caixa da F1 | **Previsto (F1-28 a F1-33).** Nada ali existe ainda |
+> | Linha "Stack" do cabeçalho histórico | Não há Tailwind no repo; HTMX e Alpine vêm por CDN no `base.html` |
+>
+> **Divergências materiais doc × tela** (amostragem de 27/09/2026, sem correção de conteúdo):
+> - **COT-03** (`quotations/detail.html`): as seções reais são §1 Resumo (`#sec-resumo`),
+>   §2 Estrutura Analítica/EAP (`#sec-eap`), §3 Formação de Preço (`#sec-preco`), §4 Aprovação
+>   Técnica (`#sec-aprovacao`), §5 Proposta Comercial (`#sec-proposta`) e §6 Ordem de Fabricação
+>   (`#sec-of`). O cabeçalho é o **Carimbo** e o estado da assinatura é o **Selo** (Prancha §5.1
+>   e §5.3), no lugar de QHeader e ApprovalBanner. A EAP abre em gaveta (`_eap_item_drawer.html`).
+> - **Sem tela:** AUTH-02/03 (MFA TOTP), AUTH-04 (recuperação; existe só `change-password/`),
+>   DASH-02, CLI-01..03 (há só `cotacoes/clientes/criar/` rápido), MAT-03..05 como telas próprias
+>   (preço é salvo no detalhe), EQP-01 (vaso de pressão), EQP-04, EQP-05, APR-04 (PVElite),
+>   AUD-01..03, CFG-01 e CFG-03.
+> - **Absorvidas:** CST-01..04 viram §2/§3 da COT-03; APR-01 é `audit/inbox.html`
+>   (`/aprovacoes/`); CFG-02 é `accounts/members` + `access/config|roles|workflow`; CFG-04 é
+>   `engineering_params/calibration|knobs`; EQP-02 é o data sheet do feixe
+>   (`quotations/data_sheet.html`) e o do permutador (`tema_templates/data_sheet.html`).
+> - **Existem e não estão no inventário:** OF (`production/list|detail`), cadeia de custos
+>   (`cost_discovery/*`), catálogo e composição TEMA (`tema_templates/catalog|compose`),
+>   entrada TEMA e por partes (`quotations/tema_entry|new_parts`), databook, sugestões de
+>   rate, painel de export Nomus e configuração do fluxo de aprovações (`access/workflow`).
+
+**Cabeçalho histórico (v2.0, 2026-05-16), sem edição:**
 > **Versão:** 2.0 | **Referência:** PROJECT_BRIEF.md, DATA_MODEL.md, API_SPEC.md, EPICS.md
 > **Stack front-end:** Django Templates + HTMX + Alpine.js + Tailwind CSS (com tokens G customizados)
 > **Linguagem visual:** **G · Refined Bauhaus** (ver §3) | **Padrão arquitetural:** **Command Center** (ver §3.5)
@@ -22,7 +71,7 @@
 
 5. **Feedback imediato para ações assíncronas.** Cálculo ASME e geração de PDF são tarefas longas. A tela deve mostrar progresso em tempo real com mensagens descritivas do que está acontecendo, nunca um spinner genérico.
 
-6. **Identidade visual industrial, não corporativa.** O SmartQuotation é uma ferramenta de engenharia, não um SaaS de gestão. A UI deve evocar **placas de equipamento industrial, prontuários NR-13, painéis de operação** — não dashboards genéricos. Geometria reta (sem cantos arredondados), tipografia condensada e uppercase, paleta blocada com personalidade. Ver §3 para o design system completo.
+6. *(Superado pela Prancha — ver nota de vigência.)* **Identidade visual industrial, não corporativa.** O SmartQuotation é uma ferramenta de engenharia, não um SaaS de gestão. A UI deve evocar **placas de equipamento industrial, prontuários NR-13, painéis de operação** — não dashboards genéricos. Geometria reta (sem cantos arredondados), tipografia condensada e uppercase, paleta blocada com personalidade. Ver §3 para o design system completo.
 
 7. **Visão holística sobre tabs ocultos.** Em telas-hub (COT-03, dashboards), prefira **rolagem com minimap navegável** a abas horizontais que escondem contexto. O usuário deve ver o estado completo de uma cotação numa olhada — equipamentos, BOM, preço, aprovação técnica e proposta — sem trocar de tela. Ver §3.5 para o padrão Command Center.
 
@@ -60,6 +109,8 @@
 ---
 
 ## 3. Design System · G · Refined Bauhaus
+
+> **SUPERADO.** Registro histórico. Tokens e componentes vigentes: [`DESIGN_PRANCHA.md`](DESIGN_PRANCHA.md). §3.5 e §3.6 continuam valendo.
 
 > **Conceito:** geometria assertiva e cor blocada com personalidade industrial (DNA Bauhaus), refinados com polish contemporâneo para uso prolongado (8h/dia). Inspiração visual: placas de equipamento industrial, prontuários NR-13, posters Bauhaus 1925, design system Vercel/Linear aplicado a contexto técnico.
 > **Referências externas:** Caterpillar moderno, ABB digital, Vercel docs, Linear marketing.
@@ -1742,7 +1793,72 @@ Filtros: Layer (Padrão Ind. / Tenant / Atual), Operação
 
 ---
 
+## 9. Caixa da F1 do Cognitive Core — **previsto (F1-28 a F1-33)**
+
+> Nada nesta seção existe hoje. Fonte: `cognitive-core/docs/FASES.md` §4.5 e
+> `cognitive-core/docs/EXPERIENCIA.md` §2, §5.6, §6 e §8. Os limites do Core valem aqui
+> (INTENT, "Limites"): o Core sugere e sinaliza; decisão e efeito externo ficam nos botões do SQ.
+> **Semente:** `audit/inbox.html` (`/aprovacoes/`: abas "A aprovar" e "Minhas solicitações",
+> recusa com motivo, badge por polling, o solicitante não aprova a própria). A caixa **evolui**
+> esse inbox; não nasce ao lado dele.
+
+**Quatro tipos (F1-29).** Estado nunca só por cor: marca de forma e rótulo em texto.
+
+| Tipo | Efeito externo já ocorreu? | Ação principal (verbo fixo) |
+|---|---|---|
+| Feito ✓ | Sim, com recibo | "Entendi" |
+| Para conferir ○ | Não | **Aprovar** |
+| Pede autorização ◆ | Não; parâmetros fixos e hash no item | **Autorizar** + parâmetro ("Autorizar envio da proposta COT-… a …") |
+| Sugestão (sombra) ◌ | Não; nada será executado | "Estava certo" / "Eu faria diferente" |
+
+**Dez estados (F1-29), um teste por estado:** carregando (esqueleto na altura final) · vazio
+· erro de rede (última fila com a hora; autorizar desligado) · erro do item · sucesso (recibo)
+· **expirado** · **superado** · recusado (motivo obrigatório) · bloqueado pela regra (sem
+botão de forçar) · duplicado (mostra o anterior).
+
+**Expirado e superado (F1-30).** O item carrega o hash do cálculo. Se a cotação mudar depois
+do item, ele cai para *superado* e **não autoriza o antigo** ("A cotação mudou depois deste
+pedido."). É o mesmo mecanismo do Selo *Divergente* (Prancha §5.3). Prazo vencido vira
+*expirado*, cartão cinza sem botão de autorizar. Prova: editar a cotação bloqueia 100% das
+autorizações pendentes dela.
+
+**"Ver evidência" (F1-31).** Abre a COT-03 na seção certa, por UI Actions de uma allowlist
+declarada pelo SQ; caminho fora da lista é recusado. O Core leva ao lugar e destaca, não
+clica. Âncoras reais da COT-03:
+
+| Item | Destino |
+|---|---|
+| Proposta pronta para enviar | `/cotacoes/{id}/#sec-preco` (destaca margem e preço de venda) |
+| Cálculo mudou depois da assinatura | `#sec-aprovacao` (Selo divergente) |
+| Ajuste manual derrubou a margem | `#sec-eap` (linhas `eap-row--manual`, marca de origem manual) |
+
+**Autorização do envio (F1-32).** Pré-condição do primeiro envio real (INTENT, Prioridade 3).
+Passkey na web com **step-up** no momento de autorizar: a tela mostra os parâmetros exatos
+(proposta, versão, destinatário do cadastro, hash); assina-se o hash do que se vê, com nonce
+de uso único. Sessão velha, replay ou hash trocado: recusa explicada, sem "tentar de novo"
+silencioso. Papel privilegiado não autoriza só com senha. Autorizar sem conexão não existe.
+Métrica M11 = 0.
+
+**Proposta enviada uma vez.** Depois de autorizada, a COT-03 §5 e o `proposals/detail.html`
+mostram o estado de envio visível e único: *pendente de autorização* → *em envio* →
+*enviada* (data, destinatário, recibo do provedor) ou *falhou* (nada foi enviado; o que
+fazer). Clique repetido, 50 envios concorrentes ou queda no meio **não** geram segundo
+despacho; após queda, o estado fica *em conciliação* até o ledger fechar, sem botão de
+reenviar. Hoje existe `Proposal.status` (`draft|ready|sent|superseded`) e o envio por e-mail
+(`propostas/{id}/enviar-email/`), sem idempotência nem esses estados.
+
+**Sombra com placar (F1-33).** Itens *Sugestão* mostram "eu teria × você fez" e o placar por
+classe; o Core fica em sombra e depois `act_with_approval`, nunca além.
+
+**Mobile-first (F1-28/29).** A caixa funciona a 360 dp sem rolagem horizontal, com alvos
+≥ 48 dp e contraste ≥ 4,5:1. A COT-03 continua desktop denso: no celular, o item traz o
+resumo e "Abrir no computador". Métricas de experiência: M4–M7 e M11–M12 de `EXPERIENCIA.md` §9.
+
+---
+
 ## Anexo A · CSS Completo do Design System G
+
+> **SUPERADO.** Não colar. O CSS servido já é a Prancha (`backend/static/css/design-system-g.css`).
 
 Para o dev parceiro: este é o CSS-base pronto para colar em `static/css/design-system-g.css` e importar no template-base do Django. Tudo já está em `:root` para coexistir com Tailwind utilities — você pode usar `bg-[var(--g-orange)]` em classes Tailwind também.
 
@@ -2261,6 +2377,8 @@ module.exports = {
 ---
 
 ## Anexo B · Checklist de Aderência ao G
+
+> **SUPERADO.** Revisar tela nova contra `DESIGN_PRANCHA.md` (§2 regra do laranja, §6.3 contrato duro).
 
 Antes de marcar uma tela como "pronta", verificar:
 

@@ -1,6 +1,21 @@
+---
+# Contrato de documentação (Maestro E16). Doc de direção histórica, sem área de código.
+reviewed: 2026-09-27
+---
 # ROADMAP.md — SmartQuotation
 
 > **Status:** Aprovado | **Versão:** 1.0 | **Referência:** EPICS.md, PROJECT_BRIEF.md
+>
+> **Direção vigente (nota de 2026-09-27).** Este documento é histórico. A direção que vale é
+> `.maestro/INTENT.md` v2 (carimbado em 27/09/2026) e `docs/PRODUCT_VISION.md` (10/07); onde
+> divergem deste texto, valem eles. Ficou superado aqui:
+> - **Fiscal próprio no H3** (NF-e, NFS-e, SPED): fiscal e financeiro entram por integração
+>   com o ERP do cliente (Nomus prioritário), nunca reconstruídos.
+> - **PVElite como gate de CI/release**: fora enquanto não houver casos de regressão dele no
+>   repo; o gate vigente é o dos golden cases do motor (feixe −2,9%, BEU/BEM 0,0%).
+> - **Expansão API 650/620 e B31.x** antes da beta multi-empresa: fora de escopo.
+> - **Metas de MRR** e de número de tenants: não fazem parte do Resultado do INTENT, que mede
+>   fidelidade do motor, prova da F1 do Cognitive Core e beta com 1 a 2 caldeirarias.
 
 ---
 

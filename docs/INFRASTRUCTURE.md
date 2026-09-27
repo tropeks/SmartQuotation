@@ -1,6 +1,52 @@
+---
+# Contrato de documentação (Maestro E16).
+#
+# Como o SQ roda, faz backup, restaura e prova o que está no repo. O cover é o que, se
+# mudar, torna este doc mentiroso: compose de dev e de produção, imagem, entrypoint,
+# scripts de backup e o exemplo de ambiente de produção. `.github/` fica fora de propósito
+# (a §5 descreve o CI, mas o contrato do CI é o próprio ci.yml).
+#
+# Emenda de 27/09/2026 (Conformador, INTENT v2 carimbado), conferida contra o código em
+# 288a8ca: §0 nova (realidade), §5 trocada pelo CI que existe, §6 separa o que o script
+# faz do que é desenho, §10 (SQ na F1 do Core) e §11 (prova headless) novas. §2–§4, §7–§9
+# ficam como desenho-alvo, marcadas como tal.
+covers:
+  - docker-compose.yml
+  - docker-compose.prod.yml
+  - backend/Dockerfile
+  - backend/entrypoint.sh
+  - scripts/backup_db.sh
+  - scripts/backup_media.sh
+  - .env.prod.example
+reviewed: 2026-09-27
+---
 # INFRASTRUCTURE.md — SmartQuotation
 
-> **Status:** Aprovado | **Versão:** 1.0 | **Referência:** ARCHITECTURE.md, SECURITY.md
+> **Status:** v1.1, emendada em 27/09/2026 contra o repo e a direção carimbada
+> (`.maestro/INTENT.md` v2). **Referência:** ARCHITECTURE.md, SECURITY.md,
+> HANDOFF_MIGRACAO.md, `cognitive-core/docs/FASES.md` §4 e §10.
+>
+> **Como ler:** a §0 é a realidade de hoje. As §2–§4 e §7–§9 são o **desenho-alvo** da v1.0
+> (registry, Caddy, staging, domínio `smartquotation.com.br`) e **não existem** na produção
+> atual; ficam como referência, não como procedimento.
+
+---
+
+## 0. Realidade em 27/09/2026
+
+| Item | Como está | Fonte |
+|---|---|---|
+| Produção | `quotation.qtec.me`, VPS atrás de `cloudflared`; containers avulsos `sq-web-proto`, `sq-prod-db`, `sq-prod-redis`, imagem `smartquotation:proto`, volumes nomeados | HANDOFF_MIGRACAO §2.2 e §4 |
+| Deploy | **Manual**, sem pipeline (último: 28/07/2026). Merge em `main` não sobe nada | HANDOFF §4 |
+| Compose de produção | `docker-compose.prod.yml` existe no repo, mas a produção **não** sobe por ele | HANDOFF §4 |
+| Porta do app | O compose de produção publica `8000:8000` em todas as interfaces; ir para loopback é a F1-04 (§10) | `docker-compose.prod.yml:21-22` |
+| Rollback | Imagem `smartquotation:rollback-20260718` + dump `~/backups/sq/pre_prancha_20260728_143633.sql.gz` | HANDOFF §4 |
+| Staging | Não existe | — |
+| Backup | Ver §6: o script não roda contra a produção atual; sem cifra, sem off-site, sem drill | `scripts/backup_db.sh`, HANDOFF §4 |
+| CI | `.github/workflows/ci.yml`, seis jobs de prova, nenhum de deploy (§5) | ci.yml |
+| Monitoramento | Só o `/health/` e o `HEALTHCHECK` da imagem; nada externo avisa se cair (§7 é alvo) | `backend/Dockerfile:53-54` |
+
+A migração da produção para outro host **não está em curso**: é decisão futura do Capitão.
 
 ---
 
@@ -8,16 +54,22 @@
 
 | Ambiente | Propósito | URL | Hospedagem |
 |---|---|---|---|
-| `dev` | Desenvolvimento local | `localhost:8000` | Docker Compose local |
-| `staging` | Validação antes de produção | `staging.smartquotation.com.br` | VPS BR (menor) |
-| `production` | Clientes reais | `{tenant}.smartquotation.com.br` | VPS BR (principal) |
+| `dev` | Desenvolvimento local | `localhost:8000` (venv) ou `:8001` (compose) | `docker-compose.yml` (db 5436, redis 6380) |
+| `staging` | *Alvo, não existe* | — | — |
+| `production` | Clientes reais | `quotation.qtec.me` | VPS + `cloudflared` (§0) |
 
-**Regra:** nenhum deploy vai direto para `production` — sempre passa por `staging` primeiro.
-**Dados:** staging usa dataset anonimizado, nunca dump de produção.
+**Regra-alvo:** nenhum deploy vai direto para `production` — sempre passa por `staging` primeiro.
+Hoje não há staging; até existir, o gate é a CI verde no commit que vai para a imagem.
+**Dados:** nenhum dump de produção sai da instância (INTENT, Limites); fixture é sintética.
 
 ---
 
-## 2. Docker Compose — Produção
+## 2. Docker Compose — Produção (desenho-alvo)
+
+> **Não é o `docker-compose.prod.yml` do repo.** O versionado builda a imagem local, sobe
+> `web`/`worker`/`beat` + `postgres:15` + `redis:7-alpine` em `sq_net`, com `media_data` em
+> `/app/backend/media` e sem Caddy, registry nem job de backup. E a produção atual nem usa
+> esse compose (§0). O bloco abaixo é o alvo da v1.0.
 
 ```yaml
 # docker-compose.prod.yml
@@ -144,7 +196,10 @@ volumes:
 
 ---
 
-## 3. Caddyfile
+## 3. Caddyfile (desenho-alvo)
+
+> Não há Caddy no repo nem na produção: a entrada hoje é o `cloudflared` (§0), e na F1 é o
+> túnel por instância (F1-14, §10).
 
 ```caddyfile
 {
@@ -202,7 +257,13 @@ volumes:
 
 ---
 
-## 4. Variáveis de Ambiente (`.env.prod`)
+## 4. Variáveis de Ambiente (`.env.prod`) (desenho-alvo)
+
+> O contrato real é `.env.prod.example`: `DJANGO_*`, `FIELD_ENCRYPTION_KEY`, `POSTGRES_*`,
+> `REDIS_URL`, `USE_S3`, `PROTHEUS_PULL_INTERVAL_MINUTES`, `POSTGRES_BACKUP_DIR`,
+> `MEDIA_BACKUP_DIR`. Não há `REDIS_PASSWORD`, Sentry, SMTP, `CF_API_TOKEN` nem chave `age`.
+> `FIELD_ENCRYPTION_KEY` cifra o `MaterialPrice`: perdê-la torna o backup do banco ilegível
+> nessa parte, então ela precisa de cópia fora do host (ver §10, F1-15).
 
 ```bash
 # Django
@@ -251,161 +312,43 @@ CF_API_TOKEN=<Cloudflare DNS API token para wildcard cert>
 
 ---
 
-## 5. CI/CD — GitHub Actions
+## 5. CI — o que existe
 
-```yaml
-# .github/workflows/deploy.yml
-name: Test, Scan & Deploy
+Um workflow só, `.github/workflows/ci.yml`. Dispara em push para `main` e `feat/**` e em PR
+para `main`; **não faz deploy**. Branch `conform/*` só roda CI via PR.
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+| Job | O que prova |
+|---|---|
+| `pricing-engine` | Os quatro gates stdlib do motor (§11) |
+| `ops-tests` | Contrato de `backup_db.sh`/`backup_media.sh`, volume de media, storage de proposals, lockfiles. `test_backup_script` e `test_media_backup` **leem este doc** (cron com `set -a`, `media_data`) |
+| `pip-audit` | CVEs em `base.lock` e `ci.lock`, sem re-resolver a árvore |
+| `django-check` | `manage.py check` + `makemigrations --check` |
+| `django-test` | `manage.py test apps` contra `postgres:16-alpine`, com WeasyPrint obrigatório |
+| `docker-build` | `docker build -f backend/Dockerfile` (só em `main`/PR para `main`, depois do `django-test`) |
 
-jobs:
-
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: sq_test
-          POSTGRES_USER: sq_test
-          POSTGRES_PASSWORD: test
-        options: --health-cmd pg_isready --health-interval 10s
-      redis:
-        image: redis:7-alpine
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements/test.txt
-
-      - name: Lint (ruff + black)
-        run: |
-          ruff check .
-          black --check .
-
-      - name: SAST (bandit)
-        run: bandit -r smartquotation/ -ll
-
-      - name: Dependency audit (pip-audit)
-        run: pip-audit --strict --vulnerability-service pypi
-
-      - name: Secret scan (detect-secrets)
-        run: detect-secrets scan --baseline .secrets.baseline
-
-      - name: Run tests (unit + integration)
-        env:
-          DATABASE_URL: postgresql://sq_test:test@localhost:5432/sq_test
-          REDIS_URL: redis://localhost:6379/0
-          DJANGO_SETTINGS_MODULE: smartquotation.settings.test
-        run: |
-          pytest tests/ -v --cov=smartquotation --cov-report=xml \
-            --cov-fail-under=80
-
-      # GATE CRÍTICO: regressão contra PVElite
-      - name: PVElite Regression Tests
-        env:
-          DATABASE_URL: postgresql://sq_test:test@localhost:5432/sq_test
-        run: |
-          pytest tests/engineering/regression/ -v \
-            --tb=short \
-            -m "pvélite" \
-            --max-pvélite-delta-pct=1.0   # falha se delta > 1% em qualquer caso
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -t app:test .
-
-      - name: Scan image (Trivy)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: app:test
-          exit-code: "1"
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-
-  deploy-staging:
-    runs-on: ubuntu-latest
-    needs: [test, security-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: staging
-    steps:
-      - name: Build & push image
-        run: |
-          docker build -t registry.smartquotation.com.br/app:${GITHUB_SHA::8} .
-          docker push registry.smartquotation.com.br/app:${GITHUB_SHA::8}
-
-      - name: Deploy to staging
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: deploy
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
-            cd /opt/smartquotation
-            export IMAGE_TAG=${GITHUB_SHA::8}
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml run --rm web \
-              python manage.py migrate_schemas --executor=parallel
-            docker compose -f docker-compose.prod.yml up -d
-            docker compose -f docker-compose.prod.yml run --rm web \
-              python manage.py collectstatic --noinput
-
-      - name: Smoke test staging
-        run: |
-          sleep 15
-          curl -f https://staging.smartquotation.com.br/health/ || exit 1
-
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: deploy-staging
-    environment: production   # requer aprovação manual no GitHub
-    steps:
-      - name: Deploy to production
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: deploy
-          key: ${{ secrets.PROD_SSH_KEY }}
-          script: |
-            cd /opt/smartquotation
-            export IMAGE_TAG=${GITHUB_SHA::8}
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml run --rm web \
-              python manage.py migrate_schemas --executor=parallel
-            docker compose -f docker-compose.prod.yml up -d --no-deps web worker beat
-            docker compose -f docker-compose.prod.yml run --rm web \
-              python manage.py collectstatic --noinput
-```
+O desenho de deploy da v1.0 (registry, Trivy, staging, aprovação manual, cobertura ≥ 80%,
+regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT).
 
 ---
 
 ## 6. Backup e Recuperação
 
-### Backup rápido via scripts/backup_db.sh
+### O que o backup faz de fato
 
-O script `scripts/backup_db.sh` executa um dump do PostgreSQL usando `docker exec` e comprime
-o resultado com gzip. Ele pode ser chamado diretamente ou agendado via cron do host.
+| Peça | Faz | Não faz |
+|---|---|---|
+| `scripts/backup_db.sh` | `docker compose -f docker-compose.prod.yml exec -T db pg_dump -U $POSTGRES_USER $POSTGRES_DB \| gzip` → `$BACKUP_DIR/sq_<ts>.sql.gz`, escrita atômica (`.tmp` + `mv`), `set -euo pipefail` | Cifra, off-site, retenção/limpeza, validar conteúdo, avisar falha, globais (`pg_dumpall`) |
+| `scripts/backup_media.sh` | `tar czf` de `/app/backend/media` (volume `media_data`) via `exec -T web` → `media_<ts>.tar.gz` | Idem |
+| Produção atual | **Nenhum dos dois roda contra ela**: ambos exigem o compose, e a produção é de containers avulsos (HANDOFF §4). O backup de produção que existe é manual | — |
+
+**Restore testado:** o único registrado é o dump pré-Prancha de 28/07/2026
+(`~/backups/sq/pre_prancha_20260728_143633.sql.gz`, "verificado" no HANDOFF §4), sem duração
+nem procedimento anotados. **Não há drill** de restore periódico, cronometrado e registrado, e o
+runbook de restore abaixo nunca foi executado (ele restaura um `.sql.age` que nenhum script do
+repo produz). Lição já paga: `pg_dumpall` na porta errada gera arquivo de 20 bytes com exit 0;
+backup se valida pelo **conteúdo** (tamanho, `zcat | head`, restore), nunca pelo exit code.
+
+### Uso de scripts/backup_db.sh (quando a produção subir pelo compose)
 
 ```bash
 # Uso manual
@@ -430,7 +373,7 @@ Para editar: `crontab -e`
 > A variável `POSTGRES_BACKUP_DIR` (padrão `/backups/sq`) é definida em `.env.prod.example`.
 > O script cria o diretório automaticamente se não existir.
 
-### Estratégia de backup
+### Estratégia de backup (desenho-alvo, `scripts/backup.sh` não existe)
 
 ```bash
 #!/bin/bash
@@ -469,7 +412,9 @@ find /backups -maxdepth 1 -type d -mtime +7 -exec rm -rf {} +
 curl -s -X POST "${HEALTHCHECK_URL}/backup-complete"
 ```
 
-### Política de retenção de backup
+### Política de retenção de backup (desenho-alvo)
+
+> A linha de 15 anos (NR-13) espera a DP-27 (jurídico), conforme o INTENT.
 
 | Frequência | Retenção | Storage estimado |
 |---|---|---|
@@ -479,7 +424,7 @@ curl -s -X POST "${HEALTHCHECK_URL}/backup-complete"
 | Mensal | 365 dias | 12 dumps |
 | Anual | 15 anos | 15 dumps (arquivamento frio) |
 
-### RTO / RPO estimados
+### RTO / RPO estimados (metas da v1.0, nunca medidas)
 
 | Cenário | RPO (dados perdidos) | RTO (tempo até restauração) |
 |---|---|---|
@@ -488,7 +433,7 @@ curl -s -X POST "${HEALTHCHECK_URL}/backup-complete"
 | Exclusão acidental de tenant | ≤ 6 horas | ≤ 1 hora |
 | Desastre total (datacenter) | ≤ 6 horas | ≤ 8 horas (off-site restore) |
 
-### Restore procedure (runbook)
+### Restore procedure (runbook, nunca executado)
 
 ```bash
 # Restore completo de produção em novo VPS
@@ -519,7 +464,10 @@ curl -f https://novo-vps.smartquotation.com.br/health/
 
 ---
 
-## 7. Observabilidade
+## 7. Observabilidade (desenho-alvo, exceto 7.1)
+
+> Existe hoje: `GET /health/` (`apps.health`) e o `HEALTHCHECK` da imagem. Sentry, Uptime Kuma,
+> Flower e alertas não estão configurados.
 
 ### 7.1 Health Check endpoint
 
@@ -555,7 +503,7 @@ Response 503: { "status": "degraded", "db": "error", "redis": "ok" }
 
 ---
 
-## 8. Sizing de Infraestrutura (MVP)
+## 8. Sizing de Infraestrutura (MVP) (desenho-alvo)
 
 ### VPS Produção
 
@@ -582,7 +530,7 @@ Response 503: { "status": "degraded", "db": "error", "redis": "ok" }
 
 ---
 
-## 9. Provisionamento (bootstrap do servidor)
+## 9. Provisionamento (bootstrap do servidor) (desenho-alvo, nunca executado)
 
 ```bash
 #!/bin/bash
@@ -627,3 +575,59 @@ echo "deploy hard nofile 65536" >> /etc/security/limits.conf
 
 echo "✅ Servidor provisionado. Clone o repositório em /opt/smartquotation e configure .env.prod"
 ```
+
+---
+
+## 10. SQ na F1 do Core
+
+Duas coisas separadas, que não se misturam na F1 (DP-02):
+
+| | Produção atual | Instância do Core para o SQ |
+|---|---|---|
+| Onde | VPS + `cloudflared`, `quotation.qtec.me` (§0) | VM `borda-1` do R640 (DP-02, FASES §10) |
+| Guarda | Os tenants do SQ (ENGEMATEX): banco multi-schema, `media_data` (propostas), `FIELD_ENCRYPTION_KEY` | Estado do Core para o SQ: ledger de envio, trilha/`trace_id`, fatos e decisões do Diretor da instância. Dado de cliente só o que a capability entrega, e ele não sai da instância (INTENT, Limites) |
+| Muda na F1 | Só a F1-04; migrar de host é decisão futura do Capitão | Nasce na F1 |
+
+O que a F1 exige da infra, tudo **previsto**:
+
+| Ordem | Exige | Prova (FASES §4) | Estado |
+|---|---|---|---|
+| F1-04 | Porta `8000` em loopback no `docker-compose.prod.yml` (`127.0.0.1:8000:8000`) | Varredura externa: 0 portas do SQ fora do túnel | **previsto (F1-04)**; hoje `docker-compose.prod.yml:22` publica em `0.0.0.0` |
+| F1-14 | Túnel por instância para o socket, Access por instância | Varredura externa: 0 portas; sem sessão → 302/403 em 100% | **previsto (F1-14)** |
+| F1-15 | Backup PITR (base + WAL) com drill mensal que afirma número; `age` com dois destinatários (a chave de um host não basta) | Drill verde com RPO medido ≤ 5 min e RTO registrado; artefato adulterado reprova | **previsto (F1-15)**; hoje há só `pg_dump` sem cifra e sem drill (§6) |
+| F1-16 | Operação sem córtex | 72 h com córtex desligado: 0 execução essencial falhada | **previsto (F1-16)** |
+
+O RTO medido no drill da F1-15 é o número que alimenta os gatilhos C-6 e C-8 (FASES §10).
+Nenhuma compra ou mudança de host sai daqui sem gatilho medido e decisão do Capitão.
+
+---
+
+## 11. Prova headless
+
+Esta forge não tem Docker nem Postgres para o SQ; não se sobe produção nem banco aqui. O que se
+prova sem lab:
+
+**1. Motor, local (stdlib pura, sem Django, sem banco).** Os mesmos quatro gates do job
+`pricing-engine` da CI, a partir da raiz do repo:
+
+```bash
+python3 -m tests.validate_feixe_completo       # feixe vs referencial (−2,9%; falha >10%)
+python3 -m tests.validate_permutador_completo  # BEU+BEM (0,0%; ±10% + geometria)
+python3 -m tests.test_cost_chain_knobs         # contrato dos knobs da TenantCostChain
+python3 -m tests.test_solda_fisica             # régua de solda por primeiros princípios
+```
+
+`scripts/prova_motor.sh` (a criar pelo Conformador) roda os quatro e falha no primeiro vermelho.
+
+**2. Suíte Django, por recibo da CI.** `manage.py test apps` precisa de Postgres (TenantTestCase),
+então a prova é o run verde do job `django-test` **no SHA exato do HEAD**, lido via `gh`:
+
+```bash
+gh run list --workflow ci.yml --commit "$(git rev-parse HEAD)" --json databaseId,conclusion
+gh run view <id> --json jobs --jq '.jobs[] | [.name, .conclusion] | @tsv'
+```
+
+`scripts/ci/suite_receipt.sh` (a criar pelo Conformador) faz isso e falha se não houver run no
+HEAD ou se `Testes Django (multi-tenant)` não for `success`. Run de outro SHA não vale como recibo.
+Como `conform/*` não dispara CI em push (§5), o recibo sai do PR para `main`.
+

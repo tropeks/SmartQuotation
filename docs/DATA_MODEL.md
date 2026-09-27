@@ -1,6 +1,57 @@
+---
+# Contrato de documentação (Maestro E16).
+# Entidades persistidas do SmartQuotation (schema public + schema por tenant).
+covers:
+  - backend/apps/**/models.py
+  - backend/apps/**/migrations/**
+reviewed: 2026-09-27
+---
 # DATA_MODEL.md — SmartQuotation
 
-> **Status:** Aprovado | **Versão:** 1.0 | **Referência:** ARCHITECTURE.md
+> **Status:** Aprovado, emendado em 2026-09-27 | **Versão:** 1.1 | **Referência:** ARCHITECTURE.md, `.maestro/INTENT.md` v2
+
+---
+
+## 0. Emenda 2026-09-27 — o que existe no código
+
+As seções 1 a 5 abaixo misturam o que existe com o desenho alvo de 2025. Esta tabela é o
+mapa medido em `backend/apps/**/models.py`. Onde ela e o resto do doc divergem, vale ela.
+Convenção real: PK `BigAutoField` (não UUID), dinheiro em `DecimalField`, sem soft delete.
+
+| App | Entidades reais |
+|---|---|
+| `tenants` (public) | Plan, Tenant, Domain |
+| `accounts` | Role (papel como dado, `requires_crea`, `is_admin_like`), UserProfile (`role` = `Role.key`, CREA, `must_change_password`) |
+| `access` | RolePermission (papel × capability), ApprovalWorkflow, ApprovalStage |
+| `audit` | TechnicalApproval, ApprovalRequest, ApprovalCase, ApprovalTask, AccessLog |
+| `quotations` | Customer, Quotation (+ `pricing_basis` referencial/validado_custo, `avisos`), CalculationSnapshot, QuotationItem, ItemMaterial, ItemOperation, QuotationPart |
+| `materials` | Material, MaterialPrice (cifrado, por forma), LigaMetalurgica, MaterialStandard |
+| `engineering_params` | Rate (`operacao`, `rate_hh`, `rate_hm`, vigência), ProcessParameter, TenantParamConfig, RateSuggestion, KnobChangeProposal |
+| `cost_discovery` / `cost_structure` | CostDiscoverySession / CostStructure |
+| `tema_templates` | ComponentTemplate, ComponentOperation |
+| `proposals` | ProposalTemplate, Proposal (status draft/ready/sent/superseded, `docx_sha256`/`pdf_sha256`), ProposalVersion (envio: `emailed_at`, `emailed_by`, `email_to`) |
+| `production` | OrdemFabricacao, OFItem, OFMaterial, OFOperation, ProductionEntry, ProductionObservation, ActualRate, InspectionPlan, InspectionItem |
+| `integrations.*` | Nomus: Config, SyncRun, ExportLog · Protheus: Config, SyncBinding, SyncRun, SyncAttempt, CatalogStaging, Supplier, WorkOrderSnapshot, BOMSnapshot · Omie: Config, FiscalDocument, InvoiceRun, InvoiceAttempt · SAP B1: Config, SyncBinding, SyncRun, ExportLog, SyncAttempt · Bling: Config, ExportLog |
+
+**Não existem** (desenho alvo de 2025, sem data): TenantConfig (§3.1), MaterialCategory e
+MaterialAllowableStress (§3.3; S admissível vive em `pricing_engine/asme.py`), Equipment e
+componentes (§3.5), Operation, Machine, Rate em 3 camadas, CostBreakdown e PriceFormation
+(§3.6), BillOfMaterials, BOMItem, ManufacturingRoute e RouteOperation (§3.7; o papel de lista
+de material e roteiro é da OF, em `production`). O campo `pvélite_validation_required` de
+TenantConfig está fora de escopo pelo INTENT v2.
+
+**Previsto na F1 do Cognitive Core** (não existe ainda):
+
+| Ordem | Entidade prevista | Para quê |
+|---|---|---|
+| F1-01 | Token delegado (usuário, escopo de capability, expiração, revogação) | Core age como usuário real do tenant |
+| F1-03 | Idempotência do envio em `ProposalVersion` (chave única, estado do envio) | Mesma versão `sent` nunca reenvia |
+| F1-09 | Cadastro de destinatários por cliente (origem, data de alteração) | Envio só para destinatário cadastrado |
+| F1-17 | Responsável do departamento e retrato imutável da habilitação (CREA) no ato da assinatura | Onboarding da F1 |
+| F1-32 | Credencial passkey por usuário | Step-up antes de efeito externo |
+
+Ledger de efeitos, conciliação e registry de capabilities (F1-05 a F1-08) vivem na instância
+do Core, não neste banco.
 
 ---
 
@@ -276,13 +327,13 @@ Entity: CalculationSnapshot
   -- H1: append-only por serviço; hardening por trigger fica para H1.5.
 ```
 
-### 3.5 Equipamentos — Modelo Polimórfico (H1.5/H2)
+### 3.5 Equipamentos — Modelo Polimórfico (alvo, não implementado)
 
 O desenho `Equipment`, `PressureVessel`, `HeatExchanger` e `EquipmentComponent` continua sendo a
 direção de evolução para vasos, PVElite amplo, múltiplos equipamentos por cotação e BOM/roteiro
 formal. Ele não é pré-condição para o H1 auditável de feixe + BEU/BEM.
 
-### 3.6 Formação de Custo e Preço
+### 3.6 Formação de Custo e Preço (alvo 2025, não implementado — ver §0)
 
 ```
 Entity: Operation
@@ -366,7 +417,7 @@ Entity: PriceFormation
 
 ---
 
-### 3.7 BOM e Roteiro de Fabricação
+### 3.7 BOM e Roteiro de Fabricação (alvo 2025, não implementado — ver §0)
 
 ```
 Entity: BillOfMaterials
@@ -430,7 +481,7 @@ Entity: RouteOperation
 
 ---
 
-### 3.8 Propostas Comerciais
+### 3.8 Propostas Comerciais (desenho 2025; forma real na §0)
 
 ```
 Entity: ProposalTemplate
@@ -520,3 +571,9 @@ ALTER TABLE equipmentcomponent ADD CONSTRAINT chk_imported_has_doc
 ALTER TABLE rate ADD CONSTRAINT chk_actual_has_samples
   CHECK (layer != 'actual' OR sample_count IS NOT NULL);
 ```
+
+---
+
+## Flags para o orchestrator
+
+Nenhuma.

@@ -1,4 +1,25 @@
+---
+# Contrato de documentação (Maestro E16).
+#
+# Fonte da verdade dos tokens e componentes visuais (Carimbo, marca de proveniência,
+# Selo). Cobre o CSS servido, o carregamento de fontes no base.html, a proposta em PDF
+# (paleta própria, §6.1) e as telas onde os componentes novos vivem.
+#
+# `reviewed:` atesta a passada de conformidade ao INTENT v2 (27/09/2026), que confirma a
+# Prancha como identidade vigente, e a conferência com a caixa da F1 (§8, só perguntas).
+covers:
+  - backend/static/**
+  - backend/templates/base.html
+  - backend/apps/proposals/templates/proposals/proposal_pdf.html
+  - backend/apps/quotations/templates/quotations/detail.html
+  - backend/apps/quotations/templates/quotations/_eap_item_drawer.html
+reviewed: 2026-09-27
+---
 # Prancha — sistema visual do SmartQuotation
+
+> **Vigente** (`.maestro/INTENT.md` v2, 27/09/2026: "UI nova nasce na identidade Prancha").
+> Já implementada em `backend/static/css/design-system-g.css`. Tasy Neumorphic e o Design
+> System G estão superados (`DESIGN_IDENTIDADE_VISUAL.md` e `UX_SPEC.md` §3/Anexos: histórico).
 
 **Decisão (Rômulo, 2026-07-28, tarde):** o SmartQuotation ganha identidade própria, com o
 Vitali como *inspiração* e não como cânone.
@@ -386,3 +407,37 @@ Caso que exige decisão explícita e **não** é automático: a pílula **"Pende
 
 Não há teste de UI no repo. Antes de mergear: screenshot antes/depois das telas críticas
 (data sheet, detalhe/EAP, lista, login) pelo harness da sprint.
+
+---
+
+## 8. Prancha × caixa mobile da F1 (perguntas abertas, não resolvidas)
+
+A F1 do Cognitive Core prevê a inbox do SQ virando caixa (F1-28/29: sistema visual pequeno e
+neutro, mobile-first a 360 dp, contraste ≥ 4,5:1; `UX_SPEC.md` §9). A Prancha foi desenhada
+para grade densa no desktop. Conferência de 27/09/2026 (contraste WCAG medido contra
+`--p-paper`, salvo indicação):
+
+| Ponto | Medida | Tensão |
+|---|---|---|
+| `--p-ink-3` (rótulo, micro-rótulo, desabilitado) | 3,0:1 no papel; 2,5:1 na mesa | Abaixo de 4,5:1 para texto |
+| `--p-hot` sobre `--p-hot-soft` / `--p-ok` sobre `--p-ok-soft` | 4,37:1 / 4,32:1 | Pílula e linha manual abaixo de 4,5:1 |
+| `--p-ink`, `--p-ink-2`, `--p-bp`, `--p-bad`, `--p-warn` | 16,8 / 7,4 / 8,5 / 6,8 / 5,4:1 | Passam |
+| Densidade | linha 29 px; alvo 44 px só em `pointer: coarse` | A caixa pede alvo ≥ 48 dp |
+| Micro-rótulo 10 px e cabeçalho 10,5 px | — | Legibilidade a 360 dp e texto a 200% |
+| Fontes Plex por Google Fonts (3 famílias) | — | Orçamento de ≤ 150 KB na primeira tela da caixa (EXPERIENCIA §8.4) |
+
+**Perguntas (decisão de produto/identidade, fora do poder desta revisão):**
+
+1. **Colisão de marcas de forma.** Aqui ◆ losango cheio em `--p-hot` = *ajuste manual* e ○
+   círculo vazado = *catálogo* (§5.2). Na caixa, ◆ âmbar = *Pede autorização* e ○ azul =
+   *Para conferir* (EXPERIENCIA §2.1). Na mesma tela (item "Ajuste manual derrubou a margem"
+   abrindo `#sec-eap`), o mesmo símbolo diria duas coisas. Qual vocabulário cede?
+2. **A caixa é Prancha ou um sistema próprio "pequeno e neutro"?** F1-28 pede tokens próprios
+   aprovados. Recomendação: subconjunto da Prancha (mesmos neutros, `--p-bp`, semânticos),
+   sem Condensed e sem densidade de 29 px, para não nascer uma terceira identidade.
+3. **`--p-ink-3` sobe para ≥ 4,5:1 em toda a Prancha, ou só na caixa?** Mexer no token global
+   muda a hierarquia da grade densa (o rótulo recua para o número aparecer).
+4. **`--p-hot` na caixa.** A regra do laranja (§2) reserva o token a margem e origem manual.
+   O estado *superado* da caixa usa o mesmo mecanismo do Selo divergente (§5.3, `--p-hot`):
+   herda o laranja, ou fica cinza como na EXPERIENCIA §2.4?
+

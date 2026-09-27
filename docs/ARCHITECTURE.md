@@ -1,6 +1,121 @@
+---
+# Contrato de documentação (Maestro E16).
+# Arquitetura vigente do SmartQuotation: motor puro, adapter, apps Django, integrações ERP
+# e a fronteira com o Cognitive Core (F1). Direção: .maestro/INTENT.md v2.
+covers:
+  - pricing_engine/**
+  - backend/smartquotation/**
+  - backend/apps/**
+  - docker-compose*.yml
+  - backend/Dockerfile
+reviewed: 2026-09-27
+---
 # ARCHITECTURE.md — SmartQuotation
 
-> **Status:** Aprovado | **Versão:** 1.0 | **Referência:** PROJECT_BRIEF.md
+> **Status:** Aprovado, emendado em 2026-09-27 | **Versão:** 1.1 | **Referência:** `.maestro/INTENT.md` v2, `docs/PRODUCT_VISION.md` (10/07), PROJECT_BRIEF.md (2025, histórico)
+>
+> **Emenda 2026-09-27.** As seções 1 a 6 abaixo são o plano de 2025 e ficam como histórico.
+> O que vale hoje está na **§0 (arquitetura vigente)** e na **§0.4 (fronteira com o Cognitive
+> Core)**. ADRs que não valem mais estão marcadas **Superada**, com o motivo em uma linha.
+
+---
+
+## 0. Arquitetura vigente (medida no código em 2026-09-27)
+
+### 0.1 Visão geral
+
+Monólito modular Django com um motor de custeio em Python puro ao lado. Multi-tenant por
+schema (django-tenants), UI server-rendered (templates + HTMX, Alpine pontual), sessão auth.
+
+```
+[Browser: orçamentista / engenheiro / gestor / PCP]
+        │ HTTPS
+        ▼
+[cloudflared (túnel)] ── VPS de produção; nenhuma porta pública além do túnel é o alvo (F1-04)
+        │
+        ▼
+[Django 5.2 + Gunicorn]  (docker-compose.prod.yml: web, worker, beat, db, redis)
+   ├─ django-tenants ── schema por tenant, roteado pelo subdomínio
+   ├─ sessão Django + CSRF + django-axes; TenantMembershipMiddleware; MustChangePassword
+   ├─ RBAC configurável: Role (dado por tenant) × capability (registry em código,
+   │   apps/access/capabilities.py, fail-closed) em RolePermission
+   ├─ templates + HTMX ── UI; DRF só em /api/cotacoes/ (leitura) e /api/permutador/estimate/
+   │
+   ├─ apps/quotations/adapter.py ── recompute(): monta FeixeInputs + TenantCostChain do banco,
+   │      chama o motor e persiste a EAP (Quotation → QuotationItem → ItemMaterial/ItemOperation)
+   │      └──► pricing_engine/ (Python puro, zero Django)
+   │             quote_feixe · permutador_quote.quote_completo (TEMA BEU/BEM…) · asme.py (UG-27/32,
+   │             Ap.2, UG-21) · rates.TenantCostChain · process_params · rt_exposicoes
+   ├─ CalculationSnapshot (hash + engine_version) → TechnicalApproval (CREA) → aprovação por
+   │   estágios (apps/audit, apps/access) → Proposal/ProposalVersion (DOCX/PDF)
+   ├─ production ── OF montada a partir do snapshot assinado, apontamento, ActualRate, ITP
+   └─ integrations ── Nomus (prioritário), Protheus, Omie, SAP B1, Bling (Celery, por tenant)
+        │
+        ├──► PostgreSQL (public: Tenant/Domain/Plan · schema por tenant: o resto)
+        ├──► Redis (broker Celery, cache)
+        └──► Celery worker + beat (tarefas de integração ERP)
+```
+
+### 0.2 Mapa de componentes reais
+
+| Componente | Onde | Responsabilidade | Falha |
+|---|---|---|---|
+| Motor de custeio | `pricing_engine/` | Custo por peso bruto, MO por driver físico, verificações ASME (alerta, não bloqueia) | Exceção sobe ao chamador; gates `tests/validate_*` no CI |
+| Adapter | `backend/apps/quotations/adapter.py` | Único caminho que **persiste** resultado do motor (`recompute`) | Cotação fica sem recompute; nada gravado pela metade |
+| Tenancy | `apps/tenants` | Tenant, Domain, Plan (schema public); `provision_tenant` | — |
+| Contas e RBAC | `apps/accounts`, `apps/access` | UserProfile, Role como dado (`requires_crea`), matriz papel × capability, workflow de aprovação | Capability ausente do registry = negado |
+| Auditoria | `apps/audit` | TechnicalApproval, ApprovalRequest/Case/Task (inbox por papel), AccessLog | — |
+| Materiais | `apps/materials` | Material, MaterialPrice (cifrado, por forma), LigaMetalurgica, MaterialStandard | — |
+| Parâmetros | `apps/engineering_params` | Rate, ProcessParameter, TenantParamConfig, RateSuggestion, KnobChangeProposal | — |
+| Custos | `apps/cost_discovery`, `apps/cost_structure` | Cadeia de custo (seed top-down + back-solve), CostStructure (custo fixo/capacidade) | — |
+| Catálogo TEMA | `apps/tema_templates` | ComponentTemplate/ComponentOperation; compor trocador por designação | Sem seed, `/tema/compor/` vazio |
+| Propostas | `apps/proposals` | Template editável, DOCX (python-docx) e PDF (WeasyPrint, fallback chrome headless), envio por e-mail | `send_email` sem idempotência hoje (F1-03) |
+| Produção | `apps/production` | OrdemFabricacao e filhos, apontamento, ActualRate, ITP | — |
+| Integrações | `apps/integrations/{nomus,protheus,omie,sap_b1,bling}` | Conectores por tenant, runs assíncronos, logs/tentativas, healthcheck admin | Retry por run; fiscal fica no ERP do cliente |
+
+### 0.3 Regras que a arquitetura sustenta (do INTENT v2)
+
+- `pricing_engine` é lib pura; a persistência do resultado passa pelo adapter. Gates do feixe
+  (−2,9%) e do permutador BEU/BEM (0,0%) nunca regridem.
+- Custo é derivado (motor ou roll-up), nunca digitado; preço rotulado `referencial` ou
+  `validado_custo` (`Quotation.pricing_basis`).
+- Nenhum caminho (admin, API, Core) altera número assinado sem invalidar a assinatura.
+- Fiscal e financeiro entram por integração com o ERP do cliente, nunca reconstruídos.
+- UI nova nasce na identidade Prancha (`docs/DESIGN_PRANCHA.md`); `design-system-g.css` é legado.
+- Sem LLM no produto hoje. IA, quando vier, entra pelo Core (§0.4), nunca decidindo número.
+
+### 0.4 Fronteira com o Quantum Cognitive Core (F1)
+
+O SmartQuotation é a primeira vertical do Core (`cognitive-core/docs/FASES.md` §4). Nada
+disto existe no código ainda; é o contrato **previsto** para a F1.
+
+- **`core_bridge`** (app Django novo, F1-02/F1-03): manifesto assinado de capabilities e
+  endpoints finos `/api/core/v1/*` que chamam os serviços existentes, nunca o ORM por fora:
+  `quotation.read`, `quotation.create_draft`, `quotation.recompute` (via adapter),
+  `proposal.render` e `proposal.send` (classe externa, com `preview` e `idempotency_key`).
+- **Token delegado por escopo** (F1-01): curto, emitido pelo SQ para um usuário real do
+  tenant, com escopo de capability. O Core age como esse usuário; token de `quotation.read`
+  recebe 403 em escrita. Não há conta de serviço nem leitura do banco do produto.
+- **O SQ mantém a autoridade.** O manifesto declara, não concede: o produto reexecuta RBAC e
+  validação em toda chamada. A aprovação CREA continua na esteira do produto.
+- **Recálculo antes de efeito externo.** A guarda recalcula pelo motor e confere o hash do
+  payload aprovado, o destinatário (cadastro fechado) e os limites antes de qualquer envio;
+  envio de versão já `sent` é recusado. Autorização do envio com passkey e step-up (F1-32)
+  antes do primeiro envio real.
+- **Autonomia:** sombra e depois `act_with_approval`, nunca além, na F1.
+
+### 0.5 Estado das ADRs de 2025
+
+| ADR | Status | Motivo |
+|---|---|---|
+| ADR-001 Django + DRF | Vigente (emendada) | Django 5.2; DRF é superfície mínima, UI é server-rendered |
+| ADR-002 PostgreSQL | Vigente | Sem pgaudit/RLS hoje; isolamento é o schema |
+| ADR-003 Templates + HTMX | Vigente (emendada) | Sem Tailwind; identidade visual é a Prancha |
+| ADR-004 Schema-per-tenant | Vigente | Implementada com django-tenants |
+| ADR-005 `engineering/` + pint | **Superada** | O motor real é `pricing_engine/` (custeio paramétrico + verificações ASME), sem pint/Pydantic |
+| ADR-006 docxtpl + WeasyPrint + LibreOffice | **Superada** | python-docx + WeasyPrint com fallback chrome headless, geração síncrona |
+| ADR-007 allauth + TOTP | **Superada** | Sessão Django + axes + RBAC como dado; passkey/step-up prevista em F1-32 |
+| ADR-008 VPS BR + Caddy + gate PVElite | **Superada** | Produção em VPS + cloudflared; gate de CI é o do motor (feixe/permutador), PVElite fora enquanto não houver casos no repo |
 
 ---
 
@@ -20,7 +135,7 @@ infraestrutura e apresentação. A arquitetura é desenhada para:
 ## 2. Architecture Decision Records (ADRs)
 
 ### ADR-001 — Backend Framework
-**Status:** Aprovado
+**Status:** Aprovado; emendada em 2026-09-27: o módulo de cálculo é `pricing_engine/`, não `engineering/`.
 **Contexto:** Sistema com cálculos normativos pesados, multi-tenant, RBAC, audit trail, geração de documentos, APIs para ERP, ciclo de vida 10+ anos.
 **Decisão:** Python 3.12 + Django 5.x + Django REST Framework (DRF)
 **Justificativa:**
@@ -62,7 +177,7 @@ infraestrutura e apresentação. A arquitetura é desenhada para:
 ---
 
 ### ADR-003 — Frontend
-**Status:** Aprovado
+**Status:** Aprovado; emendada em 2026-09-27: sem Tailwind, identidade visual Prancha (`docs/DESIGN_PRANCHA.md`).
 **Contexto:** UI predominantemente de formulários complexos (data sheet ASME/TEMA), tabelas editáveis (BOM, roteiro), cálculo reativo. Usuário interno. Time pequeno.
 **Decisão:** Django Templates + HTMX + Alpine.js + Tailwind CSS
 **Justificativa:**
@@ -99,7 +214,7 @@ infraestrutura e apresentação. A arquitetura é desenhada para:
 ---
 
 ### ADR-005 — Motor de Cálculo Normativo
-**Status:** Aprovado
+**Status:** **Superada** (2026-09-27): o motor é `pricing_engine/`, Python puro sem pint/Pydantic, e o gate de CI é o dos golden cases, não PVElite. Ver §0.
 **Contexto:** Cálculo ASME/TEMA é o produto principal. Sujeito a auditoria. Precisa de versionamento, reprodução histórica, validação contra PVElite.
 **Decisão:** Módulo Python puro `engineering/` desacoplado do Django, com Pydantic v2 + `pint` para unidades
 **Estrutura:**
@@ -136,7 +251,7 @@ engineering/
 ---
 
 ### ADR-006 — Geração de Documentos
-**Status:** Aprovado
+**Status:** **Superada** (2026-09-27): o código usa python-docx + WeasyPrint com fallback chrome headless, síncrono. Ver §0.2.
 **Decisão:** `docxtpl` (Jinja2 em template Word) para DOCX + WeasyPrint para PDF; LibreOffice headless como fallback
 **Justificativa:**
 - Templates DOCX editáveis no Word pelo setor comercial sem depender de dev
@@ -147,7 +262,7 @@ engineering/
 ---
 
 ### ADR-007 — Autenticação, Autorização e Auditoria
-**Status:** Aprovado
+**Status:** **Superada** (2026-09-27): sessão Django + axes + RBAC configurável (Role × capability); sem allauth/TOTP nem simple-history; passkey e step-up previstos em F1-32. TechnicalApproval segue vigente.
 **Decisão:**
 - Auth: `django-allauth` + MFA via TOTP (`django-otp`) obrigatório para roles privilegiados
 - Autz: RBAC nativo Django com `Groups` mapeando perfis do produto
@@ -159,7 +274,7 @@ engineering/
 ---
 
 ### ADR-008 — Infraestrutura
-**Status:** Aprovado
+**Status:** **Superada** (2026-09-27): produção roda em VPS + cloudflared, sem Caddy; o gate de CI é o do motor. Ver §0.1.
 **Decisão:** VPS BR + Docker Compose (Gunicorn + PostgreSQL + Redis + Caddy + Celery) + GitHub Actions CI/CD
 **Justificativa:**
 - Soberania de dados em BR (exigência setorial implícita)
@@ -171,7 +286,7 @@ engineering/
 
 ---
 
-## 3. Diagrama de Arquitetura
+## 3. Diagrama de Arquitetura (plano 2025, superado pela §0.1)
 
 ```
 [Browser: Orçamentista / Engenheiro / Gestor / PCP]
@@ -239,7 +354,7 @@ engineering/
 
 ---
 
-## 4. Especificação de Componentes
+## 4. Especificação de Componentes (plano 2025, superada pela §0.2)
 
 ### 4.1 Django Application (Core)
 **Responsabilidade:** Orquestrar todos os fluxos de negócio — cotação, cálculo, preço, proposta, audit.
@@ -289,7 +404,7 @@ engineering/
 
 ---
 
-## 5. Módulos Django (Apps)
+## 5. Módulos Django (Apps) (plano 2025, superado pela §0.2)
 
 ```
 smartquotation/
@@ -314,6 +429,9 @@ smartquotation/
 
 ## 6. RBAC — Matriz de Perfis e Permissões
 
+> Emenda 2026-09-27: papéis são dado por tenant (`accounts.Role`) e a matriz é configurável
+> (`access.RolePermission` × registry de capabilities). A tabela abaixo é o default de referência.
+
 | Permissão | Orçamentista | Engenheiro | Gestor Comercial | PCP | Admin |
 |---|---|---|---|---|---|
 | Criar/editar cotação | ✅ | ✅ | ❌ | ❌ | ✅ |
@@ -326,3 +444,9 @@ smartquotation/
 | Ver relatórios de rentabilidade | ❌ | ❌ | ✅ | ❌ | ✅ |
 | Configurar tenant | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Acessar API externa (ERP) | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+---
+
+## Flags para o orchestrator
+
+- Acoplamento motor↔Django: além do adapter, `tema_templates/services.py`, `engineering_params/simulation.py`, `cost_discovery/services.py`, `quotations/views.py` e `quotations/services.py` chamam `quote_completo`/`quote_feixe` direto (simulação e prévia, sem persistir EAP). A regra do INTENT diz "único acoplamento"; ver relatório.
