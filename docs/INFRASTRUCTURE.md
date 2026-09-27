@@ -10,6 +10,10 @@
 # 288a8ca: §0 nova (realidade), §5 trocada pelo CI que existe, §6 separa o que o script
 # faz do que é desenho, §10 (SQ na F1 do Core) e §11 (prova headless) novas. §2–§4, §7–§9
 # ficam como desenho-alvo, marcadas como tal.
+#
+# Emenda da ordem 002 (27/09/2026): §6 reescrita — backup diário via systemd (dump + mídia +
+# chave com prova de decifra), drill semanal de restore, runbook de restore para containers
+# avulsos; covers ganham os scripts novos e as units de ops/systemd/.
 covers:
   - docker-compose.yml
   - docker-compose.prod.yml
@@ -17,6 +21,13 @@ covers:
   - backend/entrypoint.sh
   - scripts/backup_db.sh
   - scripts/backup_media.sh
+  - scripts/backup_key.sh
+  - scripts/restore_check.sh
+  - scripts/lib/backup_common.sh
+  - ops/systemd/sq-backup.service
+  - ops/systemd/sq-backup.timer
+  - ops/systemd/sq-restore-check.service
+  - ops/systemd/sq-restore-check.timer
   - .env.prod.example
 reviewed: 2026-09-27
 ---
@@ -42,7 +53,7 @@ reviewed: 2026-09-27
 | Porta do app | O compose de produção publica `8000:8000` em todas as interfaces; ir para loopback é a F1-04 (§10) | `docker-compose.prod.yml:21-22` |
 | Rollback | Imagem `smartquotation:rollback-20260718` + dump `~/backups/sq/pre_prancha_20260728_143633.sql.gz` | HANDOFF §4 |
 | Staging | Não existe | — |
-| Backup | Ver §6: o script não roda contra a produção atual; sem cifra, sem off-site, sem drill | `scripts/backup_db.sh`, HANDOFF §4 |
+| Backup | Ver §6: scripts e units prontos para os containers avulsos (dump + mídia + chave com prova de decifra, drill semanal), **não instalados** (gate do Capitão); sem cifra, sem off-site | `scripts/backup_*.sh`, `ops/systemd/`, HANDOFF §4 |
 | CI | `.github/workflows/ci.yml`, seis jobs de prova, nenhum de deploy (§5) | ci.yml |
 | Monitoramento | Só o `/health/` e o `HEALTHCHECK` da imagem; nada externo avisa se cair (§7 é alvo) | `backend/Dockerfile:53-54` |
 
@@ -320,7 +331,7 @@ para `main`; **não faz deploy**. Branch `conform/*` só roda CI via PR.
 | Job | O que prova |
 |---|---|
 | `pricing-engine` | Os quatro gates stdlib do motor (§11) |
-| `ops-tests` | Contrato de `backup_db.sh`/`backup_media.sh`, volume de media, storage de proposals, lockfiles. `test_backup_script` e `test_media_backup` **leem este doc** (cron com `set -a`, `media_data`) |
+| `ops-tests` | Contrato de `backup_db.sh`/`backup_media.sh`, volume de media, storage de proposals, lockfiles. `test_backup_script` também roda `test_backup_db_hardening`, `test_atomic_backup`, `test_backup_key`, `test_restore_check` e `test_backup_units` (docker falso). `test_backup_script` e `test_media_backup` **leem este doc** (cron com `set -a`, `media_data`) |
 | `pip-audit` | CVEs em `base.lock` e `ci.lock`, sem re-resolver a árvore |
 | `django-check` | `manage.py check` + `makemigrations --check` |
 | `django-test` | `manage.py test apps` contra `postgres:16-alpine`, com WeasyPrint obrigatório |
@@ -333,87 +344,153 @@ regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT)
 
 ## 6. Backup e Recuperação
 
-### O que o backup faz de fato
+> Emenda da ordem 002 (27/09/2026). Tudo abaixo está no repo e **provado com docker falso**
+> (`tests/test_backup_*`, `tests/test_restore_check.py`, `tests/test_media_backup.py`); nada
+> disso foi instalado nem executado contra a produção. Instalar as units no host de produção
+> é **gate ship do Capitão**.
+
+### O que roda, onde
 
 | Peça | Faz | Não faz |
 |---|---|---|
-| `scripts/backup_db.sh` | `docker compose -f docker-compose.prod.yml exec -T db pg_dump -U $POSTGRES_USER $POSTGRES_DB \| gzip` → `$BACKUP_DIR/sq_<ts>.sql.gz`, escrita atômica (`.tmp` + `mv`), `set -euo pipefail` | Cifra, off-site, retenção/limpeza, validar conteúdo, avisar falha, globais (`pg_dumpall`) |
-| `scripts/backup_media.sh` | `tar czf` de `/app/backend/media` (volume `media_data`) via `exec -T web` → `media_<ts>.tar.gz` | Idem |
-| Produção atual | **Nenhum dos dois roda contra ela**: ambos exigem o compose, e a produção é de containers avulsos (HANDOFF §4). O backup de produção que existe é manual | — |
+| `scripts/backup_db.sh` | `pg_dumpall` no container avulso `sq-prod-db` (porta 5436, senha do env do próprio container), ou `pg_dump` via compose onde houver compose. Detecta o modo por `.State.Running`; container parado **falha** (não cai para compose); docker inacessível falha na hora. `umask 077`, escrita atômica (`.tmp` + `mv`). **Valida pelo conteúdo**: gzip íntegro, tamanho e linhas mínimos, schema `engematex` presente e o **rodapé** `-- PostgreSQL database cluster dump complete` (ou `... database dump complete` no compose) — dump truncado é rejeitado. Usuário/host/porta vão ao `sh` do container como argv posicional e passam por lista branca. Grava `last_success`; poda `sq_*.sql.gz` > `BACKUP_RETENTION_DAYS` (14) só depois de um backup novo validado | Cifra, off-site, PITR |
+| `scripts/backup_media.sh` | `tar czf - -C / app/backend/media` no `sq-web-proto` (volume `media_data` montado em `/app/backend/media`), mesma detecção/fail-fast. Valida com `tar tzf`: exige `app/backend/media/` e ≥1 entrada sob ele (ou `MEDIA_ALLOW_EMPTY=1`). Grava `media_last_success`; retenção igual | Idem |
+| `scripts/backup_key.sh` | Copia a `FIELD_ENCRYPTION_KEY` do env do `sq-web-proto` para `${KEY_BACKUP_DIR}/field_encryption_key` (0600), com fingerprint `sha256` truncado ao lado; preserva a anterior se a chave mudou. **Prova de decifra**: tira um `preco_brl_kg` de `engematex.materials_materialprice` do dump mais recente e roda Fernet **dentro** do container, com chave e token por **stdin**. A prova imprime só `ok`, `falha` ou `sem amostra` (exit 0 / 2 / 3); saída inesperada do container é descartada | Custódia fora do host (ordem 003) |
+| `scripts/restore_check.sh` | Drill: sobe `postgres:15` efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
+| `ops/systemd/sq-backup.{service,timer}` | Todo dia 03:00 (`Persistent=true`, `RandomizedDelaySec=5min`): `backup_db.sh` → `backup_media.sh` → `backup_key.sh`, `Type=oneshot`, para no primeiro que falhar | — |
+| `ops/systemd/sq-restore-check.{service,timer}` | Toda segunda 05:00: `restore_check.sh` | — |
 
-**Restore testado:** o único registrado é o dump pré-Prancha de 28/07/2026
-(`~/backups/sq/pre_prancha_20260728_143633.sql.gz`, "verificado" no HANDOFF §4), sem duração
-nem procedimento anotados. **Não há drill** de restore periódico, cronometrado e registrado, e o
-runbook de restore abaixo nunca foi executado (ele restaura um `.sql.age` que nenhum script do
-repo produz). Lição já paga: `pg_dumpall` na porta errada gera arquivo de 20 bytes com exit 0;
-backup se valida pelo **conteúdo** (tamanho, `zcat | head`, restore), nunca pelo exit code.
+As units rodam como `root` (o usuário de deploy não está no grupo docker, e dar o grupo a ele
+seria root permanente só para o backup), com `ProtectSystem=strict` + `ReadWritePaths` só nos
+diretórios de backup, `PrivateTmp`, `NoNewPrivileges`, `UMask=0077`, e
+`EnvironmentFile=/opt/smartquotation/.env.prod`. Falha = unit `failed`, visível em
+`systemctl --failed` e no journal.
 
-### Uso de scripts/backup_db.sh (quando a produção subir pelo compose)
+**A `FIELD_ENCRYPTION_KEY` NUNCA viaja junto com o dump no off-site (ordem 003): vai para
+custódia separada.** Por isso ela mora em `KEY_BACKUP_DIR` (default
+`/var/lib/smartquotation/key-backup`), fora do `BACKUP_DIR`: o `backup_key.sh` recusa rodar se
+um diretório estiver dentro do outro, e nenhum log, status ou arquivo do `BACKUP_DIR` contém a
+chave (testado com chave sintética). Sem a chave, o dump restaura com preços ilegíveis; sem o
+dump, a chave não serve para nada — os dois juntos no mesmo destino é que não podem estar.
+
+**Restore testado:** o único registrado em produção é o dump pré-Prancha de 28/07/2026
+(`~/backups/sq/pre_prancha_20260728_143633.sql.gz`, "verificado" no HANDOFF §4). A partir da
+instalação das units, o drill semanal é o registro (`restore_last_success`). Lição já paga:
+`pg_dumpall` na porta errada gera arquivo de 20 bytes com exit 0; backup se valida pelo
+**conteúdo** (tamanho, rodapé, restore), nunca pelo exit code.
+
+### Instalar as units (gate ship do Capitão — NÃO executado)
+
+Pré-requisitos a conferir no host: o repo (com `scripts/` e `scripts/lib/`) em
+`/opt/smartquotation`, e `/opt/smartquotation/.env.prod` presente com as variáveis de backup
+(ver `.env.prod.example`; **sem** `DOCKER="sudo docker"`, que o `NoNewPrivileges` bloqueia).
 
 ```bash
-# Uso manual
-POSTGRES_USER=sq POSTGRES_DB=smartquotation BACKUP_DIR=/backups/sq ./scripts/backup_db.sh
-# ou (usa POSTGRES_BACKUP_DIR do .env.prod):
+# como root no host de produção
+install -d -m 0700 /backups/sq /var/lib/smartquotation/key-backup
+install -m 0644 /opt/smartquotation/ops/systemd/sq-backup.service \
+                /opt/smartquotation/ops/systemd/sq-backup.timer \
+                /opt/smartquotation/ops/systemd/sq-restore-check.service \
+                /opt/smartquotation/ops/systemd/sq-restore-check.timer /etc/systemd/system/
+docker pull postgres:15                     # o drill roda sem rede: a imagem tem que estar local
+systemctl daemon-reload
+systemctl start sq-backup.service           # 1ª execução assistida
+journalctl -u sq-backup.service -n 50 --no-pager
+systemctl start sq-restore-check.service    # 1º drill assistido
+systemctl enable --now sq-backup.timer sq-restore-check.timer
+systemctl list-timers 'sq-*'
+```
+
+Se mudar `POSTGRES_BACKUP_DIR` ou `KEY_BACKUP_DIR` no `.env.prod`, mude o `ReadWritePaths` das
+units junto (o teste `test_backup_units` confere o par no `.env.prod.example`).
+
+### Como ler o resultado
+
+| Arquivo | Escrito por | Conteúdo |
+|---|---|---|
+| `/backups/sq/last_success` | `backup_db.sh`, só no sucesso | `timestamp=`, `file=`, `bytes=` |
+| `/backups/sq/media_last_success` | `backup_media.sh`, só no sucesso | `timestamp=`, `file=`, `bytes=`, `entries=` |
+| `/var/lib/smartquotation/key-backup/last_success` | `backup_key.sh`, só com prova `ok` | `timestamp=`, `result=ok`, `dump=`, `key_sha256_16=` |
+| `/var/lib/smartquotation/key-backup/last_proof` | `backup_key.sh`, toda prova | `result=ok\|falha\|sem amostra`, `dump=`, `key_sha256_16=` |
+| `/backups/sq/restore_last_success` | `restore_check.sh`, só no sucesso | `dump=`, `schema=`, `quotations=`, `tables=`, `psql_errors=`, `media_entries=`, `duration_s=` |
+
+Falha **não** toca nos `*last_success`: a **idade** deles é o sinal. Backup diário saudável
+tem `last_success` com menos de ~26 h; drill saudável, `restore_last_success` com menos de 8
+dias. Checagem rápida:
+
+```bash
+systemctl --failed; systemctl list-timers 'sq-*'
+cat /backups/sq/last_success /backups/sq/restore_last_success
+find /backups/sq -maxdepth 1 -name last_success -mmin -1560 | grep -q . || echo "BACKUP ATRASADO"
+```
+
+`key_sha256_16` é o fingerprint (sha256 truncado) da chave — serve para conferir a cópia em
+custódia com `sha256sum < arquivo_da_chave | cut -c1-16`; não é a chave. `sem amostra` (dump
+sem `MaterialPrice`) falha a unit por padrão: a chave não foi provada, e isso não é verde.
+
+### Execução manual (sem systemd)
+
+```bash
+# Uso manual (usa POSTGRES_BACKUP_DIR e o resto do .env.prod):
 set -a && source .env.prod && set +a && ./scripts/backup_db.sh
+# Usuário de deploy fora do grupo docker: DOCKER="sudo docker" só neste uso manual.
 ```
 
 > **Atenção:** use `set -a` antes de `source` para que as variáveis do `.env.prod` (sem `export`)
 > sejam exportadas e herdadas pelo processo filho (`backup_db.sh`). Sem isso, com `set -u` no
-> script, `POSTGRES_USER`/`POSTGRES_DB` ficam "unbound" e o script aborta.
+> script, variáveis obrigatórias ficam "unbound".
 
-**Agendamento via cron do host** (crontab do usuário de deploy):
+Alternativa às units, se o host não tiver systemd (crontab do **root**, mesma cadeia):
 
 ```
-# Backup diário às 3h
-0 3 * * * bash -c 'set -a && source /opt/smartquotation/.env.prod && set +a && /opt/smartquotation/scripts/backup_db.sh' >> /var/log/sq_backup.log 2>&1
+0 3 * * * bash -c 'set -a && source /opt/smartquotation/.env.prod && set +a && /opt/smartquotation/scripts/backup_db.sh && /opt/smartquotation/scripts/backup_media.sh && /opt/smartquotation/scripts/backup_key.sh' >> /var/log/sq_backup.log 2>&1
 ```
 
-Para editar: `crontab -e`
+### Restore em produção (runbook, containers avulsos — nunca executado em produção)
 
-> A variável `POSTGRES_BACKUP_DIR` (padrão `/backups/sq`) é definida em `.env.prod.example`.
-> O script cria o diretório automaticamente se não existir.
-
-### Estratégia de backup (desenho-alvo, `scripts/backup.sh` não existe)
+O caminho de dados é o mesmo que o drill semanal exercita em container efêmero; a troca em
+produção nunca foi feita. Antes de qualquer passo destrutivo, rode `backup_db.sh` (o estado
+atual vira o dump mais novo) e guarde o nome do arquivo.
 
 ```bash
-#!/bin/bash
-# /opt/smartquotation/scripts/backup.sh — executa via cron a cada 6h
+# 0. Escolha o dump e confira que ele passa no drill
+ls -1 /backups/sq/sq_*.sql.gz | tail -n 3
+/opt/smartquotation/scripts/restore_check.sh          # usa o mais recente
 
-set -euo pipefail
+# 1. Pare a app (ninguém escreve durante o restore)
+docker stop sq-web-proto
 
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backups/${TIMESTAMP}"
-mkdir -p "${BACKUP_DIR}"
+# 2. Recrie o banco a partir do dump (pg_dumpall recria o database; "role já existe" é esperado)
+docker exec sq-prod-db sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U "$POSTGRES_USER" -h 127.0.0.1 -p 5436 -d postgres -c "DROP DATABASE smartquotation WITH (FORCE)"'
+zcat /backups/sq/sq_<ts>.sql.gz | docker exec -i sq-prod-db sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U "$POSTGRES_USER" -h 127.0.0.1 -p 5436 -d postgres'
 
-# 1. Dump completo do PostgreSQL
-docker compose -f docker-compose.prod.yml exec -T db pg_dumpall -U ${POSTGRES_USER} \
-  | age --encrypt --recipient "${BACKUP_PUBLIC_KEY}" \
-  > "${BACKUP_DIR}/postgres_${TIMESTAMP}.sql.age"
+# 3. Chave: o container da app tem que ter a MESMA FIELD_ENCRYPTION_KEY do dump.
+#    Compare o fingerprint da cópia com o do dump restaurado (last_proof/last_success).
+sha256sum < /var/lib/smartquotation/key-backup/field_encryption_key | cut -c1-16
+#    Se o sq-web-proto for recriado, passe a chave por --env-file 0600 (nunca na linha de comando).
 
-# 2. Snapshot do volume de mídia (media_data: PDFs/DOCX de propostas em /app/backend/media)
-BACKUP_DIR="${BACKUP_DIR}" COMPOSE_FILE=docker-compose.prod.yml \
-  ./scripts/backup_media.sh
-# Ou equivalente inline:
-# docker compose -f docker-compose.prod.yml exec -T web \
-#   tar czf - /app/backend/media > "${BACKUP_DIR}/media_${TIMESTAMP}.tar.gz"
+# 4. Suba a app e restaure a mídia (volume media_data → /app/backend/media)
+docker start sq-web-proto
+docker exec -i sq-web-proto tar xzf - -C / < /backups/sq/media_<ts>.tar.gz
 
-# 3. Atualiza symlink de backup mais recente
-ln -sfn "${BACKUP_DIR}" /backups/latest
-
-# 4. Sync off-site
-rclone sync /backups/ "${RCLONE_REMOTE}/" \
-  --min-age 1m \
-  --log-file /var/log/backup-rclone.log
-
-# 5. Limpeza local (mantém 7 dias)
-find /backups -maxdepth 1 -type d -mtime +7 -exec rm -rf {} +
-
-# 6. Notificação
-curl -s -X POST "${HEALTHCHECK_URL}/backup-complete"
+# 5. Valide
+curl -fsS https://quotation.qtec.me/health/
+/opt/smartquotation/scripts/backup_key.sh              # prova de decifra contra o banco novo
 ```
+
+Em host novo: Docker, repo em `/opt/smartquotation`, `.env.prod`, containers `sq-prod-db` e
+`sq-web-proto` recriados (HANDOFF §4), a chave **da custódia** no env do `sq-web-proto`, e então
+os passos 2–5.
+
+### Off-site (ordem 003, não existe)
+
+Hoje tudo fica no disco do próprio host: perder o host é perder os backups. A ordem 003 leva o
+**dump e a mídia** para fora (cifrados); a **chave vai por outro caminho, para custódia
+separada** — nunca no mesmo destino nem no mesmo pacote do dump.
 
 ### Política de retenção de backup (desenho-alvo)
 
+> Hoje: `BACKUP_RETENTION_DAYS` local (default 14) para dump e mídia. O resto é alvo.
 > A linha de 15 anos (NR-13) espera a DP-27 (jurídico), conforme o INTENT.
 
 | Frequência | Retenção | Storage estimado |
@@ -432,35 +509,6 @@ curl -s -X POST "${HEALTHCHECK_URL}/backup-complete"
 | VPS inacessível | ≤ 6 horas | ≤ 4 horas (novo VPS + restore) |
 | Exclusão acidental de tenant | ≤ 6 horas | ≤ 1 hora |
 | Desastre total (datacenter) | ≤ 6 horas | ≤ 8 horas (off-site restore) |
-
-### Restore procedure (runbook, nunca executado)
-
-```bash
-# Restore completo de produção em novo VPS
-# 1. Provisionar VPS + instalar Docker
-# 2. Clonar repositório + configurar .env.prod
-# 3. Baixar backup mais recente do S3-compatible
-rclone copy "${RCLONE_REMOTE}/latest/" /backups/latest/
-
-# 4. Iniciar apenas o PostgreSQL
-docker compose up -d db
-
-# 5. Descriptografar e restaurar banco
-age --decrypt --identity /path/to/private.key \
-  /backups/latest/postgres_*.sql.age | \
-  docker compose -f docker-compose.prod.yml exec -T db psql -U ${POSTGRES_USER}
-
-# 6. Restaurar mídia (volume media_data → /app/backend/media dentro do container)
-docker compose -f docker-compose.prod.yml up -d web
-docker compose -f docker-compose.prod.yml exec -T web \
-  tar xzf - -C / < /backups/latest/media_*.tar.gz
-
-# 7. Subir todos os serviços
-docker compose -f docker-compose.prod.yml up -d
-
-# 8. Validar
-curl -f https://novo-vps.smartquotation.com.br/health/
-```
 
 ---
 
@@ -594,7 +642,7 @@ O que a F1 exige da infra, tudo **previsto**:
 |---|---|---|---|
 | F1-04 | Porta `8000` em loopback no `docker-compose.prod.yml` (`127.0.0.1:8000:8000`) | Varredura externa: 0 portas do SQ fora do túnel | **previsto (F1-04)**; hoje `docker-compose.prod.yml:22` publica em `0.0.0.0` |
 | F1-14 | Túnel por instância para o socket, Access por instância | Varredura externa: 0 portas; sem sessão → 302/403 em 100% | **previsto (F1-14)** |
-| F1-15 | Backup PITR (base + WAL) com drill mensal que afirma número; `age` com dois destinatários (a chave de um host não basta) | Drill verde com RPO medido ≤ 5 min e RTO registrado; artefato adulterado reprova | **previsto (F1-15)**; hoje há só `pg_dump` sem cifra e sem drill (§6) |
+| F1-15 | Backup PITR (base + WAL) com drill mensal que afirma número; `age` com dois destinatários (a chave de um host não basta) | Drill verde com RPO medido ≤ 5 min e RTO registrado; artefato adulterado reprova | **previsto (F1-15)**; hoje há dump diário validado + drill semanal em container efêmero, sem cifra, sem PITR e ainda não instalados (§6) |
 | F1-16 | Operação sem córtex | 72 h com córtex desligado: 0 execução essencial falhada | **previsto (F1-16)** |
 
 O RTO medido no drill da F1-15 é o número que alimenta os gatilhos C-6 e C-8 (FASES §10).
