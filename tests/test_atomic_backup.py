@@ -357,21 +357,24 @@ def test_backup_media_final_file_exists_on_success():
         )
 
 
+TESTS = [
+    test_backup_db_uses_temp_file,
+    test_backup_db_renames_on_success,
+    test_backup_db_cleans_up_on_failure,
+    test_backup_media_uses_temp_file,
+    test_backup_media_renames_on_success,
+    test_backup_media_cleans_up_on_failure,
+    test_backup_db_no_partial_file_on_failure,
+    test_backup_db_final_file_exists_on_success,
+    test_backup_media_no_partial_file_on_failure,
+    test_backup_media_final_file_exists_on_success,
+    test_backup_db_cleans_tmp_when_exec_fails_mid_pipe,
+    test_backup_media_cleans_tmp_when_exec_fails_mid_pipe,
+]
+
+
 if __name__ == "__main__":
-    tests = [
-        test_backup_db_uses_temp_file,
-        test_backup_db_renames_on_success,
-        test_backup_db_cleans_up_on_failure,
-        test_backup_media_uses_temp_file,
-        test_backup_media_renames_on_success,
-        test_backup_media_cleans_up_on_failure,
-        test_backup_db_no_partial_file_on_failure,
-        test_backup_db_final_file_exists_on_success,
-        test_backup_media_no_partial_file_on_failure,
-        test_backup_media_final_file_exists_on_success,
-        test_backup_db_cleans_tmp_when_exec_fails_mid_pipe,
-        test_backup_media_cleans_tmp_when_exec_fails_mid_pipe,
-    ]
+    tests = TESTS
     failed = []
     for t in tests:
         try:

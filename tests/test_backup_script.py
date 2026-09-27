@@ -449,6 +449,14 @@ if __name__ == "__main__":
         test_backup_script_fails_fast_when_docker_is_inaccessible,
         test_backup_script_announces_auto_detected_mode_on_stderr,
     ]
+    # O job ops-tests do CI só chama este módulo (e o .github/ não é tocado por ordem de
+    # agente), então ele também roda as suítes de ops da ordem 002 — todas com docker falso.
+    from tests.test_atomic_backup import TESTS as ATOMIC
+    from tests.test_backup_db_hardening import TESTS as HARDENING
+    from tests.test_backup_key import TESTS as KEY
+    from tests.test_backup_units import TESTS as UNITS
+    from tests.test_restore_check import TESTS as RESTORE
+    tests += ATOMIC + HARDENING + KEY + RESTORE + UNITS
     failed = []
     for t in tests:
         try:
