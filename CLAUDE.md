@@ -52,11 +52,15 @@ backend/               # Django 5.2 + django-tenants (schema-per-tenant) + sessi
 
 **Regra de ouro:** `pricing_engine` é lib pura. O único caminho que **persiste** resultado do
 motor é `apps/quotations/adapter.py` (`recompute()` monta FeixeInputs, chama `quote_feixe`,
-persiste a EAP). Outros módulos podem chamar o motor para simular ou exibir, nunca gravar
-(INTENT v3 §Limites). Travado por import-linter (ordem 004): `.importlinter` na raiz,
-`python scripts/lint_imports.py` roda os contratos. Achado da ordem 004, ainda aberto:
-`apps.quotations.services.create_permutador_quotation` persiste sem passar pelo adapter
-(ver `docs/ARCHITECTURE.md` §Flags).
+persiste a EAP; `persist_complete()`/`revise_complete()` fazem o mesmo para o permutador
+completo — criação e revisão de `scope="complete"`, a partir de `quote_completo`). Outros
+módulos podem chamar o motor para simular ou exibir, nunca gravar (INTENT v3 §Limites).
+Travado por import-linter (ordem 004): `.importlinter` na raiz, `python scripts/
+lint_imports.py` roda os contratos; e por `apps/quotations/tests_persistence_boundary.py`
+(ordem 005, AST puro): prova que só o adapter (+ overrides manuais nomeados do drawer EAP)
+escreve resultado nos models da EAP. Achado da ordem 004 — RESOLVIDO na 005:
+`create_permutador_quotation` (que persistia sem passar pelo adapter) virou
+`adapter.persist_complete`/`.revise_complete` (ver `docs/ARCHITECTURE.md` §Flags).
 
 ## Dev (Docker)
 ```bash

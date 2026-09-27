@@ -51,7 +51,9 @@ schema (django-tenants), UI server-rendered (templates + HTMX, Alpine pontual), 
    ├─ templates + HTMX ── UI; DRF só em /api/cotacoes/ (leitura) e /api/permutador/estimate/
    │
    ├─ apps/quotations/adapter.py ── recompute(): monta FeixeInputs + TenantCostChain do banco,
-   │      chama o motor e persiste a EAP (Quotation → QuotationItem → ItemMaterial/ItemOperation)
+   │      chama o motor e persiste a EAP (Quotation → QuotationItem → ItemMaterial/ItemOperation);
+   │      persist_complete()/revise_complete() (ordem 005): idem para o permutador completo
+   │      (criação e revisão de scope="complete", a partir de quote_completo)
    │      └──► pricing_engine/ (Python puro, zero Django)
    │             quote_feixe · permutador_quote.quote_completo (TEMA BEU/BEM…) · asme.py (UG-27/32,
    │             Ap.2, UG-21) · rates.TenantCostChain · process_params · rt_exposicoes
@@ -70,7 +72,7 @@ schema (django-tenants), UI server-rendered (templates + HTMX, Alpine pontual), 
 | Componente | Onde | Responsabilidade | Falha |
 |---|---|---|---|
 | Motor de custeio | `pricing_engine/` | Custo por peso bruto, MO por driver físico, verificações ASME (alerta, não bloqueia) | Exceção sobe ao chamador; gates `tests/validate_*` no CI |
-| Adapter | `backend/apps/quotations/adapter.py` | Único caminho que **persiste** resultado do motor (`recompute`) | Cotação fica sem recompute; nada gravado pela metade |
+| Adapter | `backend/apps/quotations/adapter.py` | Único caminho que **persiste** resultado do motor (`recompute`, `persist_complete`, `revise_complete`) | Cotação fica sem recompute; nada gravado pela metade |
 | Tenancy | `apps/tenants` | Tenant, Domain, Plan (schema public); `provision_tenant` | — |
 | Contas e RBAC | `apps/accounts`, `apps/access` | UserProfile, Role como dado (`requires_crea`), matriz papel × capability, workflow de aprovação | Capability ausente do registry = negado |
 | Auditoria | `apps/audit` | TechnicalApproval, ApprovalRequest/Case/Task (inbox por papel), AccessLog | — |
@@ -94,6 +96,11 @@ schema (django-tenants), UI server-rendered (templates + HTMX, Alpine pontual), 
   raiz, e `apps`, em `backend/`, no mesmo PYTHONPATH). Gate programático em
   `tests/test_import_contracts.py`, hoje dependurado em `tests/test_requirements_lock.py`
   (job `ops-tests`) — `docs/patches/004-ci-import-linter.patch` adiciona um step dedicado.
+  Companheiro mecânico (ordem 005): `apps/quotations/tests_persistence_boundary.py` varre a
+  árvore de `apps` por AST (sem Django/banco) e prova, com allowlist nomeada e justificada,
+  que só o adapter (e um punhado de overrides manuais documentados) escreve resultado nos
+  models da EAP — o import-linter trava QUEM IMPORTA o motor; este trava QUEM ESCREVE o
+  resultado, inclusive escrita sem motor nenhum (override manual do drawer).
 - Custo é derivado (motor ou roll-up), nunca digitado; preço rotulado `referencial` ou
   `validado_custo` (`Quotation.pricing_basis`).
 - Nenhum caminho (admin, API, Core) altera número assinado sem invalidar a assinatura.
@@ -474,17 +481,18 @@ smartquotation/
   permitidas — travado por `import-linter` na ordem 004 (`.importlinter`,
   `tests/test_import_contracts.py`). `quotations/services.py` NÃO importa `pricing_engine`
   (correção: a nota anterior citava esse módulo errado).
-- **ACHADO da ordem 004 (não corrigido, reportado ao Diretor):**
-  `apps.quotations.services.create_permutador_quotation` persiste Quotation/QuotationItem a
-  partir de um `resultado` já computado pelo motor, SEM passar por
-  `apps.quotations.adapter.py` — chamado por `apps.tema_templates.views.data_sheet` (criação,
-  quando `salvar`) e por `apps.quotations.views.quotation_revise` (revisão de cotação
-  `scope="complete"`; ver `apps/quotations/test_feature.py::test_quotation_revise_permutador`
-  para a reprodução, que já passa hoje). O import-linter não pega isto: `services.py` recebe
-  o dict já pronto como parâmetro, não importa `pricing_engine`. Ou seja, hoje HÁ dois
-  caminhos que persistem resultado do motor — o adapter (`recompute`/`_recompute_complete`,
-  para feixe e para RE-computar um "complete" existente) e `create_permutador_quotation`
-  (criação e revisão de "complete"). O texto literal do INTENT v3 §Limites ("o único caminho
-  que PERSISTE... é apps/quotations/adapter.py") não descreve o código como ele é hoje para
-  o permutador completo. Decisão do Diretor: emendar o INTENT para reconhecer os dois
-  caminhos, ou abrir uma ordem para rotear `create_permutador_quotation` pelo adapter.
+- **ACHADO da ordem 004 — RESOLVIDO na ordem 005 (decisão A do Diretor, plano
+  01M3JEJ9SGZS8FFJA4G9MV6JHW):** `apps.quotations.services.create_permutador_quotation`
+  persistia Quotation/QuotationItem a partir de um `resultado` já computado pelo motor, SEM
+  passar por `apps.quotations.adapter.py` — chamada por `apps.tema_templates.views.data_sheet`
+  (criação, quando `salvar`) e por `apps.quotations.views.quotation_revise` (revisão de
+  cotação `scope="complete"`). A função foi movida para
+  `apps.quotations.adapter.persist_complete()`/`.revise_complete()` (corpo idêntico); saiu de
+  `services.py` sem wrapper de compat. `.importlinter` ganhou o `ignore_import` do adapter
+  para `pricing_engine.permutador_quote` e perdeu o de `quotations.views` (a view não importa
+  mais o motor direto). Caracterizado (golden, `tests_characterization_005.py`) antes de
+  mover, sem mudança de comportamento; travado estruturalmente por
+  `tests_persistence_boundary.py` (ver §0.3) para não reabrir.
+- revisão de cotação completa ganha número novo hoje; decidido (Capitão,
+  01M3JEK53Y43C5A55X0ANSA4B5): mantém o número com revision+1 — corrigido na ordem 006; a
+  005 preserva o comportamento atual.
