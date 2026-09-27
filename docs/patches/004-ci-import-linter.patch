@@ -1,0 +1,17 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 111d524..151ec52 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -92,6 +92,12 @@ jobs:
+           cache-dependency-path: backend/requirements/ci.lock
+       - name: Instalar deps de CI
+         run: pip install --require-hashes -r requirements/ci.lock
++      # Trava mecânica do INTENT v3 §Limites (ordem 004): pricing_engine é lib pura, e só
++      # apps.quotations.adapter + a allowlist nomeada em .importlinter importam as funções
++      # que COMPUTAM uma cotação (quote_feixe/quote_completo/quote_beu). Estático (grimp),
++      # roda sem banco — por isso entra aqui e não no job django-test.
++      - name: Contrato de imports (import-linter — INTENT v3 §Limites)
++        run: python ../scripts/lint_imports.py
+       - name: manage.py check
+         env:
+           DJANGO_SETTINGS_MODULE: smartquotation.settings.development
