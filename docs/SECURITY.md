@@ -127,7 +127,7 @@ aprovado e são recusados se ele divergir (F1-06, F1-30).
 |---|---|
 | TLS | Termina no túnel (Cloudflare); Django confia em `X-Forwarded-Proto` (`SECURE_PROXY_SSL_HEADER`), o que **só é seguro com a origem em loopback** (F1-04) |
 | Campos cifrados | `MaterialPrice.preco_brl_kg` e credenciais de ERP via `django-encrypted-model-fields` (Fernet). Preço de venda da cotação **não** é cifrado em campo |
-| Backup | `pg_dump` cifrado com `age`; alvo: PITR + drill mensal, `age` com dois destinatários (F1-15) |
+| Backup | No repo, não instalado (gate ship): dump e mídia cifrados com `age` para dois destinatários (instância + recuperação da Quantum, DP-41) e enviados off-site; `FIELD_ENCRYPTION_KEY` cifrada só para a recuperação, em remote e credencial próprios (ordem 003, `docs/INFRASTRUCTURE.md` §6). Alvo: PITR (F1-15) |
 | Segredos | `.env` fora do repositório; nunca imprimir nem commitar. Alvo H2: cofre |
 
 ### 3.5 Headers e injeção
@@ -273,4 +273,4 @@ encaminha ao jurídico (`cognitive-core/docs/DECISOES-CAPITAO.md`, parte II).
 | J-19 (DP-19 aprovada) | Modelo de linguagem na nuvem: parte contratual | F1 | Nenhum dado de cliente a LLM em nuvem |
 | J-20 (DP-20 aprovada) | Termo de uso de dado do piloto | F1 | Sem rotulagem nem golden set com dado real do piloto |
 | J-28 (DP-28 aprovada) | Cloudflare no DPA | F1 | Túnel em uso técnico; contratação formal pendente |
-| J-29 (DP-29 aprovada) | Backup cifrado em provedor estrangeiro | F1 | Backup off-site em provedor estrangeiro espera o parecer |
+| J-29 (DP-29 aprovada) | Backup cifrado em provedor estrangeiro | F1 | Off-site em provedor estrangeiro **permitido pela DP-29**; parecer J-29 pode mudar o destino (se apontar risco, troca-se o remote e a série cifrada é reenviada). Ordem 003, `docs/INFRASTRUCTURE.md` §6 |
