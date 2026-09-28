@@ -104,6 +104,16 @@ class OrdemFabricacaoTests(TenantTestCase):
         with self.assertRaises(ValidationError):
             services.convert_quotation_to_of(self.quotation, created_by=self.user)
 
+    def test_convert_bloqueia_revisao_nao_vigente(self):
+        """P2 (ordem 007): a revisão MANTÉM o número — só a VIGENTE (maior `revision` do
+        mesmo número) pode virar OF. Converter uma revisão superada mandaria pra fábrica
+        uma versão que já foi substituída."""
+        from apps.quotations.adapter import revise_feixe
+
+        revise_feixe(self.quotation, created_by=self.user)  # cria a Rev.1 do MESMO número
+        with self.assertRaises(ValidationError):
+            services.convert_quotation_to_of(self.quotation, created_by=self.user)
+
     def test_deep_copy_isolation_from_revision(self):
         """OF rows devem permanecer inalteradas após recompute() da cotação."""
         of = services.convert_quotation_to_of(self.quotation, created_by=self.user)
