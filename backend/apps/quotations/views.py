@@ -500,8 +500,13 @@ def quotation_edit(request, pk):
     deriva a EAP dos inputs, então toda edição vai pra Quotation.inputs, não pras
     linhas da EAP (que o recompute regenera)."""
     orig = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
-    if orig.scope == "complete":
-        # Permutador tem fluxo de dados próprio; edição fora do Tier A.
+    if orig.scope != "tube_bundle":
+        # Tier A é só do FEIXE (FeixeDataSheetForm exige tubo/espelho/chicana). Permutador
+        # completo ('complete') tem fluxo de dados próprio; partes avulsas ('parts') não
+        # têm data sheet de feixe nenhum — as duas revisam por `quotations:revise` (mesma
+        # rota, sem form específico). BLOQUEANTE (revisão do Diretor): 'parts' escapava
+        # deste guard e caía no form do feixe, com campos obrigatórios que uma cotação de
+        # partes nunca preenche.
         return redirect("quotations:detail", pk=orig.pk)
 
     if request.method == "POST":

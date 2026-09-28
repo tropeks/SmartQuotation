@@ -120,13 +120,18 @@
        (este item). "Nova Revisão" = fluxo antigo do motor (recompute + nova revisão).{% endcomment %}
     <div class="q-carimbo-actions q-actions" x-show="!isEditing">
       <button type="button" class="q-btn" @click="confirmOpen = true">Revisar</button>
-      {% if q.scope == "complete" %}
+      {% comment %}Tier A (form com preview ao vivo) só existe para o FEIXE. Permutador
+         completo ('complete') e partes avulsas ('parts') não têm data sheet específico
+         de revisão — os dois postam direto pra quotations:revise (BLOQUEANTE, revisão do
+         Diretor: 'parts' ia para quotations:edit, o form do feixe, com campos obrigatórios
+         de tubo/espelho/chicana que uma cotação de partes nunca preenche).{% endcomment %}
+      {% if q.scope == "tube_bundle" %}
+      <a class="q-btn" href="{% url 'quotations:edit' q.pk %}">Nova Revisão</a>
+      {% else %}
       <form action="{% url 'quotations:revise' q.pk %}" method="post" style="display:inline;margin:0">
         {% csrf_token %}
         <button type="submit" class="q-btn">Nova Revisão</button>
       </form>
-      {% else %}
-      <a class="q-btn" href="{% url 'quotations:edit' q.pk %}">Nova Revisão</a>
       {% endif %}
       <a class="q-btn primary" href="{% url 'proposals:create' q.pk %}">Gerar Proposta</a>
       <a class="q-btn" href="{% url 'quotations:databook' q.pk %}">Databook de Suprimentos</a>
