@@ -26,7 +26,7 @@ Convenção real: PK `BigAutoField` (não UUID), dinheiro em `DecimalField`, sem
 | `audit` | TechnicalApproval, ApprovalRequest, ApprovalCase, ApprovalTask, AccessLog |
 | `quotations` | Customer, Quotation (+ `pricing_basis` referencial/validado_custo, `avisos`), CalculationSnapshot, QuotationItem, ItemMaterial, ItemOperation, QuotationPart |
 | `materials` | Material, MaterialPrice (cifrado, por forma), LigaMetalurgica, MaterialStandard |
-| `engineering_params` | Rate (`operacao`, `rate_hh`, `rate_hm`, vigência), ProcessParameter, TenantParamConfig, RateSuggestion, KnobChangeProposal |
+| `engineering_params` | Rate (`operacao`, `rate_hh`, `rate_hm`, vigência), ProcessParameter, TenantParamConfig (singleton; ordem 008 acrescenta `fator_preco_completo`/`impostos_pct_completo` — markup/imposto do PERMUTADOR COMPLETO por tenant, mesmas casas de `Quotation.fator_preco`/`.impostos_pct`, default 1,25/9,0), RateSuggestion, KnobChangeProposal |
 | `cost_discovery` / `cost_structure` | CostDiscoverySession / CostStructure |
 | `tema_templates` | ComponentTemplate, ComponentOperation |
 | `proposals` | ProposalTemplate, Proposal (status draft/ready/sent/superseded, `docx_sha256`/`pdf_sha256`), ProposalVersion (envio: `emailed_at`, `emailed_by`, `email_to`) |

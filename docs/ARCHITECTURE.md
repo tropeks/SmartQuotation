@@ -507,3 +507,19 @@ smartquotation/
   propostas draft/ready anteriores), P6 (revisão não troca cliente) e P7 (não revisa
   número que já tem OF) — ver `apps/quotations/services.py` e `docs/ship/
   ORDEM_007_DIFERENCA.md`.
+- **Ordem 008 — markup/imposto do PERMUTADOR COMPLETO por tenant.** Até aqui, `fator_preco`/
+  `impostos_pct` de `quote_completo` eram hardcoded na assinatura da função (1,25/9,0, os
+  valores da planilha ENGEMATEX) — nenhum tenant conseguia mudá-los. Decisão do Diretor: só
+  o par do PERMUTADOR ganha knob (`TenantParamConfig.fator_preco_completo`/
+  `.impostos_pct_completo`, singleton, default 1,25/9,0 — preço não muda no dia 1); o FEIXE
+  continua por cotação (`Quotation.fator_preco`/`.impostos_pct`, já existente) — são dois
+  markups genuinamente diferentes, calibrados para escopos diferentes, e as duas semânticas
+  de imposto (feixe por fora, permutador ICMS por dentro) continuam como estão, cada uma
+  fiel à planilha do seu escopo. **O motor (`pricing_engine`) não muda e não lê
+  `TenantCostChain.fator_preco`/`.impostos_pct`** — `tema_templates.services.estimate_complete`
+  passa os dois valores EXPLICITAMENTE como kwargs de `quote_completo` (a `TenantCostChain`
+  tem defaults neutros 1,0/0,0 que zerariam o markup em silêncio se o motor passasse a lê-los
+  de lá). `adapter.revise_complete` CONGELA o par da cotação ORIGINAL (paridade com
+  `revise_feixe`, que já congela o par do feixe) — mudar o markup do tenant depois de uma
+  cotação criada não reprecifica revisões antigas por baixo do pano. Golden `char_005.json`
+  intacto (default idêntico ao hardcoded de hoje) — ver `docs/ship/ORDEM_008_DIFERENCA.md`.
