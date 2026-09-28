@@ -349,6 +349,16 @@ def _money2(x) -> Decimal:
     return Decimal(str(round(float(x or 0), 2)))
 
 
+def _q(field_name: str, x) -> Decimal:
+    """float/str -> Decimal quantizado pela `decimal_places` do PRÓPRIO campo de
+    `Quotation` (lida de `Quotation._meta`, não hardcoded). Uso: fator_preco (8,5) e
+    impostos_pct (6,3) — política comercial, não dinheiro (que segue em `_money2`, sempre
+    2 casas). `_money2` truncava os dois a 2 casas antes de gravar: 1,01377 virava 1,01;
+    23,303 virava 23,30 — perda real e permanente, não só de exibição (ordem 006)."""
+    places = Quotation._meta.get_field(field_name).decimal_places
+    return Decimal(str(x)).quantize(Decimal(1).scaleb(-places))
+
+
 def _inputs_serializaveis(cleaned: dict) -> dict:
     """Subconjunto JSON-serializável do data sheet (descarta objetos não serializáveis)."""
     import json
@@ -396,8 +406,8 @@ def persist_complete(customer, designacao, cleaned, resultado,
         custo_total=_money2(resultado.get("custo_total")),
         preco_sem_impostos=_money2(resultado.get("preco_sem_impostos")),
         preco_com_impostos=_money2(resultado.get("preco_com_impostos")),
-        fator_preco=_money2(resultado.get("fator_preco", 1)),
-        impostos_pct=_money2(resultado.get("impostos_pct", 0)),
+        fator_preco=_q("fator_preco", resultado.get("fator_preco", 1)),
+        impostos_pct=_q("impostos_pct", resultado.get("impostos_pct", 0)),
         computed_at=timezone.now(),
     )
     _criar_itens_por_secao(q, resultado)
@@ -410,8 +420,9 @@ def revise_complete(orig: Quotation, created_by) -> Quotation:
     DIMENSÕES da cotação original (não o seed), com fallback defensivo no seed se os inputs
     salvos não validarem mais. Absorve o ramo 'complete' de quotations.views.quotation_revise
     (ordem 005). A revisão ganha NÚMERO NOVO — regra de negócio confirmada pelo Capitão
-    (decisão 01M3JEK53Y43C5A55X0ANSA4B5); a correção fica para a ordem 006, junto com a de
-    fator_preco/impostos_pct.
+    (decisão 01M3JEK53Y43C5A55X0ANSA4B5); a correção de manter o número fica para a ordem
+    007. A precisão de fator_preco/impostos_pct (ordem 006) já está corrigida em
+    `persist_complete`, chamada por esta função.
 
     `resultado` é calculado FORA de qualquer transação, de propósito: `estimate_from_inputs`
     (via `tema_templates.services._liga_db`/`liga_choices`/`tenant_cost_chain`) engole erro
