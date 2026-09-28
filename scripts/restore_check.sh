@@ -2,8 +2,16 @@
 # Drill de restore: prova que o backup mais recente RESTAURA, não só que existe.
 #
 # O que faz:
-#   1. Sobe um Postgres efêmero (${RESTORE_IMAGE}, default postgres:15 — mesma major da
-#      produção) com --network none e --rm, nome único; auth trust (sem rede, sem senha).
+#   0. Lê a major de origem do dump escolhido (linha "-- Dumped from database version X.Y"
+#      que tanto pg_dump quanto pg_dumpall escrevem) e resolve ${RESTORE_IMAGE}: sem
+#      RESTORE_IMAGE definida, usa postgres:<major da origem> (família debian, não -alpine —
+#      é a família que produção roda); com RESTORE_IMAGE definida, a major da imagem tem que
+#      ser >= a major de origem (restore de major mais NOVA num servidor mais VELHO não é
+#      suportado — ex.: um pg_dumpall 16 emite GRANT ... WITH INHERIT TRUE, que o 15 rejeita).
+#      Dump sem a linha de versão, ou imagem com tag sem major legível, reprovam aqui, antes
+#      de qualquer container subir.
+#   1. Sobe um Postgres efêmero (${RESTORE_IMAGE}) com --network none e --rm, nome único;
+#      auth trust (sem rede, sem senha).
 #   2. Espera ficar pronto (pg_isready em 127.0.0.1: só responde depois do init da imagem).
 #   3. Aplica o dump mais recente (${BACKUP_DIR}/sq_*.sql.gz) via psql. Erros do psql são
 #      CONTADOS, não exibidos. O único tolerado é 'role "..." already exists' (esperado num
@@ -33,7 +41,11 @@
 #
 # Variáveis:
 #   BACKUP_DIR / POSTGRES_BACKUP_DIR  onde estão dump e mídia (default /backups/sq)
-#   RESTORE_IMAGE           imagem do Postgres efêmero (default postgres:15)
+#   RESTORE_IMAGE           imagem do Postgres efêmero. Default: deriva postgres:<major> da
+#                           própria major de origem do dump (ver item 0 acima; sem -alpine).
+#                           Se definida, a major da tag tem que ser >= a de origem do dump
+#                           (menor reprova; tag sem major legível — ex. "postgres:latest" —
+#                           também reprova, pedindo tag com major explícita).
 #   RESTORE_DB              banco a conferir (default ${POSTGRES_DB:-smartquotation})
 #   RESTORE_SCHEMA          schema do tenant (default engematex)
 #   RESTORE_TABLES          tabelas obrigatórias no schema (default abaixo)
@@ -60,7 +72,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${SCRIPT_DIR}/lib/offsite_common.sh"
 
 BACKUP_DIR="${BACKUP_DIR:-${POSTGRES_BACKUP_DIR:-/backups/sq}}"
-RESTORE_IMAGE="${RESTORE_IMAGE:-postgres:15}"
+# Sem default fixo: resolvida mais abaixo, depois de ler a major de origem do dump.
+RESTORE_IMAGE_EXPLICIT="${RESTORE_IMAGE:-}"
 RESTORE_DB="${RESTORE_DB:-${POSTGRES_DB:-smartquotation}}"
 RESTORE_SCHEMA="${RESTORE_SCHEMA:-engematex}"
 RESTORE_TABLES="${RESTORE_TABLES:-quotations_quotation quotations_quotationitem materials_material materials_materialprice}"
@@ -140,6 +153,57 @@ if ! gzip -t "${DUMP}" 2>/dev/null; then
   exit 1
 fi
 
+# --- Major de origem do dump (item 0): pg_dump/pg_dumpall escrevem "-- Dumped from database
+# version X.Y" (pg_dumpall embute isso por database, ao chamar pg_dump internamente); a
+# primeira ocorrência já basta — um cluster tem uma major só. `zcat | grep -m1`: com
+# pipefail, o zcat pode morrer de SIGPIPE assim que o grep -m1 fecha o pipe depois do
+# primeiro match, e isso apareceria como falha do pipeline mesmo com o match encontrado —
+# por isso pipefail é desligado só para esta linha (o exit code que importa aqui é o do
+# grep, não o do zcat).
+set +o pipefail
+DUMP_VERSION_LINE="$(zcat "${DUMP}" 2>/dev/null | grep -m1 -E '^-- Dumped from database version [0-9]+')" || true
+set -o pipefail
+if [ -z "${DUMP_VERSION_LINE}" ]; then
+  echo "${SQ_SCRIPT}: FALHA — cabeçalho de versão ausente: dump não é de pg_dump/pg_dumpall ou está truncado no início." >&2
+  exit 1
+fi
+SOURCE_MAJOR="$(printf '%s\n' "${DUMP_VERSION_LINE}" | sed -E 's/^-- Dumped from database version ([0-9]+).*/\1/')"
+if ! [[ "${SOURCE_MAJOR}" =~ ^[0-9]+$ ]]; then
+  echo "${SQ_SCRIPT}: FALHA — não consegui ler a major de origem do dump (cabeçalho ilegível)." >&2
+  exit 1
+fi
+
+# extract_image_major TAG: extrai a major de uma tag de imagem postgres (postgres:15,
+# postgres:15-alpine, postgres:15.8, registry/x/postgres:16.4-bookworm). Chamada FORA de
+# $(...): um `exit` aqui precisa terminar o script inteiro, não só uma subshell.
+extract_image_major() {
+  local image="$1" last tag
+  last="${image%%@*}"      # descarta o digest (@sha256:<hex>): o hex não é major
+  last="${last##*/}"       # descarta o registry/repo: só o último componente pode ter a tag
+  case "${last}" in
+    *:*) tag="${last##*:}" ;;
+    *) tag="" ;;
+  esac
+  if [[ "${tag}" =~ ^([0-9]+) ]]; then
+    IMAGE_MAJOR="${BASH_REMATCH[1]}"
+    return 0
+  fi
+  echo "${SQ_SCRIPT}: FALHA — RESTORE_IMAGE=${image} não tem major legível na tag (use algo como postgres:15, postgres:16-alpine ou postgres:16.4)." >&2
+  exit 1
+}
+
+if [ -z "${RESTORE_IMAGE_EXPLICIT}" ]; then
+  RESTORE_IMAGE="postgres:${SOURCE_MAJOR}"
+  echo "${SQ_SCRIPT}: RESTORE_IMAGE não definida — usando ${RESTORE_IMAGE} (major de origem do dump)"
+else
+  RESTORE_IMAGE="${RESTORE_IMAGE_EXPLICIT}"
+  extract_image_major "${RESTORE_IMAGE}"
+  if [ "${IMAGE_MAJOR}" -lt "${SOURCE_MAJOR}" ]; then
+    echo "${SQ_SCRIPT}: FALHA — RESTORE_IMAGE=${RESTORE_IMAGE} (major ${IMAGE_MAJOR}) é mais velha que a major de origem do dump (${SOURCE_MAJOR}): restaurar um dump de major mais nova num servidor de major mais velha não é suportado." >&2
+    exit 1
+  fi
+fi
+
 MEDIA=""
 MEDIA_ENTRIES="-"
 if [ "${RESTORE_CHECK_MEDIA}" = "1" ]; then
@@ -214,8 +278,8 @@ sq_require_docker
 NAME="sq-restore-check-$(date +%Y%m%d%H%M%S)-$$"
 WORK="$(mktemp -d)"
 sq_track_tmp "${WORK}"
-# -v: o postgres:15 declara VOLUME /var/lib/postgresql/data; sem -v o volume anônimo, com a
-# cópia restaurada do banco, sobrevive ao container.
+# -v: a imagem postgres declara VOLUME /var/lib/postgresql/data; sem -v o volume anônimo,
+# com a cópia restaurada do banco, sobrevive ao container.
 cleanup() {
   ${DOCKER} rm -fv "${NAME}" >/dev/null 2>&1 || true
   sq_cleanup
@@ -309,6 +373,8 @@ mkdir -p "${BACKUP_DIR}"
 sq_write_status "${STATUS_FILE}" \
   "timestamp=$(sq_now_iso)" \
   "dump=$(basename -- "${DUMP}")" \
+  "source_major=${SOURCE_MAJOR}" \
+  "image=${RESTORE_IMAGE}" \
   "schema=${RESTORE_SCHEMA}" \
   "quotations=${QCOUNT}" \
   "tables=${RESTORE_TABLES// /,}" \

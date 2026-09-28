@@ -316,14 +316,31 @@ def synthetic_dump(
     footer: str | None = FOOTER_CLUSTER,
     materialprice_tokens: list[str] | None = None,
     quotations: int = 2,
+    pg_version: str | None = "15.8",
 ) -> str:
-    """Dump SINTÉTICO no formato do pg_dumpall (nenhum dado real da ENGEMATEX)."""
+    """Dump SINTÉTICO no formato do pg_dumpall (nenhum dado real da ENGEMATEX).
+
+    pg_version: valor da linha "-- Dumped from database version X.Y" que pg_dumpall embute
+    (via pg_dump interno) na seção de cada banco — é dela que restore_check.sh deriva a
+    major de origem. None omite a linha (dump "truncado no início" / de outra ferramenta).
+    """
     out = [
         "--",
         "-- PostgreSQL database cluster dump",
         "--",
         "CREATE ROLE sq;",
         "\\connect smartquotation",
+        "--",
+        "-- PostgreSQL database dump",
+        "--",
+    ]
+    if pg_version is not None:
+        out += [
+            f"-- Dumped from database version {pg_version} (Debian {pg_version}-1.pgdg120+1)",
+            f"-- Dumped by pg_dumpall version {pg_version}",
+            "",
+        ]
+    out += [
         f"CREATE SCHEMA {schema};",
         f"CREATE TABLE {schema}.quotations_quotation (id bigint NOT NULL, numero varchar(40));",
         f"CREATE TABLE {schema}.materials_materialprice (id bigint NOT NULL, forma varchar(20), "

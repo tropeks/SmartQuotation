@@ -80,6 +80,8 @@ def test_success_restores_newest_dump_in_isolated_ephemeral_container():
         assert status["dump"] == "sq_20260927_030000.sql.gz" and status["schema"] == "engematex"
         assert status["quotations"] == "3" and status["media_entries"] == "1", status
         assert "materials_materialprice" in status["tables"], status
+        # major de origem do dump (default do fixture: 15.8) e a imagem efetivamente usada.
+        assert status["source_major"] == "15" and status["image"] == "postgres:15", status
 
 
 def test_output_has_only_counts_and_table_names_never_content():
