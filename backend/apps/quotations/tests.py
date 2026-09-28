@@ -667,6 +667,11 @@ class DatabookViewTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("text/csv", resp["Content-Type"])
         self.assertIn("316L", resp.content.decode("utf-8"))
+        # ordem 007 (NIT): a revisão MANTÉM o número — sem a revisão no filename, o
+        # databook de duas revisões diferentes da MESMA cotação sairia com o MESMO nome
+        # de arquivo.
+        self.assertIn(f"databook-{self.q.number}-R{self.q.revision}.csv",
+                      resp["Content-Disposition"])
 
 
 class ItemOperationProvenanceTests(TenantTestCase):

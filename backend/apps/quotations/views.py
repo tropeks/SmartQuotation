@@ -624,7 +624,9 @@ def databook_export(request, pk):
     from apps.quotations.databook import build_databook
     q = get_object_or_404(Quotation.objects.select_related("customer"), pk=pk)
     resp = HttpResponse(content_type="text/csv; charset=utf-8")
-    resp["Content-Disposition"] = f'attachment; filename="databook-{q.number}.csv"'
+    # ordem 007 (NIT): a revisão MANTÉM o número — sem a revisão no filename, o databook
+    # de duas revisões diferentes da MESMA cotação sairia com o MESMO nome de arquivo.
+    resp["Content-Disposition"] = f'attachment; filename="databook-{q.number}-R{q.revision}.csv"'
     writer = csv.writer(resp)
     writer.writerow(["Componente", "Família", "Norma ASTM", "Condição", "Certificação", "Notas"])
     for r in build_databook(q):
