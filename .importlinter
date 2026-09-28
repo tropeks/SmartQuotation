@@ -111,8 +111,3 @@ ignore_imports=
     apps.tema_templates.tests -> pricing_engine.permutador_quote
     apps.tema_templates.tests -> pricing_engine.beu_quote
     apps.proposals.tests -> pricing_engine.permutador_quote
-
-    # tests_characterization_005.py (ordem 005): fixture da cena (e) — cotação com inputs
-    # inválidos — chama quote_completo direto para semear uma Quotation via ORM cru; não é
-    # o caminho de persistência de produção que o teste está caracterizando.
-    apps.quotations.tests_characterization_005 -> pricing_engine.permutador_quote

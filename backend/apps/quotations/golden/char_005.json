@@ -47,12 +47,24 @@
         "sort_order": 4
       }
     ],
+    "propostas": [
+      {
+        "docx_path": "",
+        "generated_at_is_null": true,
+        "number": "PROP-2026-001-A",
+        "pdf_path": "",
+        "quotation_number": "COT-2026-001",
+        "status": "draft"
+      }
+    ],
     "quotation": {
       "avisos": [],
       "computed_at_is_null": false,
+      "created_by_username": "admin-char-005",
       "custo_material": "39425.43",
       "custo_mo": "88621.89",
       "custo_total": "128047.32",
+      "customer_company_name": "ACME Char A",
       "fator_preco": "1.25000",
       "impostos_pct": "9.000",
       "inputs": {
@@ -84,7 +96,7 @@
       "pricing_basis": "referencial",
       "revision": 0,
       "scope": "complete",
-      "status": "draft",
+      "status": "sent",
       "title": "Permutador BEU"
     },
     "snapshot": {
@@ -238,12 +250,24 @@
         "sort_order": 4
       }
     ],
+    "propostas": [
+      {
+        "docx_path": "",
+        "generated_at_is_null": true,
+        "number": "PROP-2026-002-A",
+        "pdf_path": "",
+        "quotation_number": "COT-2026-002",
+        "status": "draft"
+      }
+    ],
     "quotation": {
       "avisos": [],
       "computed_at_is_null": false,
+      "created_by_username": "admin-char-005",
       "custo_material": "39296.04",
       "custo_mo": "79765.04",
       "custo_total": "119061.08",
+      "customer_company_name": "ACME Char B",
       "fator_preco": "1.25000",
       "impostos_pct": "9.000",
       "inputs": {
@@ -429,12 +453,24 @@
         "sort_order": 4
       }
     ],
+    "propostas": [
+      {
+        "docx_path": "",
+        "generated_at_is_null": true,
+        "number": "PROP-2026-003-A",
+        "pdf_path": "",
+        "quotation_number": "COT-2026-003",
+        "status": "draft"
+      }
+    ],
     "quotation": {
       "avisos": [],
       "computed_at_is_null": false,
+      "created_by_username": "admin-char-005",
       "custo_material": "118258.05",
       "custo_mo": "116138.90",
       "custo_total": "234396.96",
+      "customer_company_name": "ACME Char C",
       "fator_preco": "1.25000",
       "impostos_pct": "9.000",
       "inputs": {
@@ -690,12 +726,15 @@
         "sort_order": 4
       }
     ],
+    "propostas": [],
     "quotation": {
       "avisos": [],
       "computed_at_is_null": false,
+      "created_by_username": "admin-char-005",
       "custo_material": "39425.43",
       "custo_mo": "88621.89",
       "custo_total": "128047.32",
+      "customer_company_name": "ACME Char A",
       "fator_preco": "1.25000",
       "impostos_pct": "9.000",
       "inputs": {
@@ -881,12 +920,15 @@
         "sort_order": 4
       }
     ],
+    "propostas": [],
     "quotation": {
       "avisos": [],
       "computed_at_is_null": false,
+      "created_by_username": "admin-char-005",
       "custo_material": "39424.69",
       "custo_mo": "88738.00",
       "custo_total": "128162.69",
+      "customer_company_name": "ACME Char E",
       "fator_preco": "1.25000",
       "impostos_pct": "9.000",
       "inputs": {
@@ -1038,6 +1080,16 @@
         "sort_order": 4
       }
     ],
+    "propostas": [
+      {
+        "docx_path": "",
+        "generated_at_is_null": true,
+        "number": "PROP-2026-001-A",
+        "pdf_path": "",
+        "quotation_number": "COT-2026-001",
+        "status": "draft"
+      }
+    ],
     "quotation": {
       "avisos": [
         {
@@ -1047,9 +1099,11 @@
         }
       ],
       "computed_at_is_null": false,
+      "created_by_username": "admin-char-005",
       "custo_material": "39425.43",
       "custo_mo": "88621.89",
       "custo_total": "128047.32",
+      "customer_company_name": "ACME Char A",
       "fator_preco": "1.25000",
       "impostos_pct": "9.000",
       "inputs": {
@@ -1081,7 +1135,7 @@
       "pricing_basis": "referencial",
       "revision": 0,
       "scope": "complete",
-      "status": "draft",
+      "status": "sent",
       "title": "Permutador BEU"
     },
     "snapshot": {

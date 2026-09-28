@@ -4,7 +4,6 @@ from decimal import Decimal
 import hashlib
 import json
 from django.db import transaction
-from django.utils import timezone
 from apps.quotations.models import CalculationSnapshot, Quotation
 from apps.quotations.adapter import default_inputs, recompute
 

@@ -11,18 +11,26 @@ Este teste NUNCA importa create_permutador_quotation nem persist_complete direta
 nome muda de módulo entre C1 (código atual) e C2 (mudança), e este arquivo tem de continuar
 IMPORTÁVEL e VERDE nos dois lados, comparando com o MESMO golden. Por isso ele dirige tudo
 por HTTP (URLs não mudam) e por apps.quotations.adapter.recompute (função que sobrevive ao
-refactor inalterada). A única exceção é a fixture da cena (e), construída via ORM cru +
-pricing_engine.permutador_quote.quote_completo direto (chamada de simulação, não de
-persistência de produção — permitida em qualquer lado do refactor).
+refactor inalterada). A fixture da cena (e) é construída via ORM cru com PLACEHOLDERS fixos
+(não chama o motor): o fallback de verdade (`quote_completo`) roda dentro de
+`revise_complete`, por conta do próprio adapter — este arquivo não precisa importar
+`pricing_engine.permutador_quote` (mantém a allowlist do `.importlinter` enxuta).
 
 Cenários (cada um vira uma chave do golden):
   a) POST "salvar" no data sheet, BEU de referência (razão 1,0 nos drivers paramétricos).
   b) idem, BEM de referência.
   c) BEU com dimensões e liga alteradas + pressão de projeto > 0 (exige memorial ASME).
-  d) quotation_revise() da cotação (a).
+  d) quotation_revise() da cotação (a), depois de forçar (a) p/ status "sent" (prova por
+     assertEqual, não só pelo golden: a revisão nasce em "draft" mesmo partindo de uma
+     original que NÃO estava em draft).
   e) quotation_revise() de uma cotação com inputs inválidos → cai no fallback
      `quote_completo(desig)` de estimate_from_inputs.
-  f) adapter.recompute() sobre a cotação (a).
+  f) adapter.recompute() sobre a cotação (a) (já com status "sent" da cena (d)).
+
+Cada cenário captura, além dos totais/itens/snapshot: created_by.username, customer.
+company_name e, para a Quotation capturada, as Proposal ligadas a ela (number, status,
+quotation_number de vínculo, docx_path/pdf_path, generated_at_is_null) — só (a)/(b)/(c)
+geram Proposal (o data sheet chama create_proposal() só no "salvar"; quotation_revise não).
 
 O golden é gravado (`json.dump`) SOMENTE com SQ_RECORD_CHAR=1 no ambiente — rode assim só
 sobre o código ANTES da ordem 005. Sem a env var, o teste COMPARA contra o golden versionado
@@ -97,6 +105,8 @@ def _quotation_payload(q: Quotation) -> dict:
         "peso_liquido_kg": str(q.peso_liquido_kg),
         "pricing_basis": q.pricing_basis,
         "computed_at_is_null": q.computed_at is None,
+        "created_by_username": q.created_by.username if q.created_by_id else None,
+        "customer_company_name": q.customer.company_name,
     }
 
 
@@ -159,6 +169,22 @@ def _snapshot_payload(q: Quotation) -> dict:
     }
 
 
+def _proposal_payload(q: Quotation) -> list:
+    """Campos principais das Proposal ligadas a q, + o número da PRÓPRIA cotação (prova
+    de vínculo — apps.proposals.services.next_proposal_number deriva de quotation.number)."""
+    return [
+        {
+            "number": p.number,
+            "status": p.status,
+            "quotation_number": p.quotation.number,
+            "docx_path": p.docx_path,
+            "pdf_path": p.pdf_path,
+            "generated_at_is_null": p.generated_at is None,
+        }
+        for p in q.proposals.order_by("id")
+    ]
+
+
 def _capture(q: Quotation) -> dict:
     q.refresh_from_db()
     itens = [_item_payload(it) for it in q.itens.order_by("sort_order", "id")]
@@ -166,27 +192,23 @@ def _capture(q: Quotation) -> dict:
         "quotation": _quotation_payload(q),
         "itens": itens,
         "snapshot": _snapshot_payload(q),
+        "propostas": _proposal_payload(q),
     }
 
 
 def _fallback_seed_quotation(customer, created_by) -> Quotation:
-    """Fixture da cena (e): cotação 'complete' com inputs incompletos (form fica inválido em
-    estimate_from_inputs → revise cai no fallback quote_completo(desig)). Construída via ORM
-    cru + motor direto: NÃO é o caminho de persistência de produção caracterizado aqui."""
-    from pricing_engine.permutador_quote import quote_completo
-
-    resultado_seed = quote_completo("BEU")
-    custo_mo_seed = (float(resultado_seed.get("custo_mao_obra", 0))
-                      + float(resultado_seed.get("custo_servicos", 0)))
+    """Fixture da cena (e): cotação 'complete' com inputs incompletos — `estimate_from_inputs`
+    devolve None (form inválido) e `revise_complete` cai no fallback `quote_completo(desig)`,
+    chamado pelo PRÓPRIO adapter durante a revisão, não aqui. Os totais abaixo são
+    PLACEHOLDERS arbitrários (a revisão os substitui integralmente pelo resultado real do
+    fallback) — de propósito, para este arquivo não precisar importar
+    `pricing_engine.permutador_quote` (mantém a allowlist do `.importlinter` enxuta)."""
     return Quotation.objects.create(
         number="COT-2026-900", revision=0, customer=customer, scope="complete",
         title="BEU inválido p/ fallback", created_by=created_by,
         inputs={"designacao": "BEU", "n_tubos": 68},  # incompleto: form fica inválido
-        custo_material=Decimal(str(round(resultado_seed["custo_material"], 2))),
-        custo_mo=Decimal(str(round(custo_mo_seed, 2))),
-        custo_total=Decimal(str(round(resultado_seed["custo_total"], 2))),
-        preco_sem_impostos=Decimal(str(round(resultado_seed["preco_sem_impostos"], 2))),
-        preco_com_impostos=Decimal(str(round(resultado_seed["preco_com_impostos"], 2))),
+        custo_material=Decimal("1.00"), custo_mo=Decimal("1.00"), custo_total=Decimal("2.00"),
+        preco_sem_impostos=Decimal("2.00"), preco_com_impostos=Decimal("2.00"),
         computed_at=timezone.now(),
     )
 
@@ -249,7 +271,16 @@ class PersistenciaPermutadorCharacterizationTests(TenantTestCase):
         q_a = self._cena_a()
         q_b = self._cena_b(excluir_pks=[q_a.pk])
         q_c = self._cena_c(excluir_pks=[q_a.pk, q_b.pk])
+
+        # (d): a revisão sempre nasce em "draft" — inclusive quando a cotação ORIGINAL já
+        # saiu do rascunho (ex.: enviada). Muda o status de (a) ANTES de revisar para provar
+        # que "draft" na revisão não é um acidente de a original já estar em draft.
+        q_a.status = "sent"
+        q_a.save(update_fields=["status"])
+        self.assertNotEqual(q_a.status, "draft")
         q_d = self._revise(q_a.pk)
+        self.assertEqual(q_d.status, "draft")
+
         q_e = self._cena_e()
 
         golden = {
