@@ -88,6 +88,18 @@ def to_feixe_inputs(quotation) -> FeixeInputs:
 def build_cost_chain(quotation) -> TenantCostChain:
     """Monta a CADEIA DE CUSTOS do tenant a partir do banco (wizard A1-c popula/calibra):
     preços de material (por material×forma), fator de correção de MO, markup e impostos.
+
+    DEVERIA (revisão do Diretor, ordem 007): `recompute()` passou a rodar DENTRO do
+    `transaction.atomic()` de `adapter.revise_feixe` (a persistência da revisão do feixe
+    migrou pra cá). As duas consultas abaixo engolem `except Exception` de propósito (cair
+    nos defaults quando a consulta falha, o mesmo padrão de `tema_templates.services`) —
+    mas um erro REAL de banco, sem savepoint, deixa a transação Postgres inteira ABORTADA;
+    a PRÓXIMA query (fora deste `try`) bateria em "current transaction is aborted" — 500
+    em vez de continuar com os defaults, como sempre funcionou fora de uma transação. Cada
+    `try` abaixo agora abre seu PRÓPRIO `transaction.atomic()` (savepoint): se a consulta
+    falhar, só o savepoint desfaz — a transação de fora (e o resto de `recompute()`)
+    continua utilizável. Provado com erro de banco DE VERDADE (não mock em memória) em
+    `tests_ordem_007_revise_feixe_savepoint.py`.
     """
     from datetime import date
     chain = TenantCostChain(
@@ -96,37 +108,39 @@ def build_cost_chain(quotation) -> TenantCostChain:
     )
     # preços de material vigentes (cifrados) por (sigla, forma)
     try:
-        from apps.materials.models import MaterialPrice
-        # Resolução única em MaterialPriceManager: antes, iterar sem order_by deixava
-        # o último registro do queryset vencer — com duas vigências válidas no mesmo
-        # dia, o preço que entrava no orçamento era o que o banco devolvesse por último.
-        chain.material_price.update(
-            {chave: float(valor) for chave, valor in MaterialPrice.objects.mapa_vigente().items()})
+        with transaction.atomic():
+            from apps.materials.models import MaterialPrice
+            # Resolução única em MaterialPriceManager: antes, iterar sem order_by deixava
+            # o último registro do queryset vencer — com duas vigências válidas no mesmo
+            # dia, o preço que entrava no orçamento era o que o banco devolvesse por último.
+            chain.material_price.update(
+                {chave: float(valor) for chave, valor in MaterialPrice.objects.mapa_vigente().items()})
     except Exception:
         pass
     # fator de correção de MO (knob calibrado pelo back-solve)
     try:
-        from apps.engineering_params.models import ProcessParameter, Rate, TenantParamConfig
-        hoje = date.today()
-        for r in (Rate.objects.filter(valid_from__lte=hoje)
-                  .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
-                  .order_by("valid_from")):
-            chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
-            if r.rate_hm is not None:
-                chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
-        for pp_obj in (ProcessParameter.objects.filter(valid_from__lte=hoje, valor__isnull=False)
-                       .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
-                       .order_by("valid_from")):
-            if pp_obj.operacao == "ALARGAR_ESPELHO" and pp_obj.metodo == "cnc":
-                continue
-            chain.process_params[
-                (pp_obj.operacao, pp_obj.metodo, pp_obj.material or None)
-            ] = float(pp_obj.valor)
-        cfg = TenantParamConfig.get_solo()
-        chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
-        # knobs configuráveis (V2/F1): scrap por família + setup por parâmetro → override do motor.
-        chain.perda_por_familia = _coerce_factor_map(cfg.perda_por_familia, "perda_por_familia")
-        chain.setup_frac = _coerce_factor_map(cfg.setup_frac, "setup_frac")
+        with transaction.atomic():
+            from apps.engineering_params.models import ProcessParameter, Rate, TenantParamConfig
+            hoje = date.today()
+            for r in (Rate.objects.filter(valid_from__lte=hoje)
+                      .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
+                      .order_by("valid_from")):
+                chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
+                if r.rate_hm is not None:
+                    chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
+            for pp_obj in (ProcessParameter.objects.filter(valid_from__lte=hoje, valor__isnull=False)
+                           .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
+                           .order_by("valid_from")):
+                if pp_obj.operacao == "ALARGAR_ESPELHO" and pp_obj.metodo == "cnc":
+                    continue
+                chain.process_params[
+                    (pp_obj.operacao, pp_obj.metodo, pp_obj.material or None)
+                ] = float(pp_obj.valor)
+            cfg = TenantParamConfig.get_solo()
+            chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
+            # knobs configuráveis (V2/F1): scrap por família + setup por parâmetro → override do motor.
+            chain.perda_por_familia = _coerce_factor_map(cfg.perda_por_familia, "perda_por_familia")
+            chain.setup_frac = _coerce_factor_map(cfg.setup_frac, "setup_frac")
     except Exception:
         pass
     return chain
@@ -150,10 +164,16 @@ def recompute(quotation) -> None:
 
 
 def _apply_avisos(quotation) -> None:
-    """Roda os validadores de negócio e persiste em Quotation.avisos (não quebra o custeio)."""
+    """Roda os validadores de negócio e persiste em Quotation.avisos (não quebra o custeio).
+
+    Mesma razão do savepoint em `build_cost_chain` (ordem 007, revisão do Diretor):
+    `validate_metalurgia` pode consultar o banco (materiais/ligas), e este `try` roda
+    DENTRO do `transaction.atomic()` de `adapter.revise_feixe` — um erro real de banco
+    aqui, sem savepoint, abortaria a transação inteira."""
     from apps.quotations.validators import validate_metalurgia
     try:
-        avisos = list(validate_metalurgia(quotation))
+        with transaction.atomic():
+            avisos = list(validate_metalurgia(quotation))
     except Exception:
         avisos = []
     quotation.avisos = avisos
