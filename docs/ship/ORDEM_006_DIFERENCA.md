@@ -61,6 +61,28 @@ o golden é o único artefato "de estado" tocado, e ele só espelha o comportame
   do hash muda).
 - `backend/apps/quotations/tests_characterization_005.py` + golden `char_005.json` —
   fotografia de ponta a ponta (HTTP → persistência → snapshot) dos 6 cenários (a–f);
-  diff campo a campo do golden antes/depois desta ordem em `../diff006.txt` do worktree
-  de execução (18 caminhos, todos em `snapshot.inputs.pricing.{fator_preco,impostos_pct}`
+  diff campo a campo do golden antes/depois desta ordem no anexo abaixo (18 caminhos, todos em `snapshot.inputs.pricing.{fator_preco,impostos_pct}`
   ou `snapshot_hash` — nenhum total, item, peso ou proposta mudou).
+
+## Anexo — diff do golden `char_005.json` (antes -> depois)
+
+```
+$.a.snapshot.snapshot.inputs.pricing.fator_preco: '1.25' -> '1.25000'
+$.a.snapshot.snapshot.inputs.pricing.impostos_pct: '9.0' -> '9.000'
+$.a.snapshot.snapshot.snapshot_hash: '03643f50d7a8f2d9c0300272280fa1368df5eb66d583cfcf82c295a7ab9a5ace' -> '349003d3215653c3e14b343ee46c91bf077f00916a18d06aa302dd89e91b50e9'
+$.b.snapshot.snapshot.inputs.pricing.fator_preco: '1.25' -> '1.25000'
+$.b.snapshot.snapshot.inputs.pricing.impostos_pct: '9.0' -> '9.000'
+$.b.snapshot.snapshot.snapshot_hash: '9dccc1b2a09a09560dd1598ae01c6a7e5231b9451baa81444429782fde3c5207' -> '78722b938c2d53a3655afe425829316720869a889ca8c490cb32e9d932937e24'
+$.c.snapshot.snapshot.inputs.pricing.fator_preco: '1.25' -> '1.25000'
+$.c.snapshot.snapshot.inputs.pricing.impostos_pct: '9.0' -> '9.000'
+$.c.snapshot.snapshot.snapshot_hash: '308d5fa6b1c5a55f268b2f7efe36c7b09d20f4260ed79c592d569ae7ae079905' -> 'b047122b8a86c60cd470dc6cec3b94a902a51dcb46ff00007ed6ccdcee9d2b8a'
+$.d.snapshot.snapshot.inputs.pricing.fator_preco: '1.25' -> '1.25000'
+$.d.snapshot.snapshot.inputs.pricing.impostos_pct: '9.0' -> '9.000'
+$.d.snapshot.snapshot.snapshot_hash: 'd067a51199486ac71d662849874e5b52de7cbb7c3996fb4bf7efee16a4456063' -> '7ce2164083bcb449ac087d65b5943f6c88ddf977f5d37cfcbe3fd32655590bc0'
+$.e.snapshot.snapshot.inputs.pricing.fator_preco: '1.25' -> '1.25000'
+$.e.snapshot.snapshot.inputs.pricing.impostos_pct: '9.0' -> '9.000'
+$.e.snapshot.snapshot.snapshot_hash: '0833e09f8c38756e815160f5a685bdc71638f2c0d494f031da1261d8e2e0d2bf' -> 'e066c4c969b940182df5b22e4991b6455c1030eb30b9553125077fb4fd6331a3'
+$.f.snapshot.snapshot.inputs.pricing.fator_preco: '1.25' -> '1.25000'
+$.f.snapshot.snapshot.inputs.pricing.impostos_pct: '9.0' -> '9.000'
+$.f.snapshot.snapshot.snapshot_hash: '03643f50d7a8f2d9c0300272280fa1368df5eb66d583cfcf82c295a7ab9a5ace' -> '349003d3215653c3e14b343ee46c91bf077f00916a18d06aa302dd89e91b50e9'
+```

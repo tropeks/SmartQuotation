@@ -354,7 +354,10 @@ def _q(field_name: str, x) -> Decimal:
     `Quotation` (lida de `Quotation._meta`, não hardcoded). Uso: fator_preco (8,5) e
     impostos_pct (6,3) — política comercial, não dinheiro (que segue em `_money2`, sempre
     2 casas). `_money2` truncava os dois a 2 casas antes de gravar: 1,01377 virava 1,01;
-    23,303 virava 23,30 — perda real e permanente, não só de exibição (ordem 006)."""
+    23,303 virava 23,30 — perda real e permanente, não só de exibição (ordem 006).
+    None falha alto: `_money2` o convertia em 0 em silêncio (markup zero gravado)."""
+    if x is None:
+        raise ValueError(f"{field_name} ausente no resultado do motor (None)")
     places = Quotation._meta.get_field(field_name).decimal_places
     return Decimal(str(x)).quantize(Decimal(1).scaleb(-places))
 
