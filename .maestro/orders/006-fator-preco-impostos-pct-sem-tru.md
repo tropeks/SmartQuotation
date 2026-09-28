@@ -35,3 +35,7 @@ Gates do motor 0,0% intactos; suíte Django verde; CI verde no tip; recibos moto
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 006` (você não fecha a própria ordem).
+accepted_at: 2026-09-28T00:59:00-03:00
+accepted_session: desconhecido
+accepted_tree: b6f660c7227da4203f8b9080dee413ce94bbc801
+accepted_intent: 3
