@@ -25,8 +25,18 @@ JOBS_OBRIGATORIOS=(
   "Testes de ops/infra (backup + media volume)"
   "pip-audit (CVEs nos locks)"
   "Django check + migrations"
-  "Testes Django (multi-tenant)"
 )
+
+# Testes Django (multi-tenant): dois formatos aceitos (ordem 009). O job único de sempre
+# ("Testes Django (multi-tenant)") OU o grupo da matriz Postgres 15/16 introduzida pelo
+# patch docs/patches/009-ci-postgres-matrix.patch, cada job nomeado
+# "Testes Django (multi-tenant) — Postgres <major>". No formato matriz TODAS as majors
+# de DJANGO_MATRIX_VALUES têm que estar presentes E success (matriz incompleta reprova); se
+# os dois formatos aparecerem no mesmo run (ex.: durante a migração do patch), todos os jobs
+# de ambos os formatos precisam de success.
+DJANGO_JOB_EXACT="Testes Django (multi-tenant)"
+DJANGO_MATRIX_PREFIX="Testes Django (multi-tenant) — Postgres "
+DJANGO_MATRIX_VALUES="15,16"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -84,11 +94,13 @@ if ! gh run view "$RUN_ID" --json jobs,conclusion,status,headSha,url,databaseId 
 $(cat "$TMP_DIR/run.err")"
 fi
 
-python3 - "$TMP_DIR/run.json" "$HEAD_SHA" "${JOBS_OBRIGATORIOS[@]}" <<'PY'
+python3 - "$TMP_DIR/run.json" "$HEAD_SHA" "$DJANGO_JOB_EXACT" "$DJANGO_MATRIX_PREFIX" \
+      "$DJANGO_MATRIX_VALUES" "${JOBS_OBRIGATORIOS[@]}" <<'PY'
 import json
 import sys
 
-path, head_sha, *required = sys.argv[1:]
+path, head_sha, django_exact, django_prefix, django_values_csv, *required = sys.argv[1:]
+django_values = django_values_csv.split(",")
 try:
     with open(path) as f:
         run = json.load(f)
@@ -122,6 +134,33 @@ for name in required:
         problems.append(f"job obrigatório ausente do run: '{name}'")
     elif j.get("conclusion") != "success":
         problems.append(f"job obrigatório '{name}' concluiu como '{j.get('conclusion')}'")
+
+# Testes Django (multi-tenant): formato antigo (job exato) e/ou formato matriz (grupo com
+# prefixo django_prefix). Se os dois aparecerem no mesmo run, TODOS os jobs de ambos os
+# formatos precisam de success. No formato matriz, faltar qualquer major de django_values é
+# "matriz incompleta" (reprova mesmo que os presentes estejam success).
+django_group = {n: j for n, j in by_name.items() if n.startswith(django_prefix)}
+django_relevant = []
+if django_exact in by_name:
+    django_relevant.append((django_exact, by_name[django_exact]))
+django_relevant.extend(sorted(django_group.items()))
+
+if not django_relevant:
+    problems.append(
+        f"job obrigatório ausente do run: '{django_exact}' "
+        f"(formato antigo) nem o grupo da matriz '{django_prefix}*' (formato novo)"
+    )
+else:
+    if django_group:
+        missing = [v for v in django_values if (django_prefix + v) not in django_group]
+        if missing:
+            problems.append(
+                "matriz '" + django_prefix + "*' incompleta: faltam "
+                + ", ".join(django_prefix + v for v in missing)
+            )
+    for name, j in django_relevant:
+        if j.get("conclusion") != "success":
+            problems.append(f"job obrigatório '{name}' concluiu como '{j.get('conclusion')}'")
 
 if problems:
     print("REPROVADO:")

@@ -466,8 +466,12 @@ if __name__ == "__main__":
     from tests.test_offsite_yubikey import TESTS as OFFSITE_YUBIKEY
     from tests.test_offsite_separation import TESTS as OFFSITE_SEPARATION
     from tests.test_backup_run import TESTS as RUNNER
+    # Ordem 009: major do drill derivada do dump, recibo de suíte com matriz e suíte local.
+    from tests.test_restore_image_major import TESTS as RESTORE_MAJOR
+    from tests.test_suite_receipt import TESTS as SUITE_RECEIPT
+    from tests.test_suite_local_pg import TESTS as SUITE_LOCAL_PG
     tests += ATOMIC + HARDENING + KEY + RESTORE + UNITS + OFFSITE + OFFSITE_KEY + OFFSITE_YUBIKEY
-    tests += OFFSITE_SEPARATION + RUNNER
+    tests += OFFSITE_SEPARATION + RUNNER + RESTORE_MAJOR + SUITE_RECEIPT + SUITE_LOCAL_PG
     failed = []
     for t in tests:
         try:
