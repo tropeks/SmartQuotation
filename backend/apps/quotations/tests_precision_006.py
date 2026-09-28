@@ -6,9 +6,13 @@ Markup fracionário (ex.: 1,01377 — o próprio default do campo) virava 1,01; 
 23,303 viravam 23,30. O `CalculationSnapshot` (inputs.pricing) e o `snapshot_hash` herdam
 a string truncada porque `build_snapshot_payload` lê `str(quotation.fator_preco)` do banco.
 
-Este arquivo prova o caso sintético do relato (1,01377 / 23,303): preserva as casas do
-CAMPO, não 2, na Quotation persistida E no snapshot.inputs.pricing (vermelho antes do fix:
-TRUNCA — 1,01377 vira 1,01000; 23,303 vira 23,300... na verdade 23,30, ver traceback).
+Este arquivo prova:
+  1) o caso sintético do relato (1,01377 / 23,303) preserva as casas do CAMPO, não 2, na
+     Quotation persistida E no snapshot.inputs.pricing (vermelho antes do fix: TRUNCA).
+  2) BEU de referência (motor usa 1,25/9,0 fixos — `tenant_cost_chain()` não injeta markup
+     do tenant no permutador completo, ordem 008 fora de escopo): preco_com_impostos e
+     preco_sem_impostos são EXATAMENTE os mesmos antes/depois do fix — só a STRING gravada
+     (e portanto o snapshot_hash) muda de "1.25"/"9.0" para "1.25000"/"9.000".
 """
 from decimal import Decimal
 
@@ -64,3 +68,30 @@ class PrecisaoFatorPrecoImpostosPctTests(TenantTestCase):
         self.assertIsNotNone(snap, "persist_complete deveria ter criado o CalculationSnapshot")
         self.assertEqual(snap.inputs["pricing"]["fator_preco"], "1.01377")
         self.assertEqual(snap.inputs["pricing"]["impostos_pct"], "23.303")
+
+    def test_beu_referencia_preco_identico_so_string_do_hash_muda(self):
+        """BEU de referência: o motor sempre usa 1,25/9,0 fixos (nenhum knob de tenant
+        entra em quote_completo hoje — ordem 008). O PREÇO não muda; a STRING gravada
+        (e o snapshot_hash, por depender dela) sim: "1.25"/"9.0" -> "1.25000"/"9.000"."""
+        resultado = _resultado_sintetico(
+            fator_preco=1.25, impostos_pct=9.0,
+            preco_com_impostos=2000.0, preco_sem_impostos=1830.28,
+        )
+        q = persist_complete(
+            customer=self.customer, designacao="BEU", cleaned={"designacao": "BEU"},
+            resultado=resultado, created_by=self.user, title="BEU Referência 006",
+        )
+
+        # Preço: idêntico antes/depois do fix — 1,25/9,0 não truncam em 2 casas, então o
+        # VALOR nunca esteve em risco aqui (a prova de valor real está no teste acima).
+        self.assertEqual(q.preco_com_impostos, Decimal("2000.00"))
+        self.assertEqual(q.preco_sem_impostos, Decimal("1830.28"))
+        self.assertEqual(q.fator_preco, Decimal("1.25"))
+        self.assertEqual(q.impostos_pct, Decimal("9.0"))
+
+        # O snapshot é montado a partir do objeto em memória, ANTES de qualquer refresh —
+        # é aqui que a STRING muda de formato: "1.25"/"9.0" (2 casas, `_money2`) para
+        # "1.25000"/"9.000" (casa do campo, `_q`). Isso é o que move o snapshot_hash.
+        snap = q.snapshots.first()
+        self.assertEqual(snap.inputs["pricing"]["fator_preco"], "1.25000")
+        self.assertEqual(snap.inputs["pricing"]["impostos_pct"], "9.000")
