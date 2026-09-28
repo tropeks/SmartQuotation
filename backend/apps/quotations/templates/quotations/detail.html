@@ -169,6 +169,20 @@
     </div>
   </div>
 
+  {% if revision_history|length > 1 %}
+  {% comment %}P1: a listagem só mostra a vigente; aqui fica o histórico das revisões do
+     MESMO número (ordem 007 — revisão mantém o número).{% endcomment %}
+  <div class="g-note" style="margin:8px 0 16px" role="navigation" aria-label="Histórico de revisões">
+    Histórico de revisões:
+    {% for rev in revision_history %}
+    <a href="{% url 'quotations:detail' rev.pk %}"
+       class="q-btn{% if rev.pk == q.pk %} primary{% endif %}" style="margin-right:4px">
+      Rev. {{ rev.revision }}{% if rev.pk == q.pk %} (atual){% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {# Modal de confirmação para entrar em modo de revisão/edição. #}
   <div x-show="confirmOpen" x-cloak class="q-modal-overlay"
        @click.self="confirmOpen = false" @keydown.escape.window="confirmOpen = false">

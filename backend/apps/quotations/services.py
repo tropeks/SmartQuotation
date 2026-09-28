@@ -3,9 +3,31 @@ from datetime import date, datetime
 from decimal import Decimal
 import hashlib
 import json
-from django.db import transaction
+from django.db import IntegrityError, models, transaction
 from apps.quotations.models import CalculationSnapshot, Quotation
 from apps.quotations.adapter import default_inputs, recompute
+
+
+class RevisionConflictError(Exception):
+    """Corrida entre duas revisões concorrentes do MESMO `number` — a UniqueConstraint
+    `uniq_quotation_number_revision` rejeitou o INSERT (IntegrityError). `allocate_revision`
+    (select_for_update) já serializa o caso normal; isto é o backstop para quando o INSERT
+    corre fora do lock (ou o nível de isolamento do banco permite a corrida). Vira mensagem
+    de conflito ao usuário — nunca um 500."""
+
+
+class NotCurrentRevisionError(Exception):
+    """P2: ação bloqueada porque a cotação não é a revisão VIGENTE (a de maior `revision`)
+    do seu `number` — só a vigente pode enviar proposta ou virar Ordem de Fabricação."""
+
+
+class CustomerChangeNotAllowedError(Exception):
+    """P6: uma revisão não pode trocar o cliente da cotação original."""
+
+
+class QuotationHasProductionOrderError(Exception):
+    """P7: não se revisa uma cotação cujo `number` já tem Ordem de Fabricação ativa
+    (não cancelada) — em qualquer revisão desse número."""
 
 
 # v2 (M1): `outputs.items.operacoes` passou a carregar horas, taxas, custo_direto e
@@ -205,6 +227,64 @@ def next_number() -> str:
               .order_by("-number").values_list("number", flat=True).first())
     seq = int(ultimo.split("-")[-1]) + 1 if ultimo else 1
     return f"{prefixo}{seq:03d}"
+
+
+def allocate_revision(orig: Quotation) -> int:
+    """Ordem 007 — aloca a PRÓXIMA revisão de `orig.number`: max(revision)+1 entre TODAS
+    as linhas do mesmo número (P3: revisar a partir de uma revisão antiga também sai com
+    max+1, nunca `orig.revision+1` — senão duas revisões concorrentes a partir de revisões
+    antigas diferentes colidiriam).
+
+    `select_for_update()` TRAVA essas linhas — precisa ser chamada DENTRO da MESMA
+    `transaction.atomic()` que faz o INSERT da revisão nova: é a trava seguindo até o
+    commit que serializa dois pedidos de revisão concorrentes do mesmo número (o segundo
+    espera o primeiro commitar, e então enxerga o `max(revision)` já atualizado).
+    """
+    maior = (Quotation.objects.select_for_update()
+             .filter(number=orig.number)
+             .aggregate(models.Max("revision"))["revision__max"])
+    base = maior if maior is not None else orig.revision
+    return base + 1
+
+
+def is_current_revision(quotation: Quotation) -> bool:
+    """P1/P2: True sse `quotation` é a revisão VIGENTE (maior `revision`) do seu `number`.
+    A listagem só mostra a vigente (P1); só ela pode virar proposta enviada/OF (P2)."""
+    maior = Quotation.objects.filter(number=quotation.number).aggregate(
+        models.Max("revision"))["revision__max"]
+    return quotation.revision == maior
+
+
+def has_active_production_order(number: str) -> bool:
+    """P7: True sse alguma revisão deste `number` já tem Ordem de Fabricação NÃO cancelada.
+    Import tardio: evita ciclo quotations<->production (production já importa quotations
+    no nível de módulo; aqui o sentido é o inverso, só em runtime)."""
+    from apps.production.models import OrdemFabricacao, STATUS_CANCELADA
+
+    return (OrdemFabricacao.objects.filter(quotation__number=number)
+            .exclude(status=STATUS_CANCELADA).exists())
+
+
+def assert_revisable(orig: Quotation) -> None:
+    """P7: recusa revisar uma cotação cujo número já tem Ordem de Fabricação ativa."""
+    if has_active_production_order(orig.number):
+        raise QuotationHasProductionOrderError(
+            f"A cotação {orig.number} já possui Ordem de Fabricação e não pode ser "
+            "revisada."
+        )
+
+
+def supersede_previous_proposals(number: str) -> None:
+    """P4: ao criar uma revisão nova, marca como 'superseded' as propostas 'draft'/'ready'
+    de QUALQUER revisão anterior do mesmo número — o texto/preço delas não corresponde
+    mais à revisão vigente. As já 'sent' ficam como estão (já saíram para o cliente; a
+    ordem não pede revogar um envio já feito). Import tardio: proposals não é dependência
+    de módulo de quotations.services (só desta função, em runtime)."""
+    from apps.proposals.models import Proposal
+
+    Proposal.objects.filter(
+        quotation__number=number, status__in=["draft", "ready"],
+    ).update(status="superseded")
 
 
 @transaction.atomic

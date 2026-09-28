@@ -4,10 +4,11 @@ Vertical slice: criar feixe -> recompute (preview ao vivo) -> salvar -> detalhe 
 """
 import re
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Max, OuterRef, Q, Subquery
 from django.views.decorators.http import require_POST
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -20,7 +21,10 @@ from apps.audit.services import log_access
 from apps.quotations.models import Quotation, Customer
 from apps.quotations.forms import FeixeDataSheetForm, QuotationEntryForm, CustomerQuickForm
 from apps.quotations.adapter import default_inputs, to_feixe_inputs
-from apps.quotations.services import create_feixe_quotation
+from apps.quotations.services import (
+    create_feixe_quotation, CustomerChangeNotAllowedError, QuotationHasProductionOrderError,
+    RevisionConflictError,
+)
 
 from pricing_engine.feixe_inputs import FeixeInputs
 from pricing_engine.feixe_quote import quote_feixe
@@ -293,8 +297,21 @@ def _render_status_control(request, quotation):
     )
 
 
+def _vigente_queryset():
+    """P1: só a revisão VIGENTE (maior `revision`) de cada `number` — a revisão MANTÉM o
+    número (ordem 007), então sem este filtro a listagem mostraria uma linha por REVISÃO,
+    não uma por COTAÇÃO. Derivado (subquery correlacionada por `number`), sem campo novo:
+    a mesma regra de `services.is_current_revision`, em massa."""
+    vigente_do_numero = (
+        Quotation.objects.filter(number=OuterRef("number"))
+        .values("number").annotate(mx=Max("revision")).values("mx")
+    )
+    return Quotation.objects.annotate(_vigente=Subquery(vigente_do_numero)).filter(
+        revision=F("_vigente"))
+
+
 def _list_context(request):
-    qs = Quotation.objects.select_related("customer", "created_by")
+    qs = _vigente_queryset().select_related("customer", "created_by")
 
     search = (request.GET.get("q") or "").strip()
     if search:
@@ -490,25 +507,34 @@ def quotation_edit(request, pk):
     if request.method == "POST":
         form = FeixeDataSheetForm(request.POST)
         if form.is_valid():
-            from apps.quotations.services import next_number, create_calculation_snapshot
-            from apps.quotations.adapter import recompute
-            customer, _ = Customer.objects.get_or_create(company_name=form.cleaned_data["customer_name"])
-            q = Quotation.objects.create(
-                number=next_number(),
-                revision=orig.revision + 1,
-                customer=customer,
-                title=form.cleaned_data["title"],
-                scope=orig.scope,
-                status="draft",
-                inputs=form.to_inputs_dict(),
-                fator_preco=orig.fator_preco,
-                impostos_pct=orig.impostos_pct,
-                created_by=request.user,
-            )
-            recompute(q)
-            create_calculation_snapshot(q)
-            return redirect("quotations:detail", pk=q.pk)
-        # inválido → re-render com erros (preview cai nos inputs originais)
+            # P6: revisão NÃO troca o cliente. O form pede `customer_name` (usado na
+            # CRIAÇÃO); numa revisão, o campo só pode confirmar o cliente já existente —
+            # trocá-lo (inclusive criando um Customer novo via get_or_create, como o form
+            # de criação faz) é bloqueado aqui, ANTES de chamar o adapter.
+            nome_submetido = (form.cleaned_data["customer_name"] or "").strip()
+            nome_original = orig.customer.company_name if orig.customer_id else ""
+            if nome_submetido and nome_submetido != nome_original:
+                form.add_error(
+                    "customer_name",
+                    "Não é possível trocar o cliente numa revisão. Para outro cliente, "
+                    "crie uma cotação nova.",
+                )
+            else:
+                from apps.quotations.adapter import revise_feixe
+
+                try:
+                    q = revise_feixe(
+                        orig, request.user,
+                        title=form.cleaned_data["title"], inputs=form.to_inputs_dict(),
+                    )
+                except QuotationHasProductionOrderError as err:
+                    form.add_error(None, str(err))
+                except RevisionConflictError as err:
+                    form.add_error(None, str(err))
+                else:
+                    return redirect("quotations:detail", pk=q.pk)
+        # inválido (ou bloqueado por P6/P7/conflito) → re-render com erros (preview cai
+        # nos inputs originais)
         results = _preview(dict(orig.inputs or {}))
         return render(request, "quotations/edit.html",
                       {"form": form, "results": results, "orig": orig, **_param_config_ctx()})
@@ -543,10 +569,16 @@ def quotation_detail(request, pk):
     active_approval = q.technical_approvals.filter(
         revoked_at__isnull=True).select_related("approved_by").first()
     snapshot = latest_snapshot_for(q)
+    # P1: a listagem só mostra a vigente; aqui, no detalhe, o histórico das revisões do
+    # MESMO número (ordem 007 — revisão mantém o número, então "outras cotações com este
+    # number" SÃO as revisões anteriores/posteriores desta).
+    revision_history = list(
+        Quotation.objects.filter(number=q.number).order_by("-revision"))
     return render(request, "quotations/detail.html",
                   {
                       "q": q,
                       "itens": itens,
+                      "revision_history": revision_history,
                       "carimbo": _carimbo(q, active_approval, snapshot),
                       "selo": _selo(q, active_approval, snapshot),
                       "pricing_basis_pill": (
@@ -1071,28 +1103,21 @@ def quotation_update_meta(request, pk):
 @require_capability("quotation.write")
 @require_POST
 def quotation_revise(request, pk):
+    """"Nova Revisão" (feixe/parts) ou "Revisar" (permutador completo): MANTÉM o número
+    (ordem 007) e sobe a revisão via o adapter (revise_feixe/revise_complete — único
+    caminho que persiste resultado do motor, INTENT v3 §Limites). P7/conflito de corrida
+    viram mensagem de erro (redirect de volta ao detalhe), nunca um 500."""
     orig = get_object_or_404(Quotation, pk=pk)
 
-    if orig.scope == "complete":
-        from apps.quotations.adapter import revise_complete
-        q = revise_complete(orig, created_by=request.user)
-    else:
-        from apps.quotations.adapter import recompute
-        from apps.quotations.services import next_number
-        q = Quotation.objects.create(
-            number=next_number(),
-            revision=orig.revision + 1,
-            customer=orig.customer,
-            title=orig.title,
-            scope=orig.scope,
-            status="draft",
-            inputs=orig.inputs,
-            fator_preco=orig.fator_preco,
-            impostos_pct=orig.impostos_pct,
-            created_by=request.user
-        )
-        recompute(q)
-        from apps.quotations.services import create_calculation_snapshot
-        create_calculation_snapshot(q)
+    try:
+        if orig.scope == "complete":
+            from apps.quotations.adapter import revise_complete
+            q = revise_complete(orig, created_by=request.user)
+        else:
+            from apps.quotations.adapter import revise_feixe
+            q = revise_feixe(orig, created_by=request.user)
+    except (QuotationHasProductionOrderError, RevisionConflictError) as err:
+        messages.error(request, str(err))
+        return redirect("quotations:detail", pk=orig.pk)
 
     return redirect("quotations:detail", pk=q.pk)

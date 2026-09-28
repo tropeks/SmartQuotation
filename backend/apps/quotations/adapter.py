@@ -8,19 +8,25 @@ resultado do motor — outros módulos podem chamar o motor para simular/exibir,
 - persist_complete(...): cria uma Quotation de PERMUTADOR COMPLETO a partir do resultado
   do motor (data sheet "salvar"). revise_complete(...): revisão de uma cotação 'complete'
   (ordem 005 — movidas de apps.quotations.services.create_permutador_quotation).
+- revise_feixe(...): revisão de uma cotação 'tube_bundle'/'parts' (ordem 007 — movida das
+  views quotation_edit/quotation_revise, que só montavam o form/POST e delegam a
+  persistência a este adapter). Ordem 007: revisão MANTÉM o número (`services.
+  allocate_revision`), P7 bloqueia número com OF, P4 supersede propostas anteriores.
 
 pricing_engine permanece PURO (zero import Django). float -> Decimal na fronteira.
 """
 import logging
 from dataclasses import fields
 from decimal import Decimal
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 
 from pricing_engine.feixe_inputs import FeixeInputs, caso_136_tubos
 from pricing_engine.feixe_quote import quote_feixe
 from pricing_engine.rates import TenantCostChain, op_key
-from apps.quotations.models import Quotation, QuotationItem, ItemMaterial, ItemOperation
+from apps.quotations.models import (
+    Quotation, QuotationItem, ItemMaterial, ItemOperation, QuotationPart,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -422,9 +428,15 @@ def revise_complete(orig: Quotation, created_by) -> Quotation:
     """Revisão de uma cotação de permutador completo (scope='complete'): recomputa com as
     DIMENSÕES da cotação original (não o seed), com fallback defensivo no seed se os inputs
     salvos não validarem mais. Absorve o ramo 'complete' de quotations.views.quotation_revise
-    (ordem 005). A revisão ganha NÚMERO NOVO — regra de negócio confirmada pelo Capitão
-    (decisão 01M3JEK53Y43C5A55X0ANSA4B5); a correção de manter o número fica para a ordem
-    007. A precisão de fator_preco/impostos_pct (ordem 006) já está corrigida em
+    (ordem 005).
+
+    Ordem 007 — MANTÉM o número (`orig.number`) e sobe a revisão via `allocate_revision`
+    (select_for_update; P3: revisar a partir de revisão antiga também sai com max+1, não
+    `orig.revision+1`). P7: recusa revisar se o número já tem Ordem de Fabricação ativa.
+    P4: propostas draft/ready de revisões anteriores do mesmo número viram 'superseded'.
+    IntegrityError na UniqueConstraint(number, revision) (corrida — teórica com o lock de
+    `allocate_revision`) vira `RevisionConflictError`, mensagem de conflito ao usuário. A
+    precisão de fator_preco/impostos_pct (ordem 006) já está corrigida em
     `persist_complete`, chamada por esta função.
 
     `resultado` é calculado FORA de qualquer transação, de propósito: `estimate_from_inputs`
@@ -432,20 +444,99 @@ def revise_complete(orig: Quotation, created_by) -> Quotation:
     de banco com `except Exception` para cair no fallback hardcoded — esse é o comportamento
     de fora de uma transação Django, onde uma consulta que falha não contamina nada além
     dela. `@transaction.atomic` na função inteira (como era antes) envolvia essa chamada:
-    um erro de banco ali aborta a transação Postgres, e a PRÓXIMA query (o `next_number()`
-    de `persist_complete`) batia em "current transaction is aborted" — 500 em vez de cair
-    nos defaults como sempre fez. Só `persist_complete` (a escrita em si) e o
-    `status`/`save()` entram na transação."""
+    um erro de banco ali aborta a transação Postgres, e a PRÓXIMA query (o `allocate_revision`
+    de dentro do bloco) batia em "current transaction is aborted" — 500 em vez de cair
+    nos defaults como sempre fez. Só a alocação da revisão, `persist_complete` (a escrita
+    em si) e o `status`/`save()` entram na transação."""
     from apps.tema_templates.services import estimate_from_inputs
     from pricing_engine.permutador_quote import quote_completo
+    from apps.quotations.services import (
+        allocate_revision, assert_revisable, supersede_previous_proposals,
+    )
+    from apps.quotations.services import RevisionConflictError
+
+    assert_revisable(orig)
 
     desig = orig.inputs.get("designacao", "BEU")
     resultado = estimate_from_inputs(desig, orig.inputs) or quote_completo(desig)
     with transaction.atomic():
-        q = persist_complete(
-            customer=orig.customer, designacao=desig, cleaned=orig.inputs, resultado=resultado,
-            created_by=created_by, title=orig.title, revision=orig.revision + 1,
-        )
+        revision = allocate_revision(orig)
+        try:
+            q = persist_complete(
+                customer=orig.customer, designacao=desig, cleaned=orig.inputs, resultado=resultado,
+                created_by=created_by, title=orig.title, number=orig.number, revision=revision,
+            )
+        except IntegrityError as err:
+            raise RevisionConflictError(
+                f"Conflito ao gravar a revisão de {orig.number}: outra revisão concorrente "
+                "já foi criada. Tente novamente."
+            ) from err
         q.status = "draft"
         q.save()
+        supersede_previous_proposals(orig.number)
+    return q
+
+
+def _copy_quotation_parts(orig: Quotation, new: Quotation) -> None:
+    """Copia as QuotationPart da cotação original para a revisão nova (scope='parts') —
+    sem isso, `_recompute_parts` não acha nenhuma parte inclusa e a revisão nasce com
+    custo ZERO (achado da ordem 007, item 9 do escopo)."""
+    QuotationPart.objects.bulk_create([
+        QuotationPart(
+            quotation=new, template=p.template, tema_letter=p.tema_letter,
+            material_sigla=p.material_sigla, params=p.params,
+            incluso=p.incluso, sort_order=p.sort_order,
+        )
+        for p in orig.parts.all()
+    ])
+
+
+def revise_feixe(orig: Quotation, created_by, *, title=None, inputs=None) -> Quotation:
+    """Revisão de uma cotação NÃO 'complete' (feixe tube_bundle ou partes avulsas 'parts'):
+    ordem 007 — MANTÉM o número (`orig.number`) e sobe a revisão via `allocate_revision`
+    (select_for_update; P3: revisar a partir de revisão antiga também sai com max+1). É o
+    ADAPTER (INTENT v3 §Limites) quem persiste o resultado do motor: cria a linha nova,
+    copia as QuotationPart quando scope='parts' (P9), e chama recompute()/
+    create_calculation_snapshot() como o resto do adapter. P7: recusa se o número já tem
+    OF ativa. P4: propostas draft/ready de revisões anteriores do mesmo número viram
+    'superseded'. IntegrityError na UniqueConstraint(number, revision) vira
+    `RevisionConflictError` — mensagem de conflito, nunca um 500.
+
+    `title`/`inputs`: None copia da original ("Nova Revisão" sem mudar dados);
+    `quotation_edit` (Tier A) passa os dois vindos do form. O CLIENTE nunca é parâmetro —
+    é sempre `orig.customer` (P6: revisão não troca o cliente; bloquear uma TENTATIVA de
+    troca é responsabilidade da view, antes de chamar esta função)."""
+    from apps.quotations.services import (
+        allocate_revision, assert_revisable, create_calculation_snapshot,
+        supersede_previous_proposals,
+    )
+    from apps.quotations.services import RevisionConflictError
+
+    assert_revisable(orig)
+
+    with transaction.atomic():
+        revision = allocate_revision(orig)
+        try:
+            q = Quotation.objects.create(
+                number=orig.number,
+                revision=revision,
+                customer=orig.customer,
+                title=orig.title if title is None else title,
+                scope=orig.scope,
+                status="draft",
+                inputs=orig.inputs if inputs is None else inputs,
+                fator_preco=orig.fator_preco,
+                impostos_pct=orig.impostos_pct,
+                created_by=created_by,
+            )
+        except IntegrityError as err:
+            raise RevisionConflictError(
+                f"Conflito ao gravar a revisão de {orig.number}: outra revisão concorrente "
+                "já foi criada. Tente novamente."
+            ) from err
+        if orig.scope == "parts":
+            _copy_quotation_parts(orig, q)
+        recompute(q)
+        create_calculation_snapshot(q)
+        supersede_previous_proposals(orig.number)
     return q

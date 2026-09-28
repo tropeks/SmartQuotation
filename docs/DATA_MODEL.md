@@ -252,8 +252,12 @@ Entity: Customer
 ```
 Entity: Quotation
   - id: BIGSERIAL (PK)
-  - number: VARCHAR(50) UNIQUE NOT NULL       -- COT-{ANO}-{SEQ}
+  - number: VARCHAR(50) NOT NULL, db_index    -- COT-{ANO}-{SEQ}; ordem 007: revisão MANTÉM
+                                               -- o número e sobe `revision` — a identidade
+                                               -- passa a ser o PAR (number, revision), não
+                                               -- `number` sozinho (era UNIQUE até a 0009)
   - revision: SMALLINT DEFAULT 0
+  - UNIQUE(number, revision)                  -- uniq_quotation_number_revision (migração 0010)
   - customer_id: FK -> Customer NOT NULL
   - title: VARCHAR(500) NOT NULL
   - scope: ENUM(tube_bundle,complete) DEFAULT tube_bundle

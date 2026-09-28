@@ -9,6 +9,11 @@
       hx-trigger="change delay:250ms from:#ds-form, submit"
       hx-swap="outerHTML">
   {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div role="alert" style="color:#b00020;margin-bottom:12px">
+    {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+  </div>
+  {% endif %}
 
   <section class="g-section">
     <header class="g-section-head"><h3>§1 · Identificação</h3></header>

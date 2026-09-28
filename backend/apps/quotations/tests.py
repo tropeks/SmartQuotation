@@ -1342,7 +1342,7 @@ class RevisePermutadorForaDaTransacaoTests(TenantMigrationTestCase):
         self.assertEqual(revisada.status, "draft")
         self.assertEqual(revisada.revision, 1)
         self.assertGreater(revisada.custo_total, 0)
-        self.assertNotEqual(revisada.number, orig.number)  # ainda a divergência PRESERVADA
+        self.assertEqual(revisada.number, orig.number)  # ordem 007: revisão MANTÉM o número
 
 
 class PersistCompleteAtomicidadeTests(TenantTestCase):

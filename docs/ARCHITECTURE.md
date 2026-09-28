@@ -494,5 +494,16 @@ smartquotation/
   mover, sem mudança de comportamento; travado estruturalmente por
   `tests_persistence_boundary.py` (ver §0.3) para não reabrir.
 - revisão de cotação completa ganha número novo hoje; decidido (Capitão,
-  01M3JEK53Y43C5A55X0ANSA4B5): mantém o número com revision+1 — corrigido na ordem 006; a
-  005 preserva o comportamento atual.
+  01M3JEK53Y43C5A55X0ANSA4B5): mantém o número com revision+1 — corrigido na ordem 007
+  (feixe/parts via `adapter.revise_feixe`, completo via `adapter.revise_complete`); a
+  005 preservou o comportamento antigo, a 006 tratou só a precisão de fator_preco/
+  impostos_pct. `Quotation.number` deixou de ser UNIQUE sozinho (migração
+  `quotations/0010`): a identidade passa a ser o PAR (number, revision)
+  (`uniq_quotation_number_revision`). Alocador único `services.allocate_revision`
+  (select_for_update em todas as linhas do `number`) garante max(revision)+1 mesmo
+  revisando a partir de uma revisão antiga (P3); `IntegrityError` de uma corrida rara vira
+  `RevisionConflictError` (mensagem ao usuário). P1 (listagem só mostra a revisão vigente),
+  P2 (só a vigente envia proposta/vira OF), P4 (nova revisão marca `superseded` as
+  propostas draft/ready anteriores), P6 (revisão não troca cliente) e P7 (não revisa
+  número que já tem OF) — ver `apps/quotations/services.py` e `docs/ship/
+  ORDEM_007_DIFERENCA.md`.

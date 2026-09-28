@@ -82,7 +82,7 @@ class FeatureViewsTests(TenantTestCase):
         self.assertEqual(resp.status_code, 302)
 
         q2 = Quotation.objects.get(pk=resp.url.split("/")[-2])
-        self.assertNotEqual(q2.number, old_num)
+        self.assertEqual(q2.number, old_num)   # ordem 007: revisão MANTÉM o número
         self.assertEqual(q2.revision, old_rev + 1)
         self.assertEqual(q2.customer, self.customer)
         self.assertEqual(q2.scope, "tube_bundle")
@@ -101,7 +101,7 @@ class FeatureViewsTests(TenantTestCase):
         self.assertEqual(resp.status_code, 302)
 
         q2 = Quotation.objects.get(pk=resp.url.split("/")[-2])
-        self.assertNotEqual(q2.number, q.number)
+        self.assertEqual(q2.number, q.number)   # ordem 007: revisão MANTÉM o número
         self.assertEqual(q2.revision, q.revision + 1)
         self.assertEqual(q2.customer, self.customer)
         self.assertEqual(q2.scope, "complete")
