@@ -36,3 +36,7 @@ Gates do motor intactos; suíte e CI verdes; import-linter 2/2; makemigrations l
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 008` (você não fecha a própria ordem).
+accepted_at: 2026-09-28T06:46:16-03:00
+accepted_session: desconhecido
+accepted_tree: 8b009c74f6ac6db49a7b61f375f109d7c3d396fa
+accepted_intent: 3
