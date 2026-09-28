@@ -1,0 +1,28 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 151ec52..fcd7ed3 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -108,14 +108,21 @@ jobs:
+         run: python manage.py makemigrations --check --dry-run
+
+   django-test:
+-    name: Testes Django (multi-tenant)
++    name: "Testes Django (multi-tenant) — Postgres ${{ matrix.postgres }}"
+     runs-on: ubuntu-latest
++    # Ordem 009: produção (container avulso sq-prod-db) não tem a major registrada no repo —
++    # pode estar em 15 ou 16 (docker-compose.prod.yml/restore_check.sh assumiam 15; dev/CI
++    # já rodavam 16). A matriz prova a suíte nas duas até o upgrade/confirmação da major real.
++    strategy:
++      fail-fast: false
++      matrix:
++        postgres: ["15", "16"]
+     defaults:
+       run:
+         working-directory: backend
+     services:
+       postgres:
+-        image: postgres:16-alpine
++        image: postgres:${{ matrix.postgres }}-alpine
+         env:
+           POSTGRES_DB: smartquotation
+           POSTGRES_USER: sq

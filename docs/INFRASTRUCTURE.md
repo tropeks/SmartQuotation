@@ -21,6 +21,16 @@
 # e a lib. Revisão da 003: runner backup_run.sh (segue depois de falha), backfill, conferência
 # do off-site no drill semanal, separação de credencial lida do rclone.conf, custódia MANUAL
 # do .env.prod.
+#
+# Emenda da ordem 009 (28/09/2026): achado do Conformador ("produção roda Postgres 15, dev e
+# CI rodam 16") apurado contra o repo — não provado (a fonte é docker-compose.prod.yml, que a
+# produção não usa; o indício mais forte do repo, o incidente de catálogo de 18/07/2026,
+# aponta para 16, com ressalva). Dossiê completo e leitura decisiva para o Capitão em
+# docs/ship/ORDEM_009_POSTGRES.md. §0 ganha a linha "Postgres (major)"; §2 nota a divergência
+# do compose.prod; §5 registra a matriz de CI pendente (docs/patches/009-ci-postgres-matrix.patch)
+# e o teste local (scripts/ci/suite_local_pg.sh); §6 registra que restore_check.sh deriva a
+# imagem do cabeçalho do dump em vez de fixar postgres:15; §11 registra os nomes de job da
+# matriz.
 covers:
   - docker-compose.yml
   - docker-compose.prod.yml
@@ -41,7 +51,7 @@ covers:
   - ops/systemd/sq-restore-check.timer
   - ops/systemd/backup.env.example
   - .env.prod.example
-reviewed: 2026-09-27
+reviewed: 2026-09-28
 ---
 # INFRASTRUCTURE.md — SmartQuotation
 
@@ -68,6 +78,7 @@ reviewed: 2026-09-27
 | Backup | Ver §6: scripts e units prontos para os containers avulsos (dump + mídia + chave com prova de decifra, drill semanal, off-site cifrado com `age` e chave em custódia off-site separada), **não instalados** (gate do Capitão) | `scripts/backup_*.sh`, `scripts/offsite_*.sh`, `ops/systemd/`, HANDOFF §4 |
 | CI | `.github/workflows/ci.yml`, seis jobs de prova, nenhum de deploy (§5) | ci.yml |
 | Monitoramento | Só o `/health/` e o `HEALTHCHECK` da imagem; nada externo avisa se cair (§7 é alvo) | `backend/Dockerfile:53-54` |
+| Postgres (major) | **Não registrada no repo.** `docker-compose.prod.yml` declara `postgres:15`, mas produção não roda por ele (linha acima); o indício mais forte do repo (incidente de catálogo de 18/07/2026) aponta para 16, com ressalva. Leitura decisiva (`docker exec sq-prod-db cat PG_VERSION`, etc.) para o Capitão em `docs/ship/ORDEM_009_POSTGRES.md` | ordem 009, `docs/ship/ORDEM_009_POSTGRES.md` |
 
 A migração da produção para outro host **não está em curso**: é decisão futura do Capitão.
 
@@ -93,6 +104,11 @@ Hoje não há staging; até existir, o gate é a CI verde no commit que vai para
 > `web`/`worker`/`beat` + `postgres:15` + `redis:7-alpine` em `sq_net`, com `media_data` em
 > `/app/backend/media` e sem Caddy, registry nem job de backup. E a produção atual nem usa
 > esse compose (§0). O bloco abaixo é o alvo da v1.0.
+>
+> **Nota da ordem 009:** o `postgres:15` do compose versionado (linha acima) é a origem da
+> premissa "produção roda 15" — mas como esse compose nunca é usado pela produção real, ele
+> não prova a major do cluster de fato. Dossiê de evidência e leitura decisiva em
+> `docs/ship/ORDEM_009_POSTGRES.md`.
 
 ```yaml
 # docker-compose.prod.yml
@@ -343,7 +359,7 @@ para `main`; **não faz deploy**. Branch `conform/*` só roda CI via PR.
 | Job | O que prova |
 |---|---|
 | `pricing-engine` | Os quatro gates stdlib do motor (§11) |
-| `ops-tests` | Contrato de `backup_db.sh`/`backup_media.sh`, volume de media, storage de proposals, lockfiles. `test_backup_script` também roda `test_backup_db_hardening`, `test_atomic_backup`, `test_backup_key`, `test_restore_check` e `test_backup_units` (docker falso). `test_backup_script` e `test_media_backup` **leem este doc** (cron com `set -a`, `media_data`) |
+| `ops-tests` | Contrato de `backup_db.sh`/`backup_media.sh`, volume de media, storage de proposals, lockfiles. `test_backup_script` também roda `test_backup_db_hardening`, `test_atomic_backup`, `test_backup_key`, `test_restore_check`, `test_backup_units`, os de off-site e runner (ordem 003) e, desde a ordem 009, `test_restore_image_major`, `test_suite_receipt` e `test_suite_local_pg` (docker, `gh` e `git` falsos). `test_backup_script` e `test_media_backup` **leem este doc** (cron com `set -a`, `media_data`) |
 | `pip-audit` | CVEs em `base.lock` e `ci.lock`, sem re-resolver a árvore |
 | `django-check` | `manage.py check` + `makemigrations --check` |
 | `django-test` | `manage.py test apps` contra `postgres:16-alpine`, com WeasyPrint obrigatório |
@@ -351,6 +367,14 @@ para `main`; **não faz deploy**. Branch `conform/*` só roda CI via PR.
 
 O desenho de deploy da v1.0 (registry, Trivy, staging, aprovação manual, cobertura ≥ 80%,
 regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT).
+
+**Ordem 009 — matriz de major do Postgres (pendente do Capitão):** `django-test` hoje só
+prova `postgres:16-alpine`, que não é comprovadamente a major da produção (§0). O patch
+`docs/patches/009-ci-postgres-matrix.patch` troca esse job único por uma matriz Postgres 15 e
+16 (`Testes Django (multi-tenant) — Postgres 15` / `— Postgres 16`); até o Capitão aplicá-lo,
+a prova local contra uma major específica é `scripts/ci/suite_local_pg.sh <major>` (suíte
+Django contra Postgres efêmero em `127.0.0.1`, `--rm`). Dossiê completo em
+`docs/ship/ORDEM_009_POSTGRES.md`.
 
 ---
 
@@ -369,7 +393,7 @@ regressão PVElite) não existe; PVElite como gate está fora de escopo (INTENT)
 | `scripts/backup_db.sh` | `pg_dumpall` no container avulso `sq-prod-db` (porta 5436, senha do env do próprio container), ou `pg_dump` via compose onde houver compose. Detecta o modo por `.State.Running`; container parado **falha** (não cai para compose); docker inacessível falha na hora. `umask 077`, escrita atômica (`.tmp` + `mv`). **Valida pelo conteúdo**: gzip íntegro, tamanho e linhas mínimos, schema `engematex` presente e o **rodapé** `-- PostgreSQL database cluster dump complete` (ou `... database dump complete` no compose) — dump truncado é rejeitado. Usuário/host/porta vão ao `sh` do container como argv posicional e passam por lista branca. Grava `last_success`; poda `sq_*.sql.gz` > `BACKUP_RETENTION_DAYS` (14) só depois de um backup novo validado | PITR (cifra e off-site: `offsite_push.sh`) |
 | `scripts/backup_media.sh` | `tar czf - -C / app/backend/media` no `sq-web-proto` (volume `media_data` montado em `/app/backend/media`), mesma detecção/fail-fast. Valida com `tar tzf`: exige `app/backend/media/` e ≥1 entrada sob ele (ou `MEDIA_ALLOW_EMPTY=1`). Grava `media_last_success`; retenção igual | Idem |
 | `scripts/backup_key.sh` | Copia a `FIELD_ENCRYPTION_KEY` do env do `sq-web-proto` para `${KEY_BACKUP_DIR}/field_encryption_key` (0600), com fingerprint `sha256` truncado ao lado; preserva a anterior se a chave mudou. **Prova de decifra**: tira um `preco_brl_kg` de `engematex.materials_materialprice` do dump mais recente e roda Fernet **dentro** do container, com chave e token por **stdin**. A prova imprime só `ok`, `falha` ou `sem amostra` (exit 0 / 2 / 3); saída inesperada do container é descartada | Custódia fora do host (`offsite_key_push.sh`) |
-| `scripts/restore_check.sh` | Drill: sobe `postgres:15` efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. Com `OFFSITE_REMOTE` definido, confere **sem baixar** que o dump mais novo confirmado no `offsite_manifest` é o dump local mais novo, tem menos de `OFFSITE_MAX_AGE_HOURS` e está no remote com o hash registrado (`rclone hashsum`); com `OFFSITE_HASH_DOWNLOAD=1` **não baixa**: confere só presença e tamanho (`rclone lsjson`), avisa no journal ("hash indisponível sem download") e grava `offsite_check=tamanho`. Remote mudo, objeto ausente ou diferente = falha. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
+| `scripts/restore_check.sh` | Drill: sobe um Postgres efêmero (`--network none`, `--rm`, nome único), aplica o dump mais recente, confere schema `engematex`, tabelas `quotations_quotation`, `quotations_quotationitem`, `materials_material`, `materials_materialprice` e cotações ≥ `RESTORE_MIN_QUOTATIONS`; valida o tar de mídia mais recente. **Ordem 009:** sem `RESTORE_IMAGE`, a imagem passa a ser derivada do cabeçalho `-- Dumped from database version` do próprio dump (`postgres:<major>`), em vez de fixar `postgres:15` (que nunca foi comprovadamente a major da produção — dossiê em `docs/ship/ORDEM_009_POSTGRES.md`); `RESTORE_IMAGE` numa major menor que a do dump reprova, e `restore_last_success` grava `source_major=`/`image=`. Com `OFFSITE_REMOTE` definido, confere **sem baixar** que o dump mais novo confirmado no `offsite_manifest` é o dump local mais novo, tem menos de `OFFSITE_MAX_AGE_HOURS` e está no remote com o hash registrado (`rclone hashsum`); com `OFFSITE_HASH_DOWNLOAD=1` **não baixa**: confere só presença e tamanho (`rclone lsjson`), avisa no journal ("hash indisponível sem download") e grava `offsite_check=tamanho`. Remote mudo, objeto ausente ou diferente = falha. Container sempre removido (trap). Saída só com contagens e nomes de tabela. Grava `restore_last_success` com a duração | Restore em produção; medir RPO |
 | `scripts/offsite_key_push.sh` | Se o fingerprint da chave mudou desde o último envio (`offsite_key_fingerprint`), cifra a `FIELD_ENCRYPTION_KEY` com `age` **só** para a chave de recuperação da Quantum (lida do arquivo 0600 por stdin) e envia `field_encryption_key.<fpr>.<UTC>.age` para `OFFSITE_KEY_REMOTE`, com hash remoto conferido. Chave igual: confere (`hashsum`) que o objeto dela continua lá | Enviar a chave para o remote do dump (recusa se for o mesmo, um dentro do outro ou a mesma seção do `rclone.conf`) |
 | `scripts/offsite_push.sh` | Cifra, com backfill (todo dump e tar local ainda não confirmado, do mais antigo para o mais novo), com `age` para **dois** destinatários (instância + recuperação), confere no cabeçalho uma stanza por destinatário, do tipo dele (`X25519` ou `piv-p256`), envia com `rclone copyto --immutable` para `OFFSITE_REMOTE`, confere o hash remoto e grava `offsite_last_success` | Apagar no remoto; sobrescrever objeto remoto; escolher provedor |
 | `scripts/backup_run.sh` | Runner da unit: `backup_db.sh` → `backup_media.sh` → `backup_key.sh` → `offsite_key_push.sh` → `offsite_push.sh`, **seguindo depois de falha** (o off-site do dump tem valor sem a chave); registra cada exit em `backup_run_last` e sai != 0 no fim se alguma etapa falhou. INT/TERM (`systemctl stop`, timeout): mata a etapa em curso, **não** segue, sai 130/143 e registra `interrupted=<etapa>` | — |
@@ -424,7 +448,11 @@ install -m 0644 /opt/smartquotation/ops/systemd/sq-backup.service \
                 /opt/smartquotation/ops/systemd/sq-backup.timer \
                 /opt/smartquotation/ops/systemd/sq-restore-check.service \
                 /opt/smartquotation/ops/systemd/sq-restore-check.timer /etc/systemd/system/
-docker pull postgres:15                     # o drill roda sem rede: a imagem tem que estar local
+docker pull postgres:<major da produção>    # o drill roda sem rede: a imagem tem que estar local.
+                                             # restore_check.sh sobe postgres:<major lida do
+                                             # cabeçalho do dump>; puxe essa major. Qual é: a
+                                             # leitura do host na §3 de docs/ship/ORDEM_009_POSTGRES.md
+                                             # (não é necessariamente 15).
 systemctl daemon-reload
 systemctl start sq-backup.service           # 1ª execução assistida
 journalctl -u sq-backup.service -n 50 --no-pager
@@ -672,7 +700,8 @@ rclone copyto sq-offsite-key:<bucket>/<prefixo>/field_encryption_key.<fpr>.<UTC>
 age -d -i <identidade> -o sq_<ts>.sql.gz sq_<ts>.sql.gz.age
 age -d -i <identidade> -o media_<ts>.tar.gz media_<ts>.tar.gz.age
 age -d -i <identidade-de-recuperação> -o fek fek.age
-# 3. Restore verificado do arquivo baixado (postgres:15 efêmero, sem rede)
+# 3. Restore verificado do arquivo baixado (Postgres efêmero, sem rede — a major é derivada
+#    do cabeçalho do dump desde a ordem 009, ver docs/ship/ORDEM_009_POSTGRES.md)
 BACKUP_DIR="$PWD/drill" RESTORE_DUMP_FILE="$PWD/sq_<ts>.sql.gz" \
   RESTORE_MEDIA_FILE="$PWD/media_<ts>.tar.gz" /opt/smartquotation/scripts/restore_check.sh
 # 4. A chave é a do dump? fingerprint igual ao key_sha256_16 do last_proof daquele dia
@@ -878,4 +907,9 @@ gh run view <id> --json jobs --jq '.jobs[] | [.name, .conclusion] | @tsv'
 `scripts/ci/suite_receipt.sh` (a criar pelo Conformador) faz isso e falha se não houver run no
 HEAD ou se `Testes Django (multi-tenant)` não for `success`. Run de outro SHA não vale como recibo.
 Como `conform/*` não dispara CI em push (§5), o recibo sai do PR para `main`.
+
+**Ordem 009:** com o patch `docs/patches/009-ci-postgres-matrix.patch` aplicado, o job vira
+matriz (`Testes Django (multi-tenant) — Postgres 15` e `— Postgres 16`, §5); o
+`suite_receipt.sh` aceita tanto o nome antigo (runs anteriores ao patch) quanto a matriz — e,
+na matriz, exige as duas majors (15 e 16) presentes e `success`: matriz incompleta reprova.
 
