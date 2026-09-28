@@ -7,7 +7,11 @@ Derivado dinamicamente dos seeds presentes (pricing_engine/seeds/{d}_materiais.j
 """
 from __future__ import annotations
 
+import logging
+
 from pricing_engine.permutador_quote import designacoes_disponiveis
+
+logger = logging.getLogger(__name__)
 
 # designações cujo custeio paramétrico já foi validado contra referencial real
 COSTABLE = set(designacoes_disponiveis())
@@ -99,42 +103,55 @@ def _metalurgia(cleaned):
 
 def tenant_cost_chain():
     """Monta a TenantCostChain do tenant (preços de material cifrados + fator de MO),
-    reaproveitando o mesmo padrão do adapter de cotações. Sem dados → None (usa defaults)."""
+    reaproveitando o mesmo padrão do adapter de cotações. Sem dados → None (usa defaults).
+
+    Cada bloco abre seu PRÓPRIO `transaction.atomic()` (savepoint) — mesmo padrão de
+    `apps.quotations.adapter.build_cost_chain` (ordem 007): um erro de banco DE VERDADE
+    dentro de um `except Exception: pass` sem savepoint deixa a transação Postgres INTEIRA
+    abortada; a PRÓXIMA query (fora deste `try`, ou de quem chamou esta função dentro de uma
+    transação maior) bateria em "current transaction is aborted" em vez de só cair no
+    default. `logger.warning` torna o fallback visível — sem log, um erro real de banco
+    virava um "default silencioso" indistinguível de "tenant sem dados configurados"."""
+    from django.db import transaction
     from pricing_engine.rates import TenantCostChain, op_key
     chain = TenantCostChain()
     try:
-        from datetime import date
-        from apps.materials.models import MaterialPrice
-        hoje = date.today()
-        for mp in MaterialPrice.objects.select_related("material").filter(valid_from__lte=hoje):
-            if mp.valid_until and mp.valid_until < hoje:
-                continue
-            try:
-                chain.material_price[(mp.material.sigla.upper(), mp.forma.lower())] = float(mp.preco_brl_kg)
-            except (TypeError, ValueError):
-                continue
-    except Exception:
-        pass
+        with transaction.atomic():
+            from datetime import date
+            from apps.materials.models import MaterialPrice
+            hoje = date.today()
+            for mp in MaterialPrice.objects.select_related("material").filter(valid_from__lte=hoje):
+                if mp.valid_until and mp.valid_until < hoje:
+                    continue
+                try:
+                    chain.material_price[(mp.material.sigla.upper(), mp.forma.lower())] = float(mp.preco_brl_kg)
+                except (TypeError, ValueError):
+                    continue
+    except Exception as exc:
+        logger.warning("tenant_cost_chain: falha ao ler MaterialPrice vigente — cadeia segue "
+                       "sem preços de material (%s)", exc)
     try:
-        from datetime import date
-        from django.db import models
-        from apps.engineering_params.models import Rate, TenantParamConfig
-        hoje = date.today()
-        for r in (Rate.objects.filter(valid_from__lte=hoje)
-                  .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
-                  .order_by("valid_from")):
-            chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
-            if r.rate_hm is not None:
-                chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
-        cfg = TenantParamConfig.get_solo()
-        chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
-        # knob configurável (V2/F1): scrap por família → override do motor. É AQUI que a perda
-        # pega no custeio (estimate_complete usa dims_override). Coerção visível reusa o adapter.
-        from apps.quotations.adapter import _coerce_factor_map
-        chain.perda_por_familia = _coerce_factor_map(cfg.perda_por_familia, "perda_por_familia")
-        chain.setup_frac = _coerce_factor_map(cfg.setup_frac, "setup_frac")
-    except Exception:
-        pass
+        with transaction.atomic():
+            from datetime import date
+            from django.db import models
+            from apps.engineering_params.models import Rate, TenantParamConfig
+            hoje = date.today()
+            for r in (Rate.objects.filter(valid_from__lte=hoje)
+                      .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=hoje))
+                      .order_by("valid_from")):
+                chain.rate_hh[op_key(r.operacao)] = float(r.rate_hh)
+                if r.rate_hm is not None:
+                    chain.rate_hm[op_key(r.operacao)] = float(r.rate_hm)
+            cfg = TenantParamConfig.get_solo()
+            chain.fator_correcao_mo = float(cfg.fator_correcao_mo)
+            # knob configurável (V2/F1): scrap por família → override do motor. É AQUI que a perda
+            # pega no custeio (estimate_complete usa dims_override). Coerção visível reusa o adapter.
+            from apps.quotations.adapter import _coerce_factor_map
+            chain.perda_por_familia = _coerce_factor_map(cfg.perda_por_familia, "perda_por_familia")
+            chain.setup_frac = _coerce_factor_map(cfg.setup_frac, "setup_frac")
+    except Exception as exc:
+        logger.warning("tenant_cost_chain: falha ao ler Rate/TenantParamConfig — cadeia segue "
+                       "com fator_correcao_mo/knobs default (%s)", exc)
     return chain
 
 
@@ -236,12 +253,20 @@ def tenant_pricing_completo():
     mesmos defaults de função de `pricing_engine.permutador_quote.quote_completo` (1,25/9,0)
     se o TenantParamConfig não estiver acessível (sem schema de tenant, erro de banco) — mesmo
     padrão tolerante de `tenant_cost_chain()`. Escopo PRÓPRIO do permutador: não confundir com
-    o markup do feixe (por cotação, em `Quotation.fator_preco`/`.impostos_pct`)."""
+    o markup do feixe (por cotação, em `Quotation.fator_preco`/`.impostos_pct`).
+
+    Savepoint (`transaction.atomic()`) + `logger.warning` no fallback: mesma razão de
+    `tenant_cost_chain()` — um erro de banco de verdade não pode abortar a transação de quem
+    chamou esta função, e o fallback não pode ser silencioso."""
+    from django.db import transaction
     try:
-        from apps.engineering_params.models import TenantParamConfig
-        cfg = TenantParamConfig.get_solo()
-        return float(cfg.fator_preco_completo), float(cfg.impostos_pct_completo)
-    except Exception:
+        with transaction.atomic():
+            from apps.engineering_params.models import TenantParamConfig
+            cfg = TenantParamConfig.get_solo()
+            return float(cfg.fator_preco_completo), float(cfg.impostos_pct_completo)
+    except Exception as exc:
+        logger.warning("tenant_pricing_completo: falha ao ler TenantParamConfig — usando o "
+                       "default do motor (1,25/9,0) (%s)", exc)
         return 1.25, 9.0
 
 

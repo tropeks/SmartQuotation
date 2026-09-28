@@ -444,6 +444,42 @@ def persist_complete(customer, designacao, cleaned, resultado,
     return q
 
 
+def _pricing_da_original(orig: Quotation) -> tuple[float, float]:
+    """(fator_preco, impostos_pct) que de fato precificaram a cotação ORIGINAL de um
+    permutador completo — para `revise_complete` CONGELAR (ordem 008 (c), rodada de conserto
+    a partir da revisão).
+
+    `Quotation.fator_preco`/`.impostos_pct` NÃO são uma fonte confiável sozinhos: são campos
+    do MODEL com default (`1,01377`/`23,303` — os valores do FEIXE, não do permutador). Uma
+    `Quotation(scope="complete")` criada FORA de `persist_complete` (admin "add", carga,
+    migração de dados — ver `tests_memorial_robusto.py:113-166` para um exemplo real desse
+    caminho) nasce com esse default sem nunca ter passado pelo motor. Congelar esse valor na
+    revisão gravaria um markup/ICMS ~19% errado, com preço de venda errado, sem aviso nenhum.
+
+    Fonte preferida: o `CalculationSnapshot` mais recente da original
+    (`inputs.pricing.fator_preco`/`.impostos_pct`) — é o que o motor de fato RODOU, gravado
+    por `apps.quotations.services.build_snapshot_payload` toda vez que a cotação é computada
+    e persistida. Se a original não tem snapshot nenhum (nunca foi computada pelo motor —
+    exatamente o caso acima), cai no markup VIGENTE do tenant (`tenant_pricing_completo()`),
+    com um `logger.warning` — silenciosamente inventar proveniência seria pior que assumir o
+    vigente."""
+    from apps.tema_templates.services import tenant_pricing_completo
+
+    snap = orig.snapshots.order_by("-created_at").first()
+    if snap is not None:
+        pricing = (snap.inputs or {}).get("pricing") or {}
+        fator_preco = pricing.get("fator_preco")
+        impostos_pct = pricing.get("impostos_pct")
+        if fator_preco is not None and impostos_pct is not None:
+            return float(fator_preco), float(impostos_pct)
+    logger.warning(
+        "revise_complete: cotação %s rev.%s sem snapshot de proveniência de preço — usando "
+        "o markup/imposto VIGENTE do tenant em vez de congelar Quotation.fator_preco/"
+        ".impostos_pct (pode ser o default do model, 1,01377/23,303, os valores do FEIXE, "
+        "não o que de fato precificou este permutador)", orig.number, orig.revision)
+    return tenant_pricing_completo()
+
+
 def revise_complete(orig: Quotation, created_by) -> Quotation:
     """Revisão de uma cotação de permutador completo (scope='complete'): recomputa com as
     DIMENSÕES da cotação original (não o seed), com fallback defensivo no seed se os inputs
@@ -459,13 +495,13 @@ def revise_complete(orig: Quotation, created_by) -> Quotation:
     precisão de fator_preco/impostos_pct (ordem 006) já está corrigida em
     `persist_complete`, chamada por esta função.
 
-    Ordem 008 (c) — CONGELA o markup/imposto da cotação ORIGINAL (`orig.fator_preco`/
-    `.impostos_pct`), não pega o vigente do tenant (`TenantParamConfig.fator_preco_completo`/
-    `.impostos_pct_completo`), por paridade com `revise_feixe` (que já congela os dois campos
-    equivalentes do feixe). Passa os dois explicitamente a `estimate_from_inputs`/
-    `quote_completo` — se não passasse, a revisão reprecificaria silenciosamente com a
-    política comercial vigente do tenant, mesmo que ela tenha mudado depois da cotação
-    original ter sido criada/enviada ao cliente.
+    Ordem 008 (c) — CONGELA o markup/imposto da cotação ORIGINAL, por paridade com
+    `revise_feixe` (que já congela os dois campos equivalentes do feixe) — mudar o markup do
+    tenant depois de uma cotação criada/enviada não pode reprecificar a revisão por baixo do
+    pano. A PROVENIÊNCIA desse par vem de `_pricing_da_original` (rodada de conserto): o
+    snapshot da original quando existe, o vigente do tenant (com aviso) quando não — ver a
+    docstring de `_pricing_da_original` para o porquê de `orig.fator_preco`/`.impostos_pct`
+    sozinhos não serem uma fonte confiável.
 
     `resultado` é calculado FORA de qualquer transação, de propósito: `estimate_from_inputs`
     (via `tema_templates.services._liga_db`/`liga_choices`/`tenant_cost_chain`) engole erro
@@ -486,8 +522,7 @@ def revise_complete(orig: Quotation, created_by) -> Quotation:
     assert_revisable(orig)
 
     desig = orig.inputs.get("designacao", "BEU")
-    fator_preco_orig = float(orig.fator_preco)
-    impostos_pct_orig = float(orig.impostos_pct)
+    fator_preco_orig, impostos_pct_orig = _pricing_da_original(orig)
     resultado = (
         estimate_from_inputs(desig, orig.inputs, fator_preco=fator_preco_orig,
                              impostos_pct=impostos_pct_orig)

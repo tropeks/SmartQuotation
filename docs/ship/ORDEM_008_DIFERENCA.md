@@ -66,16 +66,46 @@ erro nenhum. Passar os valores como kwargs explícitos, calculados a partir do
 ### Revisão (`revise_complete`) CONGELA o markup da cotação original
 
 Decisão (c) do Diretor: revisar uma cotação de permutador completo recomputa com o
-`fator_preco`/`impostos_pct` **da cotação original** (`orig.fator_preco`/`.impostos_pct`),
-não com o vigente do tenant — por paridade com `revise_feixe`, que já faz exatamente isso
-para o feixe. Se o tenant mudar de `1,25/9,0` para `1,40/15,0` DEPOIS de uma cotação ter
-sido criada (e possivelmente enviada ao cliente), revisar essa cotação continua usando
-`1,25/9,0` — a revisão não reprecifica silenciosamente por baixo do pano.
+`fator_preco`/`impostos_pct` **da cotação original**, não com o vigente do tenant — por
+paridade com `revise_feixe`, que já faz exatamente isso para o feixe. Se o tenant mudar de
+`1,25/9,0` para `1,40/15,0` DEPOIS de uma cotação ter sido criada (e possivelmente enviada
+ao cliente), revisar essa cotação continua usando `1,25/9,0` — a revisão não reprecifica
+silenciosamente por baixo do pano.
 
 Isso vale inclusive no caminho de fallback (`estimate_from_inputs` devolve `None` quando os
 inputs salvos não validam mais o form) — `revise_complete` passa `fator_preco`/
 `impostos_pct` da original também para o `quote_completo(desig)` de emergência, não só para
 o caminho feliz.
+
+#### Regra de PROVENIÊNCIA (rodada de conserto, a partir da revisão do Diretor)
+
+**"O `fator_preco`/`impostos_pct` da cotação original" não é o mesmo que "o que está
+gravado em `Quotation.fator_preco`/`.impostos_pct`."** Esses dois campos do MODEL têm
+default `1,01377`/`23,303` — os valores do markup/imposto do FEIXE, não do permutador. Uma
+`Quotation(scope="complete")` criada **fora** de `persist_complete` (admin "add", carga de
+dados, migração — o mesmo caminho real exercitado por
+`backend/apps/quotations/tests_memorial_robusto.py:113-166`) nasce com esse default sem
+nunca ter passado pelo motor do permutador. Congelar esse valor numa revisão gravaria um
+markup/ICMS ~19% errado no preço de venda, sem aviso nenhum — bloqueante encontrado na
+revisão desta ordem.
+
+**A fonte de verdade não é `orig.fator_preco`/`.impostos_pct` — é o `CalculationSnapshot`
+mais recente da original** (`inputs.pricing.fator_preco`/`.impostos_pct`), porque é o que o
+motor de fato **rodou** para chegar no preço que está na tela/proposta. `adapter.
+_pricing_da_original(orig)` resolve nessa ordem:
+
+1. Existe um `CalculationSnapshot`? Usa `snapshot.inputs["pricing"]` — congela o par que
+   realmente precificou a original (o caso comum: toda cotação criada por
+   `persist_complete`, ou seja, todo o fluxo normal do data sheet, tem snapshot).
+2. Não existe snapshot (a original nunca passou pelo motor)? Usa o markup **vigente do
+   tenant** (`tenant_pricing_completo()`) e registra `logger.warning` com o número/revisão
+   da cotação — silenciosamente inventar uma proveniência que não existe seria pior do que
+   assumir o vigente e deixar rastro no log.
+
+Efeito prático: `orig.fator_preco`/`.impostos_pct` sozinhos deixaram de ser lidos por
+`revise_complete` — quem quiser saber "com que markup uma cotação foi feita" deve olhar o
+snapshot, não o campo solto na `Quotation` (o campo continua existindo e sendo gravado por
+`persist_complete`, só não é mais a fonte de leitura da revisão).
 
 ### Preview/simulador (tela "Compor Trocador")
 
@@ -158,7 +188,22 @@ produção — o golden continua exatamente o mesmo depois do ajuste.
   - `ReviseCompleteCongelaMarkupTests` — o snapshot (`CalculationSnapshot.inputs.pricing`)
     grava o par do tenant no momento da criação (`"1.30000"`/`"12.000"`); revisar depois de
     o tenant mudar para `1,40/15` sai com o par ORIGINAL (`1,30/12`), não o vigente.
+- `backend/apps/quotations/tests_ordem_008_provenance.py` (rodada de conserto):
+  - `RevisaoSemProvenienciaUsaMarkupDoTenantTests` — uma `Quotation(scope='complete')` criada
+    fora de `persist_complete` (sem `CalculationSnapshot`, mesmo caminho de
+    `tests_memorial_robusto.py`) tem o default do MODEL (`1,01377`/`23,303`, os valores do
+    FEIXE); revisá-la usa o markup VIGENTE do tenant (não esse default), com
+    `logger.warning` registrando o número/revisão.
+  - `RevisaoComProvenienciaCongelaOSnapshotTests` — cotação criada de verdade por
+    `persist_complete` (com snapshot) continua congelando o par DO SNAPSHOT mesmo com o
+    tenant mudando de política comercial depois — prova que a regra de proveniência não
+    regride o comportamento já coberto por `ReviseCompleteCongelaMarkupTests`.
+- `backend/apps/tema_templates/tests_ordem_008_savepoint.py` (rodada de conserto):
+  `TenantCostChainSavepointTests`/`TenantPricingCompletoSavepointTests` — erro de banco REAL
+  (`SELECT 1/0`, mesmo padrão de `tests_ordem_007_revise_feixe_savepoint.py`) dentro de
+  `tenant_cost_chain()`/`tenant_pricing_completo()` não aborta a transação de quem chamou
+  (savepoint) e dispara `logger.warning` (antes: nem savepoint, nem log).
 - `backend/apps/quotations/tests_characterization_005.py` + golden `char_005.json` — sem
-  diff (rodado antes e depois desta ordem).
+  diff (rodado antes e depois desta ordem, e de novo depois da rodada de conserto).
 - Gates do motor intactos: `python -m tests.validate_feixe_completo`,
   `python -m tests.validate_permutador_completo` (`scripts/prova_motor.sh`).

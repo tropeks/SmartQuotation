@@ -208,10 +208,12 @@ def _fallback_seed_quotation(customer, created_by) -> Quotation:
     cai no default do MODEL (1,01377/23,303 — o par do FEIXE, não do permutador), porque esta
     fixture nunca passou por `persist_complete` (que sempre grava o par do resultado do
     motor). Uma cotação `scope='complete'` real NUNCA tem esses defaults — `persist_complete`
-    sempre grava o que `quote_completo` devolveu (1,25/9,0 ou o do tenant). Ordem 008 (c) faz
-    `revise_complete` CONGELAR o fator_preco/impostos_pct da ORIGINAL — sem o valor explícito
-    aqui, a revisão desta cena congelaria o artefato do fixture (1,01377/23,303) em vez do
-    par real do permutador, e o golden mudaria por um motivo estranho ao escopo desta ordem."""
+    sempre grava o que `quote_completo` devolveu (1,25/9,0 ou o do tenant). Mantido explícito
+    por realismo/documentação, mas deixou de ser o que protege o golden: a rodada de conserto
+    da ordem 008 (`adapter._pricing_da_original`) parou de confiar cegamente em
+    `orig.fator_preco`/`.impostos_pct` — esta fixture nunca teve `CalculationSnapshot`
+    (criada fora de `persist_complete`), então `revise_complete` cai no markup VIGENTE do
+    tenant (com `logger.warning`), não no que está gravado aqui, seja lá qual for."""
     return Quotation.objects.create(
         number="COT-2026-900", revision=0, customer=customer, scope="complete",
         title="BEU inválido p/ fallback", created_by=created_by,
