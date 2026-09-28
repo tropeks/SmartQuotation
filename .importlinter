@@ -114,3 +114,6 @@ ignore_imports=
     # ordem 007: RevisaoCompleteBloqueiaComOfAtivaTests (P7 espelhado pra revise_complete)
     # monta a fixture BEU chamando quote_completo direto, mesmo padrão dos outros testes.
     apps.quotations.tests_ordem_007_p7_of -> pricing_engine.permutador_quote
+    # ordem 008: prova o markup/imposto do tenant comparando estimate_complete direto contra
+    # quote_completo/gross_up_icms (mesmo padrão dos outros testes de tema_templates).
+    apps.tema_templates.tests_ordem_008 -> pricing_engine.permutador_quote

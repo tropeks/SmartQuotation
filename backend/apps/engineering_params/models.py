@@ -9,6 +9,7 @@ Separação-chave (insight @WellToMcAt):
 Tudo versionado por valid_from (vigência). Ver pricing_engine/{rates.py,process_params.py}.
 """
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -203,6 +204,17 @@ class TenantParamConfig(models.Model):
     # adapter copia p/ TenantCostChain.setup_frac. Escala horas no caminho paramétrico (razão≠1) →
     # move o custeio do data sheet real. No referência (razão 1,0) o setup se cancela (gate 0,0%).
     setup_frac = models.JSONField(default=_default_setup_frac)
+    # Ordem 008 — markup/imposto do PERMUTADOR COMPLETO (escopo próprio: diferente do markup
+    # do FEIXE, que continua por cotação em Quotation.fator_preco/.impostos_pct — decisão (a)
+    # do Diretor). Mesmas casas decimais de Quotation.fator_preco/.impostos_pct (8,5 e 6,3),
+    # para a mesma precisão sobreviver ao trajeto tenant → motor → snapshot. Default 1,25/9,0
+    # = o valor HOJE hardcoded em pricing_engine.permutador_quote.quote_completo — configurável
+    # sem mover preço nenhum no dia 1 (decisão (d)). O motor (pricing_engine) não lê estes
+    # campos: tema_templates.services passa os valores EXPLICITAMENTE como kwargs de
+    # quote_completo (TenantCostChain.fator_preco/.impostos_pct têm defaults neutros 1,0/0,0,
+    # que zerariam o markup em silêncio).
+    fator_preco_completo = models.DecimalField(max_digits=8, decimal_places=5, default=Decimal("1.25"))
+    impostos_pct_completo = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal("9.0"))
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -218,6 +230,16 @@ class TenantParamConfig(models.Model):
     def save(self, *args, **kwargs):
         self.pk = 1  # garante singleton
         super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.fator_preco_completo is not None and self.fator_preco_completo <= 0:
+            raise ValidationError(
+                {"fator_preco_completo": "fator_preco_completo deve ser maior que zero."})
+        if self.impostos_pct_completo is not None and not (
+                Decimal("0") <= self.impostos_pct_completo < Decimal("100")):
+            raise ValidationError(
+                {"impostos_pct_completo": "impostos_pct_completo deve estar no intervalo [0, 100)."})
 
     def __str__(self):
         return f"TenantParamConfig(mo={self.fator_correcao_mo}, threshold={self.drill_method_threshold_holes})"

@@ -202,13 +202,23 @@ def _fallback_seed_quotation(customer, created_by) -> Quotation:
     chamado pelo PRÓPRIO adapter durante a revisão, não aqui. Os totais abaixo são
     PLACEHOLDERS arbitrários (a revisão os substitui integralmente pelo resultado real do
     fallback) — de propósito, para este arquivo não precisar importar
-    `pricing_engine.permutador_quote` (mantém a allowlist do `.importlinter` enxuta)."""
+    `pricing_engine.permutador_quote` (mantém a allowlist do `.importlinter` enxuta).
+
+    fator_preco/impostos_pct EXPLÍCITOS (ordem 008): sem isto, `Quotation.objects.create`
+    cai no default do MODEL (1,01377/23,303 — o par do FEIXE, não do permutador), porque esta
+    fixture nunca passou por `persist_complete` (que sempre grava o par do resultado do
+    motor). Uma cotação `scope='complete'` real NUNCA tem esses defaults — `persist_complete`
+    sempre grava o que `quote_completo` devolveu (1,25/9,0 ou o do tenant). Ordem 008 (c) faz
+    `revise_complete` CONGELAR o fator_preco/impostos_pct da ORIGINAL — sem o valor explícito
+    aqui, a revisão desta cena congelaria o artefato do fixture (1,01377/23,303) em vez do
+    par real do permutador, e o golden mudaria por um motivo estranho ao escopo desta ordem."""
     return Quotation.objects.create(
         number="COT-2026-900", revision=0, customer=customer, scope="complete",
         title="BEU inválido p/ fallback", created_by=created_by,
         inputs={"designacao": "BEU", "n_tubos": 68},  # incompleto: form fica inválido
         custo_material=Decimal("1.00"), custo_mo=Decimal("1.00"), custo_total=Decimal("2.00"),
         preco_sem_impostos=Decimal("2.00"), preco_com_impostos=Decimal("2.00"),
+        fator_preco=Decimal("1.25"), impostos_pct=Decimal("9.0"),
         computed_at=timezone.now(),
     )
 

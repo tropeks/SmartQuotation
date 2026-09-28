@@ -74,9 +74,15 @@ class EstimateCompleteUsaMarkupDoTenantTests(TestCase):
     """tema_templates.estimate_complete passa fator_preco/impostos_pct do tenant ao motor."""
 
     def test_sem_configuracao_preco_igual_ao_de_hoje(self):
-        """Tenant novo (default 1,25/9,0) → mesmo preço que o motor hardcoded de sempre."""
-        from apps.tema_templates.services import estimate_complete
-        de_hoje = quote_completo("BEU")   # defaults de função do motor: 1,25/9,0
+        """Tenant novo (default 1,25/9,0) → mesmo preço que a MESMA cadeia de custos do tenant
+        dava antes da ordem 008 (quando o motor sempre usava os defaults de função 1,25/9,0,
+        porque nada passava fator_preco/impostos_pct explicitamente). Compara contra a cadeia
+        de custos do tenant (não contra `quote_completo` peladão) para isolar o efeito desta
+        ordem de outras diferenças já existentes entre a cadeia do tenant e os defaults do
+        motor (perda_por_familia/setup_frac — fora do escopo desta ordem)."""
+        from apps.tema_templates.services import estimate_complete, tenant_cost_chain
+        chain = tenant_cost_chain()
+        de_hoje = quote_completo("BEU", cost_chain=chain)   # sem fator_preco/impostos_pct: 1,25/9,0
         com_tenant = estimate_complete("BEU")
         preco_com = com_tenant["preco_com_impostos"]
         preco_sem = com_tenant["preco_sem_impostos"]
@@ -117,7 +123,7 @@ class EstimateCompleteUsaMarkupDoTenantTests(TestCase):
         cfg.save()
 
         r = self.client.post("/tema/compor/check/", {"front": "B", "shell": "E", "rear": "U"})
-        self.assertContains(r, "markup 1.3")
+        self.assertContains(r, "markup 1,3")   # template usa localização pt-BR (vírgula)
 
 
 class ReviseCompleteCongelaMarkupTests(TestCase):

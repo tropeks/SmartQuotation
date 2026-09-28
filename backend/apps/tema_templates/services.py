@@ -230,16 +230,35 @@ def _physical_params(designacao, cleaned):
     }
 
 
+def tenant_pricing_completo():
+    """(fator_preco, impostos_pct) vigentes do tenant para o PERMUTADOR COMPLETO —
+    TenantParamConfig.fator_preco_completo/.impostos_pct_completo (ordem 008). Fallback nos
+    mesmos defaults de função de `pricing_engine.permutador_quote.quote_completo` (1,25/9,0)
+    se o TenantParamConfig não estiver acessível (sem schema de tenant, erro de banco) — mesmo
+    padrão tolerante de `tenant_cost_chain()`. Escopo PRÓPRIO do permutador: não confundir com
+    o markup do feixe (por cotação, em `Quotation.fator_preco`/`.impostos_pct`)."""
+    try:
+        from apps.engineering_params.models import TenantParamConfig
+        cfg = TenantParamConfig.get_solo()
+        return float(cfg.fator_preco_completo), float(cfg.impostos_pct_completo)
+    except Exception:
+        return 1.25, 9.0
+
+
 def estimate_complete(designacao: str, dims_override: dict | None = None,
                       fator_correcao_mo: float | None = None, params: dict | None = None,
                       liga_por_lado: dict | None = None, dens_por_lado: dict | None = None,
-                      preco_por_lado: dict | None = None, corrosivo: str = "Tubos"):
+                      preco_por_lado: dict | None = None, corrosivo: str = "Tubos",
+                      fator_preco: float | None = None, impostos_pct: float | None = None):
     """Estimativa de custo/preço de um permutador completo pela designação TEMA.
 
     dims_override: {label_material: {dim: valor}} — dimensões reais do projeto que
     recomputam o peso geométrico (parametria de verdade, não replay do seed). Ex.:
     {"TUBOS DE TROCA TÉRMICA": {"COMPR.": 8000, "QUANTIDADE": 200}}.
     fator_correcao_mo: sobrescreve o fator de MO (default = o do TenantParamConfig).
+    fator_preco/impostos_pct: sobrescrevem o markup/imposto do TenantParamConfig — usado pela
+    revisão (ordem 008 (c)) para CONGELAR a política comercial da cotação original em vez de
+    pegar a vigente do tenant. None (o caso comum) = lê `tenant_pricing_completo()`.
 
     Retorna dict do motor (custo por seção + preço) ou None se não é custeável.
     """
@@ -250,10 +269,15 @@ def estimate_complete(designacao: str, dims_override: dict | None = None,
     chain = tenant_cost_chain()
     if fator_correcao_mo is not None:
         chain.fator_correcao_mo = float(fator_correcao_mo)
+    if fator_preco is None or impostos_pct is None:
+        tenant_fator_preco, tenant_impostos_pct = tenant_pricing_completo()
+        fator_preco = tenant_fator_preco if fator_preco is None else fator_preco
+        impostos_pct = tenant_impostos_pct if impostos_pct is None else impostos_pct
     return quote_completo(d, cost_chain=chain, dims_override=dims_override or None,
                           params=params or None, liga_por_lado=liga_por_lado or None,
                           dens_por_lado=dens_por_lado or None, preco_por_lado=preco_por_lado or None,
-                          corrosivo=corrosivo)
+                          corrosivo=corrosivo, fator_preco=float(fator_preco),
+                          impostos_pct=float(impostos_pct))
 
 
 def pressao_total_projeto(cleaned):
@@ -468,9 +492,13 @@ def flange_corpo_avisos(designacao, cleaned):
         return []
 
 
-def estimate_from_inputs(designacao, cleaned):
+def estimate_from_inputs(designacao, cleaned, fator_preco=None, impostos_pct=None):
     """Recomputa custo/preço do permutador a partir de inputs salvos (revisão de cotação),
-    reconstruindo dims_override/params/metalurgia como o data sheet faz. None se inviável."""
+    reconstruindo dims_override/params/metalurgia como o data sheet faz. None se inviável.
+
+    fator_preco/impostos_pct: repassados a `estimate_complete` (ordem 008 (c)) — a revisão
+    passa os valores da cotação ORIGINAL aqui para congelar a política comercial; None (padrão)
+    usa a vigente do tenant."""
     from apps.tema_templates.forms import PermutadorDataSheetForm
     form = PermutadorDataSheetForm(cleaned)
     if not form.is_valid():
@@ -481,4 +509,5 @@ def estimate_from_inputs(designacao, cleaned):
     liga, dens, preco = _metalurgia(cd)
     return estimate_complete(designacao, dims_override=override, fator_correcao_mo=fc,
                              params=params, liga_por_lado=liga, dens_por_lado=dens,
-                             preco_por_lado=preco, corrosivo=cd.get("fluido_corrosivo", "Tubos"))
+                             preco_por_lado=preco, corrosivo=cd.get("fluido_corrosivo", "Tubos"),
+                             fator_preco=fator_preco, impostos_pct=impostos_pct)

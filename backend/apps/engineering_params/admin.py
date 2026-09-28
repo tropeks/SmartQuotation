@@ -21,4 +21,5 @@ class ProcessParameterAdmin(admin.ModelAdmin):
 
 @admin.register(TenantParamConfig)
 class TenantParamConfigAdmin(admin.ModelAdmin):
-    list_display = ("id", "fator_correcao_mo", "drill_method_threshold_holes", "updated_at")
+    list_display = ("id", "fator_correcao_mo", "drill_method_threshold_holes",
+                     "fator_preco_completo", "impostos_pct_completo", "updated_at")

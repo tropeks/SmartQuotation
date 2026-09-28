@@ -459,6 +459,14 @@ def revise_complete(orig: Quotation, created_by) -> Quotation:
     precisão de fator_preco/impostos_pct (ordem 006) já está corrigida em
     `persist_complete`, chamada por esta função.
 
+    Ordem 008 (c) — CONGELA o markup/imposto da cotação ORIGINAL (`orig.fator_preco`/
+    `.impostos_pct`), não pega o vigente do tenant (`TenantParamConfig.fator_preco_completo`/
+    `.impostos_pct_completo`), por paridade com `revise_feixe` (que já congela os dois campos
+    equivalentes do feixe). Passa os dois explicitamente a `estimate_from_inputs`/
+    `quote_completo` — se não passasse, a revisão reprecificaria silenciosamente com a
+    política comercial vigente do tenant, mesmo que ela tenha mudado depois da cotação
+    original ter sido criada/enviada ao cliente.
+
     `resultado` é calculado FORA de qualquer transação, de propósito: `estimate_from_inputs`
     (via `tema_templates.services._liga_db`/`liga_choices`/`tenant_cost_chain`) engole erro
     de banco com `except Exception` para cair no fallback hardcoded — esse é o comportamento
@@ -478,7 +486,13 @@ def revise_complete(orig: Quotation, created_by) -> Quotation:
     assert_revisable(orig)
 
     desig = orig.inputs.get("designacao", "BEU")
-    resultado = estimate_from_inputs(desig, orig.inputs) or quote_completo(desig)
+    fator_preco_orig = float(orig.fator_preco)
+    impostos_pct_orig = float(orig.impostos_pct)
+    resultado = (
+        estimate_from_inputs(desig, orig.inputs, fator_preco=fator_preco_orig,
+                             impostos_pct=impostos_pct_orig)
+        or quote_completo(desig, fator_preco=fator_preco_orig, impostos_pct=impostos_pct_orig)
+    )
     with transaction.atomic():
         revision = allocate_revision(orig)
         try:
