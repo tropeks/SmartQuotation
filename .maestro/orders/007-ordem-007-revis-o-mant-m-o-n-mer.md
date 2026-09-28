@@ -39,3 +39,7 @@ Teste vermelho antes de cada regra; migração testada ida e volta (guarda); gat
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 007` (você não fecha a própria ordem).
+accepted_at: 2026-09-28T04:21:02-03:00
+accepted_session: desconhecido
+accepted_tree: ed99793cc6d968f49c383e1297978344f6c13cb6
+accepted_intent: 3
