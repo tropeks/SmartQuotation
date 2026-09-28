@@ -126,8 +126,8 @@
             "temperatura_projeto_c": null
           },
           "pricing": {
-            "fator_preco": "1.25",
-            "impostos_pct": "9.0"
+            "fator_preco": "1.25000",
+            "impostos_pct": "9.000"
           },
           "quotation": {
             "number": "COT-2026-001",
@@ -197,7 +197,7 @@
             "preco_sem_impostos": "145653.83"
           }
         },
-        "snapshot_hash": "03643f50d7a8f2d9c0300272280fa1368df5eb66d583cfcf82c295a7ab9a5ace",
+        "snapshot_hash": "349003d3215653c3e14b343ee46c91bf077f00916a18d06aa302dd89e91b50e9",
         "standard_refs": []
       }
     }
@@ -329,8 +329,8 @@
             "temperatura_projeto_c": null
           },
           "pricing": {
-            "fator_preco": "1.25",
-            "impostos_pct": "9.0"
+            "fator_preco": "1.25000",
+            "impostos_pct": "9.000"
           },
           "quotation": {
             "number": "COT-2026-002",
@@ -400,7 +400,7 @@
             "preco_sem_impostos": "135431.98"
           }
         },
-        "snapshot_hash": "9dccc1b2a09a09560dd1598ae01c6a7e5231b9451baa81444429782fde3c5207",
+        "snapshot_hash": "78722b938c2d53a3655afe425829316720869a889ca8c490cb32e9d932937e24",
         "standard_refs": []
       }
     }
@@ -532,8 +532,8 @@
             "temperatura_projeto_c": 150.0
           },
           "pricing": {
-            "fator_preco": "1.25",
-            "impostos_pct": "9.0"
+            "fator_preco": "1.25000",
+            "impostos_pct": "9.000"
           },
           "quotation": {
             "number": "COT-2026-003",
@@ -640,7 +640,7 @@
             "preco_sem_impostos": "266626.54"
           }
         },
-        "snapshot_hash": "308d5fa6b1c5a55f268b2f7efe36c7b09d20f4260ed79c592d569ae7ae079905",
+        "snapshot_hash": "b047122b8a86c60cd470dc6cec3b94a902a51dcb46ff00007ed6ccdcee9d2b8a",
         "standard_refs": [
           {
             "item": "Pressão de projeto (UG-21)",
@@ -796,8 +796,8 @@
             "temperatura_projeto_c": null
           },
           "pricing": {
-            "fator_preco": "1.25",
-            "impostos_pct": "9.0"
+            "fator_preco": "1.25000",
+            "impostos_pct": "9.000"
           },
           "quotation": {
             "number": "COT-2026-004",
@@ -867,7 +867,7 @@
             "preco_sem_impostos": "145653.83"
           }
         },
-        "snapshot_hash": "d067a51199486ac71d662849874e5b52de7cbb7c3996fb4bf7efee16a4456063",
+        "snapshot_hash": "7ce2164083bcb449ac087d65b5943f6c88ddf977f5d37cfcbe3fd32655590bc0",
         "standard_refs": []
       }
     }
@@ -956,8 +956,8 @@
             "n_tubos": 68
           },
           "pricing": {
-            "fator_preco": "1.25",
-            "impostos_pct": "9.0"
+            "fator_preco": "1.25000",
+            "impostos_pct": "9.000"
           },
           "quotation": {
             "number": "COT-2026-901",
@@ -1027,7 +1027,7 @@
             "preco_sem_impostos": "145785.07"
           }
         },
-        "snapshot_hash": "0833e09f8c38756e815160f5a685bdc71638f2c0d494f031da1261d8e2e0d2bf",
+        "snapshot_hash": "e066c4c969b940182df5b22e4991b6455c1030eb30b9553125077fb4fd6331a3",
         "standard_refs": []
       }
     }
@@ -1165,8 +1165,8 @@
             "temperatura_projeto_c": null
           },
           "pricing": {
-            "fator_preco": "1.25",
-            "impostos_pct": "9.0"
+            "fator_preco": "1.25000",
+            "impostos_pct": "9.000"
           },
           "quotation": {
             "number": "COT-2026-001",
@@ -1236,7 +1236,7 @@
             "preco_sem_impostos": "145653.83"
           }
         },
-        "snapshot_hash": "03643f50d7a8f2d9c0300272280fa1368df5eb66d583cfcf82c295a7ab9a5ace",
+        "snapshot_hash": "349003d3215653c3e14b343ee46c91bf077f00916a18d06aa302dd89e91b50e9",
         "standard_refs": []
       }
     }
