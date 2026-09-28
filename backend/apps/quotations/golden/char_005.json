@@ -54,7 +54,7 @@
         "number": "PROP-2026-001-A",
         "pdf_path": "",
         "quotation_number": "COT-2026-001",
-        "status": "draft"
+        "status": "superseded"
       }
     ],
     "quotation": {
@@ -758,7 +758,7 @@
         "rt_escopo": "Total",
         "temperatura_projeto_c": null
       },
-      "number": "COT-2026-004",
+      "number": "COT-2026-001",
       "peso_bruto_kg": "0.00",
       "peso_liquido_kg": "0.00",
       "preco_com_impostos": "160059.15",
@@ -800,7 +800,7 @@
             "impostos_pct": "9.000"
           },
           "quotation": {
-            "number": "COT-2026-004",
+            "number": "COT-2026-001",
             "revision": 1,
             "scope": "complete",
             "title": "Permutador BEU"
@@ -854,7 +854,7 @@
               "sort_order": 4
             }
           ],
-          "number": "COT-2026-004",
+          "number": "COT-2026-001",
           "revision": 1,
           "scope": "complete",
           "totals": {
@@ -867,7 +867,7 @@
             "preco_sem_impostos": "145653.83"
           }
         },
-        "snapshot_hash": "7ce2164083bcb449ac087d65b5943f6c88ddf977f5d37cfcbe3fd32655590bc0",
+        "snapshot_hash": "db04b24f3bd48697988dd58441ea8bdc98ab17ade294d5668cd3056cfe4a3409",
         "standard_refs": []
       }
     }
@@ -935,7 +935,7 @@
         "designacao": "BEU",
         "n_tubos": 68
       },
-      "number": "COT-2026-901",
+      "number": "COT-2026-900",
       "peso_bruto_kg": "0.00",
       "peso_liquido_kg": "0.00",
       "preco_com_impostos": "160203.37",
@@ -960,7 +960,7 @@
             "impostos_pct": "9.000"
           },
           "quotation": {
-            "number": "COT-2026-901",
+            "number": "COT-2026-900",
             "revision": 1,
             "scope": "complete",
             "title": "BEU inválido p/ fallback"
@@ -1014,7 +1014,7 @@
               "sort_order": 4
             }
           ],
-          "number": "COT-2026-901",
+          "number": "COT-2026-900",
           "revision": 1,
           "scope": "complete",
           "totals": {
@@ -1027,7 +1027,7 @@
             "preco_sem_impostos": "145785.07"
           }
         },
-        "snapshot_hash": "e066c4c969b940182df5b22e4991b6455c1030eb30b9553125077fb4fd6331a3",
+        "snapshot_hash": "c0c96230a2669b3bd1b24d25cddff6c0dbb4b16e25c0eb6bbf895af482a7b306",
         "standard_refs": []
       }
     }
@@ -1087,7 +1087,7 @@
         "number": "PROP-2026-001-A",
         "pdf_path": "",
         "quotation_number": "COT-2026-001",
-        "status": "draft"
+        "status": "superseded"
       }
     ],
     "quotation": {
