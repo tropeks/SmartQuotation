@@ -405,23 +405,33 @@ def persist_complete(customer, designacao, cleaned, resultado,
     return q
 
 
-@transaction.atomic
 def revise_complete(orig: Quotation, created_by) -> Quotation:
     """Revisão de uma cotação de permutador completo (scope='complete'): recomputa com as
     DIMENSÕES da cotação original (não o seed), com fallback defensivo no seed se os inputs
     salvos não validarem mais. Absorve o ramo 'complete' de quotations.views.quotation_revise
     (ordem 005). A revisão ganha NÚMERO NOVO — regra de negócio confirmada pelo Capitão
     (decisão 01M3JEK53Y43C5A55X0ANSA4B5); a correção fica para a ordem 006, junto com a de
-    fator_preco/impostos_pct."""
+    fator_preco/impostos_pct.
+
+    `resultado` é calculado FORA de qualquer transação, de propósito: `estimate_from_inputs`
+    (via `tema_templates.services._liga_db`/`liga_choices`/`tenant_cost_chain`) engole erro
+    de banco com `except Exception` para cair no fallback hardcoded — esse é o comportamento
+    de fora de uma transação Django, onde uma consulta que falha não contamina nada além
+    dela. `@transaction.atomic` na função inteira (como era antes) envolvia essa chamada:
+    um erro de banco ali aborta a transação Postgres, e a PRÓXIMA query (o `next_number()`
+    de `persist_complete`) batia em "current transaction is aborted" — 500 em vez de cair
+    nos defaults como sempre fez. Só `persist_complete` (a escrita em si) e o
+    `status`/`save()` entram na transação."""
     from apps.tema_templates.services import estimate_from_inputs
     from pricing_engine.permutador_quote import quote_completo
 
     desig = orig.inputs.get("designacao", "BEU")
     resultado = estimate_from_inputs(desig, orig.inputs) or quote_completo(desig)
-    q = persist_complete(
-        customer=orig.customer, designacao=desig, cleaned=orig.inputs, resultado=resultado,
-        created_by=created_by, title=orig.title, revision=orig.revision + 1,
-    )
-    q.status = "draft"
-    q.save()
+    with transaction.atomic():
+        q = persist_complete(
+            customer=orig.customer, designacao=desig, cleaned=orig.inputs, resultado=resultado,
+            created_by=created_by, title=orig.title, revision=orig.revision + 1,
+        )
+        q.status = "draft"
+        q.save()
     return q

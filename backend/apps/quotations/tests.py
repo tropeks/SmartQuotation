@@ -1285,3 +1285,85 @@ class TemaEntryRoutingTests(TenantTestCase):
         r = self.client.get("/cotacoes/nova/feixe/", {"tipo": "XPTO"})
         self.assertEqual(r.status_code, 200)
         self.assertNotEqual(r.context["form"].initial.get("tipo"), "XPTO")
+
+
+class RevisePermutadorForaDaTransacaoTests(TenantMigrationTestCase):
+    """Regressão apontada na revisão do Opus (ordem 005): `revise_complete` calculava
+    `resultado` (via `estimate_from_inputs`) DENTRO do mesmo `@transaction.atomic` que
+    persistia a cotação. `tema_templates.services` engole erro de banco com
+    `except Exception` em `_liga_db`/`liga_choices`/`tenant_cost_chain` — de propósito,
+    para cair nos defaults hardcoded quando a consulta falha. Um erro REAL de banco ali,
+    porém, deixa a transação Postgres abortada; a query seguinte (o `next_number()` de
+    `persist_complete`) batia em "current transaction is aborted" — 500 em vez de
+    continuar com os defaults, como sempre funcionou fora de uma transação.
+
+    TransactionTestCase (via TenantMigrationTestCase), não TenantTestCase: o Django
+    TestCase comum embrulha CADA teste no próprio `atomic()` ambiente, que sozinho já
+    reproduz "current transaction is aborted" em qualquer erro de banco real —
+    mascarando a diferença entre "dentro" e "fora" da transação do código de produção.
+    Comprovado experimentalmente: com TenantTestCase, a mesma sequência abaixo falha
+    INDEPENDENTE do fix, porque o `atomic()` do próprio test runner já está aberto."""
+
+    def setUp(self):
+        super().setUp()
+        self.customer = Customer.objects.create(company_name="ACME TX")
+
+    def test_erro_de_banco_engolido_na_metalurgia_nao_impede_a_revisao(self):
+        from unittest.mock import patch
+        from apps.quotations.adapter import revise_complete
+
+        def _erro_de_banco_real(*args, **kwargs):
+            # Estatui um erro de banco DE VERDADE (não um mock em memória): só assim a
+            # transação Postgres fica genuinamente abortada, reproduzindo o sintoma
+            # relatado ("current transaction is aborted") em vez de simulá-lo de longe.
+            with connection.cursor() as cur:
+                cur.execute("SELECT 1/0")
+
+        cleaned = {
+            "designacao": "BEU", "n_tubos": 68, "comprimento_tubo_mm": 13000,
+            "od_tubo_mm": 19.05, "esp_tubo_mm": 2.108, "n_chicanas": 1,
+            "comprimento_casco_mm": 1631, "diametro_casco_mm": 764,
+            "esp_casco_mm": 9.5, "n_passes_tubos": 2, "rt_escopo": "Total",
+            "classe_feixe": "CS", "classe_casco": "CS", "fluido_corrosivo": "Tubos",
+            "fator_correcao_mo": 1.0,
+        }
+        orig = Quotation.objects.create(
+            number="COT-TX-000", revision=0, customer=self.customer, scope="complete",
+            title="BEU TX", inputs=cleaned,
+        )
+        # LigaMetalurgica.objects.filter é a consulta que _liga_db (chamada por
+        # _metalurgia, dentro de estimate_from_inputs) engole com `except Exception`.
+        with patch("apps.materials.models.LigaMetalurgica.objects.filter",
+                   side_effect=_erro_de_banco_real):
+            revisada = revise_complete(orig, created_by=None)
+
+        # a revisão não quebrou (não subiu InternalError/500) e completou com os
+        # defaults hardcoded de liga (CS), exatamente como fazia antes da ordem 005.
+        self.assertEqual(revisada.status, "draft")
+        self.assertEqual(revisada.revision, 1)
+        self.assertGreater(revisada.custo_total, 0)
+        self.assertNotEqual(revisada.number, orig.number)  # ainda a divergência PRESERVADA
+
+
+class PersistCompleteAtomicidadeTests(TenantTestCase):
+    """Se o memorial ASME falhar dentro de persist_complete (permutador pressurizado sem
+    memorial gravável), nada da EAP fica meio-persistido — @transaction.atomic reverte
+    a Quotation e os QuotationItem criados até ali junto com o RuntimeError."""
+
+    def setUp(self):
+        self.customer = Customer.objects.create(company_name="ACME Atomicidade")
+
+    def test_falha_no_memorial_nao_deixa_residuo_na_eap(self):
+        from unittest.mock import patch
+        from apps.quotations.adapter import persist_complete
+        from pricing_engine.permutador_quote import quote_completo
+
+        antes = (Quotation.objects.count(), QuotationItem.objects.count(),
+                 CalculationSnapshot.objects.count())
+        cleaned = {"designacao": "BEU", "pressao_projeto_bar": 50}
+        with patch("apps.tema_templates.services.memorial_asme", return_value=[]):
+            with self.assertRaises(RuntimeError):
+                persist_complete(self.customer, "BEU", cleaned, quote_completo("BEU"))
+        depois = (Quotation.objects.count(), QuotationItem.objects.count(),
+                  CalculationSnapshot.objects.count())
+        self.assertEqual(antes, depois)
