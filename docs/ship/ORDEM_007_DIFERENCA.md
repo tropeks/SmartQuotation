@@ -48,6 +48,41 @@ mesmo número, decisão do Capitão (01M3JEK53Y43C5A55X0ANSA4B5).
   — a revisão nascia com custo zero. Corrigido: a revisão copia as peças da cotação
   original.
 
+## Desempenho da listagem (P1) — DEVERIA, revisão do Diretor
+
+`views._vigente_queryset` (filtro "só a revisão vigente") usava uma `Subquery`
+correlacionada por `number` com `Max("revision")`, comparada por igualdade — o Postgres
+roda isso como um `SubPlan` recalculado **por linha** (O(N) execuções do agregado).
+Trocado por `~Exists(Quotation.objects.filter(number=OuterRef("number"),
+revision__gt=OuterRef("revision")))`: "não existe nenhuma revisão MAIOR do mesmo número" —
+vira um **anti-join** avaliado num passe só. Mesmo resultado, plano bem mais barato.
+Conferido com `EXPLAIN` no banco `sq007` (schema `engematex`, 99 linhas — 50 números, 0–2
+revisões extras cada):
+
+```
+-- ANTES (Subquery + Max, correlacionada)
+Sort  (cost=1057.49..1057.50 rows=1 width=1070)
+  ->  Seq Scan on quotations_quotation  (cost=0.00..1057.48 rows=1 width=1070)
+        Filter: (revision = (SubPlan 2))
+        SubPlan 1 / SubPlan 2
+          ->  GroupAggregate  (cost=0.14..8.17 rows=1 width=120)
+                ->  Index Only Scan using uniq_quotation_number_revision ...
+
+-- DEPOIS (~Exists, anti-join)
+Sort  (cost=44.21..44.42 rows=84 width=1068)
+  ->  Hash Anti Join  (cost=20.84..41.52 rows=84 width=1068)
+        Hash Cond: ((quotations_quotation.number)::text = (u0.number)::text)
+        Join Filter: (u0.revision > quotations_quotation.revision)
+        ->  Seq Scan on quotations_quotation  (cost=0.00..19.26 rows=126 width=1068)
+        ->  Hash  (cost=19.26..19.26 rows=126 width=120)
+              ->  Seq Scan on quotations_quotation u0  (cost=0.00..19.26 rows=126 width=120)
+```
+
+Custo total caiu de ~1057 para ~44 (nesta amostra pequena; a diferença cresce com o
+número de cotações, já que o "antes" é O(N) subplans e o "depois" é um único join). Os
+dois planos devolvem a MESMA contagem (50 vigentes) — `ListagemMostraApenasVigenteTests`
+(P1) continua verde.
+
 ## Deploy
 
 **Ordem obrigatória: migrar ANTES de subir o código.** A migração

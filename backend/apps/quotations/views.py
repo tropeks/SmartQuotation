@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import F, Max, OuterRef, Q, Subquery
+from django.db.models import Exists, OuterRef, Q
 from django.views.decorators.http import require_POST
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -300,14 +300,19 @@ def _render_status_control(request, quotation):
 def _vigente_queryset():
     """P1: só a revisão VIGENTE (maior `revision`) de cada `number` — a revisão MANTÉM o
     número (ordem 007), então sem este filtro a listagem mostraria uma linha por REVISÃO,
-    não uma por COTAÇÃO. Derivado (subquery correlacionada por `number`), sem campo novo:
-    a mesma regra de `services.is_current_revision`, em massa."""
-    vigente_do_numero = (
-        Quotation.objects.filter(number=OuterRef("number"))
-        .values("number").annotate(mx=Max("revision")).values("mx")
+    não uma por COTAÇÃO. Sem campo novo, derivado.
+
+    DEVERIA (revisão do Diretor): a forma anterior (`Subquery` correlacionada por `number`
+    com `Max("revision")`, comparada por igualdade) faz o planejador rodar um SUBPLANO por
+    linha (O(N) execuções do agregado) e tende a cair em seq scan. `~Exists(...)` vira um
+    ANTI-JOIN — "não existe nenhuma revisão MAIOR do mesmo number" —, que o Postgres casa
+    com o índice (number, revision) da UniqueConstraint (migração 0010) num passe só, sem
+    agregação nenhuma. Mesmo resultado (uma linha por número, a de maior revision), plano
+    bem mais barato."""
+    revisao_mais_nova_do_mesmo_numero = Quotation.objects.filter(
+        number=OuterRef("number"), revision__gt=OuterRef("revision"),
     )
-    return Quotation.objects.annotate(_vigente=Subquery(vigente_do_numero)).filter(
-        revision=F("_vigente"))
+    return Quotation.objects.filter(~Exists(revisao_mais_nova_do_mesmo_numero))
 
 
 def _list_context(request):
