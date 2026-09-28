@@ -16,6 +16,7 @@ from apps.quotations.models import Quotation
 from apps.proposals.models import Proposal, ProposalTemplate
 from apps.proposals.richtext import normalize_rich_text
 from apps.proposals import services
+from apps.quotations.services import NotCurrentRevisionError
 from apps.audit.services import log_access
 
 # Espelha o RBAC de production/engineering_params: só papéis que JÁ editam custeio
@@ -97,7 +98,10 @@ def proposal_download(request, pk, fmt):
     if not default_storage.exists(rel):
         raise Http404("Arquivo não encontrado.")
     log_access(request, "download", p, {"format": fmt, "path": rel})
-    return FileResponse(default_storage.open(rel, "rb"), as_attachment=True, filename=os.path.basename(rel))
+    # Nome de download = número da PROPOSTA (amigável), não o nome do arquivo no storage
+    # (que é por `pk` desde a ordem 007 — ver _proposal_storage_name).
+    return FileResponse(default_storage.open(rel, "rb"), as_attachment=True,
+                         filename=f"{p.number}.{fmt}")
 
 
 @login_required
@@ -129,6 +133,9 @@ def proposal_send_email(request, pk):
 
     try:
         services.send_email(p, to_email=to_email, body=body, sent_by=request.user)
+    except NotCurrentRevisionError as err:
+        messages.error(request, str(err))
+        return redirect(redirect_to)
     except (ValueError, FileNotFoundError):
         messages.error(request, "Gere a proposta em PDF antes de enviar por e-mail.")
         return redirect(redirect_to)

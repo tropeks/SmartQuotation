@@ -24,6 +24,7 @@ from django.utils import timezone
 
 from apps.proposals.models import Proposal, ProposalTemplate, ProposalVersion
 from apps.proposals.richtext import normalize_rich_text
+from apps.quotations.services import is_current_revision, NotCurrentRevisionError
 
 _django_engine = engines["django"]
 
@@ -71,9 +72,15 @@ def render_template_texts(tpl: ProposalTemplate, ctx: dict) -> dict:
 
 
 def next_proposal_number(quotation) -> str:
+    """P5 (ordem 007): a revisão MANTÉM o número da cotação, então o número da proposta
+    sozinho não distingue mais revisões — `PROP-AAAA-NNN-A` na Rev.0 (sem mudança de
+    formato) e `PROP-AAAA-NNN-R{n}-A` a partir da Rev.N (n>0)."""
     n = quotation.proposals.count() + 1
     letra = chr(ord("A") + n - 1)
-    return f"PROP-{quotation.number.replace('COT-', '')}-{letra}"
+    base = quotation.number.replace("COT-", "")
+    if quotation.revision:
+        return f"PROP-{base}-R{quotation.revision}-{letra}"
+    return f"PROP-{base}-{letra}"
 
 
 def create_proposal(quotation, template: ProposalTemplate = None) -> Proposal:
@@ -107,9 +114,16 @@ def _proposal_storage_name(proposal: Proposal, ext: str) -> str:
     """Storage name prefixado pelo schema do tenant → isolamento por tenant no
     filesystem/S3 compartilhado. Sem o prefixo, dois tenants com o mesmo
     proposal.number colidiriam (overwrite) e um poderia baixar o arquivo do outro
-    (mesmo com schema-per-tenant no banco, o MEDIA_ROOT/bucket é compartilhado)."""
+    (mesmo com schema-per-tenant no banco, o MEDIA_ROOT/bucket é compartilhado).
+
+    Chave = `proposal.pk`, NÃO `proposal.number` (ordem 007): antes da ordem 007 duas
+    Proposal de REVISÕES diferentes podiam ter o MESMO `number` (a revisão gerava número
+    de cotação novo, mas nada impedia duas propostas homônimas por coincidência de
+    formatação); agora que a revisão mantém o número da cotação, sem esta troca o
+    `_save_to_storage` abaixo (delete-then-save) apagaria o PDF/DOCX da Rev.0 ao gerar
+    a proposta da Rev.1 com um número parecido. `pk` é único por construção, sempre."""
     schema = connection.schema_name or "public"
-    return f"proposals/{schema}/{proposal.number}.{ext}"
+    return f"proposals/{schema}/{proposal.pk}.{ext}"
 
 
 def _save_to_storage(local_path: str, storage_name: str) -> str:
@@ -264,6 +278,15 @@ def default_email_body(proposal: Proposal) -> str:
 
 
 def send_email(proposal: Proposal, to_email: str, body: str, sent_by=None) -> ProposalVersion:
+    # P2 (ordem 007): revisão MANTÉM o número — só a revisão VIGENTE (maior `revision`)
+    # pode ENVIAR proposta. Enviar a partir de uma revisão superada mandaria ao cliente um
+    # preço/escopo que já foi substituído (a nova revisão existe justamente porque algo
+    # mudou).
+    if not is_current_revision(proposal.quotation):
+        raise NotCurrentRevisionError(
+            "Esta cotação não é mais a revisão vigente; gere a proposta a partir da "
+            "revisão atual antes de enviar."
+        )
     if not proposal.pdf_path:
         raise ValueError("A proposta ainda nao possui PDF gerado.")
     if not default_storage.exists(proposal.pdf_path):
