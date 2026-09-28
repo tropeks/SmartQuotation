@@ -108,6 +108,17 @@ def _required_stages():
 
 def _assert_convertible(quotation):
     """Verifica pré-condições para converter cotação em OF. Retorna o snapshot."""
+    # P2 (ordem 007): revisão MANTÉM o número — só a revisão VIGENTE (maior `revision`
+    # do número) pode virar OF. Convertida uma revisão antiga, a fábrica receberia uma
+    # versão que já foi substituída.
+    from apps.quotations.services import is_current_revision
+
+    if not is_current_revision(quotation):
+        raise ValidationError(
+            "Esta cotação não é a revisão vigente (existe uma revisão mais nova com o "
+            "mesmo número) — converta a partir da revisão vigente."
+        )
+
     snapshot = latest_snapshot_for(quotation)
     if snapshot is None:
         raise ValidationError("Cotação sem CalculationSnapshot — execute o cálculo antes de converter.")
