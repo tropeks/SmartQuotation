@@ -56,3 +56,7 @@ como `ignore_imports` explícito no `.importlinter` até esta ordem — para
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 005` (você não fecha a própria ordem).
+accepted_at: 2026-09-27T23:32:28-03:00
+accepted_session: desconhecido
+accepted_tree: 1234c17ad69d86ea2be9d2c61906b236527fdd7b
+accepted_intent: 3
