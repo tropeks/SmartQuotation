@@ -130,6 +130,35 @@ Se essa consulta devolver alguma linha (não deveria, dado o schema atual), pare
 investigue antes de migrar — indicaria um estado já inconsistente, não algo que a
 migração 0010 causa.
 
+### Lock da migração (`ADD CONSTRAINT UNIQUE`) — DEVERIA, revisão do Diretor
+
+`AddConstraint(UniqueConstraint(number, revision))` builda um índice novo e toma
+**ACCESS EXCLUSIVE** em `quotations_quotation` durante o build — nenhuma leitura nem
+escrita na tabela passa enquanto o `ADD CONSTRAINT` não termina (é o mesmo lock de
+qualquer `ALTER TABLE` que precisa validar/criar índice único no Postgres; não tem como
+fugir dele com um `UniqueConstraint` do Django).
+
+**Duração esperada nesta migração: milissegundos.** Hoje o schema é de 1 tenant only
+(ENGEMATEX) com a tabela de cotações pequena (a fabricante não gera milhares de cotações
+por ano) — não há motivo para reescrever esta migração com `CONCURRENTLY`. **Recomendação:
+rode o deploy fora do horário comercial mesmo assim** (mesma prática de qualquer migração
+de schema), porque o ACCESS EXCLUSIVE, embora curto, bloqueia qualquer request que esteja
+tentando ler/gravar `Quotation` naquele instante (elas ficam na fila, não falham — mas um
+request na fila numa migração de milissegundos ainda é melhor evitado em produção).
+
+**Padrão para quando a tabela crescer** (múltiplos tenants, anos de histórico): trocar por
+`CREATE UNIQUE INDEX CONCURRENTLY` (fora de uma transação — precisa de uma migração com
+`atomic = False` e `AddIndexConcurrently`, do `django.contrib.postgres.operations`) seguido
+de `AddConstraint(..., **{"using_index" placeholder})` — no Django isso é
+`AddConstraint` com um índice já existente via `UniqueConstraint(fields=..., name=...)`
+associado por `AlterUniqueTogether`/índice nomeado previamente criado
+`CONCURRENTLY` e depois promovido a constraint com `ALTER TABLE ... ADD CONSTRAINT ...
+UNIQUE USING INDEX <nome>` (SQL cru via `RunSQL`, já que o Django ORM não expõe
+`USING INDEX` diretamente). Isso evita o ACCESS EXCLUSIVE prolongado que um `CREATE UNIQUE
+INDEX` comum tomaria numa tabela grande. **Não aplicável agora** — registrado aqui para
+quando a beta multi-tenant (VISÃO §Prioridades) tornar a tabela grande o bastante pra
+importar.
+
 ## Rollback
 
 - **Código:** reverter o binário/deploy para a versão anterior a esta ordem. É seguro a
@@ -144,16 +173,35 @@ migração 0010 causa.
 
 ## Onde ver a prova
 
-- `backend/apps/quotations/tests.py` — `RevisionKeepsNumberMigrationTests` (migração 0010,
-  ida e volta, com e sem `number` repetido) e `RefuseDowngradeGuardUnitTests` (a guarda do
-  reverse, chamada direto); `AllocateRevisionTests` (P3, alocador, corrida →
-  `RevisionConflictError`); `IsCurrentRevisionTests`, `ListagemMostraApenasVigenteTests`
-  (P1); `SupersedePropostasAnterioresTests` (P4); `RevisaoNaoTrocaClienteTests` (P6);
-  `RevisaoBloqueiaComOfAtivaTests` (P7); `RevisaoDePartesCopiaQuotationPartTests` (cópia de
-  `QuotationPart` na revisão).
+- `backend/apps/quotations/tests_ordem_007_migration.py` — `RevisionKeepsNumberMigrationTests`
+  (migração 0010, ida e volta, com e sem `number` repetido) e `RefuseDowngradeGuardUnitTests`
+  (a guarda do reverse, chamada direto).
+- `backend/apps/quotations/tests_ordem_007_allocator.py` — `AllocateRevisionTests` (P3,
+  alocador; a tradução IntegrityError -> RevisionConflictError de uma corrida MOCADA que
+  ainda colide).
+- `backend/apps/quotations/tests_ordem_007_allocator_concurrencia.py` —
+  `AllocateRevisionConcorrenciaRealTests` (duas CONEXÕES Postgres reais, via threading: a
+  segunda espera a primeira e sai com max+1, sem IntegrityError) e
+  `AllocateRevisionSqlEmiteForUpdateTests` (o SQL emitido contém `FOR UPDATE` de verdade,
+  via `CaptureQueriesContext` — e documenta que a forma antiga, com `.aggregate(Max(...))`,
+  NÃO emitia).
+- `backend/apps/quotations/tests_ordem_007_revise_feixe_savepoint.py` —
+  `ReviseFeixeForaDaTransacaoTests`: erro de banco DE VERDADE engolido dentro de
+  `build_cost_chain`/`_apply_avisos` não aborta a transação da revisão (savepoint).
+- `backend/apps/quotations/tests_ordem_007_p1_listagem.py` — `IsCurrentRevisionTests`,
+  `ListagemMostraApenasVigenteTests` (P1).
+- `backend/apps/quotations/tests_ordem_007_p4_supersede.py` —
+  `SupersedePropostasAnterioresTests` (P4).
+- `backend/apps/quotations/tests_ordem_007_p6_cliente.py` — `RevisaoNaoTrocaClienteTests` (P6).
+- `backend/apps/quotations/tests_ordem_007_p7_of.py` — `RevisaoBloqueiaComOfAtivaTests`
+  (P7, `revise_feixe`); `RevisaoCompleteBloqueiaComOfAtivaTests` (P7, `revise_complete`).
+- `backend/apps/quotations/tests_ordem_007_p9_parts.py` —
+  `RevisaoDePartesCopiaQuotationPartTests` (cópia de `QuotationPart` na revisão, via o
+  adapter direto) e `RevisaoDePartesViaHttpTests` (a mesma prova, mas batendo na VIEW —
+  inclui `test_quotation_edit_recusa_scope_parts`, o botão certo pra `quotations:revise`).
 - `backend/apps/production/tests.py` — `test_convert_bloqueia_revisao_nao_vigente` (P2, OF).
-- `backend/apps/proposals/tests.py` — `ProposalOrdem007Tests` (P5, storage por `pk`, P2 no
-  envio de e-mail).
+- `backend/apps/proposals/tests_ordem_007.py` — `ProposalOrdem007Tests` (P5, storage por
+  `pk`, P2 no envio de e-mail).
 - `backend/apps/quotations/test_feature.py` — `test_quotation_revise_feixe` /
   `test_quotation_revise_permutador` atualizados para o novo comportamento (número mantido).
 
