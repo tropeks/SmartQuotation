@@ -41,7 +41,10 @@ class Quotation(models.Model):
     PRICING_BASIS = [("referencial", "Referencial"),
                       ("validado_custo", "Validado por custo")]
 
-    number = models.CharField(max_length=50, unique=True)
+    # Ordem 007: revisão MANTÉM o número e sobe `revision` — a identidade de uma cotação
+    # passa a ser o PAR (number, revision), não `number` sozinho (ver Meta.constraints e a
+    # migração 0010, cujo reverse RECUSA desfazer se já existir `number` repetido).
+    number = models.CharField(max_length=50, db_index=True)
     revision = models.PositiveSmallIntegerField(default=0)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="quotations")
     title = models.CharField(max_length=500)
@@ -80,6 +83,10 @@ class Quotation(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["number", "revision"],
+                                     name="uniq_quotation_number_revision"),
+        ]
 
     def __str__(self):
         return f"{self.number} — {self.title}"
