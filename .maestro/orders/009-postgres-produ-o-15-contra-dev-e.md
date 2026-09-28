@@ -29,3 +29,7 @@ Nada no host de produção. Nenhum dado real da ENGEMATEX.
 - Direção vigente na criação: INTENT v3 (`.maestro/INTENT.md`) — o plano cita a seção da direção que autoriza esta ordem.
 - Estourou Ask-First ou orçamento? PARE e reporte ao humano — não improvise.
 - O aceite é do diretor: `maestro order --accept 009` (você não fecha a própria ordem).
+accepted_at: 2026-09-28T17:24:04-03:00
+accepted_session: desconhecido
+accepted_tree: 71c68485c7c7b3720ea9edcce486c9032c705eb5
+accepted_intent: 3
