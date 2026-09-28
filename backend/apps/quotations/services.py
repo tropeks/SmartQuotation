@@ -3,7 +3,7 @@ from datetime import date, datetime
 from decimal import Decimal
 import hashlib
 import json
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, connection, models, transaction
 from apps.quotations.models import CalculationSnapshot, Quotation
 from apps.quotations.adapter import default_inputs, recompute
 
@@ -235,15 +235,43 @@ def allocate_revision(orig: Quotation) -> int:
     max+1, nunca `orig.revision+1` — senão duas revisões concorrentes a partir de revisões
     antigas diferentes colidiriam).
 
-    `select_for_update()` TRAVA essas linhas — precisa ser chamada DENTRO da MESMA
-    `transaction.atomic()` que faz o INSERT da revisão nova: é a trava seguindo até o
-    commit que serializa dois pedidos de revisão concorrentes do mesmo número (o segundo
-    espera o primeiro commitar, e então enxerga o `max(revision)` já atualizado).
-    """
-    maior = (Quotation.objects.select_for_update()
-             .filter(number=orig.number)
-             .aggregate(models.Max("revision"))["revision__max"])
-    base = maior if maior is not None else orig.revision
+    Precisa ser chamada DENTRO da MESMA `transaction.atomic()` que faz o INSERT da
+    revisão nova.
+
+    ACHADO DO REVISOR (real, provado com duas conexões Postgres em
+    `tests_ordem_007_allocator_concurrencia.py`): a versão anterior fazia
+    `.select_for_update().aggregate(Max("revision"))` — Postgres RECUSA `FOR UPDATE` numa
+    consulta com agregação, e o Django descarta a cláusula em SILÊNCIO (sem erro, sem
+    aviso). O resultado: NENHUMA trava real acontecia, e duas transações concorrentes
+    calculavam a MESMA "próxima revisão".
+
+    Por que um `SELECT ... FOR UPDATE` comum (sem agregação) TAMBÉM não bastaria: sob
+    READ COMMITTED, o CONJUNTO de linhas que uma consulta bloqueante enxerga é decidido
+    pelo snapshot de quando ela COMEÇA a rodar — se ela precisa esperar a trava de outra
+    transação, ao acordar ela só RECHECA as linhas que já tinha encontrado (a versão mais
+    recente DELAS), ela não redescobre uma linha NOVA que a primeira transação inseriu
+    enquanto a segunda estava bloqueada. Ou seja: mesmo travando (e esperando) as linhas
+    JÁ EXISTENTES, a segunda transação pode ainda enxergar o "max" ANTIGO depois de
+    acordar, e colidir na hora de inserir. É a mesma razão pela qual "SELECT MAX(id) ...
+    FOR UPDATE" para emular sequência é um anti-padrão conhecido do Postgres.
+
+    O conserto de verdade é `pg_advisory_xact_lock`: trava por VALOR (hash do `number`),
+    não por linha, liberada só no fim da transação (commit/rollback). Quem acorda depois
+    de destravar roda uma consulta NOVA (SELECT normal, logo com snapshot NOVO sob READ
+    COMMITTED) — essa consulta nova enxerga, sim, o que a primeira transação já commitou.
+    O `select_for_update()` abaixo (materializado com `list(...)`, NUNCA `.aggregate()`)
+    continua aqui por duas razões: (i) documentação/prova de intenção — o SQL emitido
+    precisa mesmo conter `FOR UPDATE`, conferido por `CaptureQueriesContext`; (ii) defesa
+    em profundidade contra qualquer INSERT futuro que grave uma revisão sem passar por
+    este alocador. A correção da corrida em si, porém, é o advisory lock."""
+    with connection.cursor() as cur:
+        cur.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", [orig.number])
+    revisoes = list(
+        Quotation.objects.select_for_update()
+        .filter(number=orig.number)
+        .values_list("revision", flat=True)
+    )
+    base = max(revisoes) if revisoes else orig.revision
     return base + 1
 
 

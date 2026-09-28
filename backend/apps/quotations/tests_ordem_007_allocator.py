@@ -2,6 +2,14 @@
 Ordem 007 — `services.allocate_revision` (P3) e a tradução de `IntegrityError` numa
 corrida de revisão concorrente em `RevisionConflictError` (mensagem de conflito ao
 usuário, nunca um 500).
+
+IMPORTANTE (achado do revisor): o teste de corrida abaixo (`test_integrityerror_na_
+corrida_vira_revisionconflicterror`) é MOCADO — ele força uma corrida que AINDA colide
+(duas linhas tentando a MESMA revisão) e prova só a TRADUÇÃO do IntegrityError daí
+resultante em RevisionConflictError. Ele NÃO prova que a trava (`pg_advisory_xact_lock` +
+`select_for_update`, dentro de `allocate_revision`) SERIALIZA corretamente duas
+transações concorrentes usando conexões Postgres reais — essa prova, com duas threads e
+duas conexões de verdade, está em `tests_ordem_007_allocator_concurrencia.py`.
 """
 from unittest import mock
 from django.db import transaction
